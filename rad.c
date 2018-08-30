@@ -423,13 +423,13 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,ldouble dt,int v
       fprintf(out,"%.20e \n",dt);
       fprintf(out,"%.20e \n",geom->alpha);
       fprintf(out,"%.20e \n",geom->gdet);
-      for (i1=0;i1<4;i1++)
-	for (i2=0;i2<4;i2++)
-	  fprintf(out,"%.20e ",geom->tup[i1][i2]);
-      for (i1=0;i1<4;i1++)
-	for (i2=0;i2<4;i2++)
-	  fprintf(out,"%.20e ",geom->tlo[i1][i2]);
-      fprintf(out,"%.20e ",geom->gttpert);
+      //for (i1=0;i1<4;i1++)
+      //for (i2=0;i2<4;i2++)
+      //  fprintf(out,"%.20e ",geom->tup[i1][i2]);
+      //for (i1=0;i1<4;i1++)
+      //for (i2=0;i2<4;i2++)
+      //  fprintf(out,"%.20e ",geom->tlo[i1][i2]);
+      //fprintf(out,"%.20e ",geom->gttpert);
       for (i1=0;i1<4;i1++)
 	fprintf(out,"%.20e ",geom->xxvec[i1]);
       fprintf(out,"\n");
@@ -525,7 +525,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,ldouble dt,int v
 
       printf("viscous heating: %e\n",0.);
 	
-      boost2_lab2ff_with_alpha(Gi00, Gihat00, pp0, geom->gg, geom->GG, geom->alpha);
+      boost2_lab2ff(Gi00, Gihat00, pp0, geom->gg, geom->GG);
       for(iv=0;iv<4;iv++)
       {
 	Gi00[iv]*=dt*gdetu;
@@ -2699,7 +2699,7 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble Gitot_ff[4], l
   }
   
   // Boost to fluid frame
-  boost2_lab2ff_4vel_with_alpha(Gith_lab, Gith_ff, pp, gg, GG, geom->alpha, ucon, ucov);
+  boost2_lab2ff_4vel(Gith_lab, Gith_ff, pp, gg, GG, ucon, ucov);
   
   //rewrite the time component directly
   Gith_ff[0] = -kappaGasAbs * fourpi * B + kappaRadAbs * Ehatrad;
@@ -2840,7 +2840,7 @@ calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], int 
       for(j=0;j<4;j++)
         Ruu+=Rij[i][j]*ucov[i]*ucov[j];
     ldouble Ehatrad = Ruu;
-    boost2_lab2ff_with_alpha(Gi, Gi, pp, gg, GG, geom->alpha);
+    boost2_lab2ff(Gi, Gi, pp, gg, GG);
     
     //rewrite the time component directly
     Gi[0]=-kappaGasAbs*4.*Pi*B + kappaRadAbs*Ehatrad;
@@ -5110,108 +5110,6 @@ estimate_gas_radiation_coupling(ldouble *pp, void *ggg)
 
 //**********************************************************************
 //**********************************************************************
-//returns rad primitives for an atmosphere
-//**********************************************************************
-//**********************************************************************
-
-int
-set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype)
-{
-#ifdef RADIATION   
-  if(atmtype==0) //fixed Erf, urf of normal observer
-    {
-      pp[EE0]=ERADATMMIN; 
-      ldouble ucon[4];
-      calc_normalobs_relvel(GG,ucon);
-      if (VELR != VELPRIMRAD)
-      {
-        conv_vels(ucon,ucon,VELR,VELPRIMRAD,gg,GG);
-      }
- 
-      pp[FX0]=ucon[1]; 
-      pp[FY0]=ucon[2];
-      pp[FZ0]=ucon[3];
-    }
-  if(atmtype==1) //fixed Erf, urf 0 in lab frame
-    {
-      ldouble ucon[4];
-      ldouble xx2[4];
-      ldouble GGBL[4][5];
-
-      // BL coords
-      coco_N(xx,xx2,MYCOORDS,BLCOORDS);
-      calc_G_arb(xx2,GGBL,BLCOORDS);
-
-      // normal observer in BL = stationary observer
-      calc_normalobs_4vel(GGBL,ucon);
-     
-      // to MYCOORDS
-      trans2_coco(xx2,ucon,ucon,BLCOORDS,MYCOORDS);
-     
-      // to VELPRIMRAD
-      conv_vels_ut(ucon,ucon,VEL4,VELPRIMRAD,gg,GG);
-     
-      pp[FX0]=ucon[1];
-      pp[FY0]=ucon[2];
-      pp[FZ0]=ucon[3];
-
-      // print_4vector(ucon); getchar();
-      pp[EE0]=ERADATMMIN; 
-     }
-  if(atmtype==2) //optically thin atmosphere, scalings from numerical solution of radiall influx
-    {
-      ldouble gammamax=10.;
-      ldouble rout=2.; //normalize at r_BL=2
-
-      ldouble xxBL[4];
-      coco_N(xx,xxBL,MYCOORDS,BLCOORDS);
-      ldouble r=xxBL[1];
-     
-      pp[EE0]=ERADATMMIN*(rout/r)*(rout/r)*(rout/r)*(rout/r);
-
-      ldouble ut[4]={0.,-gammamax*pow(r/rout,1.),0.,0.};
-
-      ldouble ggBL[4][5],GGBL[4][5];
-      calc_g_arb(xxBL,ggBL,KERRCOORDS);
-      calc_G_arb(xxBL,GGBL,KERRCOORDS);
-
-      conv_vels(ut,ut,VELR,VEL4,ggBL,GGBL);
-
-      trans2_coco(xxBL,ut,ut,KERRCOORDS,MYCOORDS);
-
-      conv_vels_ut(ut,ut,VEL4,VELPRIM,gg,GG);
-      
-      pp[FX0]=ut[1];      
-      pp[FY0]=ut[2];      
-      pp[FZ0]=ut[3];
-
-    }
-  if(atmtype==3) //LTE, normal observer
-    {
-      ldouble Tgas=calc_PEQ_Tfromurho(pp[UU],pp[RHO],0,0,0); //indices inconsistent with CONSISTENTGAMMA
-      pp[EE0]=calc_LTE_EfromT(Tgas);
-
-      ldouble ucon[4];
-      calc_normalobs_relvel(GG,ucon);
-      if (VELR != VELPRIMRAD)
-      {
-        conv_vels(ucon,ucon,VELR,VELPRIMRAD,gg,GG);
-      }
- 
-      pp[FX0]=ucon[1]; 
-      pp[FY0]=ucon[2];
-      pp[FZ0]=ucon[3];
-    }
-
-#ifdef EVOLVEPHOTONNUMBER
-  pp[NF0]=calc_NFfromE(pp[EE0]);
-#endif
-#endif //RADIATION
-  return 0;
-}
-
-//**********************************************************************
-//**********************************************************************
 //**********************************************************************
 //**********************************************************************
 //**********************************************************************
@@ -5408,13 +5306,13 @@ test_solve_implicit_lab_file()
   iv=fscanf(in,"%lf ",&geom.gdet);
   
   //for imp.problems > 21
-  for (i1=0;i1<4;i1++)
-    for (i2=0;i2<4;i2++)
-      iv=fscanf(in,"%lf ",&geom.tup[i1][i2]);
-  for (i1=0;i1<4;i1++)
-    for (i2=0;i2<4;i2++)
-      iv=fscanf(in,"%lf ",&geom.tlo[i1][i2]);
- fscanf(in,"%lf ",&geom.gttpert);
+  //for (i1=0;i1<4;i1++)
+  //  for (i2=0;i2<4;i2++)
+  //    iv=fscanf(in,"%lf ",&geom.tup[i1][i2]);
+  //for (i1=0;i1<4;i1++)
+  //  for (i2=0;i2<4;i2++)
+  //    iv=fscanf(in,"%lf ",&geom.tlo[i1][i2]);
+  //fscanf(in,"%lf ",&geom.gttpert);
 
   for (i1=0;i1<4;i1++)
       iv=fscanf(in,"%lf ",&geom.xxvec[i1]);

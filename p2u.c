@@ -9,37 +9,6 @@
 //**********************************************************************
 //**********************************************************************
 //**********************************************************************
-//calculates conserved in given cell using global array p[]
-
-int
-calc_conserved(int ix,int iy,int iz)  // looks like this function is never called
-{
-  int iv;
-  ldouble uu[NV],pp[NV];
-  ldouble gg[4][5],GG[4][5],tlo[4][4],tup[4][4];
-  
-  struct geometry geom;
-  fill_geometry(ix,iy,iz,&geom);
-
-  for(iv=0;iv<NV;iv++)
-    {
-      pp[iv]=get_u(p,iv,ix,iy,iz);
-    }
-
-  p2u(pp,uu,&geom);
-
-  for(iv=0;iv<NV;iv++)
-    {
-      set_u(u,iv,ix,iy,iz,uu[iv]);
-    }
-
-  return 0;
-}
- 
-
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //primitive to conserved converter
 
 int
@@ -262,11 +231,9 @@ int p2u_rad(ldouble *pp, ldouble *uu, void *ggg)
   struct geometry *geom
   = (struct geometry *) ggg;
   
-  ldouble (*gg)[5], (*GG)[5], (*tlo)[4], (*tup)[4], gdet, gdetu;
+  ldouble (*gg)[5], (*GG)[5],  gdet, gdetu;
   gg = geom->gg;
   GG = geom->GG;
-  tlo = geom->tlo;
-  tup = geom->tup;
   gdet = geom->gdet;
   gdetu = gdet;
 #if (GDETIN == 0) //gdet out of derivatives

@@ -290,7 +290,7 @@
 #define OUTCOORDS BLCOORDS//KERRCOORDS                                                                    
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
-#define RADOUTPUTINZAMO
+//#define RADOUTPUTINZAMO
 #define NSTEPSTOP 1.e20
 #define NOUTSTOP 2000
 

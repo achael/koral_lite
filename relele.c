@@ -1,15 +1,15 @@
 /*! \file relele.c
  \brief Some relativistic routines
- */
+*/
 
 
 #include "ko.h" 
 
-//**********************************************************************
-//**********************************************************************
+//*********************************************************************
+//Takes primitives and computes ucon, ucov in VEL4 frame
 //**********************************************************************
 
-int //Takes primitives and computes ucon, ucov in VEL4 frame
+int 
 calc_ucon_ucov_from_prims(ldouble *pr, void *ggg, ldouble *ucon, ldouble *ucov)
 {
   struct geometry *geom
@@ -20,8 +20,8 @@ calc_ucon_ucov_from_prims(ldouble *pr, void *ggg, ldouble *ucon, ldouble *ucov)
   ucon[2] = pr[VY];
   ucon[3] = pr[VZ];
   
-#ifdef NONRELMHD //only four-velocity used;
-  fill_utinucon(ucon,geom->gg,geom->GG); //calculates the proper u^t for four-velocity
+#ifdef NONRELMHD //only three-velocity used;
+  fill_utinucon(ucon,geom->gg,geom->GG); 
   indices_21(ucon,ucov,geom->gg);
   return 0;
 #endif
@@ -33,10 +33,10 @@ calc_ucon_ucov_from_prims(ldouble *pr, void *ggg, ldouble *ucon, ldouble *ucov)
 
 
 //**********************************************************************
-//**********************************************************************
+//Takes primitives and computes urcon, urcov in VEL4 frame
 //**********************************************************************
 
-int //Takes primitives and computes urcon, urcov in VEL4 frame
+int 
 calc_urcon_urcov_from_prims(ldouble *pr, void *ggg, ldouble *urcon, ldouble *urcov)
 {
   struct geometry *geom
@@ -47,8 +47,8 @@ calc_urcon_urcov_from_prims(ldouble *pr, void *ggg, ldouble *urcon, ldouble *urc
   urcon[2] = pr[FY];
   urcon[3] = pr[FZ];
   
-#ifdef NONRELMHD //only four-velocity used;
-  fill_utinucon(urcon,geom->gg,geom->GG); //calculates the proper u^t for four-velocity
+#ifdef NONRELMHD //only three-velocity used;
+  fill_utinucon(urcon,geom->gg,geom->GG); 
   indices_21(urcon,urcov,geom->gg);
   return 0;
 #endif
@@ -59,35 +59,35 @@ calc_urcon_urcov_from_prims(ldouble *pr, void *ggg, ldouble *urcon, ldouble *urc
 }
 
 
-//**********************************************************************
-//**********************************************************************
+//*********************************************************************
+//computes ut and then calculates ucon
 //**********************************************************************
 
-int //computes ut and then calculates ucon
+int 
 conv_vels(ldouble *u1,ldouble *u2,int which1,int which2,ldouble gg[][5],ldouble GG[][5])
 {
-#ifdef NONRELMHD //only four-velocity used;
+#ifdef NONRELMHD //only three-velocity used;
   u2[1]=u1[1];u2[2]=u1[2];u2[3]=u1[3];
-  fill_utinucon(u2,gg,GG); //calculates the proper u^t for four-velocity
+  fill_utinucon(u2,gg,GG); 
   return 0;
 #endif
 
-  conv_vels_core(u1,u2,which1,which2,gg,GG,0);  // 0 means u^t is not known
+  conv_vels_core(u1,u2,which1,which2,gg,GG,0);  // 0 means u^t is not yet known
   
   return 0;
 }
 
 
 //**********************************************************************
-//**********************************************************************
+//calculates ucon, assuming ut is known
 //**********************************************************************
 
-int //calculates ucon, assuming ut is known
+int 
 conv_vels_ut(ldouble *u1,ldouble *u2,int which1,int which2,ldouble gg[][5],ldouble GG[][5])
 {
-#ifdef NONRELMHD //only four-velocity used;
+#ifdef NONRELMHD //only three-velocity used;
   u2[1]=u1[1];u2[2]=u1[2];u2[3]=u1[3];
-  fill_utinucon(u2,gg,GG); //calculates the proper u^t for four-velocity
+  fill_utinucon(u2,gg,GG); 
   return 0;
 #endif
   
@@ -98,15 +98,16 @@ conv_vels_ut(ldouble *u1,ldouble *u2,int which1,int which2,ldouble gg[][5],ldoub
 
 
 //**********************************************************************
-//**********************************************************************
+//calculates both ucon and ucov, assuming ut is unknown 
 //**********************************************************************
 
-int //calculates both ucon and ucov, assuming ut is unknown where applicable
+int 
 conv_vels_both(ldouble *u1,ldouble *u2con,ldouble *u2cov,int which1,int which2,ldouble gg[][5],ldouble GG[][5])
 {
-#ifdef NONRELMHD //only four-velocity used;
+  
+#ifdef NONRELMHD //only three-velocity used;
   u2con[1]=u1[1];u2con[2]=u1[2];u2con[3]=u1[3];
-  fill_utinucon(u2con,gg,GG); //calculates the proper u^t for four-velocity
+  fill_utinucon(u2con,gg,GG); 
   indices_21(u2con,u2cov,gg);
   return 0;
 #endif
@@ -117,7 +118,7 @@ conv_vels_both(ldouble *u1,ldouble *u2con,ldouble *u2cov,int which1,int which2,l
     return -1;
   }
   
-  conv_vels_core(u1,u2con,which1,which2,gg,GG,0);
+  conv_vels_core(u1,u2con,which1,which2,gg,GG,0); //0 means u^t is not yet known
   indices_21(u2con,u2cov,gg);
 
   return 0;
@@ -125,12 +126,10 @@ conv_vels_both(ldouble *u1,ldouble *u2con,ldouble *u2cov,int which1,int which2,l
 
 
 //**********************************************************************
+//converts contravariant velocities u1 to contravariant u2con and covariant u2cov (if which2==VEL4)
+// July 7, 17, Ramesh: Large reorganization
+// sub-calculations done in fill_utinucon, fill_utinvel3. This version has been tested with test_con_vel.c.
 //**********************************************************************
-//**********************************************************************
-//converts contravariant velocities u1
-//to contravariant u2con
-//and covariant u2cov (if which2==VEL4)
-// July 7, 17, Ramesh: Large reorganization of the code --- sub-calculations done in fill_utinucon, fill_utinvel3. This version has been tested with test_con_vel.c.
 
 int
 conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][5],ldouble GG[][5],int utknown)
@@ -138,7 +137,6 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
   
   int i,j;
   ldouble u2con[4];
-  //ldouble u2cov[4];
   int verbose=0;
   if(verbose)
   {
@@ -198,7 +196,7 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     if(u2con[0] < 1. || isnan(u2con[0]))
     {
       printf("ut.nan in conv_vels(%d,%d) VEL3->VEL4 - returning error\n",which1,which2); //getchar();
-      return -1;  // u2con[0]=1.0;
+      return -1;  
     }
     
     u2con[1] = u1[1] * u2con[0];
@@ -214,9 +212,8 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     
     if(u2con[0] < 1. || isnan(u2con[0]))
     {
-      printf("ut.nan in conv_vels(%d,%d) VEL3->VELR - returning error\n",which1,which2);
-      //	  print_4vector(u1);//getchar();
-      return -1;//u2con[0]=1.0;
+      printf("ut.nan in conv_vels(%d,%d) VEL3->VELR - returning error\n",which1,which2); //getchar();
+      return -1;
     }
     
     //to 4-velocity
@@ -284,7 +281,6 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
   }
 
   /*************** not supported  ***************/
-
   else
   {
     my_err("velocity conversion not supported.\n");
@@ -307,9 +303,8 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 // July 9, 17, Ramesh: This is Andrew's version of alpgam, which ensures a positive quantity
+//**********************************************************************
 
 ldouble
 calc_alpgam(ldouble *u1, ldouble gg[][5], ldouble GG[][5])
@@ -333,20 +328,19 @@ calc_alpgam(ldouble *u1, ldouble gg[][5], ldouble GG[][5])
   ldouble alpgam2=alpha2*gamma2;
   if(alpgam2<0.) {
     //printf("alpgam2.lt.0 in VELR->VEL4\n");
-    return 1.;}
+    return 1.;
+  }
   ldouble alpgam=sqrt(alpgam2);
   
   return alpgam;
 }
 
-
-//**********************************************************************
-//**********************************************************************
 //**********************************************************************
 // July 7, 17, Ramesh: Calculates u^t from spatial components of three-velocity VEL3
 // We solve: ut^2 * (a + 2*b + c) = -1
 //   where a = g00, b = g0i*ui, c = gij*ui*uj
 //   solution: ut = sqrt(-1/(a + 2*b + c))
+//**********************************************************************
 
 int
 fill_utinvel3(ldouble *u1,double gg[][5],ldouble GG[][5])
@@ -373,14 +367,12 @@ fill_utinvel3(ldouble *u1,double gg[][5],ldouble GG[][5])
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 // Calculates u^t from spatial components of four-velocity u^mu
 // July 7, 17, Ramesh: streamlined the code to improve efficiency
 // We solve quadratic: a*ut^2 + 2*b*ut + c = 0
 //   where a = g00, b = g0i*ui, c = 1 + gij*ui*uj
 //   solution: ut = (-b + sqrt(b^2-a*c))/a
-
+//**********************************************************************
 int
 fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5])
 {
@@ -416,159 +408,10 @@ fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5])
   return 0;
 }
 
-
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
-// Calculates u_t from spatial components of four-velocity u_mu
-// This routine is not being used anywhere
-
-int
-fill_utinucov(ldouble *u1,double gg[][5],ldouble GG[][5])
-{
-  ldouble a, b, c, delta;
-  int i, j;
-  
-  a = GG[0][0];
-  b = 0.;
-  c = 1.;
-  
-  for(i = 1; i < 4; i++)
-  {
-    b += u1[i] * GG[0][i];
-    
-    for(j = 1; j < 4; j++)
-    {
-      c += u1[i] * u1[j] * GG[i][j];
-    }
-  }
-  
-  delta = b * b - a * c;  // Note: b here is half the usual value
-  if (delta < 0.) my_err("delta.lt.0 in fill_utinucon\n");
-  
-  if (a < 0.)
-  {
-    u1[0] = (-b - sqrt(delta)) / a;
-  }
-  else
-  {
-    u1[0] = (-b + sqrt(delta)) / a;
-  }
-  
-  return 0;
-}
-
-
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
-//converts contravariant u1 -> covariant u2 (takes advantage of VELR)
-//doesn't seem like this is being used any more
-
-int
-conv_velscov(ldouble *u1,ldouble *u2,int which1,int which2,ldouble gg[][5],ldouble GG[][5])
-{
-  #ifdef NONRELMHD
-  printf("conv_velscov() not ready for NONRELMHD\n");exit(1);
-  #endif
-
-  int i,j;
-  ldouble ut[4];
-  int verbose=0;
-  if(verbose)
-    {
-      printf("conv_velscov: %d -> %d\n",which1,which2);
-      print_4vector(u1);      
-    }
-
-  if(which2!=VEL4)
-    {
-      my_err("conv_velscov() outputs only VEL4 u_mu\n");      
-    }
-
-  if(which1!=VELR)
-    {
-      conv_vels(u1,u2,which1,VEL4,gg,GG);
-      indices_21(u2,ut,gg);
-    }
-  else
-    {
-      ldouble u1cov[4],utcov[4];
-      ldouble qsq=0.;
-      for(i=1;i<4;i++)
-	for(j=1;j<4;j++)
-	  qsq+=u1[i]*u1[j]*gg[i][j];
-      ldouble gamma2=(1.+qsq);
-      ldouble alpha2=(-1./GG[0][0]);
-
-      u1[0]=0.;
-      indices_21(u1,u1cov,gg); //lowering indices in utilda
-      
-      for(i=0;i<4;i++)
-	ut[i]=u1cov[i]-sqrt(alpha2*gamma2)*delta(0,i);
-    }
-
-  /*
-  if(which1!=VELR || GG[0][0]>0. || 1) //when out of domain do simple
-    {
-      conv_vels(u1,u2,which1,VEL4,gg,GG);
-      indices_21(u2,ut,gg);
-    }
-  else
-    {
-      ldouble u1cov[4],utcon[4];
-      ldouble qsq=0.;
-      for(i=1;i<4;i++)
-	for(j=1;j<4;j++)
-	  qsq+=u1[i]*u1[j]*gg[i][j];
-      ldouble gamma2=(1.+qsq);
-      ldouble alpha2=(-1./GG[0][0]);
-
-      indices_21(u1,u1cov,gg); //lowering indices in utilda
-
-      utcon[0]=sqrt(gamma2/alpha2);
-      for(i=1;i<4;i++)
-	utcon[i]=u1[i]+utcon[0]*GG[0][i]/GG[0][0];
- 
-      for(i=0;i<4;i++)
-	ut[i]=u1cov[i]-sqrt(alpha2*gamma2)*delta(0,i);
-
-      //normalizing to ucon ucov = -1
-      ldouble norm=dot(ut,utcon);
-
-      if(fabs(norm+1)>0.1 || !isfinite(norm)) //large error
-	{
-	  conv_vels(u1,u2,which1,VEL4,gg,GG);
-	  indices_21(u2,ut,gg);
-	}
-      else //correcting norm
-	{
-	  for(i=0;i<4;i++)
-	    ut[i]/=norm;
-	}
-    }
-  */
- 
-  u2[0]=ut[0];
-  u2[1]=ut[1];
-  u2[2]=ut[2];
-  u2[3]=ut[3];
-
-  if(verbose)
-    {
-      print_4vector(u2);      
-      printf("conv_velscov done %d %d\n",which1,which2);
-    }
-  
-  return 0;
-}
-
-
-//**********************************************************************
-//**********************************************************************
 //**********************************************************************
 //converts hydro velocities as above but takes full vector of primitives
 //as an input and outputs to primitives the spatial components;
+//**********************************************************************
 
 int
 conv_velsinprims(ldouble *pp,int which1, int which2,ldouble gg[][5],ldouble GG[][5])
@@ -595,10 +438,9 @@ conv_velsinprims(ldouble *pp,int which1, int which2,ldouble gg[][5],ldouble GG[]
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //returns contravariant four-velocity of a normal observer, given the value of alpha
 //n_mu=(-alp,0,0,0);  nu^mu = nu_0 * GG[mu][0]
+//**********************************************************************
 
 int
 calc_normalobs_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncon)
@@ -614,10 +456,9 @@ calc_normalobs_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncon)
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //returns covariant and contravariant four-velocity of a normal observer, given the value of alpha
 //n_mu=(-alp,0,0,0);  nu^mu = nu_0 * GG[mu][0]
+//**********************************************************************
 
 int
 calc_normalobs_ncov_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncov, ldouble *ncon)
@@ -634,12 +475,10 @@ calc_normalobs_ncov_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncov, ldouble 
   return 0.;
 }
 
-
-//**********************************************************************
-//**********************************************************************
 //**********************************************************************
 //returns contravariant four-velocity of a normal observer
 //n_mu=(-alp,0,0,0)
+//**********************************************************************
 
 int
 calc_normalobs_4vel(ldouble GG[][5], ldouble *ncon)
@@ -653,10 +492,8 @@ calc_normalobs_4vel(ldouble GG[][5], ldouble *ncon)
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //returns contravariant relative-velocity of a normal observer
-
+//**********************************************************************
 int
 calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon)
 {
@@ -670,12 +507,10 @@ calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon)
   return 0.;
 }
 
-
-//**********************************************************************
-//**********************************************************************
 //**********************************************************************
 //returns hydro primitives for an atmosphere
 //velocities already in VELPRIM
+//**********************************************************************
 
 int
 set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype)
@@ -693,6 +528,7 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       pp[2]=ucon[1];
       pp[3]=ucon[2];
       pp[4]=ucon[3];
+      
       // Bondi-like atmosphere
       coco_N(xx,xx2,MYCOORDS,BLCOORDS);
       ldouble r=xx2[1];
@@ -769,11 +605,14 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
 #endif
       ldouble r=xx[1];
       ldouble D=PAR_D/(r*r*sqrtl(2./r*(1.-2./r)));
-      ldouble E=PAR_E/(pow(r*r*sqrt(2./r),GAMMA)*pow(1.-2./r,(GAMMA+1.)/4.)); //indices inconsistent with CONSISTENTGAMMA
+      //indices inconsistent with CONSISTENTGAMMA
+      ldouble E=PAR_E/(pow(r*r*sqrt(2./r),GAMMA)*pow(1.-2./r,(GAMMA+1.)/4.));
+      
       ldouble V=sqrtl(2./r)*(1.-2./r);
       ldouble W=1./sqrtl(1.-V*V*gg[1][1]);
       ldouble rho=D/W;
       ldouble uint=E;
+
       //corrected rho:
       rho=PAR_D/(r*r*sqrtl(2./r));    
 
@@ -829,11 +668,109 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
   return 0.;
 }
 
+//**********************************************************************
+//returns rad primitives for an atmosphere
+//**********************************************************************
+
+int
+set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype)
+{
+#ifdef RADIATION   
+  if(atmtype==0) //fixed Erf, urf of normal observer
+    {
+      pp[EE0]=ERADATMMIN; 
+      ldouble ucon[4];
+      calc_normalobs_relvel(GG,ucon);
+      if (VELR != VELPRIMRAD)
+      {
+        conv_vels(ucon,ucon,VELR,VELPRIMRAD,gg,GG);
+      }
+ 
+      pp[FX0]=ucon[1]; 
+      pp[FY0]=ucon[2];
+      pp[FZ0]=ucon[3];
+    }
+  if(atmtype==1) //fixed Erf, urf 0 in lab frame
+    {
+      ldouble ucon[4];
+      ldouble xx2[4];
+      ldouble GGBL[4][5];
+
+      // BL coords
+      coco_N(xx,xx2,MYCOORDS,BLCOORDS);
+      calc_G_arb(xx2,GGBL,BLCOORDS);
+
+      // normal observer in BL = stationary observer
+      calc_normalobs_4vel(GGBL,ucon);
+     
+      // to MYCOORDS
+      trans2_coco(xx2,ucon,ucon,BLCOORDS,MYCOORDS);
+     
+      // to VELPRIMRAD
+      conv_vels_ut(ucon,ucon,VEL4,VELPRIMRAD,gg,GG);
+     
+      pp[FX0]=ucon[1];
+      pp[FY0]=ucon[2];
+      pp[FZ0]=ucon[3];
+
+      // print_4vector(ucon); getchar();
+      pp[EE0]=ERADATMMIN; 
+     }
+  if(atmtype==2) //optically thin atmosphere, scalings from numerical solution of radiall influx
+    {
+      ldouble gammamax=10.;
+      ldouble rout=2.; //normalize at r_BL=2
+
+      ldouble xxBL[4];
+      coco_N(xx,xxBL,MYCOORDS,BLCOORDS);
+      ldouble r=xxBL[1];
+     
+      pp[EE0]=ERADATMMIN*(rout/r)*(rout/r)*(rout/r)*(rout/r);
+
+      ldouble ut[4]={0.,-gammamax*pow(r/rout,1.),0.,0.};
+
+      ldouble ggBL[4][5],GGBL[4][5];
+      calc_g_arb(xxBL,ggBL,KERRCOORDS);
+      calc_G_arb(xxBL,GGBL,KERRCOORDS);
+
+      conv_vels(ut,ut,VELR,VEL4,ggBL,GGBL);
+
+      trans2_coco(xxBL,ut,ut,KERRCOORDS,MYCOORDS);
+
+      conv_vels_ut(ut,ut,VEL4,VELPRIM,gg,GG);
+      
+      pp[FX0]=ut[1];      
+      pp[FY0]=ut[2];      
+      pp[FZ0]=ut[3];
+
+    }
+  if(atmtype==3) //LTE, normal observer
+    {
+      ldouble Tgas=calc_PEQ_Tfromurho(pp[UU],pp[RHO],0,0,0); //indices inconsistent with CONSISTENTGAMMA
+      pp[EE0]=calc_LTE_EfromT(Tgas);
+
+      ldouble ucon[4];
+      calc_normalobs_relvel(GG,ucon);
+      if (VELR != VELPRIMRAD)
+      {
+        conv_vels(ucon,ucon,VELR,VELPRIMRAD,gg,GG);
+      }
+ 
+      pp[FX0]=ucon[1]; 
+      pp[FY0]=ucon[2];
+      pp[FZ0]=ucon[3];
+    }
+
+#ifdef EVOLVEPHOTONNUMBER
+  pp[NF0]=calc_NFfromE(pp[EE0]);
+#endif
+#endif //RADIATION
+  return 0;
+}
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //picks metric like tensor from cell face arr at ix,iy,iz
+//**********************************************************************
 
 int
 pick_Tb(ldouble* arr,int ix,int iy,int iz,int idim,ldouble T[][4])
@@ -847,9 +784,8 @@ pick_Tb(ldouble* arr,int ix,int iy,int iz,int idim,ldouble T[][4])
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //picks metric like tensor from arr at ix,iy,iz
+//**********************************************************************
 
 int
 pick_T(ldouble* arr,int ix,int iy,int iz,ldouble T[][4])
@@ -861,11 +797,9 @@ pick_T(ldouble* arr,int ix,int iy,int iz,ldouble T[][4])
   return 0;
 }
 
-
-//**********************************************************************
-//**********************************************************************
 //**********************************************************************
 //picks a metric at ix,iy,iz
+//**********************************************************************
 
 int
 pick_g(int ix,int iy,int iz,ldouble gg[][5])
@@ -880,9 +814,8 @@ pick_g(int ix,int iy,int iz,ldouble gg[][5])
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //picks gdet at ix,iy,iz
+//**********************************************************************
 
 ldouble
 pick_gdet(int ix,int iy,int iz)
@@ -893,9 +826,8 @@ pick_gdet(int ix,int iy,int iz)
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //picks an inversed metric at ix,iy,iz
+//**********************************************************************
 
 int
 pick_G(int ix,int iy,int iz,ldouble GG[][5])
@@ -910,9 +842,8 @@ pick_G(int ix,int iy,int iz,ldouble GG[][5])
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //picks a metric at cell faces
+//**********************************************************************
 
 int
 pick_gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
@@ -996,9 +927,8 @@ pick_gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //picks an inversed metric at cell faces
+//**********************************************************************
 
 int
 pick_Gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
@@ -1081,9 +1011,8 @@ pick_Gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //prints primitives
+//**********************************************************************
 
 int
 print_p(ldouble *p)
@@ -1097,9 +1026,8 @@ print_p(ldouble *p)
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //prints conserved
+//**********************************************************************
 
 int
 print_u(ldouble *u)

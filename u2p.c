@@ -626,7 +626,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   calc_ucon_ucov_from_prims(pp, geom, ucond, ucovd);
   calc_bcon_bcov_bsq_from_4vel(pp, ucond, ucovd, geom, bcond, bcovd, &bsq);
   magpre = 0.5 * bsq;
-  //calc_normalobs_4vel(GG,etacon);
+  
   calc_normalobs_ncon(GG, geom->alpha, etacon);
   conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
 

@@ -98,9 +98,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
       // dt is based on the estimate from the last timestep
       dt=1./tstepdenmax;
-      #ifdef SELFTIMESTEP
-      dt=1./tstepdenmin;
-      #endif
       global_dt=dt;
       
       if(t+dt>t1)
@@ -167,9 +164,6 @@ solve_the_problem(ldouble tstart, char* folder)
               iy=loop_0[ii][1];
               iz=loop_0[ii][2];
 
-              #ifdef SELFTIMESTEP
-	      dtcell=get_u_scalar(cell_dt,ix,iy,iz);
-              #endif	   
 	      PLOOP(iv) set_u(drt1,iv,ix,iy,iz,(1./(dtcell*gamma))*get_u(u,iv,ix,iy,iz)+(-1./(dtcell*gamma))*get_u(ut0,iv,ix,iy,iz)); 
 	    } 
 
@@ -218,9 +212,7 @@ solve_the_problem(ldouble tstart, char* folder)
               ix=loop_0[ii][0];
               iy=loop_0[ii][1];
               iz=loop_0[ii][2];
-              #ifdef SELFTIMESTEP
-	      dtcell=get_u_scalar(cell_dt,ix,iy,iz);
-              #endif
+
 	      PLOOP(iv) set_u(dut1,iv,ix,iy,iz,(1./(dtcell))*get_u(u,iv,ix,iy,iz)+(-1./(dtcell))*get_u(ut1,iv,ix,iy,iz)); 
 	    }
 	   
@@ -233,9 +225,7 @@ solve_the_problem(ldouble tstart, char* folder)
               ix=loop_0[ii][0];
               iy=loop_0[ii][1];
               iz=loop_0[ii][2];
-              #ifdef SELFTIMESTEP
-	      dtcell=get_u_scalar(cell_dt,ix,iy,iz);
-              #endif
+
 	      PLOOP(iv) set_u(u,iv,ix,iy,iz,get_u(ut0,iv,ix,iy,iz)+(dtcell)*get_u(dut1,iv,ix,iy,iz)+(dtcell*(1.-2.*gamma))*get_u(drt1,iv,ix,iy,iz)); 
 	    }
 	    
@@ -282,9 +272,7 @@ solve_the_problem(ldouble tstart, char* folder)
               ix=loop_0[ii][0];
               iy=loop_0[ii][1];
               iz=loop_0[ii][2];
-              #ifdef SELFTIMESTEP
-	      dtcell=get_u_scalar(cell_dt,ix,iy,iz);
-              #endif
+
 	      PLOOP(iv) set_u(drt2,iv,ix,iy,iz,(1./(dtcell*gamma))*get_u(u,iv,ix,iy,iz)+(-1./(dtcell*gamma))*get_u(uforget,iv,ix,iy,iz)); 
 	    }
 	  
@@ -333,9 +321,7 @@ solve_the_problem(ldouble tstart, char* folder)
               ix=loop_0[ii][0];
               iy=loop_0[ii][1];
               iz=loop_0[ii][2];
-              #ifdef SELFTIMESTEP
-	      dtcell=get_u_scalar(cell_dt,ix,iy,iz);
-              #endif
+
 	      PLOOP(iv) set_u(dut2,iv,ix,iy,iz,(1./(dtcell))*get_u(u,iv,ix,iy,iz)+(-1./(dtcell))*get_u(ut2,iv,ix,iy,iz)); 
 	    }
 	 
@@ -347,9 +333,7 @@ solve_the_problem(ldouble tstart, char* folder)
               ix=loop_0[ii][0];
               iy=loop_0[ii][1];
               iz=loop_0[ii][2];
-              #ifdef SELFTIMESTEP
-	      dtcell=get_u_scalar(cell_dt,ix,iy,iz);
-              #endif	      
+
 	      PLOOP(iv) set_u(u,iv,ix,iy,iz,get_u(ut0,iv,ix,iy,iz)+(dtcell/2.)*get_u(dut1,iv,ix,iy,iz)+(dtcell/2.)*get_u(dut2,iv,ix,iy,iz)); 
 	    }
 	    
@@ -362,9 +346,7 @@ solve_the_problem(ldouble tstart, char* folder)
               ix=loop_0[ii][0];
               iy=loop_0[ii][1];
               iz=loop_0[ii][2];
-              #ifdef SELFTIMESTEP
-	      dtcell=get_u_scalar(cell_dt,ix,iy,iz);
-              #endif
+
 	      PLOOP(iv) set_u(u,iv,ix,iy,iz,get_u(u,iv,ix,iy,iz)+(dtcell/2.)*get_u(drt1,iv,ix,iy,iz)+(dtcell/2.)*get_u(drt2,iv,ix,iy,iz));
 	    }
 	   

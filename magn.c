@@ -1159,9 +1159,6 @@ mimic_dynamo(ldouble dtin)
 
       //timestep
       dt=dtin;
-      #ifdef SELFTIMESTEP
-      dt=1./get_u_scalar(cell_tsteps,ix,iy,iz); //individual time step
-      #endif
 
       ldouble Bphi=get_u(p,B3,ix,iy,iz);
       Aphi = effalpha * (HRDTHETA/(M_PI/2.)) / 0.4 

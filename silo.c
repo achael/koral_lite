@@ -728,9 +728,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	       
                dt=get_u_scalar(cell_dt,ix,iy,iz); //individual time step //?? but need min?
 	       dt=1./tstepdenmax;
-               #ifdef SELFTIMESTEP
-	       dt=1./tstepdenmin;
-               #endif
 
 	       ldouble dtau = dt/velcoord[0];
 	       dtauarr[zonalindex] = dtau;

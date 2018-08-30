@@ -1007,62 +1007,6 @@ int f_general_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   PLOOP(iv) ss[iv]=0.;  // zero out all source terms initially
 
 /***************************************************/
-//gravitational atraction applied directly following the Paczynski-Witta potential
-#if defined(PWPOTENTIAL)
-  #ifdef EVOLVEELECTRONS
-  my_err("PWPOTENTIAL not implemented for Electron Evolution!");
-  #endif
-
-  //gas velocity
-  ldouble ucon[4];
-  ucon[1]=pp[VX];
-  ucon[2]=pp[VY];
-  ucon[3]=pp[VZ];
-  conv_vels(ucon,ucon,VELPRIM,VEL4,geom->gg,geom->GG);
-  //gas density
-  ldouble rho=pp[RHO];
-  //state
-  //struct struct_of_state state;
-  //fill_struct_of_state(pp,geom,&state);
-
-  //coordinates
-  if(MYCOORDS!=SPHCOORDS && MYCOORDS!=CYLCOORDS) 
-    my_err("PWPOTENIAL implemented only for SPHCOORDS and CYLCOORDS\n");
-
-  if(if_coords_sphericallike(MYCOORDS))
-    {
-      ldouble xxvecSPH[4],r;
-      coco_N(geom->xxvec,xxvecSPH,MYCOORDS,BLCOORDS);
-      r=xxvecSPH[1];
-      //radial gradient of phi
-      ldouble dphi=1./(r-2.)/(r-2.);
-      //radial acceleration
-      ss[VX]+=-gdetu*rho*dphi;
-      //what increases the total energy as well
-      ss[UU]+=gdetu*rho*ucon[1]*dphi;
-    }
-
-  if(if_coords_cylindricallike(MYCOORDS))
-    {
-      ldouble xxvecCYL[4],R,z,r;
-      coco_N(geom->xxvec,xxvecCYL,MYCOORDS,CYLCOORDS);
-      R=xxvecCYL[1];
-      z=xxvecCYL[2];
-      r=sqrt(R*R+z*z);
-      //gradients of phi
-      ldouble dphidR,dphidz;
-      dphidR=R/(r*(-2.+r)*(-2.+r));
-      dphidz=z/(r*(-2.+r)*(-2.+r));
-      
-      ss[VX]+=-gdetu*rho*dphidR;
-      ss[VY]+=-gdetu*rho*dphidz;
-      //what increases the total energy as well
-      ss[UU]+=gdetu*rho*(ucon[1]*dphidR+ucon[2]*dphidz);
-    }
-
-#endif //PWPOTENTIAL
-
-/***************************************************/
 //artificial heating of gas at constant rate per unit mass
 #if defined(HEATINGRATEPERMASS) || defined(HEATINGRATEPERMASSSQ) || defined(HEATINGCONSTANT)
   #ifdef EVOLVEELECTRONS
@@ -2318,9 +2262,6 @@ heat_electronions_with_state(ldouble dtin)
 
       //timestep
       dt=dtin;
-      #ifdef SELFTIMESTEP
-      dt=get_u_scalar(cell_dt,ix,iy,iz); //individual time step
-      #endif
 
       struct geometry geom;
       fill_geometry(ix,iy,iz,&geom); 

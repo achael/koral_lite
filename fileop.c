@@ -30,13 +30,6 @@ save_avg(ldouble dtin)
 
 	      //timestep
 	      ldouble dt=dtin;
-              #ifdef SELFTIMESTEP
-	      dt=get_u_scalar(cell_dt,ix,iy,iz); //individual time step
-
-	      //ANDREW -- Fix this!!
-	      //for some reason this is not working, replace with:
-	      dt=1.;
-#endif
 
 #ifdef RADIATION //if implicit failed, do not take this step into account at all for failed cells
 	      if(get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)==0)
@@ -607,8 +600,7 @@ fprint_outfile(ldouble t, int nfile, int codeprim, char* folder, char *prefix)
 									  get_xx(ix,iy,iz,xxvec);
 						      
 									  coco_N(xxvec,xxvecout,MYCOORDS,OUTCOORDS);
-									  //						  coco_N(xxvec,xxvecout,MYCOORDS,BLCOORDS);
-
+									  
 									  xx=xxvecout[1];
 									  yy=xxvecout[2];
 									  zz=xxvecout[3];
@@ -647,8 +639,8 @@ fprint_outfile(ldouble t, int nfile, int codeprim, char* folder, char *prefix)
 
 
 						  
-									  ldouble tup[4][4],tlo[4][4];    
-									  ldouble eup[4][4],elo[4][4];
+									  //ldouble tup[4][4],tlo[4][4];    
+									  //ldouble eup[4][4],elo[4][4];
 
 									  //to transform primitives between coordinates if necessary
 									  ldouble ggout[4][5],GGout[4][5];
@@ -673,8 +665,8 @@ fprint_outfile(ldouble t, int nfile, int codeprim, char* folder, char *prefix)
 										for(j=0;j<5;j++)
 										  { gg[i][j]=ggout[i][j]; GG[i][j]=GGout[i][j]; }
 
-									      calc_tetrades(gg,tup,tlo,OUTCOORDS);
-									      calc_ZAMOes(gg,eup,elo,OUTCOORDS);
+									      //calc_tetrades(gg,tup,tlo,OUTCOORDS);
+									      //calc_ZAMOes(gg,eup,elo,OUTCOORDS);
 									    }
 
 
@@ -716,13 +708,14 @@ fprint_outfile(ldouble t, int nfile, int codeprim, char* folder, char *prefix)
 
 									  if(codeprim==0)
 									    {
-#ifdef RADOUTPUTINFF
-									      prad_lab2ff(pp,pp,&geom);
-#endif
 
-#ifdef RADOUTPUTINZAMO //to print  radiation primitives in ZAMO, sometimes may not tetrad properly
-									      prad_lab2on(pp,pp,&geom);
-#endif
+                                                                              //#ifdef RADOUTPUTINFF
+									      //prad_lab2ff(pp,pp,&geom);
+                                                                              //#endif
+
+                                                                              //#ifdef RADOUTPUTINZAMO 
+									      //prad_lab2on(pp,pp,&geom);
+                                                                              //#endif
 
 #ifdef RADOUTPUTVELS
 									      ldouble vrelrad[4]={0,pp[7],pp[8],pp[9]};
@@ -2258,18 +2251,27 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
 	       //ldouble tracer=pp[TRA];
 	       ldouble vel[4]={0,pp[VX],pp[VY],pp[VZ]};	
 	       ldouble vx,vy,vz;
-	       conv_vels(vel,vel,VELPRIM,VEL4,geomout.gg,geomout.GG);						  
-	       trans2_cc2on(vel,vel,geomout.tup);
+	       conv_vels(vel,vel,VELPRIM,VEL4,geomout.gg,geomout.GG);
+
+	       //TODO
+	       //tetrads sie zesraly
+	       //trans2_cc2on(vel,vel,geomout.tup); //ANDREW replaced with below 
+
 	       vx=vel[1];
 	       vy=vel[2];
 	       vz=vel[3];
+	       
 	       //transform to cartesian
-	       if (MYCOORDS==SCHWCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS || MYCOORDS==MKS1COORDS)
+	       if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS   || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
+		   MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
 		 {
 		   ldouble r=geomsph.xx;
 		   ldouble th=geomsph.yy;
 		   ldouble ph=geomsph.zz;
 
+		   vel[2]*=r;
+		   vel[3]*=r*sin(th);
+		    
 		   vx = sin(th)*cos(ph)*vel[1] 
 		     + cos(th)*cos(ph)*vel[2]
 		     - sin(ph)*vel[3];

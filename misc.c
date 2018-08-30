@@ -194,7 +194,11 @@ am_i_sane()
     exit(-1);
   }
 
-  
+#ifdef PWPOTENTIAL
+  printf("PWPOTENTIAL has been removed!\n");
+  exit(-1);
+#endif
+
 #ifdef NCOMPTONIZATION
   printf("NCOMPTONIZATION has been replaced by EVOLVEPHOTONNUMBER!\n");
   exit(-1);
@@ -325,6 +329,17 @@ am_i_sane()
 
 #ifdef NUMRADWAVESPEEDS
   printf("NUMRADWAVESPEEDS is not currently supported!\n");
+  exit(-1);
+#endif
+
+
+#ifdef RADOUTPUTINFF
+  printf("RADOUTPUTINFF no longer supported!\n");
+  exit(-1);
+#endif
+
+#ifdef RADOUTPUTINZAMO
+  printf("RADOUTPUTINZAMO no longer supported!\n");
   exit(-1);
 #endif
 

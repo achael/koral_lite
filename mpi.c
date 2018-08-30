@@ -1,212 +1,8 @@
 /*! \file mpi.c
  \brief MPI-related routines
- */
-
+*/
 
 #include "ko.h"
-
-
-///////////////////////////////////////////////////////////////
-
-int
-calc_avgs_throughout()
-{
-  /***************************/
-  //scale height at each radius - works in parallel
-
-#ifdef CALCHRONTHEGO
-  
-  int ix,iy,iz,gix,giy,giz; struct geometry geom, geomBL;
-  ldouble sigma,scaleth,xxBL[4];
-  
-#pragma omp parallel for
-  for(gix=0;gix<TNX;gix++)
-  {
-    sigma_otg_temp[gix] = 0.;
-    scaleth_otg_temp[gix] = 0.;
-  }
-
-#pragma omp parallel for private(iy, iz, gix, sigma, scaleth, geom, xxBL)
-  for(ix=0;ix<NX;ix++)
-  {
-    sigma=scaleth=0.;
-    for(iy=0;iy<NY;iy++)
-    {
-      for(iz=0;iz<NZ;iz++)
-      {
-        fill_geometry(ix,iy,iz,&geom);
-        coco_N(geom.xxvec,xxBL,MYCOORDS,BLCOORDS);
-        sigma+=get_u(p,RHO,ix,iy,iz)*geom.gdet;
-        scaleth+=get_u(p,RHO,ix,iy,iz)*geom.gdet*(M_PI/2. - xxBL[2])*(M_PI/2. - xxBL[2]);
-      }
-    }
-    gix=ix+TOI;
-    
-    sigma_otg_temp[gix]=sigma;
-    scaleth_otg_temp[gix]=scaleth;
-  }
-
-#ifdef MPI
-  MPI_Allreduce(sigma_otg_temp, sigma_otg, TNX, MPI_LDOUBLE, MPI_SUM,
-		MPI_COMM_WORLD);
-  MPI_Allreduce(scaleth_otg_temp, scaleth_otg, TNX, MPI_LDOUBLE, MPI_SUM,
-		MPI_COMM_WORLD);
-#else
-#pragma omp parallel for private(gix)
-  for(ix=0;ix<NX;ix++)
-  {
-    gix=ix+TOI;
-    sigma_otg[gix]=sigma_otg_temp[gix];
-    scaleth_otg[gix]=scaleth_otg_temp[gix];
-  }
-#endif
-  
-#pragma omp parallel for private(gix)
-  for(ix=-NGCX;ix<NX+NGCX;ix++)
-  {
-    gix=ix+TOI;
-    if(gix>0 && gix<TNX)
-      scaleth_otg[gix]=sqrt(scaleth_otg[gix]/sigma_otg[gix]);
-    
-  }
-#endif  // ifdef CALCHRONTHEGO
-  /***************************/
-
-  /***************************/
-  //averaging velocities 
-#ifdef CORRECT_POLARAXIS_3D
-#ifdef POLARAXISAVGIN3D
-
-#ifdef PHIWEDGE
- if(PHIWEDGE<0.999*2.*M_PI)
-   my_warning("POLARAXISAVGIN3D requires full 2 pi in azimuth!\n");
-#endif
- 
- int ix,iy,iz,gix,giy,giz,iv; 
- struct geometry geom, geomBL;
- ldouble v[4],ucon[4],r,th,ph;
-
-//#pragma omp parallel for private(iv)  // not tested
- for(gix=0;gix<TNX;gix++)
- {
-   for(iv=0;iv<NV+2;iv++)
-   {
-     axis1_primplus_temp[iv][gix] = 0.;
-     axis1_primplus[iv][gix] = 0.;
-     axis2_primplus_temp[iv][gix] = 0.;
-     axis2_primplus[iv][gix] = 0.;
-   }
- }
-
-  //#pragma omp parallel for private(gix, iz, iv, geom, geomBL, v)  // not tested
- for(ix=0;ix<NX;ix++)
- {
-   gix=ix+TOI;
-   for(iz=0;iz<NZ;iz++)
-   {
-#ifdef MPI
-     if(TJ==0) //topmost tile
-#endif
-     {
-       fill_geometry(ix,NCCORRECTPOLAR,iz,&geom);
-       fill_geometry_arb(ix,NCCORRECTPOLAR,iz,&geomBL,BLCOORDS);
-       
-       axis1_primplus_temp[RHO][gix]+=get_u(p,RHO,ix,NCCORRECTPOLAR,iz);
-       axis1_primplus_temp[UU][gix]+=get_u(p,UU,ix,NCCORRECTPOLAR,iz);
-       //cartesian velocities in VX..VZ slots
-       decompose_vels(&get_u(p,0,ix,NCCORRECTPOLAR,iz),VX,v,&geom,&geomBL);
-       axis1_primplus_temp[VX][gix]+=v[1];
-       axis1_primplus_temp[VY][gix]+=v[2];
-       axis1_primplus_temp[VZ][gix]+=v[3];
-       //angular velocity in NV slot!!!
-       axis1_primplus_temp[NV][gix]+=get_u(p,VZ,ix,NCCORRECTPOLAR,iz);
-       
-#ifdef RADIATION
-       axis1_primplus_temp[EE][gix]+=get_u(p,EE,ix,NCCORRECTPOLAR,iz);
-#ifdef EVOLVEPHOTONNUMBER
-       axis1_primplus_temp[NF][gix]+=get_u(p,NF,ix,NCCORRECTPOLAR,iz);
-#endif
-       //cartesian velocities in FX..FZ slots
-       decompose_vels(&get_u(p,0,ix,NCCORRECTPOLAR,iz),FX,v,&geom,&geomBL);
-       //if(ix==10) printf("1 %d > %e | %e %e %e\n",ix,get_u(p,EE,ix,NCCORRECTPOLAR,iz),v[1],v[2],v[3]);
-       axis1_primplus_temp[FX][gix]+=v[1];
-       axis1_primplus_temp[FY][gix]+=v[2];
-       axis1_primplus_temp[FZ][gix]+=v[3];
-       //rad angular velocity in NV+1 slot!!!
-       axis1_primplus_temp[NV+1][gix]+=get_u(p,FZ,ix,NCCORRECTPOLAR,iz);
-#endif //RADIATION
-     }
-     
-#ifdef MPI
-     if(TJ==NTY-1) //bottommost tile
-#endif
-     {
-       fill_geometry(ix,NY-NCCORRECTPOLAR-1,iz,&geom);
-       fill_geometry_arb(ix,NY-NCCORRECTPOLAR-1,iz,&geomBL,BLCOORDS);
-       
-       axis2_primplus_temp[RHO][gix]+=get_u(p,RHO,ix,NY-NCCORRECTPOLAR-1,iz);
-       
-       axis2_primplus_temp[UU][gix]+=get_u(p,UU,ix,NY-NCCORRECTPOLAR-1,iz);
-       //cartesian velocities in VX..VZ slots
-       decompose_vels(&get_u(p,0,ix,NY-NCCORRECTPOLAR-1,iz),VX,v,&geom,&geomBL);
-       axis2_primplus_temp[VX][gix]+=v[1];
-       axis2_primplus_temp[VY][gix]+=v[2];
-       axis2_primplus_temp[VZ][gix]+=v[3];
-       //angular velocity in NV slot!!!
-       axis2_primplus_temp[NV][gix]+=get_u(p,VZ,ix,NY-NCCORRECTPOLAR-1,iz);
-       
-#ifdef RADIATION
-       axis2_primplus_temp[EE][gix]+=get_u(p,EE,ix,NY-NCCORRECTPOLAR-1,iz);
-#ifdef EVOLVEPHOTONNUMBER
-       axis2_primplus_temp[NF][gix]+=get_u(p,NF,ix,NY-NCCORRECTPOLAR-1,iz);
-#endif 
-       //cartesian velocities in FX..FZ slots
-       decompose_vels(&get_u(p,0,ix,NY-NCCORRECTPOLAR-1,iz),FX,v,&geom,&geomBL);
-       //if(ix==10) printf("2 %d > %e | %e %e %e\n",ix,get_u(p,EE,ix,NY-NCCORRECTPOLAR-1,iz),v[1],v[2],v[3]);
-       axis2_primplus_temp[FX][gix]+=v[1];
-       axis2_primplus_temp[FY][gix]+=v[2];
-       axis2_primplus_temp[FZ][gix]+=v[3];
-       //angular velocity in NV+1 slot!!!
-       axis2_primplus_temp[NV+1][gix]+=get_u(p,FZ,ix,NY-NCCORRECTPOLAR-1,iz);
-#endif //RADIATION
-     }
-   }
-   for(iv=0;iv<NV+2;iv++)
-   {
-     axis1_primplus_temp[iv][gix]/=NZ;
-     axis2_primplus_temp[iv][gix]/=NZ;
-   }
- }
-
-#ifdef MPI
- MPI_Allreduce(&axis1_primplus_temp[0][0], &axis1_primplus[0][0], TNX*(NV+2), MPI_LDOUBLE, MPI_SUM,
-		MPI_COMM_WORLD);
- MPI_Allreduce(&axis2_primplus_temp[0][0], &axis2_primplus[0][0], TNX*(NV+2), MPI_LDOUBLE, MPI_SUM,
-		MPI_COMM_WORLD);
-#else 
-#pragma omp parallel for private(gix, iv)  // not tested
-  for(ix=0;ix<NX;ix++)
-  {
-    gix=ix+TOI;
-    for(iv=0;iv<NV+2;iv++)
-    {
-      axis1_primplus[iv][gix]=axis1_primplus_temp[iv][gix];
-      axis2_primplus[iv][gix]=axis2_primplus_temp[iv][gix];
-    }
-  }
-#endif
-  
-#endif //POLARAXISAVGIN3D
-#endif  // ifdef CORRECT_POLARAXIS_3D
-
-  
-  /***************************/
-
-return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
 
 int
 mpi_exchangedata()
@@ -222,54 +18,8 @@ mpi_exchangedata()
   mpi_senddata(reqs,&nreqs);
   mpi_recvdata(reqs,&nreqs);
 
-  /****************************/
-  /*
-  // testing which messages are lost
-  int count,out1[MPIMSGBUFSIZE],out2[MPIMSGBUFSIZE],tags[MPIMSGBUFSIZE];
-  MPI_Status statuses[MPIMSGBUFSIZE];
-  for(int i=0;i<MPIMSGBUFSIZE;i++)
-    {
-      out1[i]=out2[i]=0;
-      tags[i]=-1;
-    }
-  for(;;)
-    { 
-      MPI_Barrier(MPI_COMM_WORLD);
-      getch();
-      MPI_Testsome(nreqs,reqs,&count,out1,statuses);
-      if(PROCID==7) 
-	{
-	  printf("\n");
-	  for(int i=0;i<count;i++)
-	    {
-	      out2[out1[i]]=1;
-	      tags[out1[i]]=statuses[i].MPI_TAG;
-	    }
-	  printf("%2d > %3d (%3d) > ",PROCID,count ,nreqs);
-	  for(int i=0;i<MPIMSGBUFSIZE;i++)
-	      printf("%d ",out2[i]);
-	  printf("\n");
-	  printf("tags of completed msgs: \n");
-	  for(int i=0;i<MPIMSGBUFSIZE;i++)
-	    {	    
-	      if(out2[i]==0 || 1) 
-		{
-		  printf("%d ",tags[i]);
-		}
-	    }
-	  fflush(stdout);
-	}     
-    }
-  // end of testing
-  */
-  /*****************************/
-
   MPI_Waitall(nreqs, reqs, MPI_STATUSES_IGNORE);
   mpi_savedata();  
-
-
-  //updates polytropic indices in the ghost cells
-  //set_gammagas(2);
 
 #endif
 
@@ -279,9 +29,653 @@ mpi_exchangedata()
   return 0;
 }
 
+#ifdef MPI //comments out send and recv so that non-mpi compiler can compile without MPI_Request
 
-///////////////////////////////////////////////////////////////
-#ifdef MPI //thick bracket comments out recv and send so that non-mpi compiler can compile without MPI_Request
+int
+mpi_senddata(MPI_Request *reqs, int *nreqs)
+{  
+  int i,j,k,iv;
+  int tx,ty,tz;
+  int verbose=0;
+  ldouble temp;
+
+  //lower x
+  if(mpi_isitBC(XBCLO)==0)
+    {
+      tx=TI-1;
+      ty=TJ;
+      tz=TK;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=0;j<NY;j++)
+	  for(k=0;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[0][(i)*NY*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[0], NY*NZ*NV*NG, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+      if(verbose) printf("%d sent MPI_MSG_XLO to %d\n",PROCID,mpi_tile2procid(tx,ty,tz));
+    }
+
+  //upper x
+  if(mpi_isitBC(XBCHI)==0)
+    {
+      tx=TI+1;
+      ty=TJ;
+      tz=TK;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      for(i=NX-NG;i<NX;i++)
+	for(j=0;j<NY;j++)
+	  for(k=0;k<NZ;k++)
+	    for(iv=0;iv<NV;iv++)
+	      msgbufs[1][(i-NX+NG)*NY*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+      MPI_Isend(msgbufs[1],NG*NY*NZ*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+      if(verbose) printf("%d sent MPI_MSG_XHI to %d\n",PROCID,mpi_tile2procid(tx,ty,tz));
+    }
+
+  //lower y
+  if(mpi_isitBC(YBCLO)==0)
+    {
+      tx=TI;
+      ty=TJ-1;
+      tz=TK;
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+      for(i=0;i<NX;i++)
+	for(j=0;j<NG;j++)
+	  for(k=0;k<NZ;k++)
+	    for(iv=0;iv<NV;iv++)
+	      msgbufs[2][i*NG*NZ*NV + (j)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+      MPI_Isend(msgbufs[2], NX*NG*NZ*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_YLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }
+
+  //upper y
+  if(mpi_isitBC(YBCHI)==0)
+    {
+      tx=TI;
+      ty=TJ+1;
+      tz=TK;
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+      for(i=0;i<NX;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=0;k<NZ;k++)
+	    for(iv=0;iv<NV;iv++)
+	      msgbufs[3][i*NG*NZ*NV + (j-NY+NG)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+      MPI_Isend(msgbufs[3], NX*NG*NZ*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_YHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }
+  
+  //lower z
+  if(mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI;
+      ty=TJ;
+      tz=TK-1;
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=0;i<NX;i++)
+	for(j=0;j<NY;j++)
+	  for(k=0;k<NG;k++)
+	    for(iv=0;iv<NV;iv++)
+	      msgbufs[4][i*NY*NG*NV + j*NG*NV + (k)*NV + iv]=get_u(p,iv,i,j,k);
+      MPI_Isend(msgbufs[4], NX*NY*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_ZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }
+
+  //upper z
+  if(mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI;
+      ty=TJ;
+      tz=TK+1;
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+      for(i=0;i<NX;i++)
+	for(j=0;j<NY;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    for(iv=0;iv<NV;iv++)
+	      msgbufs[5][i*NY*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+      MPI_Isend(msgbufs[5], NX*NY*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_ZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }
+
+#ifdef MPI4CORNERS
+
+  //elongated corners - along z
+  //lower x lower y
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0)
+    {
+      tx=TI-1;
+      ty=TJ-1;
+      tz=TK;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=0;j<NG;j++)
+	  for(k=0;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[12][i*NG*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[12], NG*NG*NZ*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+  //lower x higher y
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCHI)==0)
+    {
+      tx=TI-1;
+      ty=TJ+1;
+      tz=TK;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=0;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[13][i*NG*NZ*NV + (j-NY+NG)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[13], NG*NG*NZ*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }
+  //higher x lower y
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0)
+    {
+      tx=TI+1;
+      ty=TJ-1;
+      tz=TK;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=0;j<NG;j++)
+	  for(k=0;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[14][(i-NX+NG)*NG*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[14], NG*NG*NZ*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+  //higher x higher y
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCHI)==0)
+    {
+      tx=TI+1;
+      ty=TJ+1;
+      tz=TK;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=0;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[15][(i-NX+NG)*NG*NZ*NV + (j-NY+NG)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[15], NG*NG*NZ*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  //elongated corners - along y
+  //lower x lower z
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI-1;
+      ty=TJ;
+      tz=TK-1;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=0;j<NY;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[16][i*NY*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[16], NG*NY*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+  //lower x higher z
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI-1;
+      ty=TJ;
+      tz=TK+1;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=0;j<NY;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[17][i*NY*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[17], NG*NY*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }
+  //higher x lower z
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI+1;
+      ty=TJ;
+      tz=TK-1;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=0;j<NY;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[18][(i-NX+NG)*NY*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[18], NG*NY*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+  //higher x higher z
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI+1;
+      ty=TJ;
+      tz=TK+1;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=0;j<NY;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[19][(i-NX+NG)*NY*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[19], NG*NY*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  //elongated corners - along x
+  //lower y lower z
+  if(mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI;
+      ty=TJ-1;
+      tz=TK-1;
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=0;i<NX;i++)
+	for(j=0;j<NG;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[20][i*NG*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[20], NX*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_YLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+  //lower y higher z
+  if(mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI;
+      ty=TJ-1;
+      tz=TK+1;
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=0;i<NX;i++)
+	for(j=0;j<NG;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[21][i*NG*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[21], NX*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_YLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }
+  //higher y lower z
+  if(mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI;
+      ty=TJ+1;
+      tz=TK-1;
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=0;i<NX;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[22][i*NG*NG*NV + (j-NY+NG)*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[22], NX*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_YHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+  //higher y higher z
+  if(mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI;
+      ty=TJ+1;
+      tz=TK+1;
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=0;i<NX;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[23][i*NG*NG*NV + (j-NY+NG)*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[23], NX*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_YHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  /********** corners corners ************/
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI-1;
+      ty=TJ-1;
+      tz=TK-1;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=0;j<NG;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[24][i*NG*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[24], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI-1;
+      ty=TJ-1;
+      tz=TK+1;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=0;j<NG;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[25][i*NG*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[25], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI-1;
+      ty=TJ+1;
+      tz=TK-1;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[26][i*NG*NG*NV + (j-NY+NG)*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[26], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI-1;
+      ty=TJ+1;
+      tz=TK+1;
+      #ifdef PERIODIC_XBC
+      if(tx<0) tx+=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=0;i<NG;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[27][i*NG*NG*NV + (j-NY+NG)*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[27], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI+1;
+      ty=TJ-1;
+      tz=TK-1;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=0;j<NG;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[28][(i-NX+NG)*NG*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[28], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI+1;
+      ty=TJ-1;
+      tz=TK+1;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty<0) ty+=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=0;j<NG;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[29][(i-NX+NG)*NG*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[29], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCLO)==0)
+    {
+      tx=TI+1;
+      ty=TJ+1;
+      tz=TK-1;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz<0) tz+=NTZ;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=0;k<NG;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[30][(i-NX+NG)*NG*NG*NV + (j-NY+NG)*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[30], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
+    {
+      tx=TI+1;
+      ty=TJ+1;
+      tz=TK+1;
+      #ifdef PERIODIC_XBC
+      if(tx>=NTX) tx-=NTX;
+      #endif
+      #ifdef PERIODIC_YBC
+      if(ty>=NTY) ty-=NTY;
+      #endif
+      #ifdef PERIODIC_ZBC
+      if(tz>=NTZ) tz-=NTZ;
+      #endif
+
+      for(i=NX-NG;i<NX;i++)
+	for(j=NY-NG;j<NY;j++)
+	  for(k=NZ-NG;k<NZ;k++)
+	    {
+	      for(iv=0;iv<NV;iv++)
+		msgbufs[31][(i-NX+NG)*NG*NG*NV + (j-NY+NG)*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
+	    }
+      MPI_Isend(msgbufs[31], NG*NG*NG*NV, MPI_DOUBLE,
+		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
+      *nreqs=*nreqs+1;
+    }  
+#endif //MPI4CORNERS
+
+  return 0;
+}
+
 int
 mpi_recvdata(MPI_Request *reqs, int *nreqs)
 {
@@ -290,6 +684,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
   double temp;
   int verbose=0;
   int tx,ty,tz;
+
   //upper x
   if(mpi_isitBC(XBCHI)==0)
     {
@@ -349,6 +744,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
       *nreqs=*nreqs+1;
       if(verbose) printf("%d received MPI_MSG_YHI from %d\n",PROCID,mpi_tile2procid(TI,TJ-1,TK));
     }
+
   //upper z
   if(mpi_isitBC(ZBCHI)==0)
     {							
@@ -362,6 +758,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
 		mpi_tile2procid(tx,ty,tz), MPI_MSG_ZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
       *nreqs=*nreqs+1;
     }
+
   //lower z
   if(mpi_isitBC(ZBCLO)==0)
     {
@@ -509,7 +906,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
 		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIZHI, MPI_COMM_WORLD ,&reqs[*nreqs]);
       *nreqs=*nreqs+1;
    }
-   //elongated along x
+  //elongated along x
   //upper y upper z
   if(mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
     {
@@ -614,7 +1011,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
       *nreqs=*nreqs+1;
    }
 
- if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
     {
       tx=TI+1;
       ty=TJ-1;
@@ -633,7 +1030,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
       *nreqs=*nreqs+1;
    }
 
- if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
+  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
     {
       tx=TI+1;
       ty=TJ-1;
@@ -690,7 +1087,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
       *nreqs=*nreqs+1;
    }
 
- if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
     {
       tx=TI-1;
       ty=TJ-1;
@@ -709,7 +1106,7 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
       *nreqs=*nreqs+1;
    }
 
- if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
+  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
     {
       tx=TI-1;
       ty=TJ-1;
@@ -728,13 +1125,11 @@ mpi_recvdata(MPI_Request *reqs, int *nreqs)
       *nreqs=*nreqs+1;
    }
 
-#endif  
+#endif //MPI4CORNERS
 
   return 0;
 }
 
-
-///////////////////////////////////////////////////////////////
 int
 mpi_savedata()
 {
@@ -762,7 +1157,7 @@ mpi_savedata()
 	      set_u(p,iv,i,j,k,msgbufs[7][(i+NG)*NY*NZ*NV + j*NZ*NV + k*NV + iv]);
     } 
 
- //upper y
+  //upper y
   if(mpi_isitBC(YBCHI)==0)
     {
       for(i=0;i<NX;i++)
@@ -791,7 +1186,8 @@ mpi_savedata()
 	    for(iv=0;iv<NV;iv++)
 	      set_u(p,iv,i,j,k,msgbufs[10][i*NY*NG*NV + j*NG*NV + (k-NZ)*NV + iv]);
     }
-   //lower z
+
+  //lower z
   if(mpi_isitBC(ZBCLO)==0)
     {
       for(i=0;i<NX;i++)
@@ -938,7 +1334,8 @@ mpi_savedata()
 		set_u(p,iv,i,j,k,msgbufs[43][i*NG*NG*NV + (j+NG)*NG*NV + (k+NG)*NV + iv]);
 	    }
     }
-  //corners corners
+  
+  /********** corners corners ************/
   if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
     {
       for(i=NX;i<NX+NG;i++)
@@ -960,7 +1357,6 @@ mpi_savedata()
 		set_u(p,iv,i,j,k,msgbufs[45][(i-NX)*NG*NG*NV + (j-NY)*NG*NV + (k+NG)*NV + iv]);
 	    }
     }
-
 
   if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
     {
@@ -1006,7 +1402,6 @@ mpi_savedata()
 	    }
     }
 
-
   if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
     {
       for(i=-NG;i<0;i++)
@@ -1029,672 +1424,15 @@ mpi_savedata()
 	    }
     }
 
-
-#endif
-
+#endif //MPI4CORNERS
 
   return 0; 
 }
+#endif //MPI
 
 
 ///////////////////////////////////////////////////////////////
-
-int
-mpi_senddata(MPI_Request *reqs, int *nreqs)
-{  
-  int i,j,k,iv;
-  int tx,ty,tz;
-  int verbose=0;
-  ldouble temp;
-
-  //lower x
-  if(mpi_isitBC(XBCLO)==0)
-    {
-      tx=TI-1;
-      ty=TJ;
-      tz=TK;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=0;j<NY;j++)
-	  for(k=0;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[0][(i)*NY*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[0], NY*NZ*NV*NG, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-      if(verbose) printf("%d sent MPI_MSG_XLO to %d\n",PROCID,mpi_tile2procid(tx,ty,tz));
-    }
-
-  //upper x
-  if(mpi_isitBC(XBCHI)==0)
-    {
-      tx=TI+1;
-      ty=TJ;
-      tz=TK;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      for(i=NX-NG;i<NX;i++)
-	for(j=0;j<NY;j++)
-	  for(k=0;k<NZ;k++)
-	    for(iv=0;iv<NV;iv++)
-	      msgbufs[1][(i-NX+NG)*NY*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-      MPI_Isend(msgbufs[1],NG*NY*NZ*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-      if(verbose) printf("%d sent MPI_MSG_XHI to %d\n",PROCID,mpi_tile2procid(tx,ty,tz));
-    }
-
-  //lower y
-  if(mpi_isitBC(YBCLO)==0)
-    {
-      tx=TI;
-      ty=TJ-1;
-      tz=TK;
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-      for(i=0;i<NX;i++)
-	for(j=0;j<NG;j++)
-	  for(k=0;k<NZ;k++)
-	    for(iv=0;iv<NV;iv++)
-	      msgbufs[2][i*NG*NZ*NV + (j)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-      MPI_Isend(msgbufs[2], NX*NG*NZ*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_YLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }
-
-  //upper y
-  if(mpi_isitBC(YBCHI)==0)
-    {
-      tx=TI;
-      ty=TJ+1;
-      tz=TK;
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-      for(i=0;i<NX;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=0;k<NZ;k++)
-	    for(iv=0;iv<NV;iv++)
-	      msgbufs[3][i*NG*NZ*NV + (j-NY+NG)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-      MPI_Isend(msgbufs[3], NX*NG*NZ*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_YHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }
-  //lower z
-  if(mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI;
-      ty=TJ;
-      tz=TK-1;
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=0;i<NX;i++)
-	for(j=0;j<NY;j++)
-	  for(k=0;k<NG;k++)
-	    for(iv=0;iv<NV;iv++)
-	      msgbufs[4][i*NY*NG*NV + j*NG*NV + (k)*NV + iv]=get_u(p,iv,i,j,k);
-      MPI_Isend(msgbufs[4], NX*NY*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_ZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }
-  //upper z
-  if(mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI;
-      ty=TJ;
-      tz=TK+1;
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-      for(i=0;i<NX;i++)
-	for(j=0;j<NY;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    for(iv=0;iv<NV;iv++)
-	      msgbufs[5][i*NY*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-      MPI_Isend(msgbufs[5], NX*NY*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_ZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }
-
-#ifdef MPI4CORNERS
-
-  /***************************/
-  //elongated corners - along z
-  //lower x lower y
-  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0)
-    {
-      tx=TI-1;
-      ty=TJ-1;
-      tz=TK;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=0;j<NG;j++)
-	  for(k=0;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[12][i*NG*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[12], NG*NG*NZ*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  //lower x higher y
-  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCHI)==0)
-    {
-      tx=TI-1;
-      ty=TJ+1;
-      tz=TK;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=0;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[13][i*NG*NZ*NV + (j-NY+NG)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[13], NG*NG*NZ*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }
-  
-  //higher x lower y
-  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0)
-    {
-      tx=TI+1;
-      ty=TJ-1;
-      tz=TK;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=0;j<NG;j++)
-	  for(k=0;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[14][(i-NX+NG)*NG*NZ*NV + j*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[14], NG*NG*NZ*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  //higher x higher y
-  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCHI)==0)
-    {
-      tx=TI+1;
-      ty=TJ+1;
-      tz=TK;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=0;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[15][(i-NX+NG)*NG*NZ*NV + (j-NY+NG)*NZ*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[15], NG*NG*NZ*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  /***************************/
-  //elongated corners - along y
-  //lower x lower z
-  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI-1;
-      ty=TJ;
-      tz=TK-1;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=0;j<NY;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[16][i*NY*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[16], NG*NY*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  //lower x higher z
-  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI-1;
-      ty=TJ;
-      tz=TK+1;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=0;j<NY;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[17][i*NY*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[17], NG*NY*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }
-  
-  //higher x lower z
-  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI+1;
-      ty=TJ;
-      tz=TK-1;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=0;j<NY;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[18][(i-NX+NG)*NY*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[18], NG*NY*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  //higher x higher z
-  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI+1;
-      ty=TJ;
-      tz=TK+1;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=0;j<NY;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[19][(i-NX+NG)*NY*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[19], NG*NY*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-   /***************************/
-  //elongated corners - along x
-  //lower y lower z
-  if(mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI;
-      ty=TJ-1;
-      tz=TK-1;
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=0;i<NX;i++)
-	for(j=0;j<NG;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[20][i*NG*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[20], NX*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_YLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  //lower y higher z
-  if(mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI;
-      ty=TJ-1;
-      tz=TK+1;
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=0;i<NX;i++)
-	for(j=0;j<NG;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[21][i*NG*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[21], NX*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_YLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }
-  
-  //higher y lower z
-  if(mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI;
-      ty=TJ+1;
-      tz=TK-1;
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=0;i<NX;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[22][i*NG*NG*NV + (j-NY+NG)*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[22], NX*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_YHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  //higher y higher z
-  if(mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI;
-      ty=TJ+1;
-      tz=TK+1;
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=0;i<NX;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[23][i*NG*NG*NV + (j-NY+NG)*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[23], NX*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_YHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-
-  /***************************/
-  //corners corners 
-  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI-1;
-      ty=TJ-1;
-      tz=TK-1;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=0;j<NG;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[24][i*NG*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[24], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-  if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI-1;
-      ty=TJ-1;
-      tz=TK+1;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=0;j<NG;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[25][i*NG*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[25], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
- if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI-1;
-      ty=TJ+1;
-      tz=TK-1;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[26][i*NG*NG*NV + (j-NY+NG)*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[26], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
- if(mpi_isitBC(XBCLO)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI-1;
-      ty=TJ+1;
-      tz=TK+1;
-      #ifdef PERIODIC_XBC
-      if(tx<0) tx+=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=0;i<NG;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[27][i*NG*NG*NV + (j-NY+NG)*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[27], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XLOYHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI+1;
-      ty=TJ-1;
-      tz=TK-1;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=0;j<NG;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[28][(i-NX+NG)*NG*NG*NV + j*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[28], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYLOZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-  if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCLO)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI+1;
-      ty=TJ-1;
-      tz=TK+1;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty<0) ty+=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=0;j<NG;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[29][(i-NX+NG)*NG*NG*NV + j*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[29], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYLOZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
- if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCLO)==0)
-    {
-      tx=TI+1;
-      ty=TJ+1;
-      tz=TK-1;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz<0) tz+=NTZ;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=0;k<NG;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[30][(i-NX+NG)*NG*NG*NV + (j-NY+NG)*NG*NV + k*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[30], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYHIZLO, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
- if(mpi_isitBC(XBCHI)==0 && mpi_isitBC(YBCHI)==0 && mpi_isitBC(ZBCHI)==0)
-    {
-      tx=TI+1;
-      ty=TJ+1;
-      tz=TK+1;
-      #ifdef PERIODIC_XBC
-      if(tx>=NTX) tx-=NTX;
-      #endif
-      #ifdef PERIODIC_YBC
-      if(ty>=NTY) ty-=NTY;
-      #endif
-      #ifdef PERIODIC_ZBC
-      if(tz>=NTZ) tz-=NTZ;
-      #endif
-
-      for(i=NX-NG;i<NX;i++)
-	for(j=NY-NG;j<NY;j++)
-	  for(k=NZ-NG;k<NZ;k++)
-	    {
-	      for(iv=0;iv<NV;iv++)
-		msgbufs[31][(i-NX+NG)*NG*NG*NV + (j-NY+NG)*NG*NV + (k-NZ+NG)*NV + iv]=get_u(p,iv,i,j,k);
-	    }
-      MPI_Isend(msgbufs[31], NG*NG*NG*NV, MPI_DOUBLE,
-		mpi_tile2procid(tx,ty,tz), MPI_MSG_XHIYHIZHI, MPI_COMM_WORLD,&reqs[*nreqs]);
-      *nreqs=*nreqs+1;
-    }  
-#endif
-
-
-
-  return 0;
-}
-#endif
-
-
-///////////////////////////////////////////////////////////////
-//verify if there is real BC at all, if set_bc() needed
-
+//verify if we are on an outer MPI tile
 int
 mpi_hasBC()
 {
@@ -1708,17 +1446,16 @@ mpi_hasBC()
 #endif
 }
 
-
 ///////////////////////////////////////////////////////////////
-//verify if given cell from set_bc() falls into a real BC
-
+//verify if our current tile has a particular BC type
 int
 mpi_isitBC(int BCtype)
 {
 #ifndef MPI
   return 1;
 #else //check here if real BC
-  int perx,pery,perz; //is periodic in x,y,z?
+  //is it periodic in x,y,z?
+  int perx,pery,perz; 
   perx=pery=perz=0; 
   #ifdef PERIODIC_XBC
   perx=1;
@@ -1730,6 +1467,7 @@ mpi_isitBC(int BCtype)
   perz=1;
   #endif
 
+  //do we lie on an outer tile without periodic BC? 
   if(BCtype==XBCLO && TI==0 && perx==0)
     return 1;
   if(BCtype==XBCHI && TI==NTX-1 && perx==0)
@@ -1747,9 +1485,7 @@ mpi_isitBC(int BCtype)
 #endif
 }
 
-
 ///////////////////////////////////////////////////////////////
-
 void
 mpi_synchtiming(ldouble *time)
 {
@@ -1762,16 +1498,12 @@ mpi_synchtiming(ldouble *time)
   MPI_Allreduce(&tstepdenmax, &global_tstepdenmax, 1, MPI_DOUBLE, MPI_MAX,
                 MPI_COMM_WORLD);
 
-  #ifdef SELFTIMESTEP
-  MPI_Allreduce(&tstepdenmin, &global_tstepdenmin, 1, MPI_DOUBLE, MPI_MIN,
-                MPI_COMM_WORLD);
-  #endif
-
   //maximal time taken by information exchange
-  ldouble localmp_time=mid2_time-mid1_time;
-  //MPI_Allreduce(&localmp_time, &maxmp_time, 1, MPI_DOUBLE, MPI_MAX,        MPI_COMM_WORLD);   
+  ldouble localmp_time = mid2_time-mid1_time;
+  
   //only PROCID==0 writes to stdout
-  MPI_Reduce(&localmp_time, &maxmp_time, 1, MPI_DOUBLE, MPI_MAX,     0,   MPI_COMM_WORLD);   
+  MPI_Reduce(&localmp_time, &maxmp_time, 1, MPI_DOUBLE, MPI_MAX, 0,
+	     MPI_COMM_WORLD);   
 
   //total operation time
   ldouble local_u2ptime=end_u2ptime-start_u2ptime;
@@ -1799,20 +1531,17 @@ mpi_synchtiming(ldouble *time)
   *time=global_time;
   tstepdenmax=global_tstepdenmax;
   tstepdenmin=global_tstepdenmin;
- #endif
+#endif
 }
 
-
 ///////////////////////////////////////////////////////////////
-
 void
 mpi_myinit(int argc, char *argv[])
 {
 #ifdef MPI
   int i,j,k;
 
-  // Check if MPI tiling is okay
-  
+  // Check if MPI tiling is okay  
   if (TNX % NTX != 0)
   {
     printf("\nERROR!!  NTX = %d  TNX = %d  not divisible!\n\n", NTX, TNX);
@@ -1839,7 +1568,7 @@ mpi_myinit(int argc, char *argv[])
   #endif
   #endif
   #ifdef CALCHRONTHEGO
-  if(TNZ>1) //3D?
+  if(TNZ>1) //3D tiling
     {
       if(PROCID==0) printf("CALCHRONTHEGO not implemented for 3D.\n");
       exit(-1);
@@ -1847,8 +1576,6 @@ mpi_myinit(int argc, char *argv[])
   #endif
 
   //initialize MPI
-  //MPI_Init(&argc, &argv);
-  
   int provided, required = MPI_THREAD_FUNNELED;
   MPI_Init_thread(&argc, &argv, required, &provided);
   
@@ -1856,8 +1583,7 @@ mpi_myinit(int argc, char *argv[])
   {
     if(PROCID==0)
     {
-      //printf("\nThread Support: required %d  provided %d\n\n", required, prov\
-      ided);
+      //printf("\nThread Support: required %d  provided %d\n\n", required, provided);
       //printf("Number of OMP Threads: %d\n\n", omp_get_num_threads());
     }
   }
@@ -1866,10 +1592,8 @@ mpi_myinit(int argc, char *argv[])
     // Insufficient support, degrade to 1 thread and warn the user
     if (PROCID==0)
     {
-      printf("\nWarning: This MPI implementation provides insufficient threadin\
-             g support\n");
-      printf("Thread Support: required %d  provided %d\n\n", required, provided\
-             );
+      printf("\nWarning: This MPI implementation provides insufficient threading support\n");
+      printf("Thread Support: required %d  provided %d\n\n", required, provided);
     }
     exit(1);
     //omp_set_num_threads(1);
@@ -1880,19 +1604,20 @@ mpi_myinit(int argc, char *argv[])
 
   if(NPROCS!=NTX*NTY*NTZ)
     {
-      if(PROCID==0) printf("Wrong number of processes. Problem set up for: %d x %d x %d = %d processes. But NPROCS = %d\n",NTX,NTY,NTZ,NTX*NTY*NTZ,NPROCS);
+      if(PROCID==0) printf("Wrong number of processes. Problem set up for: %d x %d x %d = %d processes. \n But NPROCS = %d\n",NTX,NTY,NTZ,NTX*NTY*NTZ,NPROCS);
       exit(-1);
     }
   
   mpi_procid2tile(PROCID,&TI,&TJ,&TK);
   mpi_tileorigin(TI,TJ,TK,&TOI,&TOJ,&TOK);
-  //printf("PROCID TI TJ TK TOI TOJ TOK: %d %d %d %d %d %d %d\n", PROCID, TI, TJ,\
-         TK, TOI, TOJ, TOK);  // useful info on how processors are assigned
+
+  // useful info on how processors are assigned
+  //printf("PROCID TI TJ TK TOI TOJ TOK: %d %d %d %d %d %d %d\n", PROCID, TI, TJ,TK, TOI, TOJ, TOK);
 
   if(PROCID==0) printf("pid: %d/%d; tot.res: %dx%dx%d; tile.res:  %dx%dx%d\n"
 	 "tile: %d,%d,%d; tile orig.: %d,%d,%d\n",PROCID,NPROCS,TNX,TNY,TNZ,NX,NY,NZ,TI,TJ,TK,TOI,TOJ,TOK);
 
-#else
+#else //no MPI
   TI=TJ=TK=0;
   TOI=TOJ=TOK=0;
   PROCID=0;
@@ -1902,7 +1627,6 @@ mpi_myinit(int argc, char *argv[])
 
 
 ///////////////////////////////////////////////////////////////
-
 void
 mpi_myfinalize()
 {
@@ -1913,7 +1637,6 @@ mpi_myfinalize()
 
 
 ///////////////////////////////////////////////////////////////
-
 void
 mpi_tileorigin(int ti, int tj, int tk, int* toi, int* toj, int* tok)
 {
@@ -1924,7 +1647,6 @@ mpi_tileorigin(int ti, int tj, int tk, int* toi, int* toj, int* tok)
 
 
 ///////////////////////////////////////////////////////////////
-
 void
 mpi_global2localidx(int gix,int giy, int giz, int *lix, int *liy, int *liz)
 {
@@ -1945,7 +1667,6 @@ mpi_global2localidx(int gix,int giy, int giz, int *lix, int *liy, int *liz)
 
 
 ///////////////////////////////////////////////////////////////
-
 void
 mpi_local2globalidx(int lix,int liy, int liz, int *gix, int *giy, int *giz)
 {
@@ -1966,7 +1687,6 @@ mpi_local2globalidx(int lix,int liy, int liz, int *gix, int *giy, int *giz)
 
 
 ///////////////////////////////////////////////////////////////
-
 void
 mpi_procid2tile(int procid, int* tilei, int* tilej, int* tilek)
 {
@@ -1977,7 +1697,6 @@ mpi_procid2tile(int procid, int* tilei, int* tilej, int* tilek)
 
 
 ///////////////////////////////////////////////////////////////
-
 int
 mpi_tile2procid(int tilei, int tilej, int tilek)
 {
@@ -1987,7 +1706,6 @@ mpi_tile2procid(int tilei, int tilej, int tilek)
 
 ///////////////////////////////////////////////////////////////
 //parasitic openMP
-
 int
 omp_myinit()
 {
@@ -1995,9 +1713,6 @@ omp_myinit()
 #ifdef MPI
   printf("MPI does not work with OMP.\n"); exit(-1);
 #endif
-
-  //omp_set_dynamic(0);
-  //omp_set_num_threads(NTX*NTY*NTZ);
 
   NPROCS=omp_get_num_threads();
   PROCID=0;
@@ -2015,3 +1730,206 @@ omp_myinit()
   return 0;
 }
 
+///////////////////////////////////////////////////////////////
+//get averages for unique mpi tiles
+int
+calc_avgs_throughout()
+{
+
+  /***************************/
+  // scale height at each radius
+#ifdef CALCHRONTHEGO 
+  
+  int ix,iy,iz,gix,giy,giz;
+  struct geometry geom, geomBL;
+  ldouble sigma,scaleth,xxBL[4];
+  
+#pragma omp parallel for
+  for(gix=0;gix<TNX;gix++)
+  {
+    sigma_otg_temp[gix] = 0.;
+    scaleth_otg_temp[gix] = 0.;
+  }
+
+#pragma omp parallel for private(iy, iz, gix, sigma, scaleth, geom, xxBL)
+  for(ix=0;ix<NX;ix++)
+  {
+    sigma=scaleth=0.;
+    for(iy=0;iy<NY;iy++)
+    {
+      for(iz=0;iz<NZ;iz++) // todo: does not work with multiple z tiles yet!
+      {
+        fill_geometry(ix,iy,iz,&geom);
+        coco_N(geom.xxvec,xxBL,MYCOORDS,BLCOORDS);
+        sigma+=get_u(p,RHO,ix,iy,iz)*geom.gdet;
+        scaleth+=get_u(p,RHO,ix,iy,iz)*geom.gdet*(M_PI/2. - xxBL[2])*(M_PI/2. - xxBL[2]);
+      }
+    }
+    gix=ix+TOI;
+    
+    sigma_otg_temp[gix]=sigma;
+    scaleth_otg_temp[gix]=scaleth;
+  }
+
+#ifdef MPI
+  MPI_Allreduce(sigma_otg_temp, sigma_otg, TNX, MPI_LDOUBLE, MPI_SUM,
+		MPI_COMM_WORLD);
+  MPI_Allreduce(scaleth_otg_temp, scaleth_otg, TNX, MPI_LDOUBLE, MPI_SUM,
+		MPI_COMM_WORLD);
+#else
+#pragma omp parallel for private(gix)
+  for(ix=0;ix<NX;ix++)
+  {
+    gix=ix+TOI;
+    sigma_otg[gix]=sigma_otg_temp[gix];
+    scaleth_otg[gix]=scaleth_otg_temp[gix];
+  }
+#endif
+  
+#pragma omp parallel for private(gix)
+  for(ix=-NGCX;ix<NX+NGCX;ix++)
+  {
+    gix=ix+TOI;
+    if(gix>0 && gix<TNX)
+      scaleth_otg[gix]=sqrt(scaleth_otg[gix]/sigma_otg[gix]);
+    
+  }
+#endif  // ifdef CALCHRONTHEGO
+  /***************************/
+
+  /***************************/
+  //average velocities 
+#ifdef CORRECT_POLARAXIS_3D
+#ifdef POLARAXISAVGIN3D
+
+#ifdef PHIWEDGE
+ if(PHIWEDGE<0.999*2.*M_PI)
+   my_warning("POLARAXISAVGIN3D requires full 2 pi in azimuth!\n");
+#endif
+ 
+ int ix,iy,iz,gix,giy,giz,iv; 
+ struct geometry geom, geomBL;
+ ldouble v[4],ucon[4],r,th,ph;
+
+#pragma omp parallel for private(iv)  // not tested
+ for(gix=0;gix<TNX;gix++)
+ {
+   for(iv=0;iv<NV+2;iv++)
+   {
+     axis1_primplus_temp[iv][gix] = 0.;
+     axis1_primplus[iv][gix] = 0.;
+     axis2_primplus_temp[iv][gix] = 0.;
+     axis2_primplus[iv][gix] = 0.;
+   }
+ }
+
+#pragma omp parallel for private(gix, iz, iv, geom, geomBL, v)  // not tested
+ for(ix=0;ix<NX;ix++)
+ {
+   gix=ix+TOI;
+   for(iz=0;iz<NZ;iz++)
+   {
+#ifdef MPI
+     if(TJ==0) //topmost tile
+#endif
+     {
+       fill_geometry(ix,NCCORRECTPOLAR,iz,&geom);
+       fill_geometry_arb(ix,NCCORRECTPOLAR,iz,&geomBL,BLCOORDS);
+       
+       axis1_primplus_temp[RHO][gix]+=get_u(p,RHO,ix,NCCORRECTPOLAR,iz);
+       axis1_primplus_temp[UU][gix]+=get_u(p,UU,ix,NCCORRECTPOLAR,iz);
+
+       //cartesian velocities in VX..VZ slots
+       decompose_vels(&get_u(p,0,ix,NCCORRECTPOLAR,iz),VX,v,&geom,&geomBL);
+       axis1_primplus_temp[VX][gix]+=v[1];
+       axis1_primplus_temp[VY][gix]+=v[2];
+       axis1_primplus_temp[VZ][gix]+=v[3];
+
+       //angular velocity in NV slot!!!
+       axis1_primplus_temp[NV][gix]+=get_u(p,VZ,ix,NCCORRECTPOLAR,iz);
+       
+#ifdef RADIATION
+       axis1_primplus_temp[EE][gix]+=get_u(p,EE,ix,NCCORRECTPOLAR,iz);
+#ifdef EVOLVEPHOTONNUMBER
+       axis1_primplus_temp[NF][gix]+=get_u(p,NF,ix,NCCORRECTPOLAR,iz);
+#endif
+       //cartesian rad velocities in FX..FZ slots
+       decompose_vels(&get_u(p,0,ix,NCCORRECTPOLAR,iz),FX,v,&geom,&geomBL);
+       axis1_primplus_temp[FX][gix]+=v[1];
+       axis1_primplus_temp[FY][gix]+=v[2];
+       axis1_primplus_temp[FZ][gix]+=v[3];
+
+       //rad angular velocity in NV+1 slot!!!
+       axis1_primplus_temp[NV+1][gix]+=get_u(p,FZ,ix,NCCORRECTPOLAR,iz);
+#endif //RADIATION
+     }
+     
+#ifdef MPI
+     if(TJ==NTY-1) //bottommost tile
+#endif
+     {
+       fill_geometry(ix,NY-NCCORRECTPOLAR-1,iz,&geom);
+       fill_geometry_arb(ix,NY-NCCORRECTPOLAR-1,iz,&geomBL,BLCOORDS);
+       
+       axis2_primplus_temp[RHO][gix]+=get_u(p,RHO,ix,NY-NCCORRECTPOLAR-1,iz);
+       axis2_primplus_temp[UU][gix]+=get_u(p,UU,ix,NY-NCCORRECTPOLAR-1,iz);
+       
+       //cartesian velocities in VX..VZ slots
+       decompose_vels(&get_u(p,0,ix,NY-NCCORRECTPOLAR-1,iz),VX,v,&geom,&geomBL);
+       axis2_primplus_temp[VX][gix]+=v[1];
+       axis2_primplus_temp[VY][gix]+=v[2];
+       axis2_primplus_temp[VZ][gix]+=v[3];
+
+       //angular velocity in NV slot!!!
+       axis2_primplus_temp[NV][gix]+=get_u(p,VZ,ix,NY-NCCORRECTPOLAR-1,iz);
+       
+#ifdef RADIATION
+       axis2_primplus_temp[EE][gix]+=get_u(p,EE,ix,NY-NCCORRECTPOLAR-1,iz);
+#ifdef EVOLVEPHOTONNUMBER
+       axis2_primplus_temp[NF][gix]+=get_u(p,NF,ix,NY-NCCORRECTPOLAR-1,iz);
+#endif 
+
+       //cartesian rad velocities in FX..FZ slots
+       decompose_vels(&get_u(p,0,ix,NY-NCCORRECTPOLAR-1,iz),FX,v,&geom,&geomBL);
+       axis2_primplus_temp[FX][gix]+=v[1];
+       axis2_primplus_temp[FY][gix]+=v[2];
+       axis2_primplus_temp[FZ][gix]+=v[3];
+
+       //rad angular velocity in NV+1 slot!!!
+       axis2_primplus_temp[NV+1][gix]+=get_u(p,FZ,ix,NY-NCCORRECTPOLAR-1,iz);
+#endif //RADIATION
+     }
+   }
+   for(iv=0;iv<NV+2;iv++)
+   {
+     axis1_primplus_temp[iv][gix]/=NZ;
+     axis2_primplus_temp[iv][gix]/=NZ;
+   }
+ }
+
+#ifdef MPI
+ MPI_Allreduce(&axis1_primplus_temp[0][0], &axis1_primplus[0][0], TNX*(NV+2), MPI_LDOUBLE, MPI_SUM,
+		MPI_COMM_WORLD);
+ MPI_Allreduce(&axis2_primplus_temp[0][0], &axis2_primplus[0][0], TNX*(NV+2), MPI_LDOUBLE, MPI_SUM,
+		MPI_COMM_WORLD);
+#else 
+#pragma omp parallel for private(gix, iv)  // not tested
+  for(ix=0;ix<NX;ix++)
+  {
+    gix=ix+TOI;
+    for(iv=0;iv<NV+2;iv++)
+    {
+      axis1_primplus[iv][gix]=axis1_primplus_temp[iv][gix];
+      axis2_primplus[iv][gix]=axis2_primplus_temp[iv][gix];
+    }
+  }
+#endif
+  
+#endif //POLARAXISAVGIN3D
+#endif  // CORRECT_POLARAXIS_3D
+
+  
+  /***************************/
+
+return 0;
+}
