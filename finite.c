@@ -62,6 +62,7 @@ reduce_minmod_theta(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *
   if(gix<limit)
     theta=1.0;
 #endif
+  
   return theta;
 }
  
@@ -82,18 +83,20 @@ reduce_minmod_theta(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *
  INT_ORDER=1: Minmod (FLUXLIMITER=0), Monotonized Central (FLUXLIMITER=1), Superbee (FLUXLIMITER=4)\n
  INT_ORDER=2: Piecewise Parabolic Method (PPM)\n
  
- \todo Make sure the revised INT_ORDER=1 is okay. Figure out what INT_ORDER=2, 4 are doing.
  */
 //**********************************************************************
 int
-avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,ldouble *ul,ldouble *ur,ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,int param,ldouble theta)
+avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
+	  ldouble *ul,ldouble *ur,
+	  ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,
+	  int param,ldouble theta)
 {
   ldouble r0[NV],rm1[NV],rp1[NV];
 
   if(param!=0) //overrule the standard reconstruction
   {
     int i;
-    if(param==1) //DONOR
+    if(param==1) //DONOR CELL
     {
       for(i=0;i<NV;i++)
       {
@@ -103,7 +106,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,ldoubl
     }
   }  // if(param!=0)
   
-  else if(INT_ORDER==0) //DONOR
+  else if(INT_ORDER==0) //DONOR CELL
   {
     int i;
     
@@ -202,7 +205,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,ldoubl
   {
     //The following is based on Colella & Woodward (J. Comp. Phys. 54, 174, 1984).
     //It uses five points: m2, m1, 0, p1, p2.
-    //The code has been checked and verified by Ramesh: July 14, 17
+    //The code has been checked and verified by Ramesh: July 14, 2017
     
     // Define various quantities that apear in the formula
     ldouble dxp2_plus_dxp1 = dxp2 + dxp1;
@@ -330,10 +333,12 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,ldoubl
  \brief Calculates and saves wavespeeds for cells within the domain plus ghost cells
  
  Wavespeeds are in code units for the basic uniformly spaced coordinates x used in KORAL\n
- For GRMHD problems, assumes that the wave dispersion relation in the fluid frame is isotropic, with wave speed given by \f$v^2 = c_s^2 + v_A^2 - c_s^2 v_A^2\f$. 
+ For GRMHD problems, assumes that the wave dispersion relation in the fluid frame is isotropic, 
+with wave speed given by \f$v^2 = c_s^2 + v_A^2 - c_s^2 v_A^2\f$. 
  This is then transformed to the code coordinate frame.
  
- Calculates left, right and maximum wavespeeds for hydro and radiation for each cell (ix, iy, iz). These velocities are saved in array aaa.\n
+ Calculates left, right and maximum wavespeeds for hydro and radiation for each cell (ix, iy, iz). 
+ These velocities are saved in array aaa.\n
  The values in aaa are then transferred to global arrays:\n
  -Hydro left/right: ahdxl, ahdxr, ahdyl, ahdyr, ahdzl, ahdzr\n
  -Hydro maximum absolute: ahdx, ahdy, ahdz\n
@@ -373,7 +378,8 @@ calc_wavespeeds()
 
 //**********************************************************************
 /*! \fn int save_wavespeeds(int ix, int iy, int iz, ldouble *aaa)
- \brief saves characteristic wavespeeds from aaa[]
+ \brief saves characteristic wavespeeds from aaa[] to the global arrays. Also compute timesteps. 
+
  \param[in] ix,iy,iz cell indices
  \param[in] aaa array with cell wavespeeds
 */
@@ -384,7 +390,7 @@ save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
   ldouble aaaxhd,aaaxrad,aaayhd,aaayrad,aaazhd,aaazrad;
   ldouble aaaxrad2,aaayrad2,aaazrad2;
 
-  //hydro
+  //hydro wavespeeds
   set_u_scalar(ahdxl,ix,iy,iz,aaa[0]);
   set_u_scalar(ahdxr,ix,iy,iz,aaa[1]);
   set_u_scalar(ahdyl,ix,iy,iz,aaa[2]);
@@ -400,8 +406,9 @@ save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
   set_u_scalar(ahdy,ix,iy,iz,aaayhd);
   set_u_scalar(ahdz,ix,iy,iz,aaazhd);
 
-  //original radiative, for timestep in slots aaa[6::11], used later
-  //limited by the optical depth - to calculate the fluxes
+  //original radiative wavespeeds in slots aaa[6::11] are used later
+  //speeds in slots[12::] are limited by the optical depth
+  //used to calculate the fluxes
   set_u_scalar(aradxl,ix,iy,iz,aaa[6+6]);
   set_u_scalar(aradxr,ix,iy,iz,aaa[6+7]);
   set_u_scalar(aradyl,ix,iy,iz,aaa[6+8]);
@@ -417,7 +424,8 @@ save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
   set_u_scalar(arady,ix,iy,iz,aaayrad);
   set_u_scalar(aradz,ix,iy,iz,aaazrad);
 
-  //searching for maximal unlimited wavespeed for setting the timestep - here radiative wavespeeds not limited by the optical depth
+  //searching for the maximal unlimited wavespeed for setting the timestep
+  // here radiative wavespeeds not limited by the optical depth
   aaaxrad=my_max(fabs(aaa[6]),fabs(aaa[7]));
   aaayrad=my_max(fabs(aaa[8]),fabs(aaa[9]));
   aaazrad=my_max(fabs(aaa[10]),fabs(aaa[11]));
@@ -439,9 +447,8 @@ save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
   #endif
   #endif
 
-  //determining the time step
+  //determine the time step
   //only domain cells
-
   if(if_indomain(ix,iy,iz)==1) 
     {      
       ldouble tstepden,ws_ph;
@@ -459,6 +466,7 @@ save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
 
       set_u_scalar(cell_tstepden,ix,iy,iz,tstepden);
 
+      //global variables for maximum/minimum (inverse) cell timestep
       ////#pragma omp critical
       if(tstepden>tstepdenmax) tstepdenmax=tstepden;  
       if(tstepden<tstepdenmin) tstepdenmin=tstepden;  
@@ -487,9 +495,10 @@ save_timesteps()
     iy = loop_0[ii][1];
     iz = loop_0[ii][2];
     
-    //set_u_scalar(cell_dt,ix,iy,iz,1./get_u_scalar(cell_tstepden,ix,iy,iz));
     ldouble cell_dt_local = 1. / get_u_scalar(cell_tstepden, ix, iy, iz);
-    
+
+    // timestep is shortest of current cell and neighbors.
+    // ANDREW: is this doing the right thing on the x boundaries?
 #ifdef SHORTERTIMESTEP
     ldouble dtm1, dtp1, dt;
     if(ix > 0)
@@ -504,16 +513,14 @@ save_timesteps()
     
     dt = 1. / get_u_scalar(cell_tstepden, ix, iy, iz);
     
-    //set_u_scalar(cell_dt,ix,iy,iz,my_min(my_min(dtm1,dtp1),dt));
     cell_dt_local = my_min(my_min(dtm1, dtp1), dt);
 #endif
     
     set_u_scalar(cell_dt,ix,iy,iz,cell_dt_local);
     
     //find the shortest
-    
-    //if(get_u_scalar(cell_dt,ix,iy,iz)<dtminloc)
-      //dtminloc=get_u_scalar(cell_dt,ix,iy,iz);
+
+    //global variables for shortest cell timestep
     if(cell_dt_local < dtminloc)
       dtminloc = cell_dt_local;
   }
@@ -524,16 +531,17 @@ save_timesteps()
 
 //**********************************************************************
 /*! \fn int calc_u2p(int type, int setflags)
- \brief Calculates all primitives from u
+ \brief Calculates all primitives from global u
  \param[in] type, not currently used
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p(int type,int setflags)
+calc_u2p(int type, int setflags)
 {
   int ii;
-  
+
+  //timer start
   struct timespec temp_clock;
   my_clock_gettime(&temp_clock);
   start_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
@@ -546,9 +554,6 @@ calc_u2p(int type,int setflags)
     ix=loop_0[ii][0];
     iy=loop_0[ii][1];
     iz=loop_0[ii][2];
-    
-    //set_cflag(ENTROPYFLAG,ix,iy,iz,0);
-    //set_cflag(ENTROPYFLAG2,ix,iy,iz,0);
     
     //skip if cell is passive
     if(!is_cell_active(ix,iy,iz))
@@ -566,7 +571,7 @@ calc_u2p(int type,int setflags)
   //re-set boundary conditions
   set_bc(global_time,0);
   
-  //timer
+  //timer stop
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   
@@ -611,13 +616,13 @@ do_correct()
  \param[in] t, dtin initial time and time step
  
  Saves initial primitives and conserveds in ppreexplict, upreexplicit\n
- Interpolates primitives to cell faces using the required interpolation scheme, and calculates left- and right-biased conserveds and fluxes\n
+ Interpolates primitives to cell faces using the required interpolation scheme, 
+ and calculates left- and right-biased conserveds and fluxes\n
  Calculates wave speeds\n
  Computes combined fluxes at the faces using the selected approximate Riemann solver\n
- Updates conserveds to new values and saves in u and upostexplicit\n
- Computes corresponding primitives and saves in p and ppostexplicit 
 */
 //**********************************************************************
+
 int
 op_explicit(ldouble t, ldouble dtin) 
 {
@@ -628,18 +633,14 @@ op_explicit(ldouble t, ldouble dtin)
   copyi_u(1.,u,upreexplicit); //conserved quantities before explicit update
   copyi_u(1.,p,ppreexplicit); //primitive quantities before explicit update
 
-  // calculates H/R and some kind of velocity average  
+  // calculates H/R and velocity averages
   calc_avgs_throughout(); 
 
-  //**********************************************************************
-  //**********************************************************************
-  
-  // First calculate wavespeeds over the domain and ghost cells
+  // calculates wavespeeds over the domain and ghost cells
   calc_wavespeeds();
 
 #ifndef SKIPEVOLUTION
 
-  //**********************************************************************
   //**********************************************************************
   
   // Next interpolate to the cell walls and calculate left and right-biased fluxes
@@ -650,14 +651,13 @@ op_explicit(ldouble t, ldouble dtin)
       iy=loop_1[ii][1];
       iz=loop_1[ii][2];
 
-
       #ifndef MPI4CORNERS
       if(if_outsidegc(ix,iy,iz)==1) continue; //avoid corners
       #endif
      
       //create arrays for interpolating conserved quantities
       struct geometry geom;
-      ldouble x0[3],x0l[3],x0r[3],xm1[3],xp1[3];
+      //ldouble x0[3],x0l[3],x0r[3],xm1[3],xp1[3];
       ldouble fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
       ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV];
       ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
@@ -670,12 +670,13 @@ op_explicit(ldouble t, ldouble dtin)
       ldouble a0[2],am1[2],ap1[2],al,ar,amax,dx;  
       ldouble ffRl[NV],ffRr[NV],ffLl[NV],ffLr[NV];
       ldouble ffl[NV],ffr[NV]; 
-      ldouble dx0, dxm2, dxm1, dxp1, dxp2;  
+      ldouble dx0, dxm2, dxm1, dxp1, dxp2;
+      ldouble minmod_theta=MINMOD_THETA;
       int reconstrpar;
       int i,dol,dor;
 
       //**********************************************************************
-      //x 'sweep'
+      // x 'sweep'
       //**********************************************************************
 
 #ifdef MPI4CORNERS
@@ -696,20 +697,20 @@ op_explicit(ldouble t, ldouble dtin)
 		  dor=0;
 		
                 // x0[0] is x of current cell        
-		x0[0]=get_x(ix,0);
+		//x0[0]=get_x(ix,0);
 
                 // xm1[0], xp1[0] are x of left and right cell centers. Are these quantities used anywhere?
-		xm1[0]=get_x(ix-1,0);
-	        xp1[0]=get_x(ix+1,0);
+		//xm1[0]=get_x(ix-1,0);
+	        //xp1[0]=get_x(ix+1,0);
 		
                 // x0l[0,1,2] are x, y, z of left x-wall, x0r[0,1,2] are x, y, z of right x-wall,
-		x0l[0]=get_xb(ix,0);
-		x0l[1]=xm1[1]=get_x(iy,1); 
-		x0l[2]=xm1[2]=get_x(iz,2);
+		//x0l[0]=get_xb(ix,0);
+		//x0l[1]=xm1[1]=get_x(iy,1); 
+		//x0l[2]=xm1[2]=get_x(iz,2);
 
-		x0r[0]=get_xb(ix+1,0);
-		x0r[1]=xp1[1]=get_x(iy,1);
-		x0r[2]=xp1[2]=get_x(iz,2);
+		//x0r[0]=get_xb(ix+1,0);
+		//x0r[1]=xp1[1]=get_x(iy,1);
+		//x0r[2]=xp1[2]=get_x(iz,2);
 	      
                 // dx0, dxm1, dxp1 are x-sizes (wall to wall) of cells ix, ix-1, ix+1, dxm2m, dxp2 are sizes of cells ix-2, ix+2		
 		dx0=get_size_x(ix,0);    
@@ -741,8 +742,7 @@ op_explicit(ldouble t, ldouble dtin)
 #ifdef REDUCEORDERWHENNEEDED
 		reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
 #endif
-		ldouble minmod_theta=MINMOD_THETA;
-
+		minmod_theta=MINMOD_THETA;
 #ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
 		minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
 #endif
@@ -810,20 +810,20 @@ op_explicit(ldouble t, ldouble dtin)
 		  dor=0;
         
                 // x0[1] is y of current cell        
-	        x0[1]=get_x(iy,1);
+	        //x0[1]=get_x(iy,1);
 
                 // xm1[1], xp1[1] are y of left and right cell centers. Are these quantities used anywhere?
-		xm1[1]=get_x(iy-1,1);
-                xp1[1]=get_x(iy+1,1);
+		//xm1[1]=get_x(iy-1,1);
+                //xp1[1]=get_x(iy+1,1);
 		
                 // x0l[0,1,2] are x, y, z of left y-wall, x0r[0,1,2] are x, y, z of right y-wall,		
-	 	x0l[1]=get_xb(iy,1);
-		x0l[0]=xm1[0]=get_x(ix,0); 
-		x0l[2]=xm1[2]=get_x(iz,2);
+	 	//x0l[1]=get_xb(iy,1);
+		//x0l[0]=xm1[0]=get_x(ix,0); 
+		//x0l[2]=xm1[2]=get_x(iz,2);
 
-		x0r[1]=get_xb(iy+1,1);
-		x0r[0]=xp1[0]=get_x(ix,0);
-		x0r[2]=xp1[2]=get_x(iz,2);
+		//x0r[1]=get_xb(iy+1,1);
+		//x0r[0]=xp1[0]=get_x(ix,0);
+		//x0r[2]=xp1[2]=get_x(iz,2);
 
                 // dx0, dxm1, dxp1 are y-sizes (wall to wall) of cells iy, iy-1, iy+1, dxm2m, dxp2 are sizes of cells iy-2, iy+2
 		dx0=get_size_x(iy,1);    
@@ -854,8 +854,7 @@ op_explicit(ldouble t, ldouble dtin)
 		reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
 #endif
 
-		ldouble minmod_theta=MINMOD_THETA;
-
+		minmod_theta=MINMOD_THETA;
 #ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
 		minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
 #endif
@@ -922,20 +921,20 @@ op_explicit(ldouble t, ldouble dtin)
                   dor=0;
          
                 // x0[2] is z of current cell        
-	        x0[2]=get_x(iz,2);
+	        //x0[2]=get_x(iz,2);
 
                 // xm1[2], xp1[2] are z of left and right cell centers. Are these quantities used anywhere?
-		xm1[2]=get_x(iz-1,2);
-                xp1[2]=get_x(iz+1,2);
+		//xm1[2]=get_x(iz-1,2);
+                //xp1[2]=get_x(iz+1,2);
 
                 // x0l[0,1,2] are x, y, z of left z-wall, x0r[0,1,2] are x, y, z of right z-wall,		
-                x0l[2]=get_xb(iz,2);
-                x0l[0]=xm1[0]=get_x(ix,0);
-                x0l[1]=xm1[1]=get_x(iy,1);
+                //x0l[2]=get_xb(iz,2);
+                //x0l[0]=xm1[0]=get_x(ix,0);
+                //x0l[1]=xm1[1]=get_x(iy,1);
          
-                x0r[2]=get_xb(iz+1,2);
-                x0r[0]=xp1[0]=get_x(ix,0);
-                x0r[1]=xp1[1]=get_x(iy,1);
+                //x0r[2]=get_xb(iz+1,2);
+                //x0r[0]=xp1[0]=get_x(ix,0);
+                //x0r[1]=xp1[1]=get_x(iy,1);
          
                 // dx0, dxm1, dxp1 are z-sizes (wall to wall) of cells iz, iz-1, iz+1, dxm2m, dxp2 are sizes of cells iz-2, iz+2
                 dx0=get_size_x(iz,2);
@@ -967,7 +966,7 @@ op_explicit(ldouble t, ldouble dtin)
                 reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
 #endif
          
-                ldouble minmod_theta=MINMOD_THETA;
+                minmod_theta=MINMOD_THETA;
 #ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
                 minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
 #endif
@@ -1015,11 +1014,10 @@ op_explicit(ldouble t, ldouble dtin)
   }  // for(ii=0;ii<Nloop_1;ii++)
 	    
   //**********************************************************************
-  //**********************************************************************
-
   // Compute fluxes at the six walls of all cells using the selected approximation of the Riemann problem
-  #pragma omp barrier
-  #pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
+  
+#pragma omp barrier
+#pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
   for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
     ix=loop_1[ii][0];
@@ -1029,7 +1027,6 @@ op_explicit(ldouble t, ldouble dtin)
   }
 
   //**********************************************************************
-  //**********************************************************************
   // Constrained transport to preserve div.B=0
 
 #ifdef MAGNFIELD
@@ -1037,7 +1034,6 @@ op_explicit(ldouble t, ldouble dtin)
   flux_ct();
 #endif
 
-  //**********************************************************************
   //**********************************************************************
   // Evolve the conserved quantities
   
@@ -1054,7 +1050,7 @@ op_explicit(ldouble t, ldouble dtin)
 
       if(is_cell_active(ix,iy,iz)==0)
       {
-        //source terms applied only for active cells	
+        // Source terms applied only for active cells	
 	PLOOP(iv) ms[iv]=0.; 
       }
       else
@@ -1093,10 +1089,10 @@ op_explicit(ldouble t, ldouble dtin)
 	flzr=get_ub(flbz,iv,ix,iy,iz+1,2);
 		  
 	// Compute Delta U from the six fluxes
-	du=-(flxr-flxl)*dt/dx - (flyr-flyl)*dt/dy - (flzr-flzl)*dt/dz;
+	du = -(flxr-flxl)*dt/dx - (flyr-flyl)*dt/dy - (flzr-flzl)*dt/dz;
 
 	// Compute new conserved by adding Delta U and the source term
-	val=get_u(u,iv,ix,iy,iz) + du + ms[iv]*dt;
+	val = get_u(u,iv,ix,iy,iz) + du + ms[iv]*dt;
 
 	// Save the new conserved to memory
 #ifdef SKIPHDEVOLUTION
@@ -1153,27 +1149,16 @@ op_explicit(ldouble t, ldouble dtin)
 #endif //SKIPEVOLUTION
 
 
-  //**********************************************************************
   //**********************************************************************  
-  // Copy conserveds to upostexplicit. These are after the explicit step but before inversion
-  //copyi_u(1.,u,upostexplicit);
-  
   // Compute postexplicit primitives and count entropy inversions
   calc_u2p(1,1);
 
   //**********************************************************************
-  //**********************************************************************  
   // Entropy Mixing
   
 #ifdef MIXENTROPIESPROPERLY
-  //mix_entropies(dt);
-  mix_entropies_new(dt);
+  mix_entropies(dt);
 #endif
-
-  //**********************************************************************
-  //**********************************************************************    
-  // Copy primitives to ppostexplicit. These are after the explicit step but before inversion
-  //copyi_u(1.,p,ppostexplicit);
 
   return GSL_SUCCESS;
 }
@@ -1188,7 +1173,7 @@ int
 op_intermediate(ldouble t, ldouble dt)
 {
 
-   //apply adiabatic expansion to relativistic electrons
+   // Apply adiabatic expansion to nonthermal electrons
 #ifdef EVOLVEELECTRONS
 #ifdef RELELECTRONS
 #ifndef SKIPRELELEXPANSION
@@ -1196,9 +1181,8 @@ op_intermediate(ldouble t, ldouble dt)
 #endif
 #endif
   
-  //apply viscous heating to thermal&relativistic electrons and ions  
-  //here? or separate after RK2
-#ifndef HEATELECTRONSATENDRK2
+  // Apply viscous heating to thermal & nonthermal electrons and ions  
+#ifndef HEATELECTRONSATENDRK2   //here? or separate after RK2
   heat_electronions_with_state(dt); 
 #endif
 #endif
@@ -1221,7 +1205,6 @@ apply_dynamo(ldouble t, ldouble dt)
   //correlates ghost cells
   mpi_exchangedata();
   calc_avgs_throughout();
-  
   set_bc(t,0);
   
   //mimics dynamo
@@ -1249,13 +1232,14 @@ op_implicit(ldouble t, ldouble dtin)
 
   int ii;
 
-  //to count the average number of iteration in the implicit solver
+  // counter for the average number of iterations in the implicit solver
   for(ii=0;ii<NGLOBALINTSLOT;ii++)
     global_int_slot[ii]=0.;
 
   /************************************************************************/
   /******** implicit **** RADIATION ***************************************/
   /************************************************************************/
+
 #ifdef RADIATION
 #ifndef SKIPRADSOURCE
 #ifdef IMPLICIT_LAB_RAD_SOURCE  // this is the default
@@ -1277,9 +1261,9 @@ op_implicit(ldouble t, ldouble dtin)
 
     //uses values already in *p as the initial guess
     implicit_lab_rad_source_term(ix,iy,iz,dt);
-  } //source terms
+  } 
 
-  //fixup here after source term 
+  //fixup here after implicit source term 
   cell_fixup(FIXUP_RADIMP);
 
 #endif //IMPLICIT_LAB_RAD_SOURCE
@@ -1325,8 +1309,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
   }
 
   //**********************************************************************
-  //**********************************************************************
-  //x 'sweep': Work on the x-face at ix, iy, iz, which lies in between cells ix-1,iy,iz and ix,iy,iz
+  //Work on the x-face at ix, iy, iz, which lies in between cells ix-1,iy,iz and ix,iy,iz
  
 #ifdef MPI4CORNERS
   if(NX>1 && ix>=0 && ix<=NX && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1)
@@ -1334,10 +1317,12 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
   if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ)
 #endif
   {
-	// Characteristic wave speeds in the two adjoining cells of the current face, which are used for combining the left-biased and right-biased fluxes at the face
+	// Characteristic wave speeds in the two adjoining cells of the current face,
+        // which are used for combining the left-biased and right-biased fluxes at the face
         // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
 	// l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
         // [0], [1] correspond to hydro and radiation wave speeds      
+
         ap1l[0]=get_u_scalar(ahdxl,ix,iy,iz);
 	ap1r[0]=get_u_scalar(ahdxr,ix,iy,iz);
 	ap1l[1]=get_u_scalar(aradxl,ix,iy,iz);
@@ -1352,7 +1337,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
 	am1[0]=get_u_scalar(ahdx,ix-1,iy,iz);
 	am1[1]=get_u_scalar(aradx,ix-1,iy,iz);
 
-	//primitives at faces
+	//primitives at the face
 	for(i=0;i<NV;i++)
 	{
           // fd_pLl, fd_pRl are the left-biased and right-biased primitives at the current cell face
@@ -1360,14 +1345,13 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
           fd_pRl[i]=get_ub(pbRx,i,ix,iy,iz,0);
 	}
 
-	// converting interpolated primitives to conserved
 	fill_geometry_face(ix,iy,iz,0,&geom);
 
 	// fd_uLl, fd_uRl are the left-biased and right-biased conserveds at the current cell face
         p2u(fd_pLl,fd_uLl,&geom);
         p2u(fd_pRl,fd_uRl,&geom);
         
-#ifdef WAVESPEEDSATFACES
+#ifdef WAVESPEEDSATFACES //re-calculate the wavespeeds directly at the face
 	ldouble aaa[24];
 	//left biased wavespeeds
 	calc_wavespeeds_lr_pure(fd_uLl,&geom,aaa);
@@ -1403,7 +1387,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
             ar=my_max(ap1r[0],am1r[0]);
             
 #ifdef BATTERY
-            //when radiation battery on - magnetic fields affected by radiation
+            //when radiation battery on - magnetic fields are affected by radiation
 #ifdef BATTERYRADWAVESPEEDS
 #ifdef BATTERYRADWAVESPEEDSBONLY
             if(i>=B1 && i<=B3)
@@ -1429,7 +1413,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
           ar=my_max(ap1r[0],am1r[0]);
 #endif
           
-          if (FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs Flus
+          if (FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs Flux
           {
 	    
             //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
@@ -1459,19 +1443,19 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
 	
   }  // if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
 
-
-  //**********************************************************************
-  //**********************************************************************
-  //y 'sweep': Work on the y-face at ix, iy, iz, which lies in between cells ix,iy-1,iz and ix,iy,iz
   
+  //**********************************************************************
+  //Work on the y-face at ix, iy, iz, which lies in between cells ix,iy-1,iz and ix,iy,iz  
 #ifdef MPI4CORNERS
   if(NY>1 && iy>=0 && iy<=NY && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1)
 #else
   if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ)
 #endif
   {
-        // Characteristic wave speeds in the two adjoining cells of the current face, which are used for combining the left-biased and right-biased fluxes at the face
-        // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face; l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
+        // Characteristic wave speeds in the two adjoining cells of the current face,
+        // which are used for combining the left-biased and right-biased fluxes at the face
+        // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
+        // l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
         // [0], [1] correspond to hydro and radiation wave speeds
       
 	ap1l[0]=get_u_scalar(ahdyl,ix,iy,iz);
@@ -1501,7 +1485,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
         p2u(fd_pLl,fd_uLl,&geom);
         p2u(fd_pRl,fd_uRl,&geom);
       
-#ifdef WAVESPEEDSATFACES
+#ifdef WAVESPEEDSATFACES // recompute wavespeeds directly at face
 	ldouble aaa[24];
 	//left-biased wavespeeds
 	calc_wavespeeds_lr_pure(fd_uLl,&geom,aaa);
@@ -1535,7 +1519,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
               ar=my_max(ap1r[0],am1r[0]);
               
 #ifdef BATTERY
-              //when radiation battery on - magnetic fields affected by radiation
+              //when radiation battery on - magnetic fields are affected by radiation
 #ifdef BATTERYRADWAVESPEEDS
 #ifdef BATTERYRADWAVESPEEDSBONLY
               if(i>=B1 && i<=B3)
@@ -1561,7 +1545,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
             ar=my_max(ap1r[0],am1r[0]);
 #endif
             
-            if (FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs
+            if (FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs Flux
             {
 	      
               //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
@@ -1570,7 +1554,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
               set_uby(flby,i,ix,iy,iz,fd_fstarl[i]);
             }
             
-            if (FLUXMETHOD==HLL_FLUX) //HLL
+            if (FLUXMETHOD==HLL_FLUX) //HLL Flux
             {
               if(al>0.)
               {
@@ -1591,18 +1575,19 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
 	}  // for(i=0;i<NV;i++)
   }  // if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
 
-  //**********************************************************************
-  //**********************************************************************
-  //z 'sweep':  Work on the z-face at ix, iy, iz, which lies in between cells ix,iy,iz-1 and ix,iy,iz
   
+  //**********************************************************************
+  // Work on the z-face at ix, iy, iz, which lies in between cells ix,iy,iz-1 and ix,iy,iz  
 #ifdef MPI4CORNERS
   if(NZ>1 && iz>=0 && iz<=NZ && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1)
 #else
   if(NZ>1 && iz>=0 && iz<=NZ && ix>=0 && ix<NX && iy>=0 && iy<NY)
 #endif
   {
-        // Characteristic wave speeds in the two adjoining cells of the current face, which are used for combining the left-biased and right-biased fluxes at the face
-        // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face; l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
+        // Characteristic wave speeds in the two adjoining cells of the current face,
+        // which are used for combining the left-biased and right-biased fluxes at the face
+        // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
+        // l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
         // [0], [1] correspond to hydro and radiation wave speeds
 
         ap1l[0]=get_u_scalar(ahdzl,ix,iy,iz);
@@ -1632,7 +1617,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
         p2u(fd_pLl,fd_uLl,&geom);
         p2u(fd_pRl,fd_uRl,&geom);
       
-#ifdef WAVESPEEDSATFACES
+#ifdef WAVESPEEDSATFACES // recompute wavespeeds directly at face
 	ldouble aaa[24];
 	//left-biased wavespeeds
 	calc_wavespeeds_lr_pure(fd_uLl,&geom,aaa);
@@ -1666,7 +1651,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
               ar=my_max(ap1r[0],am1r[0]);
               
 #ifdef BATTERY
-              //when radiation battery on - magnetic fields affected by radiation
+              //when radiation battery on - magnetic fields are affected by radiation
 #ifdef BATTERYRADWAVESPEEDS
 #ifdef BATTERYRADWAVESPEEDSBONLY
               if(i>=B1 && i<=B3)
@@ -1691,7 +1676,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
             ar=my_max(ap1r[0],am1r[0]);
 #endif
             
-            if (FLUXMETHOD==LAXF_FLUX) //Lax-Fr
+            if (FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs Flux
             {
 	      
               //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
@@ -1700,7 +1685,7 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
               set_ubz(flbz,i,ix,iy,iz,fd_fstarl[i]);
             } 
             
-            if (FLUXMETHOD==HLL_FLUX) //HLL
+            if (FLUXMETHOD==HLL_FLUX) //HLL Flux
             {
               if(al>0.)
               {
@@ -1748,7 +1733,6 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
  
  Note: xb[i], x[i] values are uniformly spaced. Conversion to real coordinates are done through `coco' routines
  
- \todo Take a look at the many 'coco' routines and find out what they do
 */
 //***********************************************************************
 int
@@ -1796,7 +1780,7 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
     }
 #endif
 
-  //minimal cell size
+  // what is the minimal cell size
   for(ix=ix1;ix<ix2;ix++)
     {
       for(iy=iy1;iy<iy2;iy++)
@@ -1834,7 +1818,7 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
  Nloop_1 = number of cells in loop_1 = (NX+2*lim)*(NY+2*lim)*(NZ+2*lim) in 3D
  
  loop_2[i][0,1,2] = ghost cells only, without corners\n
- Nloop_2 = number of cells
+ Nloop_2 = number of ghost cells without corners
  
  loop_02[i][0,1,2] = domain plus ghost cells, but no corners\n
  Nloop_02
@@ -1897,7 +1881,6 @@ alloc_loops()
     shuffle_loop(loop_0,Nloop_0);
     #endif 
  
-
     //**********************************************************************
     //inside + ghost cells - number depending on the order of reconstruction
     //used to indicate where calculate fluxes
@@ -2045,6 +2028,7 @@ alloc_loops()
     shuffle_loop(loop_3,Nloop_3);
 #endif
 */
+    
     //**********************************************************************
     //**********************************************************************
     //all corners of the domain - like in staggered grid
@@ -2190,6 +2174,42 @@ print_grid(ldouble min_dx, ldouble min_dy, ldouble min_dz)
 //**********************************************************************
 //**********************************************************************
 
+//*********************************************
+//sets cell center location
+//*********************************************
+int set_x(int ic, int idim, ldouble val)
+{  
+  if(idim==0)
+    x[ic+NG]=val;
+  if(idim==1)
+    x[ic+NG + NX+2*NG]=val;
+  if(idim==2)
+    x[ic+NG + NX+2*NG + NY+2*NG]=val;
+  return 0;
+}
+
+//*********************************************
+//* sets locations of cell boundaries *********
+//*********************************************
+int set_xb(int ic, int idim,ldouble val)
+{  
+  if(idim==0)
+    xb[ic+NG]=val;
+  if(idim==1)
+    xb[ic+NG + NX+2*NG +1]=val;
+  if(idim==2)
+    xb[ic+NG + NX+2*NG + 1 + NY+2*NG + 1]=val;
+  return 0;
+}
+
+//*********************************************
+//* returns size of cell **********************
+//*********************************************
+ldouble get_size_x(int ic, int idim)
+{
+  return get_xb(ic+1,idim)-get_xb(ic,idim);
+}
+
 //***********************************************************
 //returns four-vector of coordinates
 //***********************************************************
@@ -2211,101 +2231,14 @@ get_xx_arb(int ix,int iy,int iz,ldouble *xx,int COORDSOUT)
 {
   ldouble xx0[4];
   get_xx(ix,iy,iz,xx0);
-  
   coco_N(xx0,xx,MYCOORDS,COORDSOUT);
-
   return 0;
 }
-
-
-
-//*********************************************
-//sets cell center location
-//*********************************************
-int set_x(int ic, int idim,ldouble val)
-{  
-  if(idim==0)
-    x[ic+NG]=val;
-  if(idim==1)
-    x[ic+NG + NX+2*NG]=val;
-  if(idim==2)
-    x[ic+NG + NX+2*NG + NY+2*NG]=val;
-  return 0;
-}
-
-/*
-//returns location of cell (i) boundaries (i,i+1)
-ldouble get_xb(int ic, int idim)
-{
-  if(ic<-NG || (idim==0 && ic>NX+NG) || (idim==1 && ic>NY+NG) || (idim==2 && ic>NZ+NG)) my_err("blont w get_xb - index ouf of range");
-  if(idim==0)
-    return xb[ic+NG];
-  if(idim==1)
-    return xb[ic+NG + NX+2*NG + 1];
-  if(idim==2)
-    return xb[ic+NG + NX+2*NG + 1 + NY+2*NG + 1];
-
-  return -1;
-}
-*/
-
-
-//*********************************************
-//* returns size of cell **********************
-//*********************************************
-ldouble get_size_x(int ic, int idim)
-{
-  //if(ic<-NG || (idim==0 && ic>NX-1+NG) || (idim==1 && ic>NY-1+NG) || (idim==2 && ic>NZ-1+NG)) my_err("blont w get_size_x - index ouf of range");
-  return get_xb(ic+1,idim)-get_xb(ic,idim);
-}
-
-//*********************************************
-//* sets locations of cell boundaries *********
-//*********************************************
-int set_xb(int ic, int idim,ldouble val)
-{  
-  //  if(ic<-NG || (idim==0 && ic>NX+NG) || (idim==1 && ic>NY+NG) || (idim==2 && ic>NZ+NG)) my_err("blont w set_xb - index ouf of range");
-  if(idim==0)
-    xb[ic+NG]=val;
-  if(idim==1)
-    xb[ic+NG + NX+2*NG +1]=val;
-  if(idim==2)
-    xb[ic+NG + NX+2*NG + 1 + NY+2*NG + 1]=val;
-  return 0;
-}
-
-//deals with arrays [NX+NG x NY+NG x NZ+NG x NV] - cell centers 
-/*
-ldouble get_u(ldouble* uarr, int iv, int ix, int iy, int iz)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_u - index ouf of range");
-  
-  return uarr[iv + (ix+NG)*NV + (iy+NG)*(NX+2*NG)*NV + (iz+NG)*(NY+2*NG)*(NX+2*NG)*NV];
-}
-*/
-//deals with arrays [NX+NG x NY+NG x NZ+NG x NV] - cell centers 
- /*
-int set_u(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_u - index ouf of range");
-  
-  uarr[iv + (ix+NG)*NV + (iy+NG)*(NX+2*NG)*NV + (iz+NG)*(NY+2*NG)*(NX+2*NG)*NV] = value;
-  return 0;
-}
- */
-  /*
-//deals with arrays [NX+NG x NY+NG x NZ+NG x gSIZE] - cell centers metric
-ldouble get_g(ldouble* uarr, int i, int j, int ix, int iy, int iz)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_g - index ouf of range");
-  
-  return uarr[i*5+j + (ix+NG)*gSIZE + (iy+NG)*(NX+2*NG)*gSIZE + (iz+NG)*(NY+2*NG)*(NX+2*NG)*gSIZE];
-}
-*/
 
 
 //*********************************************
 //* returns locations of cell boundaries ******
+//* in equally spaced code coordinates ********
 //*********************************************
 ldouble
 calc_xb(int i,int idim)
@@ -2338,20 +2271,24 @@ calc_xb(int i,int idim)
 
 ///////////////////////////////////////////////////////////////
 //deals with arrays [NX+NG x NY+NG x NZ+NG x gSIZE] - cell centers metric
-
+/*
 int set_g(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
 {
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_g - index ouf of range");
+  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG)
+    my_err("problem w/ set_g - index out of range");
   
-  uarr[i*5+j + (iX(ix)+NGCX)*gSIZE + (iY(iy)+NGCY)*(SX)*gSIZE + (iZMET(iz)+NGCZMET)*(SY)*(SX)*gSIZE] = value;
+  uarr[i*5+j + (iX(ix)+NGCX)*gSIZE + \
+               (iY(iy)+NGCY)*(SX)*gSIZE + \
+               (iZMET(iz)+NGCZMET)*(SY)*(SX)*gSIZE \
+      ] = value;
   return 0;
 }
-
+*/
 
 ///////////////////////////////////////////////////////////////
 //deals with arrays [NX+NG x NY+NG x NZ+NG x 16] - 4x4 tensors
 //metric specific 
-
+/*
 int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
 {
   if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_T - index ouf of range");
@@ -2359,11 +2296,11 @@ int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
   uarr[i*4+j + (ix+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZMET(iz)+NGCZMET)*(SY)*(SX)*16] = value;
   return 0;
 }
-
+*/
 
 ///////////////////////////////////////////////////////////////
 //deals with arrays [NX+NG x NY+NG x NZ+NG x 16] - 4x4 tensors
-
+/*
 int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
 {
   if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_T - index ouf of range");
@@ -2371,7 +2308,7 @@ int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
   uarr[i*4+j + (ix+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZ(iz)+NGCZ)*(SY)*(SX)*16] = value;
   return 0;
 }
-
+*/
 
 //deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x NV] - cell boundaries in idim
 
@@ -2481,15 +2418,17 @@ ldouble get_u_scalar(ldouble* uarr,int ix,int iy,int iz)
   return uarr[ix+NG + (iy+NG)*(NX+2*NG) + (iz+NG)*(NY+2*NG)*(NX+2*NG)];
 }
 */
+
+
+
 //**********************************************************************
-//**********************************************************************
+//* Variable copying, multiplication, addition
 //**********************************************************************
 
 
 ///////////////////////////////////////////////////////////////
 //array multiplication
 //uu2=factor*uu1
-
 int
 copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, int N)
 {
@@ -2506,7 +2445,6 @@ copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, int N)
 
 
 ///////////////////////////////////////////////////////////////
-
 int
 copy_u(ldouble factor,ldouble *uu1,ldouble* uu2 )
 {
@@ -2516,7 +2454,6 @@ copy_u(ldouble factor,ldouble *uu1,ldouble* uu2 )
 
 
 ///////////////////////////////////////////////////////////////
-
 int
 copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2)	
 {
@@ -2544,7 +2481,6 @@ copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2)
 ///////////////////////////////////////////////////////////////
 //array multiplication plus addition
 //uu3=f1*uu1+f2*uu2
-
 int
 add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, int N)
 {
@@ -2571,7 +2507,6 @@ add_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 
 
 ///////////////////////////////////////////////////////////////
-
 int
 addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 {
@@ -2599,7 +2534,6 @@ addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 ///////////////////////////////////////////////////////////////
 //array multiplication plus addition on 3 matrices
 //uu3=f1*uu1+f2*uu2
-
 int
 add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4,int N)
 {
@@ -2616,7 +2550,6 @@ add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldo
 
 
 ///////////////////////////////////////////////////////////////
-
 int
 add_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4)
 {
@@ -2626,7 +2559,6 @@ add_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble 
 
 
 ///////////////////////////////////////////////////////////////
-
 int
 addi_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4)
 {
@@ -2651,11 +2583,10 @@ addi_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble
 
 
 //**********************************************************************
-//**********************************************************************
+// Domain checks
 //**********************************************************************
 
 //checks if cell is inside main domain
-
 int
 if_indomain(int ix,int iy,int iz)
 {
@@ -2699,7 +2630,7 @@ calc_bc(int ix,int iy,int iz,ldouble t,ldouble *uu,ldouble *pp,int ifinit,int BC
   return 0;
 } 
 
-//boundary conditions - sets conserved in the ghost cells
+// boundary conditions - sets conserved in a given ghost cell
 int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int ifinit,int BCtype)
 {
   int iix,iiy,iiz,iv;
@@ -2707,11 +2638,11 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
   iiy=iy;
   iiz=iz;
           
-#ifdef SPECIFIC_BC  //BC specific for given problem
+#ifdef SPECIFIC_BC  // BC specific for given problem
   calc_bc(ix,iy,iz,t,uval,pval,ifinit,BCtype);
-#else  
 
-  //standard BC  
+#else   //standard BC  
+ 
   if(BCtype==XBCLO || BCtype==XBCHI)
     {       
 #ifdef PERIODIC_XBC
@@ -2759,9 +2690,7 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
 
   for(iv=0;iv<NV;iv++)
     pval[iv]=get_u(p,iv,iix,iiy,iiz);
-  
-  //printf("ix: %d iy: %d iz: %d ENTRE: %e\n", ix, iy, iz, pval[ENTRE]);
-  
+    
   #ifdef CONSISTENTGAMMA
   set_u_scalar(gammagas, ix, iy, ix, get_u_scalar(gammagas,iix,iiy,iiz));
   #endif
@@ -2775,7 +2704,7 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
   return 0;
 }
 
-//boundary conditions - sets conserved in the ghost cells
+// boundary conditions - sets conserved in all the ghost cells
 int set_bc(ldouble t,int ifinit)
 {
   int ii;
@@ -3132,11 +3061,8 @@ int set_bc(ldouble t,int ifinit)
     }
 
 
-  /*****************************************************************/
   //corners of the whole domain are sometimes not real BC
-  //so need to fill them with something
-  /*****************************************************************/  
-  
+  //so need to fill them with something  
   int xlim,ylim,zlim;
   int lim,i,j,k;
   int ix1,iy1,iz1;
@@ -3802,7 +3728,6 @@ int set_bc(ldouble t,int ifinit)
 	
 #else //not SHEARINGBOX, regular
 
-
       //elongated corners along z
       //filling one cell deep surfaces, and averaging diagonally
       if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCLO)==1)
@@ -3985,7 +3910,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-       //elongated corners along x, filling one cell deep surfaces, and averaging diagonally
+      //elongated corners along x, filling one cell deep surfaces, and averaging diagonally
       if(mpi_isitBC(YBCLO)==1 && mpi_isitBC(ZBCLO)==1)
 	{
 	  for(ix=-NG;ix<NX+NG;ix++) {
@@ -4178,7 +4103,7 @@ int set_bc(ldouble t,int ifinit)
  ldouble uval[NV],pval[NV];
 
  /*****************************************************************/
- //corners in the midda - apply boundary condition on what is already in ghost cells
+ //corners in the middle - apply boundary condition on what is already in ghost cells
  /*****************************************************************/
 
  if(TNY>1 && TNZ==1)
@@ -4944,8 +4869,9 @@ int set_bc(ldouble t,int ifinit)
 } //set_bc()
 
 
-///////////////////////////////////////////////////////////////
+//*********************************************************
 //fixing after failed MHD main inversion
+//*********************************************************
 
 int
 cell_fixup(int type)
@@ -5140,211 +5066,8 @@ cell_fixup(int type)
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
-//outdated
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
-
-
-//**********************************************************************
-//******* solves implicitidly four-force source terms *********************
-//******* in the lab frame, returns ultimate deltas ***********************
-//******* the fiducial approach *****************************************
-//**********************************************************************
-
-struct f_implicit_metric_params
-{
-  void* ggg;
-  ldouble *uu0;
-  ldouble dt;
-  int n;
-};
-     
-
-///////////////////////////////////////////////////////////////
-
-int f_implicit_metric(const gsl_vector * x, void *paramsp,
-	      gsl_vector * f)
-//(ldouble *uu0,ldouble *uu,ldouble *pp,ldouble dt,void* ggg,ldouble *f)
-{
-
- struct f_implicit_metric_params *params 
-   = (struct f_implicit_metric_params *) paramsp;
-
-  struct geometry *geom
-    = (struct geometry *) params->ggg;
-
-  ldouble dt=params->dt;
-  
-  ldouble *uu0=params->uu0;
-
-  int n=params->n;
-
-  ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
-  gg=geom->gg;
-  GG=geom->GG;
-
-  ldouble pp[NV],uu[NV];
-  int iv;
-  for(iv=0;iv<NV;iv++)
-    {
-      pp[iv]=gsl_vector_get (x, iv);
-      if(isnan(pp[iv])) return -1;
-    }
-  //  print_Nvector(pp,NV);
-  
- //calculating conserved
-  int corr,fixup[2];
-  p2u(pp,uu,geom);
-
-   ldouble ms[NV],fval[NV];
-  //metric source terms
-   //  print_Nvector(uu,NV);
-   //  print_Nvector(uu0,NV);
-  
-  f_metric_source_term_arb(pp,geom,ms);
-
-  for(iv=0;iv<n;iv++)
-    {      
-      fval[iv]=uu[iv] - uu0[iv] - ms[iv]*dt;
-      gsl_vector_set (f, iv, fval[iv]);
-    }
-
-  //  print_Nvector(ms,NV);
-  //  print_Nvector(fval,NV);
-  //  getchar();
-
-  return GSL_SUCCESS;
-} 
-
-
-///////////////////////////////////////////////////////////////
-
-int
-print_state_metric (int iter, gsl_multiroot_fsolver * s)
-{
-  printf ("iter = %3u x = % .5e % .5e % .5e % .5e % .5e  % .5e "
-	  "f(x) = % .3e % .3e % .3e % .3e % .3e % .3e\n",
-	  iter,
-	  gsl_vector_get (s->x, 0),
-	  gsl_vector_get (s->x, 1),
-	  gsl_vector_get (s->x, 2),
-	  gsl_vector_get (s->x, 3),
-	  gsl_vector_get (s->x, 4),
-	  gsl_vector_get (s->x, 5),
-
-	  gsl_vector_get (s->f, 0),
-	  gsl_vector_get (s->f, 1),
-	  gsl_vector_get (s->f, 2),
-	  gsl_vector_get (s->f, 3),
-	  gsl_vector_get (s->f, 4),
-	  gsl_vector_get (s->f, 5));
-
-  return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
-
-int
-solve_implicit_metric(int ix,int iy,int iz,ldouble dt,ldouble *ubase)
-{
-  int i1,i2,i3,iv,i,j;
-
-  int verbose=0;
-
-  ldouble pp[NV],uu[NV],uu0[NV],uu00[NV],uup[NV]; 
-
-  ldouble (*gg)[5],(*GG)[5];
-
-  //  verbose=1;
-
-  struct geometry geom;
-  fill_geometry(ix,iy,iz,&geom);
-  
-  //temporary using local arrays
-  gg=geom.gg;
-  GG=geom.GG;
-
-  for(iv=0;iv<NV;iv++)
-    {
-      pp[iv]=get_u(p,iv,ix,iy,iz);      
-      uu[iv]=get_u(ubase,iv,ix,iy,iz);  
-      uu00[iv]=uu[iv];
-      uu0[iv]=uu[iv];
-   }
-
-  const gsl_multiroot_fsolver_type *T;
-  gsl_multiroot_fsolver *s;
-     
-  int status;
-  int iter = 0;
-     
-  const size_t n = NV;
-  struct f_implicit_metric_params par = {&geom,uu0,dt,n};
-  gsl_multiroot_function f = {&f_implicit_metric, n, &par};
-
-  gsl_vector *x = gsl_vector_alloc (n);
-     
-
-  double x_init[NV];
-  for (iv=0;iv<n;iv++)
-    {
-      x_init[iv]=1.*pp[iv];     
-      gsl_vector_set (x, iv, x_init[iv]);
-    }
-     
-  T = gsl_multiroot_fsolver_hybrids;
-  s = gsl_multiroot_fsolver_alloc (T, n);
-  gsl_multiroot_fsolver_set (s, &f, x);
-
-  //  print_state_metric (iter, s);  
-  
-  do
-    {
-      iter++;
-      status = gsl_multiroot_fsolver_iterate (s);
-
-      if (status)   /* check if solver is stuck */
-	break;
-      //print_state_metric (iter, s);
-    
-      status =gsl_multiroot_test_residual (s->f, 1e-5);
-
-      status = gsl_multiroot_test_delta (s->dx, s->x,
-					1e-4, 1e-4);
-    }
-  while (status == GSL_CONTINUE && iter < 1000);
-     
-  //printf ("status = %s\n", gsl_strerror (status)); getchar();
-  if(status!=GSL_SUCCESS) {if(verbose) printf("complain : %s\n",gsl_strerror (status));return -1;}
-
-  for(iv=0;iv<NV;iv++)
-    {
-      pp[iv]=gsl_vector_get (s->x, iv);
-    }
-
-  p2u(pp,uu,&geom);
-
-  for(iv=0;iv<NV;iv++)
-    {
-      set_u(p,iv,ix,iy,iz,pp[iv]);      
-      set_u(u,iv,ix,iy,iz,uu[iv]);      
-    }
-     
-  gsl_multiroot_fsolver_free (s);
-  gsl_vector_free (x);
-  return 0;
-
-}
-
-
-///////////////////////////////////////////////////////////////
 //averages the corrected cells over azimuth not touching magn. field
+//**********************************************************************
 
 int
 smooth_polaraxis()
@@ -5352,7 +5075,9 @@ smooth_polaraxis()
   int nc=NCCORRECTPOLAR; //correct velocity in nc most polar cells;
 
   //spherical like coords
-  if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS || MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==TKS3COORDS || MYCOORDS==MSPH1COORDS)
+  if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
+      MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==TKS3COORDS ||
+      MYCOORDS==MSPH1COORDS)
     {
       int ix;
 //#pragma omp parallel for private(ix)
@@ -5443,9 +5168,10 @@ return 0;
 }
 
 
-///////////////////////////////////////////////////////////////
+//**********************************************************************
 // correct cells near the surface of the neutron star
 // by interpolating the velocities to v_in
+//**********************************************************************
 
 #ifdef CORRECT_NSSURFACE
 int
@@ -5562,8 +5288,9 @@ correct_nssurface()
 #endif
 
 
-///////////////////////////////////////////////////////////////
+//**********************************************************************
 //treats the most polar cells is a special way, correcting them, not evolving them
+//**********************************************************************
 
 int
 correct_polaraxis()
@@ -5573,7 +5300,9 @@ correct_polaraxis()
       int ix,iy,iz,iv,ic,iysrc,ixsrc;
       
       //spherical like coords
-      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS || MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==TKS3COORDS || MYCOORDS==MSPH1COORDS)
+      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
+	  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==TKS3COORDS ||
+	  MYCOORDS==MSPH1COORDS)
 	{
 	  #pragma omp parallel for private(ic,ix,iy,iz,iv,iysrc) schedule (static)
 	  for(ix=0;ix<NX;ix++)
@@ -5843,8 +5572,9 @@ correct_polaraxis()
 }
 
 
-///////////////////////////////////////////////////////////////
+//**********************************************************************
 //treats the most polar cells is a special way, correcting them, not evolving them
+//**********************************************************************
 
 int
 correct_polaraxis_3d()
@@ -5852,9 +5582,10 @@ correct_polaraxis_3d()
       int nc=NCCORRECTPOLAR; //correct velocity in nc most polar cells;
 
       //spherical like coords
-      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS || MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS|| MYCOORDS==MKS3COORDS|| MYCOORDS==TKS3COORDS || MYCOORDS==MSPH1COORDS)
+      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
+	  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS|| MYCOORDS==MKS3COORDS|| MYCOORDS==TKS3COORDS ||
+	  MYCOORDS==MSPH1COORDS)
 	{
-	  //ldouble ppavg[NV];
           int ix;
 //#pragma omp parallel for private(ix)
 	  for(ix=0;ix<NX;ix++)
@@ -5868,6 +5599,7 @@ correct_polaraxis_3d()
 	      //if(geomBL.xx < 1.*rhorizonBL )      continue;
 
 	      gix=ix+TOI;
+	      
 	      //overwriting
 	      for(iz=0;iz<NZ;iz++)
 		{
@@ -5900,7 +5632,10 @@ correct_polaraxis_3d()
 
 			  ldouble vr,vth,vph,vx,vy,vz;
 			  ldouble cosph,sinth,costh,sinph;
-			  sinth=sin(th);		  costh=cos(th);		  sinph=sin(ph);		  cosph=cos(ph);
+			  sinth=sin(th);
+			  costh=cos(th);
+			  sinph=sin(ph);
+			  cosph=cos(ph);
 	  
 			  //gas
 			  pp[RHO]=axis1_primplus[RHO][gix];
@@ -5986,7 +5721,8 @@ correct_polaraxis_3d()
 			    vr/=sqrt(geom.gg[1][1]);
 			    vth/=sqrt(geom.gg[2][2]);
 			    vph/=sqrt(geom.gg[3][3]);
-			    //if(ic==0 && ix==10) printf("1 %d > %e %e | %e %e %e\n",iy,vth,sqrt(geom.gg[2][2]),vx,vy,vz);
+			    //if(ic==0 && ix==10)
+			    //  printf("1 %d > %e %e | %e %e %e\n",iy,vth,sqrt(geom.gg[2][2]),vx,vy,vz);
 			    ucon[1]=vr; ucon[2]=vth; ucon[3]=vph;
 			    //conv_vels(ucon,ucon,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
 			    //trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
@@ -5995,6 +5731,7 @@ correct_polaraxis_3d()
 			    pp[FX]=ucon[1];
 			    pp[FY]=ucon[2];
 			    pp[FZ]=ucon[3];
+			    
 			    //add average rotation
 			    pp[FZ]+=axis1_primplus[NV+1][gix];
 			  }
@@ -6044,7 +5781,10 @@ correct_polaraxis_3d()
 			  ldouble ph=geomBL.zz;
 			  ldouble vr,vth,vph,vx,vy,vz;
 			  ldouble cosph,sinth,costh,sinph;
-			  sinth=sin(th);		  costh=cos(th);		  sinph=sin(ph);		  cosph=cos(ph);
+			  sinth=sin(th);
+			  costh=cos(th);
+			  sinph=sin(ph);
+			  cosph=cos(ph);
 	  
 			  //gas
 			  pp[RHO]=axis2_primplus[RHO][gix];
@@ -6069,7 +5809,8 @@ correct_polaraxis_3d()
 			    //vph /= r*sinth;
 			    vr/=sqrt(geom.gg[1][1]);
 			    vth/=sqrt(geom.gg[2][2]);
-			    //if(ic==0 && ix==10) printf("2 %d > %e %e | %e %e %e\n",iy,vth,sqrt(geom.gg[2][2]),vx,vy,vz);
+			    //if(ic==0 && ix==10)
+			    // printf("2 %d > %e %e | %e %e %e\n",iy,vth,sqrt(geom.gg[2][2]),vx,vy,vz);
 			    vph/=sqrt(geom.gg[3][3]);
 
 			    ucon[1]=vr; ucon[2]=vth; ucon[3]=vph;
@@ -6080,6 +5821,7 @@ correct_polaraxis_3d()
 			    pp[VX]=ucon[1];
 			    pp[VY]=ucon[2];
 			    pp[VZ]=ucon[3];
+			    
 			    //add average rotation
 			    pp[VZ]+=axis2_primplus[NV][gix];
 			  }
@@ -6123,6 +5865,7 @@ correct_polaraxis_3d()
 			    pp[FX]=ucon[1];
 			    pp[FY]=ucon[2];
 			    pp[FZ]=ucon[3];
+			    
 			    //add average rotation
 			    pp[FZ]+=axis2_primplus[NV+1][gix];
 			  }
@@ -6157,8 +5900,9 @@ correct_polaraxis_3d()
   return 0; 
 }
 
-///////////////////////////////////////////////////////////////
-/* say if given cell is within NCCORRECTPOLAR from axis */
+//**********************************************************************
+// say if given cell is within NCCORRECTPOLAR from axis */
+//**********************************************************************
 
 int
 is_cell_corrected_polaraxis(int ix, int iy, int iz)
@@ -6183,222 +5927,27 @@ is_cell_corrected_polaraxis(int ix, int iy, int iz)
 }
 
 
-///////////////////////////////////////////////////////////////
+//**********************************************************************
 /* say if given cell is evolved or rather corrected */
+//**********************************************************************
 
 int
 is_cell_active(int ix, int iy, int iz)
 {
-  //by default active
+  //by default ALWAYS active
+  //ANDREW TODO: use for AMR? 
   return 1;
 }
-
-
-///////////////////////////////////////////////////////////////
-
-int if_modify_this_var_finitevol(int iv)
-{
-  if(iv==UU) return 1;
-  return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
-
-int volavg2center()
-{
-  //	copy_u(1.,u,ucopy);
-  int ii;
-  //calculates the primitives
-#pragma omp parallel for private(ii) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain only
-    {
-      ldouble upointval,um1,up1,uthis;	
-      int ix,iy,iz,iv;
-      int ixm1, ixp1, iym1, iyp1;
-      ix=loop_0[ii][0];
-      iy=loop_0[ii][1];
-      iz=loop_0[ii][2]; 
-		
-      for (iv=0;iv<NV;iv++) {
-	if(if_modify_this_var_finitevol(iv))
-	  {
-	    if (ix>0 && ix<NX-1){	
-	      uthis = get_u(u,iv,ix,iy,iz);
-	      um1 = get_u(u,iv,ix-1,iy,iz);
-	      up1 = get_u(u,iv,ix+1,iy,iz);
-	      upointval = uthis -um1/24. + uthis/12. - up1/24.;
-
-	    } else if (ix<=0){
-	      uthis = get_u(u,iv,ix,iy,iz);
-	      um1 = get_u(u,iv,ix+1,iy,iz);
-	      up1 = get_u(u,iv,ix+2,iy,iz);
-	      upointval = um1/12. + 23./24.*uthis - up1/24.;
-
-	    } else {
-	      uthis = get_u(u,iv,ix,iy,iz);
-	      um1 = get_u(u,iv,ix-1,iy,iz);
-	      up1 = get_u(u,iv,ix-2,iy,iz);
-	      upointval = um1/12. + 23./24.*uthis - up1/24.;
-
-	    }
-      
-	    if (NY>1){
-	      if (iy <= 0) {
-		uthis = get_u(u,iv,ix,iy,iz);
-		um1 = get_u(u,iv,ix,iy+1,iz);
-		up1 = get_u(u,iv,ix,iy+2,iz);
-		upointval += um1/12. - uthis/24. - up1/24.;
-	      } else if (iy >= NX-1) {
-		uthis = get_u(u,iv,ix,iy,iz);
-		um1 = get_u(u,iv,ix,iy-1,iz);
-		up1 = get_u(u,iv,ix,iy-2,iz);
-		upointval += um1/12. - uthis/24. - up1/24.;
-	      } else  {
-		uthis = get_u(u,iv,ix,iy,iz);
-		um1 = get_u(u,iv,ix,iy-1,iz);
-		up1 = get_u(u,iv,ix,iy+1,iz);
-		upointval +=-um1/24. + uthis/12. - up1/24.;
-	      } 
-	    }
-	  }
-	  else
-	    {
-	      uthis = get_u(u,iv,ix,iy,iz);
-	      upointval = uthis;
-	    }
-      
-	  set_u(ucent,iv,ix,iy,iz,upointval);
-	  }
-      }
-	
-      return 0;
-    }
-
-
-///////////////////////////////////////////////////////////////
-
-int center2volavg()
-  {
-    int ii;
-    //converts cell centered averages to volume w
-#pragma omp parallel for private(ii) schedule (static)
-    for(ii=0;ii<Nloop_0;ii++) //domain only
-      {
-	ldouble uavgval,um1,up1,uthis;
-	int iv,ix,iy,iz;
-	ix=loop_0[ii][0];
-	iy=loop_0[ii][1];
-	iz=loop_0[ii][2]; 
-		
-	//convert volume avg u to cell center u
-	for (iv=0;iv<NV;iv++) {
-	  if(if_modify_this_var_finitevol(iv))
-	    {
-	      if (ix>0 && ix<NX-1){	
-		uthis =get_u(ucent,iv,ix,iy,iz);
-		um1 = get_u(ucent,iv,ix-1,iy,iz);
-		up1 = get_u(ucent,iv,ix+1,iy,iz);
-		uavgval = um1/24. + 11./12.*uthis + up1/24.;
-	      } else if (ix<=0) {
-		uthis = get_u(ucent,iv,ix,iy,iz);
-		um1 = get_u(ucent,iv,ix+1,iy,iz);
-		up1 = get_u(ucent,iv,ix+2,iy,iz);
-		uavgval = uthis + uthis/24. - um1/12. + up1/24.;
-	      } else {
-		uthis = get_u(ucent,iv,ix,iy,iz);
-		um1 = get_u(ucent,iv,ix-1,iy,iz);
-		up1 = get_u(ucent,iv,ix-2,iy,iz);
-		uavgval = uthis + uthis/24. - um1/12. + up1/24.;
-	      }
-	
-	      if (NY>1){
-		if (iy <= 0) {
-		  uthis = get_u(ucent,iv,ix,iy,iz);
-		  um1 = get_u(ucent,iv,ix,iy+1,iz);
-		  up1 = get_u(ucent,iv,ix,iy+2,iz);
-		  uavgval += -um1/12. + uthis/24. + up1/24.;
-		} else if (iy >= NX-1) {
-		  uthis = get_u(ucent,iv,ix,iy,iz);
-		  um1 = get_u(ucent,iv,ix,iy-1,iz);
-		  up1 = get_u(ucent,iv,ix,iy-2,iz);
-		  uavgval += -um1/12. + uthis/24. + up1/24.;
-		} else  {
-		  uthis = get_u(ucent,iv,ix,iy,iz);
-		  um1 = get_u(ucent,iv,ix,iy-1,iz);
-		  up1 = get_u(ucent,iv,ix,iy+1,iz);
-		  uavgval += um1/24. - uthis/12. + up1/24.;
-		} 
-	      }
-	    }
-	    else
-	      {
-		uthis = get_u(ucent,iv,ix,iy,iz);
-		uavgval = uthis;
-	      }
-	    set_u(u,iv,ix,iy,iz,uavgval);
-	    }
-	}
-	return 0;
-      }
-
-
-///////////////////////////////////////////////////////////////
-
-int center2volavg_bc()
-{
-  return 0;
-  int ii;
-  //copies cell centered conserved left behind by problem bc.c to ucent
-#pragma omp parallel for private(ii) schedule (static)
-  for(ii=0;ii<Nloop_2;ii++) //ghost cells only, no corners
-    {
-      int ix,iy,iz,iv;
-      ix=loop_2[ii][0];
-      iy=loop_2[ii][1];
-      iz=loop_2[ii][2];
-      for(iv=0;iv<NV;iv++)
-	set_u(ucent,iv,ix,iy,iz,get_u(u,iv,ix,iy,iz));
-    }
-
-  //converst centered to vol.averaged conserved in the ghost cells
-#pragma omp parallel for  schedule (static)
-  for(ii=0;ii<Nloop_2;ii++) //ghost cells only, no corners
-    {
-      int ix,iy,iz,iv;
-      ix=loop_2[ii][0];
-      iy=loop_2[ii][1];
-      iz=loop_2[ii][2];
-      
-      ldouble uavgval,um1,up1,uthis;
-      int ixm1,ixp1;
-      ixm1=ix-1;
-      if(ixm1<-NGCX) ixm1=-NGCX;
-      ixp1=ix+1;
-      if(ixp1>NX+NGCX-1) ixp1=NX+NGCX-1;
-	  
-      for (iv=0;iv<NV;iv++) 
-	{
-	  uthis =get_u(ucent,iv,ix,iy,iz);
-	
-	  um1 = get_u(ucent,iv,ixm1,iy,iz);
-
-	  up1 = get_u(ucent,iv,ixp1,iy,iz);	
-
-	  uavgval = um1/24. + 11./12.*uthis + up1/24.;
-	  set_u(u,iv,ix,iy,iz,uavgval);
-	}
-    }
-	  
-  return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
+//**********************************************************************
 //evolves entropies using fluxes at faces to calculate mixing rates
+//**********************************************************************
 
 int
-get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0, ldouble *fxl,ldouble *fxr, ldouble* fyl, ldouble *fyr, ldouble *fzl, ldouble *fzr, ldouble dt, int iv)
+get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0,
+				    ldouble *fxl, ldouble *fxr,
+				    ldouble* fyl, ldouble *fyr,
+				    ldouble *fzl, ldouble *fzr,
+				    ldouble dt, int iv)
 {
       ldouble dx=get_size_x(ix,0);
       ldouble dy=get_size_x(iy,1);
@@ -6454,11 +6003,14 @@ get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0, ldouble *f
 }
 
 
-///////////////////////////////////////////////////////////////
+//**********************************************************************
+// Mixing entropy adjustment
+// TODO: still A LOT of work here
 // ANDREW - made compatible with S4 entropy (02/15/16)
+//**********************************************************************
 
 int
-mix_entropies_new(ldouble dt)
+mix_entropies(ldouble dt)
 {     
   int ix,iy,iz,ii;
 
@@ -6508,7 +6060,7 @@ mix_entropies_new(ldouble dt)
       get_factors_entropies_following_gas(ix,iy,iz,&f0,&fxl,&fxr,&fyl,&fyr,&fzl,&fzr,dt,RHO);     
 
       //***********************************
-      //******** total gas entropy *********
+      //******** total gas entropy ********
       //***********************************
       
 #ifndef DONOTMIXGASENTROPY //if entropy ~ p/rho^gamma, then no problem with mixing
@@ -6600,8 +6152,9 @@ mix_entropies_new(ldouble dt)
       if(!isfinite(syr)) syr=s0;
       if(!isfinite(szl)) szl=s0;
       if(!isfinite(szr)) szr=s0;
-  
-      Sbak =  rhofinal*(f0*s0 + fxl*sxl + fxr*sxr + fyl*syl + fyr*syr + fzl*szl + fzr*szr); //reduces to regular Godunov explicit
+
+      //reduces to regular Godunov explicit     
+      Sbak =  rhofinal*(f0*s0 + fxl*sxl + fxr*sxr + fyl*syl + fyr*syr + fzl*szl + fzr*szr); 
             
 #if defined(OLDENTROPYMIXING) //does not correct for entropy of mixing
       Sfinal = Sbak;
@@ -6648,7 +6201,6 @@ mix_entropies_new(ldouble dt)
       entsum = f0*pow(p0,ginv) + fxl*pow(pxl,ginv) + fxr*pow(pxr,ginv) + fyl*pow(pyl,ginv) + fyr*pow(pyr,ginv) + fzl*pow(pzl,ginv) + fzr*pow(pzr,ginv);
       Tgasfinal = pow(entsum, gamma) / (nfinal * K_BOLTZ);
       Sfinal = calc_SfromT(rhofinal, Tgasfinal, ix, iy, iz);
-      //if(ix==550) printf("%e %e %e %e \n",entsum,Tgasinit,Tgasfinal,Sfinal);
       
 #else //constant density
       //accounts for adiabatic expansion/compression independently for each component, only then mixes
@@ -6715,7 +6267,7 @@ mix_entropies_new(ldouble dt)
       #endif
 
       //find the scale factor that relates kappa to exp(s)
-      //ANDREW ONLY WORKS FOR S2,S3,S4
+      // ANDREW ONLY WORKS FOR S2,S3,S4 (not original S1)
       ginv = 1./gammae;
       gm1 = gammae-1.;
       kappainit = (neinit*K_BOLTZ*Teinit) / pow(rhoeinit, gammae);
@@ -6837,6 +6389,7 @@ mix_entropies_new(ldouble dt)
       pintfinalyr =  gm1*calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy+1,iz),get_u(ppreexplicit,RHO,ix,iy+1,iz),ELECTRONS,ix,iy+1,iz);
       pintfinalzl =  gm1*calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy,iz-1),get_u(ppreexplicit,RHO,ix,iy,iz-1),ELECTRONS,ix,iy,iz-1);
       pintfinalzr =  gm1*calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy,iz+1),get_u(ppreexplicit,RHO,ix,iy,iz+1),ELECTRONS,ix,iy,iz+1);
+      
       /*
       pintfinalpre =  gm1*get_u(ppreexplicit,UU,ix,iy,iz);
       pintfinalxl =  gm1* get_u(ppreexplicit,UU,ix-1,iy,iz);
@@ -6846,6 +6399,7 @@ mix_entropies_new(ldouble dt)
       pintfinalzl =  gm1* get_u(ppreexplicit,UU,ix,iy,iz-1);
       pintfinalzr =  gm1*get_u(ppreexplicit,UU,ix,iy,iz+1);
       */
+      
       p0  = my_min(p0,  LIMITFACTORINMIXING*pintfinalpre);
       pxl = my_min(pxl, LIMITFACTORINMIXING*my_max(pintfinalpre, pintfinalxl));
       pxr = my_min(pxr, LIMITFACTORINMIXING*my_max(pintfinalpre, pintfinalxr));
@@ -7016,7 +6570,7 @@ mix_entropies_new(ldouble dt)
 
       ldouble rhofinalgi = pow(rhofinal, gammai);
 
-      //ANDREW AA this should be right....but the answer looks wrong!
+      //ANDREW this should be right....but the answer looks wrong!
       gfac = gfac*s_scale;
       
       #if !defined(CONSISTENTGAMMA) && defined(NOLOGINS2)      
@@ -7046,6 +6600,7 @@ mix_entropies_new(ldouble dt)
       pintfinalyr =  gm1*calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy+1,iz),get_u(ppreexplicit,RHO,ix,iy+1,iz),IONS,ix,iy+1,iz);
       pintfinalzl =  gm1*calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy,iz-1),get_u(ppreexplicit,RHO,ix,iy,iz-1),IONS,ix,iy,iz-1);
       pintfinalzr =  gm1*calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy,iz+1),get_u(ppreexplicit,RHO,ix,iy,iz+1),IONS,ix,iy,iz+1);
+      
       /*
       pintfinalpre = gm1* get_u(ppreexplicit,UU,ix,iy,iz);
       pintfinalxl =  gm1* get_u(ppreexplicit,UU,ix-1,iy,iz);
@@ -7055,6 +6610,7 @@ mix_entropies_new(ldouble dt)
       pintfinalzl =  gm1* get_u(ppreexplicit,UU,ix,iy,iz-1);
       pintfinalzr =  gm1* get_u(ppreexplicit,UU,ix,iy,iz+1);
       */
+      
       p0  = my_min(p0, LIMITFACTORINMIXING*pintfinalpre);
       pxl = my_min(pxl, LIMITFACTORINMIXING*my_max(pintfinalpre, pintfinalxl));
       pxr = my_min(pxr, LIMITFACTORINMIXING*my_max(pintfinalpre, pintfinalxr));
@@ -7068,7 +6624,6 @@ mix_entropies_new(ldouble dt)
       Tifinal = pow(entsum, gammai) / (nifinal * K_BOLTZ);
       Sfinal = calc_SefromrhoT(rhofinal,Tifinal,IONS);
 
-      //if(ix==550) printf("%e %e %e %e %e\n",entsum,Tiinit,Tifinal,Sfinal,Sbaki);
 
 #else
       //ANDREW mix entropies constant density
@@ -7083,6 +6638,7 @@ mix_entropies_new(ldouble dt)
       uzl=calc_ufromSerho(szl*rhofinal,rhofinal,IONS,ix,iy,iz);
       uzr=calc_ufromSerho(szr*rhofinal,rhofinal,IONS,ix,iy,iz);
       #else
+      
       /*
       uintfinalpre = get_u(ppreexplicit,UU,ix,iy,iz);
       uintfinalxl =  get_u(ppreexplicit,UU,ix-1,iy,iz);
@@ -7092,6 +6648,7 @@ mix_entropies_new(ldouble dt)
       uintfinalzl =  get_u(ppreexplicit,UU,ix,iy,iz-1);
       uintfinalzr =  get_u(ppreexplicit,UU,ix,iy,iz+1);
       */
+      
       uintfinalpre = calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy,iz),get_u(ppreexplicit,RHO,ix,iy,iz),IONS,ix,iy,iz);
       uintfinalxl =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix-1,iy,iz),get_u(ppreexplicit,RHO,ix-1,iy,iz),IONS,ix-1,iy,iz);
       uintfinalxr =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix+1,iy,iz),get_u(ppreexplicit,RHO,ix+1,iy,iz),IONS,ix+1,iy,iz);
@@ -7152,746 +6709,3 @@ mix_entropies_new(ldouble dt)
       return 0;
 }
 
-
-int
-mix_entropies(ldouble dt)
-{     
-#ifdef MSTEP
-      my_err("MSTEP not compatible with MIXENTROPIESPROPERLY\n");
-#endif
-
-  int ix,iy,iz,ii;
-
- #pragma omp parallel for private(ix,iy,iz) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain 
-    {
-      ix=loop_0[ii][0];
-      iy=loop_0[ii][1];
-      iz=loop_0[ii][2]; 
-
-      ldouble rho,rhofinal = get_u(p,RHO,ix,iy,iz);
-      ldouble rhofinalxl, rhofinalxr;
-      ldouble rhofinalyl, rhofinalyr;
-      ldouble rhofinalzl, rhofinalzr;
-
-      rhofinalxl = get_u(p,RHO,ix-1,iy,iz);
-      rhofinalxr = get_u(p,RHO,ix+1,iy,iz);
-      rhofinalyl = get_u(p,RHO,ix,iy-1,iz);
-      rhofinalyr = get_u(p,RHO,ix,iy+1,iz);
-      rhofinalzl = get_u(p,RHO,ix,iy,iz-1);
-      rhofinalzr = get_u(p,RHO,ix,iy,iz+1);
-
-      ldouble uintfinal = get_u(p,UU,ix,iy,iz);
-      ldouble uintfinalpre = get_u(ppreexplicit,UU,ix,iy,iz);
-      ldouble uintfinalxl, uintfinalxr;
-      ldouble uintfinalyl, uintfinalyr;
-      ldouble uintfinalzl, uintfinalzr;
-
-      //QQQ what about boundaries? should it not have been after MPI? maybe use ppreexplicit?
-      uintfinalxl =  get_u(ppreexplicit,UU,ix-1,iy,iz);
-      uintfinalxr =  get_u(ppreexplicit,UU,ix+1,iy,iz);
-      uintfinalyl =  get_u(ppreexplicit,UU,ix,iy-1,iz);
-      uintfinalyr =  get_u(ppreexplicit,UU,ix,iy+1,iz);
-      uintfinalzl =  get_u(ppreexplicit,UU,ix,iy,iz-1);
-      uintfinalzr =  get_u(ppreexplicit,UU,ix,iy,iz+1);
-
-      ldouble f0,fxl,fxr,fyl,fyr,fzl,fzr;
-      ldouble sfinal,Sfinal,s0,sxl,sxr,syl,syr,szl,szr;
-      ldouble rsxl,rsxr,rsyl,rsyr,rszl,rszr;
-      ldouble u0,ufinal,uxl,uxr,uyl,uyr,uzl,uzr;
-      ldouble Sbak,Sbake,Sbaki;
-
-      //get fractions of the entropies coming from each cell
-      get_factors_entropies_following_gas(ix,iy,iz,&f0,&fxl,&fxr,&fyl,&fyr,&fzl,&fzr,dt,RHO); 
-
-      /******** total gas entropy *********/
-
-#ifndef DONOTMIXGASENTROPY //if entropy ~ p/rho^gamma, then no problem with mixing
-
-
-      //calculates entropy per particle
-      //assumes entropy flux is (n gdet s u^i) = (rho / mu / M_PROTON gdet s u^i) \propto (rho gdet s u^i)
-      //what is below is actually  mu / M_PROTON s but rho will return later 
-      s0=get_u(upreexplicit,ENTR,ix,iy,iz)/get_u(upreexplicit,RHO,ix,iy,iz);
-      
-      //based on ratio of fluxes (which may misbehave)
-      sxl=get_ub(flbx,ENTR,ix,iy,iz,0)/get_ub(flbx,RHO,ix,iy,iz,0);
-      sxr=get_ub(flbx,ENTR,ix+1,iy,iz,0)/get_ub(flbx,RHO,ix+1,iy,iz,0);
-      syl=get_ub(flby,ENTR,ix,iy,iz,1)/get_ub(flby,RHO,ix,iy,iz,1);
-      syr=get_ub(flby,ENTR,ix,iy+1,iz,1)/get_ub(flby,RHO,ix,iy+1,iz,1);
-      szl=get_ub(flbz,ENTR,ix,iy,iz,2)/get_ub(flbz,RHO,ix,iy,iz,2);
-      szr=get_ub(flbz,ENTR,ix,iy,iz+1,2)/get_ub(flbz,RHO,ix,iy,iz+1,2);
-      
-      
-      #ifdef PARTLYUPWINDENTROPYMIXING //corrects to cell center when outflowing
-      if(fxl<0) sxl=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fxr<0) sxr=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fyl<0) syl=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fyr<0) syr=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fzl<0) szl=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fzr<0) szr=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      #endif
-
-      //upwind scheme
-      if(fxl<0) rsxl=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsxl=get_u(ppreexplicit,ENTR,ix-1,iy,iz)/get_u(ppreexplicit,RHO,ix-1,iy,iz) ;
-      if(fxr<0) rsxr=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsxr=get_u(ppreexplicit,ENTR,ix+1,iy,iz)/get_u(ppreexplicit,RHO,ix+1,iy,iz) ;
-      if(fyl<0) rsyl=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsyl=get_u(ppreexplicit,ENTR,ix,iy-1,iz)/get_u(ppreexplicit,RHO,ix,iy-1,iz) ;
-      if(fyr<0) rsyr=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsyr=get_u(ppreexplicit,ENTR,ix,iy+1,iz)/get_u(ppreexplicit,RHO,ix,iy+1,iz) ;
-      if(fzl<0) rszl=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rszl=get_u(ppreexplicit,ENTR,ix,iy,iz-1)/get_u(ppreexplicit,RHO,ix,iy,iz-1) ;
-      if(fzr<0) rszr=get_u(ppreexplicit,ENTR,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rszr=get_u(ppreexplicit,ENTR,ix,iy,iz+1)/get_u(ppreexplicit,RHO,ix,iy,iz+1) ;
-     
-      #ifdef UPWINDENTROPYMIXING
-      sxl=rsxl;sxr=rsxr;syl=rsyl;syr=rsyr;szl=rszl;szr=rszr;
-      #endif
-
-
-      #ifdef PARTLYRECONSTRUCTEDUPWINDENTROPYMIXING
-      //upwind scheme
-      if(fxl<0) rsxl=get_ub(pbRx,ENTR,ix,iy,iz,0)/get_ub(pbRx,RHO,ix,iy,iz,0);
-      else rsxl=get_ub(pbLx,ENTR,ix,iy,iz,0)/get_ub(pbLx,RHO,ix,iy,iz,0);
-      if(fxr<0) rsxr=get_ub(pbLx,ENTR,ix+1,iy,iz,0)/get_ub(pbLx,RHO,ix+1,iy,iz,0);
-      else rsxr=get_ub(pbRx,ENTR,ix+1,iy,iz,0)/get_ub(pbRx,RHO,ix+1,iy,iz,0);
-      if(fyl<0) rsyl=get_ub(pbRx,ENTR,ix,iy,iz,1)/get_ub(pbRx,RHO,ix,iy,iz,1);
-      else rsyl=get_ub(pbLx,ENTR,ix,iy,iz,1)/get_ub(pbLx,RHO,ix,iy,iz,1);
-      if(fyr<0) rsyr=get_ub(pbLx,ENTR,ix,iy+1,iz,1)/get_ub(pbLx,RHO,ix,iy+1,iz,1);
-      else rsyr=get_ub(pbRx,ENTR,ix,iy+1,iz,1)/get_ub(pbRx,RHO,ix,iy+1,iz,1);
-      if(fzl<0) rszl=get_ub(pbRx,ENTR,ix,iy,iz,2)/get_ub(pbRx,RHO,ix,iy,iz,2);
-      else rszl=get_ub(pbLx,ENTR,ix,iy,iz,2)/get_ub(pbLx,RHO,ix,iy,iz,2);
-      if(fzr<0) rszr=get_ub(pbLx,ENTR,ix,iy,iz+1,2)/get_ub(pbLx,RHO,ix,iy,iz+1,2);
-      else rszr=get_ub(pbRx,ENTR,ix,iy,iz+1,2)/get_ub(pbRx,RHO,ix,iy,iz+1,2);
-      
-      sxl=rsxl;sxr=rsxr;syl=rsyl;syr=rsyr;szl=rszl;szr=rszr;
-      #endif
-
-      /*
-      //based on reconstructed primitives without the artificial viscosity term
-      ldouble rsxl,rsxr,rsyl,rsyr,rszl,rszr;
-      rsxl=0.5*(get_ub(pbLx,ENTR,ix,iy,iz,0)/get_ub(pbLx,RHO,ix,iy,iz,0) + get_ub(pbRx,ENTR,ix,iy,iz,0)/get_ub(pbRx,RHO,ix,iy,iz,0));
-      rsxr=0.5*(get_ub(pbLx,ENTR,ix+1,iy,iz,0)/get_ub(pbLx,RHO,ix+1,iy,iz,0) + get_ub(pbRx,ENTR,ix+1,iy,iz,0)/get_ub(pbRx,RHO,ix+1,iy,iz,0));
-      rsyl=0.5*(get_ub(pbLx,ENTR,ix,iy,iz,1)/get_ub(pbLx,RHO,ix,iy,iz,1) + get_ub(pbRx,ENTR,ix,iy,iz,1)/get_ub(pbRx,RHO,ix,iy,iz,1));
-      rsyr=0.5*(get_ub(pbLx,ENTR,ix,iy+1,iz,1)/get_ub(pbLx,RHO,ix,iy+1,iz,1) + get_ub(pbRx,ENTR,ix,iy+1,iz,1)/get_ub(pbRx,RHO,ix,iy+1,iz,1));
-      rszl=0.5*(get_ub(pbLx,ENTR,ix,iy,iz,2)/get_ub(pbLx,RHO,ix,iy,iz,2) + get_ub(pbRx,ENTR,ix,iy,iz,2)/get_ub(pbRx,RHO,ix,iy,iz,2));
-      rszr=0.5*(get_ub(pbLx,ENTR,ix,iy,iz+1,2)/get_ub(pbLx,RHO,ix,iy,iz+1,2) + get_ub(pbRx,ENTR,ix,iy,iz+1,2)/get_ub(pbRx,RHO,ix,iy,iz+1,2));
-      sxl=rsxl;sxr=rsxr;syl=rsyl;syr=rsyr;
-      */
-
-      if(!isfinite(sxl)) sxl=s0; //does not matter as will be multiplied by fxl=0
-      if(!isfinite(sxr)) sxr=s0;
-      if(!isfinite(syl)) syl=s0;
-      if(!isfinite(syr)) syr=s0;
-      if(!isfinite(szl)) szl=s0;
-      if(!isfinite(szr)) szr=s0;
-      
-      Sbak =  rhofinal*(f0*s0 + fxl*sxl + fxr*sxr + fyl*syl + fyr*syr + fzl*szl + fzr*szr); //reduces to regular Godunov explicit
-
-#ifdef OLDENTROPYMIXING //does not correct for entropy of mixing
-      Sfinal =Sbak;
-      set_u(p,ENTR,ix,iy,iz,Sfinal);
-#else //accounts for adiabatic expansion/compression independently for each component, only then mixes
-      
-      u0 =my_min(calc_ufromS(s0*rhofinal,rhofinal,ix,iy,iz),LIMITFACTORINMIXING*uintfinalpre);
-      uxl=my_min(calc_ufromS(sxl*rhofinal,rhofinal,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalxl));
-      uxr=my_min(calc_ufromS(sxr*rhofinal,rhofinal,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalxr));
-      uyl=my_min(calc_ufromS(syl*rhofinal,rhofinal,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalyl));
-      uyr=my_min(calc_ufromS(syr*rhofinal,rhofinal,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalyr));
-      uzl=my_min(calc_ufromS(szl*rhofinal,rhofinal,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalzl));
-      uzr=my_min(calc_ufromS(szr*rhofinal,rhofinal,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalzr));
-      
-      #ifdef DONOTLIMITENTRINMIXING
-      u0=calc_ufromS(s0*rhofinal,rhofinal,ix,iy,iz);
-      uxl=calc_ufromS(sxl*rhofinal,rhofinal,ix,iy,iz);
-      uxr=calc_ufromS(sxr*rhofinal,rhofinal,ix,iy,iz);
-      uyl=calc_ufromS(syl*rhofinal,rhofinal,ix,iy,iz);
-      uyr=calc_ufromS(syr*rhofinal,rhofinal,ix,iy,iz);
-      uzl=calc_ufromS(szl*rhofinal,rhofinal,ix,iy,iz);
-      uzr=calc_ufromS(szr*rhofinal,rhofinal,ix,iy,iz);
-      #endif
-
-       ufinal=f0*u0+fxl*uxl+fxr*uxr+fyl*uyl+fyr*uyr+fzl*uzl+fzr*uzr;
-       Sfinal=calc_Sfromu(rhofinal,ufinal,ix,iy,iz);
-
-       if(!isfinite(Sfinal))
-	 {
-	   /*
-	   //upwind backup
-	   u0=calc_ufromS(s0*rhofinal,rhofinal,ix,iy,iz);
-	   uxl=calc_ufromS(rsxl*rhofinal,rhofinal,ix,iy,iz);
-	   uxr=calc_ufromS(rsxr*rhofinal,rhofinal,ix,iy,iz);
-	   uyl=calc_ufromS(rsyl*rhofinal,rhofinal,ix,iy,iz);
-	   uyr=calc_ufromS(rsyr*rhofinal,rhofinal,ix,iy,iz);
-	   uzl=calc_ufromS(rszl*rhofinal,rhofinal,ix,iy,iz);
-	   uzr=calc_ufromS(rszr*rhofinal,rhofinal,ix,iy,iz);
-	   ufinal=f0*u0+fxl*uxl+fxr*uxr+fyl*uyl+fyr*uyr+fzl*uzl+fzr*uzr;
-	   Sfinal=calc_Sfromu(rhofinal,ufinal,ix,iy,iz); */
-	   //Godunov backup
-	   Sfinal=Sbak;
-	 }
-
-      set_u(p,ENTR,ix,iy,iz,Sfinal);
-#endif
-
-#endif
-
-#ifdef EVOLVEELECTRONS
-#ifndef DONOTMIXSPECIESENTROPY
-      /******** electrons *********/
-      
-      double ft1,ft2;
-      ft1=uintfinalpre/calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy,iz),get_u(ppreexplicit,RHO,ix,iy,iz),ELECTRONS,ix,iy,iz);
-      ft2=uintfinalxl/calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix-1,iy,iz),get_u(ppreexplicit,RHO,ix-1,iy,iz),ELECTRONS,ix-1,iy,iz);
-      
-      
-      uintfinalpre =  calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy,iz),get_u(ppreexplicit,RHO,ix,iy,iz),ELECTRONS,ix,iy,iz);
-      uintfinalxl =  calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix-1,iy,iz),get_u(ppreexplicit,RHO,ix-1,iy,iz),ELECTRONS,ix-1,iy,iz);
-      uintfinalxr =  calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix+1,iy,iz),get_u(ppreexplicit,RHO,ix+1,iy,iz),ELECTRONS,ix+1,iy,iz);
-      uintfinalyl =  calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy-1,iz),get_u(ppreexplicit,RHO,ix,iy-1,iz),ELECTRONS,ix,iy-1,iz);
-      uintfinalyr =  calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy+1,iz),get_u(ppreexplicit,RHO,ix,iy+1,iz),ELECTRONS,ix,iy+1,iz);
-      uintfinalzl =  calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy,iz-1),get_u(ppreexplicit,RHO,ix,iy,iz-1),ELECTRONS,ix,iy,iz-1);
-      uintfinalzr =  calc_ufromSerho(get_u(ppreexplicit,ENTRE,ix,iy,iz+1),get_u(ppreexplicit,RHO,ix,iy,iz+1),ELECTRONS,ix,iy,iz+1);
-     
-      //get_factors_entropies_following_gas(ix,iy,iz,&f0,&fxl,&fxr,&fyl,&fyr,&fzl,&fzr,dt,RHO);
-
-      //assumes entropy flux is (rho gdet s u^i)
-      s0=get_u(upreexplicit,ENTRE,ix,iy,iz)/get_u(upreexplicit,RHO,ix,iy,iz);
-
-      sxl=get_ub(flbx,ENTRE,ix,iy,iz,0)/get_ub(flbx,RHO,ix,iy,iz,0);
-      sxr=get_ub(flbx,ENTRE,ix+1,iy,iz,0)/get_ub(flbx,RHO,ix+1,iy,iz,0);
-      syl=get_ub(flby,ENTRE,ix,iy,iz,1)/get_ub(flby,RHO,ix,iy,iz,1);
-      syr=get_ub(flby,ENTRE,ix,iy+1,iz,1)/get_ub(flby,RHO,ix,iy+1,iz,1);
-      szl=get_ub(flbz,ENTRE,ix,iy,iz,2)/get_ub(flbz,RHO,ix,iy,iz,2);
-      szr=get_ub(flbz,ENTRE,ix,iy,iz+1,2)/get_ub(flbz,RHO,ix,iy,iz+1,2);
-
-      
-      //upwind scheme     
-      if(fxl<0) rsxl=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsxl=get_u(ppreexplicit,ENTRE,ix-1,iy,iz)/get_u(ppreexplicit,RHO,ix-1,iy,iz) ;
-      if(fxr<0) rsxr=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsxr=get_u(ppreexplicit,ENTRE,ix+1,iy,iz)/get_u(ppreexplicit,RHO,ix+1,iy,iz) ;
-      if(fyl<0) rsyl=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsyl=get_u(ppreexplicit,ENTRE,ix,iy-1,iz)/get_u(ppreexplicit,RHO,ix,iy-1,iz) ;
-      if(fyr<0) rsyr=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsyr=get_u(ppreexplicit,ENTRE,ix,iy+1,iz)/get_u(ppreexplicit,RHO,ix,iy+1,iz) ;
-      if(fzl<0) rszl=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rszl=get_u(ppreexplicit,ENTRE,ix,iy,iz-1)/get_u(ppreexplicit,RHO,ix,iy,iz-1) ;
-      if(fzr<0) rszr=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rszr=get_u(ppreexplicit,ENTRE,ix,iy,iz+1)/get_u(ppreexplicit,RHO,ix,iy,iz+1) ;
-    
-#ifdef UPWINDENTROPYMIXING 
-      sxl=rsxl;sxr=rsxr;syl=rsyl;syr=rsyr;szl=rszl;szr=rszr;
-#endif
-
-      #ifdef PARTLYUPWINDENTROPYMIXING //corrects to cell center when outflowing
-      if(fxl<0) sxl=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fxr<0) sxr=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fyl<0) syl=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fyr<0) syr=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fzl<0) szl=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fzr<0) szr=get_u(ppreexplicit,ENTRE,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-#endif
-      
-
-       #ifdef PARTLYRECONSTRUCTEDUPWINDENTROPYMIXING
-      //upwind scheme
-      if(fxl<0) rsxl=get_ub(pbRx,ENTRE,ix,iy,iz,0)/get_ub(pbRx,RHO,ix,iy,iz,0);
-      else rsxl=get_ub(pbLx,ENTRE,ix,iy,iz,0)/get_ub(pbLx,RHO,ix,iy,iz,0);
-      if(fxr<0) rsxr=get_ub(pbLx,ENTRE,ix+1,iy,iz,0)/get_ub(pbLx,RHO,ix+1,iy,iz,0);
-      else rsxr=get_ub(pbRx,ENTRE,ix+1,iy,iz,0)/get_ub(pbRx,RHO,ix+1,iy,iz,0);
-      if(fyl<0) rsyl=get_ub(pbRx,ENTRE,ix,iy,iz,1)/get_ub(pbRx,RHO,ix,iy,iz,1);
-      else rsyl=get_ub(pbLx,ENTRE,ix,iy,iz,1)/get_ub(pbLx,RHO,ix,iy,iz,1);
-      if(fyr<0) rsyr=get_ub(pbLx,ENTRE,ix,iy+1,iz,1)/get_ub(pbLx,RHO,ix,iy+1,iz,1);
-      else rsyr=get_ub(pbRx,ENTRE,ix,iy+1,iz,1)/get_ub(pbRx,RHO,ix,iy+1,iz,1);
-      if(fzl<0) rszl=get_ub(pbRx,ENTRE,ix,iy,iz,2)/get_ub(pbRx,RHO,ix,iy,iz,2);
-      else rszl=get_ub(pbLx,ENTRE,ix,iy,iz,2)/get_ub(pbLx,RHO,ix,iy,iz,2);
-      if(fzr<0) rszr=get_ub(pbLx,ENTRE,ix,iy,iz+1,2)/get_ub(pbLx,RHO,ix,iy,iz+1,2);
-      else rszr=get_ub(pbRx,ENTRE,ix,iy,iz+1,2)/get_ub(pbRx,RHO,ix,iy,iz+1,2);
-      
-      sxl=rsxl;sxr=rsxr;syl=rsyl;syr=rsyr;szl=rszl;szr=rszr;
-      #endif
-
-      /*
-      sxl=0.5*(get_ub(pbLx,ENTRE,ix,iy,iz,0)/get_ub(pbLx,RHO,ix,iy,iz,0) + get_ub(pbRx,ENTRE,ix,iy,iz,0)/get_ub(pbRx,RHO,ix,iy,iz,0));
-      sxr=0.5*(get_ub(pbLx,ENTRE,ix+1,iy,iz,0)/get_ub(pbLx,RHO,ix+1,iy,iz,0) + get_ub(pbRx,ENTRE,ix+1,iy,iz,0)/get_ub(pbRx,RHO,ix+1,iy,iz,0));
-      syl=0.5*(get_ub(pbLx,ENTRE,ix,iy,iz,1)/get_ub(pbLx,RHO,ix,iy,iz,1) + get_ub(pbRx,ENTRE,ix,iy,iz,1)/get_ub(pbRx,RHO,ix,iy,iz,1));
-      syr=0.5*(get_ub(pbLx,ENTRE,ix,iy+1,iz,1)/get_ub(pbLx,RHO,ix,iy+1,iz,1) + get_ub(pbRx,ENTRE,ix,iy+1,iz,1)/get_ub(pbRx,RHO,ix,iy+1,iz,1));
-      szl=0.5*(get_ub(pbLx,ENTRE,ix,iy,iz,2)/get_ub(pbLx,RHO,ix,iy,iz,2) + get_ub(pbRx,ENTRE,ix,iy,iz,2)/get_ub(pbRx,RHO,ix,iy,iz,2));
-      szr=0.5*(get_ub(pbLx,ENTRE,ix,iy,iz+1,2)/get_ub(pbLx,RHO,ix,iy,iz+1,2) + get_ub(pbRx,ENTRE,ix,iy,iz+1,2)/get_ub(pbRx,RHO,ix,iy,iz+1,2));
-      */
-
-      if(!isfinite(sxl)) sxl=s0; //does not matter as will be multiplied by fxl=0
-      if(!isfinite(sxr)) sxr=s0;
-      if(!isfinite(syl)) syl=s0;
-      if(!isfinite(syr)) syr=s0;
-      if(!isfinite(szl)) szl=s0;
-      if(!isfinite(szr)) szr=s0;
-
-      //check signs - somewhat arbitrary!
-      /*
-      if(s0*sxl<0.) fxl=0;
-      if(s0*sxr<0.) fxr=0;
-      if(s0*syl<0.) fyl=0;
-      if(s0*syr<0.) fyr=0;
-      if(s0*szl<0.) fzl=0;
-      if(s0*szr<0.)  fzr=0;
-      */
-
-      Sbake=rhofinal*(f0*s0 + fxl*sxl + fxr*sxr + fyl*syl + fyr*syr + fzl*szl + fzr*szr);
-
-#ifdef OLDENTROPYMIXING
-      Sfinal = Sbake;
-      set_u(p,ENTRE,ix,iy,iz,Sfinal);
-#else
-
-      u0=my_min(calc_ufromSerho(s0*rhofinal,rhofinal,ELECTRONS,ix,iy,iz),LIMITFACTORINMIXING*uintfinalpre);
-      uxl=my_min(calc_ufromSerho(sxl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalxl));
-      uxr=my_min(calc_ufromSerho(sxr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalxr));
-      uyl=my_min(calc_ufromSerho(syl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalyl));
-      uyr=my_min(calc_ufromSerho(syr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalyr));
-      uzl=my_min(calc_ufromSerho(szl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalzl));
-      uzr=my_min(calc_ufromSerho(szr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalzr));
-
-      #ifdef DONOTLIMITENTRINMIXING
-      u0=calc_ufromSerho(s0*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-      uxl=calc_ufromSerho(sxl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-      uxr=calc_ufromSerho(sxr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-      uyl=calc_ufromSerho(syl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-      uyr=calc_ufromSerho(syr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-      uzl=calc_ufromSerho(szl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-      uzr=calc_ufromSerho(szr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-      #endif
-
-      ufinal=f0*u0+fxl*uxl+fxr*uxr+fyl*uyl+fyr*uyr+fzl*uzl+fzr*uzr;
-
-      //if(ufinal<UEUINTMINRATIO*uintfinal) 
-      //ufinal=UEUINTMINRATIO*uintfinal;
-
-      Sfinal=calc_Sefromrhou(rhofinal,ufinal,ELECTRONS);
-
-      if(!isfinite(Sfinal))
-	{
-	  //upwind backup
-	  /*
-	  u0=calc_ufromSerho(s0*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-	  uxl=calc_ufromSerho(rsxl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-	  uxr=calc_ufromSerho(rsxr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-	  uyl=calc_ufromSerho(rsyl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-	  uyr=calc_ufromSerho(rsyr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-	  uzl=calc_ufromSerho(rszl*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-	  uzr=calc_ufromSerho(rszr*rhofinal,rhofinal,ELECTRONS,ix,iy,iz);
-	  ufinal=f0*u0+fxl*uxl+fxr*uxr+fyl*uyl+fyr*uyr+fzl*uzl+fzr*uzr;
-	  Sfinal=calc_Sfromu(rhofinal,ufinal,ix,iy,iz);
-	  */
-	  Sfinal=Sbake;
-	}
-
-      set_u(p,ENTRE,ix,iy,iz,Sfinal);
-#endif
-
-  
-      /******** ions *********/
-      
-      
-      uintfinalpre =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy,iz),get_u(ppreexplicit,RHO,ix,iy,iz),IONS,ix,iy,iz);
-      uintfinalxl =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix-1,iy,iz),get_u(ppreexplicit,RHO,ix-1,iy,iz),IONS,ix-1,iy,iz);
-      uintfinalxr =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix+1,iy,iz),get_u(ppreexplicit,RHO,ix+1,iy,iz),IONS,ix+1,iy,iz);
-      uintfinalyl =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy-1,iz),get_u(ppreexplicit,RHO,ix,iy-1,iz),IONS,ix,iy-1,iz);
-      uintfinalyr =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy+1,iz),get_u(ppreexplicit,RHO,ix,iy+1,iz),IONS,ix,iy+1,iz);
-      uintfinalzl =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy,iz-1),get_u(ppreexplicit,RHO,ix,iy,iz-1),IONS,ix,iy,iz-1);
-      uintfinalzr =  calc_ufromSerho(get_u(ppreexplicit,ENTRI,ix,iy,iz+1),get_u(ppreexplicit,RHO,ix,iy,iz+1),IONS,ix,iy,iz+1);
-      
-
-      //get_factors_entropies_following_gas(ix,iy,iz,&f0,&fxl,&fxr,&fyl,&fyr,&fzl,&fzr,dt,RHO);
-
-      //assumes entropy flux is (rho gdet s u^i)
-      s0=get_u(upreexplicit,ENTRI,ix,iy,iz)/get_u(upreexplicit,RHO,ix,iy,iz);
-      
-      sxl=get_ub(flbx,ENTRI,ix,iy,iz,0)/get_ub(flbx,RHO,ix,iy,iz,0);
-      sxr=get_ub(flbx,ENTRI,ix+1,iy,iz,0)/get_ub(flbx,RHO,ix+1,iy,iz,0);
-      syl=get_ub(flby,ENTRI,ix,iy,iz,1)/get_ub(flby,RHO,ix,iy,iz,1);
-      syr=get_ub(flby,ENTRI,ix,iy+1,iz,1)/get_ub(flby,RHO,ix,iy+1,iz,1);
-      szl=get_ub(flbz,ENTRI,ix,iy,iz,2)/get_ub(flbz,RHO,ix,iy,iz,2);
-      szr=get_ub(flbz,ENTRI,ix,iy,iz+1,2)/get_ub(flbz,RHO,ix,iy,iz+1,2);
-
-
-#ifdef PARTLYUPWINDENTROPYMIXING //corrects to cell center when outflowing
-      if(fxl<0) sxl=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fxr<0) sxr=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fyl<0) syl=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fyr<0) syr=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fzl<0) szl=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      if(fzr<0) szr=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-#endif
-
-       //upwind scheme
-      if(fxl<0) rsxl=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsxl=get_u(ppreexplicit,ENTRI,ix-1,iy,iz)/get_u(ppreexplicit,RHO,ix-1,iy,iz) ;
-      if(fxr<0) rsxr=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsxr=get_u(ppreexplicit,ENTRI,ix+1,iy,iz)/get_u(ppreexplicit,RHO,ix+1,iy,iz) ;
-      if(fyl<0) rsyl=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsyl=get_u(ppreexplicit,ENTRI,ix,iy-1,iz)/get_u(ppreexplicit,RHO,ix,iy-1,iz) ;
-      if(fyr<0) rsyr=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rsyr=get_u(ppreexplicit,ENTRI,ix,iy+1,iz)/get_u(ppreexplicit,RHO,ix,iy+1,iz) ;
-      if(fzl<0) rszl=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rszl=get_u(ppreexplicit,ENTRI,ix,iy,iz-1)/get_u(ppreexplicit,RHO,ix,iy,iz-1) ;
-      if(fzr<0) rszr=get_u(ppreexplicit,ENTRI,ix,iy,iz)/get_u(ppreexplicit,RHO,ix,iy,iz);
-      else rszr=get_u(ppreexplicit,ENTRI,ix,iy,iz+1)/get_u(ppreexplicit,RHO,ix,iy,iz+1) ;
-     
-#ifdef UPWINDENTROPYMIXING
- 
-      sxl=rsxl;sxr=rsxr;syl=rsyl;syr=rsyr;szl=rszl;szr=rszr;
-#endif
-
-
-
-       #ifdef PARTLYRECONSTRUCTEDUPWINDENTROPYMIXING
-      //upwind scheme
-      if(fxl<0) rsxl=get_ub(pbRx,ENTRI,ix,iy,iz,0)/get_ub(pbRx,RHO,ix,iy,iz,0);
-      else rsxl=get_ub(pbLx,ENTRI,ix,iy,iz,0)/get_ub(pbLx,RHO,ix,iy,iz,0);
-      if(fxr<0) rsxr=get_ub(pbLx,ENTRI,ix+1,iy,iz,0)/get_ub(pbLx,RHO,ix+1,iy,iz,0);
-      else rsxr=get_ub(pbRx,ENTRI,ix+1,iy,iz,0)/get_ub(pbRx,RHO,ix+1,iy,iz,0);
-      if(fyl<0) rsyl=get_ub(pbRx,ENTRI,ix,iy,iz,1)/get_ub(pbRx,RHO,ix,iy,iz,1);
-      else rsyl=get_ub(pbLx,ENTRI,ix,iy,iz,1)/get_ub(pbLx,RHO,ix,iy,iz,1);
-      if(fyr<0) rsyr=get_ub(pbLx,ENTRI,ix,iy+1,iz,1)/get_ub(pbLx,RHO,ix,iy+1,iz,1);
-      else rsyr=get_ub(pbRx,ENTRI,ix,iy+1,iz,1)/get_ub(pbRx,RHO,ix,iy+1,iz,1);
-      if(fzl<0) rszl=get_ub(pbRx,ENTRI,ix,iy,iz,2)/get_ub(pbRx,RHO,ix,iy,iz,2);
-      else rszl=get_ub(pbLx,ENTRI,ix,iy,iz,2)/get_ub(pbLx,RHO,ix,iy,iz,2);
-      if(fzr<0) rszr=get_ub(pbLx,ENTRI,ix,iy,iz+1,2)/get_ub(pbLx,RHO,ix,iy,iz+1,2);
-      else rszr=get_ub(pbRx,ENTRI,ix,iy,iz+1,2)/get_ub(pbRx,RHO,ix,iy,iz+1,2);
-      
-      sxl=rsxl;sxr=rsxr;syl=rsyl;syr=rsyr;szl=rszl;szr=rszr;
-      #endif
-      /*
-     sxl=0.5*(get_ub(pbLx,ENTRI,ix,iy,iz,0)/get_ub(pbLx,RHO,ix,iy,iz,0) + get_ub(pbRx,ENTRI,ix,iy,iz,0)/get_ub(pbRx,RHO,ix,iy,iz,0));
-      sxr=0.5*(get_ub(pbLx,ENTRI,ix+1,iy,iz,0)/get_ub(pbLx,RHO,ix+1,iy,iz,0) + get_ub(pbRx,ENTRI,ix+1,iy,iz,0)/get_ub(pbRx,RHO,ix+1,iy,iz,0));
-      syl=0.5*(get_ub(pbLx,ENTRI,ix,iy,iz,1)/get_ub(pbLx,RHO,ix,iy,iz,1) + get_ub(pbRx,ENTRI,ix,iy,iz,1)/get_ub(pbRx,RHO,ix,iy,iz,1));
-      syr=0.5*(get_ub(pbLx,ENTRI,ix,iy+1,iz,1)/get_ub(pbLx,RHO,ix,iy+1,iz,1) + get_ub(pbRx,ENTRI,ix,iy+1,iz,1)/get_ub(pbRx,RHO,ix,iy+1,iz,1));
-      szl=0.5*(get_ub(pbLx,ENTRI,ix,iy,iz,2)/get_ub(pbLx,RHO,ix,iy,iz,2) + get_ub(pbRx,ENTRI,ix,iy,iz,2)/get_ub(pbRx,RHO,ix,iy,iz,2));
-      szr=0.5*(get_ub(pbLx,ENTRI,ix,iy,iz+1,2)/get_ub(pbLx,RHO,ix,iy,iz+1,2) + get_ub(pbRx,ENTRI,ix,iy,iz+1,2)/get_ub(pbRx,RHO,ix,iy,iz+1,2));
-      */
-
-
-      if(!isfinite(sxl)) sxl=s0; //does not matter as will be multiplied by fxl=0
-      if(!isfinite(sxr)) sxr=s0;
-      if(!isfinite(syl)) syl=s0;
-      if(!isfinite(syr)) syr=s0;
-      if(!isfinite(szl)) szl=s0;
-      if(!isfinite(szr)) szr=s0;
-
-      //check signs - somewhat arbitrary!
-      if(s0*sxl<0.) fxl=0;
-      if(s0*sxr<0.) fxr=0;
-      if(s0*syl<0.) fyl=0;
-      if(s0*syr<0.) fyr=0;
-      if(s0*szl<0.) fzl=0;
-      if(s0*szr<0.)  fzr=0;
-
-      Sbaki= rhofinal*(f0*s0 + fxl*sxl + fxr*sxr + fyl*syl + fyr*syr + fzl*szl + fzr*szr);
-#ifdef OLDENTROPYMIXING
-      Sfinal = Sbaki;
-      set_u(p,ENTRI,ix,iy,iz,Sfinal);
-#else
-      u0=my_min(calc_ufromSerho(s0*rhofinal,rhofinal,IONS,ix,iy,iz),LIMITFACTORINMIXING*uintfinalpre);
-      uxl=my_min(calc_ufromSerho(sxl*rhofinal,rhofinal,IONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalxl));
-      uxr=my_min(calc_ufromSerho(sxr*rhofinal,rhofinal,IONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalxr));
-      uyl=my_min(calc_ufromSerho(syl*rhofinal,rhofinal,IONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalyl));
-      uyr=my_min(calc_ufromSerho(syr*rhofinal,rhofinal,IONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalyr));
-      uzl=my_min(calc_ufromSerho(szl*rhofinal,rhofinal,IONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalzl));
-      uzr=my_min(calc_ufromSerho(szr*rhofinal,rhofinal,IONS,ix,iy,iz),LIMITFACTORINMIXING*my_max(uintfinalpre,uintfinalzr));
-
-      
-#ifdef DONOTLIMITENTRINMIXING
-      u0=calc_ufromSerho(s0*rhofinal,rhofinal,IONS,ix,iy,iz);
-      uxl=calc_ufromSerho(sxl*rhofinal,rhofinal,IONS,ix,iy,iz);
-      uxr=calc_ufromSerho(sxr*rhofinal,rhofinal,IONS,ix,iy,iz);
-      uyl=calc_ufromSerho(syl*rhofinal,rhofinal,IONS,ix,iy,iz);
-      uyr=calc_ufromSerho(syr*rhofinal,rhofinal,IONS,ix,iy,iz);
-      uzl=calc_ufromSerho(szl*rhofinal,rhofinal,IONS,ix,iy,iz);
-      uzr=calc_ufromSerho(szr*rhofinal,rhofinal,IONS,ix,iy,iz);
-      #endif
-
-      ufinal=f0*u0+fxl*uxl+fxr*uxr+fyl*uyl+fyr*uyr+fzl*uzl+fzr*uzr;
-      
-      //if(ufinal<UIUINTMINRATIO*uintfinal) 
-      //ufinal=UIUINTMINRATIO*uintfinal;
-
-      Sfinal=calc_Sefromrhou(rhofinal,ufinal,IONS);
-
-
-      if(!isfinite(Sfinal))
-	{
-	  //upwind backup
-	  /*
-	  u0=calc_ufromSerho(s0*rhofinal,rhofinal,IONS,ix,iy,iz);
-	  uxl=calc_ufromSerho(rsxl*rhofinal,rhofinal,IONS,ix,iy,iz);
-	  uxr=calc_ufromSerho(rsxr*rhofinal,rhofinal,IONS,ix,iy,iz);
-	  uyl=calc_ufromSerho(rsyl*rhofinal,rhofinal,IONS,ix,iy,iz);
-	  uyr=calc_ufromSerho(rsyr*rhofinal,rhofinal,IONS,ix,iy,iz);
-	  uzl=calc_ufromSerho(rszl*rhofinal,rhofinal,IONS,ix,iy,iz);
-	  uzr=calc_ufromSerho(rszr*rhofinal,rhofinal,IONS,ix,iy,iz);
-	  ufinal=f0*u0+fxl*uxl+fxr*uxr+fyl*uyl+fyr*uyr+fzl*uzl+fzr*uzr;
-	  Sfinal=calc_Sfromu(rhofinal,ufinal,ix,iy,iz);
-	  */
-	  Sfinal=Sbaki;
-	}
-
-
-      //TEST
-      /*
-      if(!isfinite(Sfinal))
-	{
-	  Sfinal= rhofinal*(f0*s0 + fxl*sxl + fxr*sxr + fyl*syl + fyr*syr + fzl*szl + fzr*szr);
-	  printf("ENTRI error @ %d %d: corrected using old mixing\n",ix,iy);
-	}
-      */
-
-      set_u(p,ENTRI,ix,iy,iz,Sfinal);
-#endif
-
-#endif  //DONOTMIXSPECIESENTROPY  
-#endif //EVOLVEELECTRONS
-
-      int sanitycheck=0;
-      if(!isfinite(get_u(p,ENTR,ix,iy,iz))) sanitycheck=-1;
-#ifdef EVOLVEELECTRONS
-      if(!isfinite(get_u(p,ENTRE,ix,iy,iz))) sanitycheck=-1;
-      if(!isfinite(get_u(p,ENTRI,ix,iy,iz))) sanitycheck=-1;
-#endif
-
-      if(sanitycheck < 0) //something failed, let's use Godunov evolution
-	{
-	  //printf("reverting at %d\n",ix);
-	  set_u(p,ENTR,ix,iy,iz,Sbak);
-#ifdef EVOLVEELECTRONS
-#ifndef DONOTMIXSPECIESENTROPY	  
-	  set_u(p,ENTRE,ix,iy,iz,Sbake);
-	  set_u(p,ENTRI,ix,iy,iz,Sbaki);
-#endif	  
-#endif
-	}
-	  
-      //recalculating conserved quantities
-      struct geometry geom;
-      fill_geometry(ix,iy,iz,&geom);
-      p2u_mhd(&get_u(p,0,ix,iy,iz),&get_u(u,0,ix,iy,iz),&geom);
-
-    }
-  
-
-      return 0;
-}
-
-
-
-///////////////////////////////////////////////////////////////
-
-int calc_source_cent_global()
-{
-	int ii;
-	#pragma omp parallel for private(ii) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain 
-    {
-	  int iv, ix, iy,iz;
-      ix=loop_0[ii][0];
-      iy=loop_0[ii][1];
-      iz=loop_0[ii][2]; 
-      ldouble ms[NV],gs[NV];
-      
-      f_metric_source_term(ix,iy,iz,ms);
-	  f_general_source_term(ix,iy,iz,gs);
-	  for(iv=0;iv<NV;iv++){
-	    set_u(scent,iv,ix,iy,iz,ms[iv]+gs[iv]);
-	  }
-	  
-  }
-	return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
-
-int volavg2center_arb(ldouble *avg_ar,ldouble* cent_ar)
-{
-  //	copy_u(1.,avg_ar,ucopy);
-  int ii;
-  //calculates the primitives
-#pragma omp parallel for private(ii) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain only
-    {
-      ldouble upointval,um1,up1,uthis;	
-      int ix,iy,iz,iv;
-      int ixm1, ixp1, iym1, iyp1;
-      ix=loop_0[ii][0];
-      iy=loop_0[ii][1];
-      iz=loop_0[ii][2]; 
-		
-      for (iv=0;iv<NV;iv++) {
-	if(if_modify_this_var_finitevol(iv)){
-	  if (ix>0 && ix<NX-1){	
-	    uthis = get_u(avg_ar,iv,ix,iy,iz);
-	    um1 = get_u(avg_ar,iv,ix-1,iy,iz);
-	    up1 = get_u(avg_ar,iv,ix+1,iy,iz);
-	    upointval = uthis -um1/24. + uthis/12. - up1/24.;
-
-	  } else if (ix<=0){
-	    uthis = get_u(avg_ar,iv,ix,iy,iz);
-	    um1 = get_u(avg_ar,iv,ix+1,iy,iz);
-	    up1 = get_u(avg_ar,iv,ix+2,iy,iz);
-	    upointval = um1/12. + 23./24.*uthis - up1/24.;
-
-	  } else {
-	    uthis = get_u(avg_ar,iv,ix,iy,iz);
-	    um1 = get_u(avg_ar,iv,ix-1,iy,iz);
-	    up1 = get_u(avg_ar,iv,ix-2,iy,iz);
-	    upointval = um1/12. + 23./24.*uthis - up1/24.;
-
-	  }
-      
-	  if (NY>1){
-	    if (iy <= 0) {
-	      uthis = get_u(avg_ar,iv,ix,iy,iz);
-	      um1 = get_u(avg_ar,iv,ix,iy+1,iz);
-	      up1 = get_u(avg_ar,iv,ix,iy+2,iz);
-	      upointval += um1/12. - uthis/24. - up1/24.;
-	    } else if (iy >= NX-1) {
-	      uthis = get_u(avg_ar,iv,ix,iy,iz);
-	      um1 = get_u(avg_ar,iv,ix,iy-1,iz);
-	      up1 = get_u(avg_ar,iv,ix,iy-2,iz);
-	      upointval += um1/12. - uthis/24. - up1/24.;
-	    } else  {
-	      uthis = get_u(avg_ar,iv,ix,iy,iz);
-	      um1 = get_u(avg_ar,iv,ix,iy-1,iz);
-	      up1 = get_u(avg_ar,iv,ix,iy+1,iz);
-	      upointval +=-um1/24. + uthis/12. - up1/24.;
-	    } 
-	  }
-	} else {
-	  uthis = get_u(avg_ar,iv,ix,iy,iz);
-	  upointval = uthis;
-	}
-	set_u(cent_ar,iv,ix,iy,iz,upointval);
-      }
-    }
-	
-  return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
-
-int center2volavg_arb(ldouble* cent_ar,ldouble *avg_ar)
-{
-  int ii;
-  //converts cell centered averages to volume w
-#pragma omp parallel for private(ii) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain only
-    {
-      ldouble uavgval,um1,up1,uthis;
-      int iv,ix,iy,iz;
-      ix=loop_0[ii][0];
-      iy=loop_0[ii][1];
-      iz=loop_0[ii][2]; 
-		
-      //convert volume avg u to cell center u
-      for (iv=0;iv<NV;iv++) {
-	if(if_modify_this_var_finitevol(iv)){
-	  if (ix>0 && ix<NX-1){	
-	    uthis =get_u(cent_ar,iv,ix,iy,iz);
-	    um1 = get_u(cent_ar,iv,ix-1,iy,iz);
-	    up1 = get_u(cent_ar,iv,ix+1,iy,iz);
-	    uavgval = um1/24. + 11./12.*uthis + up1/24.;
-	  } else if (ix<=0) {
-	    uthis = get_u(cent_ar,iv,ix,iy,iz);
-	    um1 = get_u(cent_ar,iv,ix+1,iy,iz);
-	    up1 = get_u(cent_ar,iv,ix+2,iy,iz);
-	    uavgval = uthis + uthis/24. - um1/12. + up1/24.;
-	  } else {
-	    uthis = get_u(cent_ar,iv,ix,iy,iz);
-	    um1 = get_u(cent_ar,iv,ix-1,iy,iz);
-	    up1 = get_u(cent_ar,iv,ix-2,iy,iz);
-	    uavgval = uthis + uthis/24. - um1/12. + up1/24.;
-	  }
-	
-	  if (NY>1){
-	    if (iy <= 0) {
-	      uthis = get_u(cent_ar,iv,ix,iy,iz);
-	      um1 = get_u(cent_ar,iv,ix,iy+1,iz);
-	      up1 = get_u(cent_ar,iv,ix,iy+2,iz);
-	      uavgval += -um1/12. + uthis/24. + up1/24.;
-	    } else if (iy >= NX-1) {
-	      uthis = get_u(cent_ar,iv,ix,iy,iz);
-	      um1 = get_u(cent_ar,iv,ix,iy-1,iz);
-	      up1 = get_u(cent_ar,iv,ix,iy-2,iz);
-	      uavgval += -um1/12. + uthis/24. + up1/24.;
-	    } else  {
-	      uthis = get_u(cent_ar,iv,ix,iy,iz);
-	      um1 = get_u(cent_ar,iv,ix,iy-1,iz);
-	      up1 = get_u(cent_ar,iv,ix,iy+1,iz);
-	      uavgval += um1/24. - uthis/12. + up1/24.;
-	    } 
-	  }
-	} else {
-	  uthis = get_u(cent_ar,iv,ix,iy,iz);
-	  uavgval = uthis;
-	}
-	set_u(avg_ar,iv,ix,iy,iz,uavgval);
-      }
-    }
-  return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
-
-int center2volavg_bc_arb(ldouble* cent_ar,ldouble *avg_ar)
-{
-  return 0;
-  int ii;
-  //copies cell centered conserved left behind by problem bc.c to ucent
-#pragma omp parallel for private(ii) schedule (static)
-  for(ii=0;ii<Nloop_2;ii++) //ghost cells only, no corners
-    {
-      int ix,iy,iz,iv;
-      ix=loop_2[ii][0];
-      iy=loop_2[ii][1];
-      iz=loop_2[ii][2];
-      for(iv=0;iv<NV;iv++)
-	set_u(cent_ar,iv,ix,iy,iz,get_u(avg_ar,iv,ix,iy,iz));
-    }
-
-  //converst centered to vol.averaged conserved in the ghost cells
-#pragma omp parallel for private(ii) schedule (static)
-  for(ii=0;ii<Nloop_2;ii++) //ghost cells only, no corners
-    {
-      int ix,iy,iz,iv;
-      ix=loop_2[ii][0];
-      iy=loop_2[ii][1];
-      iz=loop_2[ii][2];
-      
-      ldouble uavgval,um1,up1,uthis;
-      int ixm1,ixp1;
-      ixm1=ix-1;
-      if(ixm1<-NGCX) ixm1=-NGCX;
-      ixp1=ix+1;
-      if(ixp1>NX+NGCX-1) ixp1=NX+NGCX-1;
-	  
-      for (iv=0;iv<NV;iv++) 
-	{
-	  uthis =get_u(cent_ar,iv,ix,iy,iz);
-	
-	  um1 = get_u(cent_ar,iv,ixm1,iy,iz);
-
-	  up1 = get_u(cent_ar,iv,ixp1,iy,iz);	
-
-	  uavgval = um1/24. + 11./12.*uthis + up1/24.;
-	  set_u(avg_ar,iv,ix,iy,iz,uavgval);
-	}
-    }
-	  
-  return 0;
-}
-    

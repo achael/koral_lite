@@ -197,9 +197,6 @@ solve_the_problem(ldouble tstart, char* folder)
         
 	    global_expdt=dt;
  
-            //Set ppostexplicit = p over domain + ghost cells
-	    //copyi_u(1.,p,ppostexplicit);
-
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
 	    count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
@@ -306,9 +303,6 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_intermediate (t,dt);
         
 	    global_expdt=dt;
-
-            // Set ppostexplicit = p over domain + ghost cells
-	    //copyi_u(1.,p,ppostexplicit);
 	    
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
 	    count_entropy(&nentr[5],&nentr2[5]);

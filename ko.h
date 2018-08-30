@@ -435,7 +435,7 @@ struct struct_of_state
 #define get_x(ic,idim) (idim==0 ? x[ic+NG] : \
 		       (idim==1 ? x[ic+NG + NX+2*NG] : \
 		       (idim==2 ? x[ic+NG + NX+2*NG + NY+2*NG ] : 0.)))
-		       
+
 #define get_xb(ic,idim) (idim==0 ? xb[ic+NG] : \
 			(idim==1 ? xb[ic+NG + NX+2*NG + 1] : \
 			(idim==2 ? xb[ic+NG + NX+2*NG +1 + NY+2*NG +1 ] : 0.)))
@@ -516,15 +516,27 @@ struct struct_of_state
 #define get_g(uarr,i,j,ix,iy,iz) uarr[i*5+j + (iX(ix)+(NGCX))*gSIZE + \
 				              (iY(iy)+(NGCY))*(SX)*gSIZE + \
 					      (iZMET(iz)+(NGCZMET))*(SY)*(SX)*gSIZE]
-  
+
+#define set_g(uarr,i,j,ix,iy,iz,val) uarr[i*5+j + (iX(ix)+(NGCX))*gSIZE +	\
+				                  (iY(iy)+(NGCY))*(SX)*gSIZE + \
+					          (iZMET(iz)+(NGCZMET))*(SY)*(SX)*gSIZE] = val
+
 #define get_T(uarr,i,j,ix,iy,iz) uarr[i*4+j + (iX(ix)+(NGCX))*16 + \
 				              (iY(iy)+(NGCY))*(SX)*16 + \
 					      (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16]
-  
+
+#define set_T(uarr,i,j,ix,iy,iz,val) uarr[i*4+j + (iX(ix)+(NGCX))*16 +	\
+				                  (iY(iy)+(NGCY))*(SX)*16 + \
+					          (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16] = val
+
 #define get_Tfull(uarr,i,j,ix,iy,iz) uarr[i*4+j + (iX(ix)+(NGCX))*16 + \
 					          (iY(iy)+(NGCY))*(SX)*16 + \
 					          (iZ(iz)+(NGCZ))*(SY)*(SX)*16]
-  
+
+#define set_Tfull(uarr,i,j,ix,iy,iz,val) uarr[i*4+j + (iX(ix)+(NGCX))*16 + \
+				     	              (iY(iy)+(NGCY))*(SX)*16 + \
+					              (iZ(iz)+(NGCZ))*(SY)*(SX)*16] = val
+
 #define get_Tb(uarr,i,j,ix,iy,iz,idim) (idim==0 ? uarr[i*4+j + (iX(ix)+(NGCX))*16 + \
 						               (iY(iy)+(NGCY))*(SX+1)*16 + \
 					                       (iZMET(iz)+(NGCZMET))*(SY)*(SX+1)*16] : \
@@ -701,6 +713,7 @@ int fill_geometry_arb(int ix,int iy,int iz,void *geom,int COORDS);
 int fill_geometry_face(int ix,int iy,int iz,int idim, void *geom);
 int fill_geometry_face_arb(int ix,int iy,int iz,int idim, void *geom,int COORDS);
 
+//deprecated
 //int calc_tetrades(ldouble g[][5], ldouble tmuup[][4], ldouble tmulo[][4],int coords);
 //int calc_ZAMOes(ldouble g[][5], ldouble emuup[][4], ldouble emulo[][4], int coords);
 
@@ -771,6 +784,7 @@ int trans_pall_coco(ldouble *pp1, ldouble *pp2, int CO1,int CO2, ldouble *xxvec,
 int trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, void* ggg1,void* ggg2);
 int trans_prad_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, void* ggg1, void* ggg2);
 
+//deprecated
 //int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg);
 //int prad_lab2ff(ldouble *pp1, ldouble *pp2, void *ggg);
 //int prad_on2lab(ldouble *pp1, ldouble *pp2, void* ggg);
@@ -781,6 +795,14 @@ int trans_prad_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxv
 //int boost2_ff2zamo(ldouble A1[4],ldouble A2[4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
 //int boost22_zamo2ff(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
 //int boost22_ff2zamo(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
+//int trans22_zamo2lab(ldouble T1[][4],ldouble T2[][4],ldouble elo[][4]);
+//int trans22_lab2zamo(ldouble T1[][4],ldouble T2[][4],ldouble eup[][4]);
+//int trans2_lab2zamo(ldouble *u1,ldouble *u2,ldouble eup[][4]);
+//int trans2_zamo2lab(ldouble *u1,ldouble *u2,ldouble elo[][4]);
+//int trans22_on2cc(ldouble T1[][4],ldouble T2[][4],ldouble tlo[][4]);
+//int trans22_cc2on(ldouble T1[][4],ldouble T2[][4],ldouble tup[][4]);
+//int trans2_cc2on(ldouble *u1,ldouble *u2,ldouble tup[][4]);
+//int trans2_on2cc(ldouble *u1,ldouble *u2,ldouble tlo[][4]);
 
 int calc_Lorentz_lab2ff(ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble L[][4]);
 int calc_Lorentz_lab2ff_4vel(ldouble *pp, ldouble gg[][5], ldouble GG[][5], ldouble L[][4], ldouble ucon[4], ldouble ucov[4]);
@@ -797,15 +819,6 @@ int boost2_ff2lab(ldouble A1[4],ldouble A2[4],ldouble *pp,ldouble gg[][5],ldoubl
 
 int multiply22(ldouble T1[][4],ldouble T2[][4],ldouble A[][4]);
 int multiply2(ldouble *u1,ldouble *u2,ldouble A[][4]);
-
-//int trans22_zamo2lab(ldouble T1[][4],ldouble T2[][4],ldouble elo[][4]);
-//int trans22_lab2zamo(ldouble T1[][4],ldouble T2[][4],ldouble eup[][4]);
-//int trans2_lab2zamo(ldouble *u1,ldouble *u2,ldouble eup[][4]);
-//int trans2_zamo2lab(ldouble *u1,ldouble *u2,ldouble elo[][4]);
-//int trans22_on2cc(ldouble T1[][4],ldouble T2[][4],ldouble tlo[][4]);
-//int trans22_cc2on(ldouble T1[][4],ldouble T2[][4],ldouble tup[][4]);
-//int trans2_cc2on(ldouble *u1,ldouble *u2,ldouble tup[][4]);
-//int trans2_on2cc(ldouble *u1,ldouble *u2,ldouble tlo[][4]);
 
 int coco_3vector(ldouble A1[3],ldouble A2[3],int CO1,int CO2,void* ggg);
 int trans2_coco(ldouble *xx,ldouble *u1,ldouble *u2,int CO1, int CO2);
@@ -836,6 +849,7 @@ int fill_utinvel3(ldouble *u1,double gg[][5],ldouble GG[][5]);
 int fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5]);
 int conv_velsinprims(ldouble *pp,int which1, int which2,ldouble gg[][5],ldouble GG[][5]);
 
+//TODO: remove these? 
 int calc_normalobs_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncon);
 int calc_normalobs_ncov_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncov, ldouble *ncon);
 int calc_normalobs_4vel(ldouble GG[][5], ldouble *ncon);
@@ -871,11 +885,6 @@ int test_maginv();
 ///////////////////////////////////////////////////////////////
 // u2p.c //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-
-int calc_primitives(int ix,int iy,int iz,int type,int setflags);
-int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
-int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
-
 //static FTYPE dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq,FTYPE gamma);
 //static FTYPE compute_idwmrho0dp(FTYPE wmrho0,FTYPE gamma);
 //static FTYPE compute_idrho0dp(FTYPE wmrho0);
@@ -886,12 +895,16 @@ int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
 //static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
 //static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
 //static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
+//static int f_u2p_solver_5d(ldouble *xxx, ldouble* uu0, ldouble* pp0, ldouble *f1, void *params, ldouble* err);
+//static int f_u2p_solver_5d_gsl(const gsl_vector * x, void *params, gsl_vector * f);
+
+int calc_primitives(int ix,int iy,int iz,int type,int setflags);
+int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
+int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
 
 int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-//static int f_u2p_solver_5d(ldouble *xxx, ldouble* uu0, ldouble* pp0, ldouble *f1, void *params, ldouble* err);
 int u2p_solver_5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-//static int f_u2p_solver_5d_gsl(const gsl_vector * x, void *params, gsl_vector * f);
 int u2p_solver_5d_gsl(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Wpplus5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
@@ -909,15 +922,13 @@ int test_inversion_5d();
 ///////////////////////////////////////////////////////////////
 // u2prad.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-
-int u2p_rad(ldouble *uu, ldouble *pp, void *ggg, int *corrected);
-int u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected);
-
 //static int get_m1closure_gammarel2_cold(int verbose, void *ggg, FTYPE *Avcon,FTYPE *Avcov, FTYPE *gammarel2return, FTYPE *deltareturn, FTYPE *numeratorreturn, FTYPE *divisorreturn, FTYPE *Erfreturn, FTYPE *urfconrel);
 //static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldouble *Avcov, ldouble *gammarel2return,ldouble *deltareturn, ldouble *numeratorreturn, ldouble *divisorreturn);
 //static int get_m1closure_Erf(void *ggg, ldouble *Avcon, ldouble gammarel2, ldouble *Erfreturn);
 //static int get_m1closure_urfconrel(int verbose, void *ggg, ldouble *pp, ldouble *Avcon, ldouble *Avcov, ldouble gammarel2, ldouble delta, ldouble numerator,ldouble divisor, ldouble *Erfreturn, ldouble *urfconrel, int *corflag);
 
+int u2p_rad(ldouble *uu, ldouble *pp, void *ggg, int *corrected);
+int u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected);
 int check_floors_rad(ldouble *pp, int whichvel,void *ggg);
 
 ///////////////////////////////////////////////////////////////
@@ -932,27 +943,32 @@ int save_timesteps();
 int calc_u2p(int type,int setflags);
 int calc_wavespeeds();
 int do_correct();
+
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);
 int apply_dynamo(ldouble t, ldouble dt);
 int op_implicit(ldouble t, ldouble dtin);
+
 ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz);
+
 int set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac);
 int alloc_loops();
 int print_grid(ldouble min_dx, ldouble min_dy, ldouble min_dz);
+
+ldouble get_size_x(int ic, int idim);
 int get_xx(int ix,int iy,int iz,ldouble *xx);
 int get_xx_arb(int ix,int iy,int iz,ldouble *xx,int COORDSOUT);
 int set_x(int ic, int idim,ldouble val);
-ldouble get_size_x(int ic, int idim);
 int set_xb(int ic, int idim,ldouble val);
 ldouble calc_xb(int i,int idim);
 int calc_bc(int ix,int iy,int iz,ldouble t, ldouble *uu,ldouble *pp,int ifinit,int BCtype);
-int set_g(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
-int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
-int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
+//int set_g(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
+//int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
+//int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
 int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim);
 int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
 int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
+
 int copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, int N);
 int copy_u(ldouble factor,ldouble *uu1,ldouble* uu2 );
 int copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2);
@@ -962,37 +978,29 @@ int addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3);
 int add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4,int N);
 int add_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4);
 int addi_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4);
+
 int if_indomain(int ix,int iy,int iz);
 int if_outsidegc(int ix,int iy,int iz);
+
 int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int ifinit,int BCtype);
 int set_bc(ldouble t,int ifinit);
+
 int cell_fixup(int type);
+
 int f_implicit_metric(const gsl_vector * x, void *paramsp, gsl_vector * f);
 int print_state_metric (int iter, gsl_multiroot_fsolver * s);
 int solve_implicit_metric(int ix,int iy,int iz,ldouble dt,ldouble *ubase);
+
 int smooth_polaraxis();
 int correct_nssurface();
 int correct_polaraxis();
 int correct_polaraxis_3d();
 int is_cell_corrected_polaraxis(int ix, int iy, int iz);
 int is_cell_active(int ix, int iy, int iz);
-int if_modify_this_var_finitevol(int iv);
-int volavg2center();
-int center2volavg();
-int center2volavg_bc();
+
 int get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0, ldouble *fxl,ldouble *fxr, ldouble* fyl, ldouble *fyr, ldouble *fzl, ldouble *fzr, ldouble dt, int iv);
 int mix_entropies(ldouble dt);
-int mix_entropies_new(ldouble dt);
-int calc_source_cent_global();
-int volavg2center_arb(ldouble *avg_ar,ldouble* cent_ar);
-int center2volavg_arb(ldouble* cent_ar,ldouble *avg_ar);
-int center2volavg_bc();
-int get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0, ldouble *fxl,ldouble *fxr, ldouble* fyl, ldouble *fyr, ldouble *fzl, ldouble *fzr, ldouble dt, int iv);
-int mix_entropies(ldouble dt);
-int calc_source_cent_global();
-int volavg2center_arb(ldouble *avg_ar,ldouble* cent_ar);
-int center2volavg_arb(ldouble* cent_ar,ldouble *avg_ar);
-int center2volavg_bc_arb(ldouble* cent_ar,ldouble *avg_ar);
+
 
 ///////////////////////////////////////////////////////////////
 // magn.c /////////////////////////////////////////////////////
