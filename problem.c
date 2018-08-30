@@ -860,7 +860,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
 	  //dump on-the-go dump files if not MPI
 #ifndef MPI 
-  
           #if(SCAOUTPUT==1) // scalar  dumpfiles
 	  fprint_scalars(t,scalars,NSCALARS);
           #endif
@@ -907,9 +906,9 @@ solve_the_problem(ldouble tstart, char* folder)
 	  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 	  if(PROCID==0)
 	    printf( "-- I/O took %.3f seconds\n", end_time-start_time);
-	  
-      }  // if(lasttout_floor!=floor(t/dtout) || ALLSTEPSOUTPUT || t>.9999999*t1 || spitoutput==1)
 
+      }  // if(lasttout_floor!=floor(t/dtout) || ALLSTEPSOUTPUT || t>.9999999*t1 || spitoutput==1)
+      
       //print performance to screen only every second
       int printeacht=0;
       #ifdef PRINTEACHT
@@ -935,7 +934,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	  fprintf_time = end_time;
 	  fprintf_nstep = nstep;
       }  // if((end_time-fprintf_time>1.  || printeacht) && PROCID==0)
-
+      
       // restore original final primitives after outputs
       // Set p = uforget over domain
       copy_u(1.,uforget,p);
@@ -947,7 +946,6 @@ solve_the_problem(ldouble tstart, char* folder)
   // END OF MAIN SIMULATION TIME LOOP 
   /***********************************************************************/
   /***********************************************************************/
-  
   return 0;
 }  
 

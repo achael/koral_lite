@@ -325,11 +325,11 @@ ldouble *u,*x,*ucent,*xb,*du,*ut1,*ut2,*ut3,*ut4,*ut0,*u_bak_fixup,*p_bak_fixup,
   *pbLx,*pbRx,*pbLy,*pbRy,*pbLz,*pbRz,*sbLx,*sbRx,*sbLy,*sbRy,*sbLz,*sbRz,
   *flbx,*flby,*flbz,*flLx,*flRx,*flLy,*flRy,*flLz,*flRz,
   *flbx2,*flby2,*flbz2,*flLx2,*flRx2,*flLy2,*flRy2,*flLz2,*flRz2,
-  *gKr,
-  *emuup,*emulo,*emuupbx,*emulobx,*emuupby,*emuloby,*emuupbz,*emulobz,
-  *emuup2,*emulo2,*emuupbx2,*emulobx2,*emuupby2,*emuloby2,*emuupbz2,*emulobz2,
-  *tmuup,*tmulo,*tmuupbx,*tmulobx,*tmuupby,*tmuloby,*tmuupbz,*tmulobz,
-  *tmuup2,*tmulo2,*tmuupbx2,*tmulobx2,*tmuupby2,*tmuloby2,*tmuupbz2,*tmulobz2;
+  *gKr;
+  //*emuup,*emulo,*emuupbx,*emulobx,*emuupby,*emuloby,*emuupbz,*emulobz,
+  //*emuup2,*emulo2,*emuupbx2,*emulobx2,*emuupby2,*emuloby2,*emuupbz2,*emulobz2,
+  //*tmuup,*tmulo,*tmuupbx,*tmulobx,*tmuupby,*tmuloby,*tmuupbz,*tmulobz,
+  //*tmuup2,*tmulo2,*tmuupbx2,*tmulobx2,*tmuupby2,*tmuloby2,*tmuupbz2,*tmulobz2;
 
 int *cellflag;
 
@@ -855,6 +855,71 @@ int pick_Gb(int ix,int iy,int iz,int,ldouble gg[][5]);
 int print_p(ldouble *p);
 int print_u(ldouble *p);
 
+
+///////////////////////////////////////////////////////////////
+// p2u.c //////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+
+int p2u(ldouble *p, ldouble *u, void *ggg);
+int p2u_mhd(ldouble *p, ldouble *u, void *ggg);
+ldouble calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg);
+int p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg);
+int p2u_rad(ldouble *pp,ldouble *uu,void *ggg);
+int p2avg(int ix,int iy,int iz,ldouble *avg);
+int test_maginv();
+
+///////////////////////////////////////////////////////////////
+// u2p.c //////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+
+int calc_primitives(int ix,int iy,int iz,int type,int setflags);
+int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
+int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
+
+//static FTYPE dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq,FTYPE gamma);
+//static FTYPE compute_idwmrho0dp(FTYPE wmrho0,FTYPE gamma);
+//static FTYPE compute_idrho0dp(FTYPE wmrho0);
+//static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble pgamma);
+//static FTYPE pressure_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+//static FTYPE compute_inside_entropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+//static FTYPE compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+//static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+//static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
+//static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
+
+int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+//static int f_u2p_solver_5d(ldouble *xxx, ldouble* uu0, ldouble* pp0, ldouble *f1, void *params, ldouble* err);
+int u2p_solver_5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+//static int f_u2p_solver_5d_gsl(const gsl_vector * x, void *params, gsl_vector * f);
+int u2p_solver_5d_gsl(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_Wpplus5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
+
+int count_entropy(int *n, int *n2);
+int copy_entropycount();
+int update_entropy();
+
+int test_inversion();
+int test_inversion_nonrel();
+int test_inversion_5d();
+
+///////////////////////////////////////////////////////////////
+// u2prad.c ///////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+
+int u2p_rad(ldouble *uu, ldouble *pp, void *ggg, int *corrected);
+int u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected);
+
+//static int get_m1closure_gammarel2_cold(int verbose, void *ggg, FTYPE *Avcon,FTYPE *Avcov, FTYPE *gammarel2return, FTYPE *deltareturn, FTYPE *numeratorreturn, FTYPE *divisorreturn, FTYPE *Erfreturn, FTYPE *urfconrel);
+//static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldouble *Avcov, ldouble *gammarel2return,ldouble *deltareturn, ldouble *numeratorreturn, ldouble *divisorreturn);
+//static int get_m1closure_Erf(void *ggg, ldouble *Avcon, ldouble gammarel2, ldouble *Erfreturn);
+//static int get_m1closure_urfconrel(int verbose, void *ggg, ldouble *pp, ldouble *Avcon, ldouble *Avcov, ldouble gammarel2, ldouble delta, ldouble numerator,ldouble divisor, ldouble *Erfreturn, ldouble *urfconrel, int *corflag);
+
+int check_floors_rad(ldouble *pp, int whichvel,void *ggg);
+
 ///////////////////////////////////////////////////////////////
 // finite.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
@@ -1124,77 +1189,6 @@ ldouble solve_Teifromnmu_consistent(ldouble n, ldouble m, ldouble u);
 ldouble uint_function(ldouble n, ldouble m, ldouble u,ldouble theta);
 ldouble duint_dtheta(ldouble n, ldouble m, ldouble theta);
 int report_negeibalance();
-
-///////////////////////////////////////////////////////////////
-// p2u.c //////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////
-
-int p2u(ldouble *p, ldouble *u, void *ggg);
-int p2u_mhd(ldouble *p, ldouble *u, void *ggg);
-int p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg);
-int p2u_rad(ldouble *pp,ldouble *uu,void *ggg);
-int p2avg(int ix,int iy,int iz,ldouble *avg);
-ldouble calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg);
-int test_maginv();
-
-///////////////////////////////////////////////////////////////
-// u2p.c //////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////
-
-int calc_primitives(int ix,int iy,int iz,int type,int setflags);
-int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
-int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
-static FTYPE dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq,FTYPE gamma);
-FTYPE compute_idwmrho0dp(FTYPE wmrho0,FTYPE gamma);
-FTYPE compute_idrho0dp(FTYPE wmrho0);
-int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble pgamma);
-FTYPE pressure_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-FTYPE compute_inside_entropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-FTYPE compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
-static FTYPE dvsq_dW(FTYPE W, FTYPE *wglobal,FTYPE Bsq,FTYPE QdotB,FTYPE QdotBsq,FTYPE Qtsq,FTYPE Qdotn,FTYPE Qdotnp,FTYPE D,FTYPE Sc, int whicheos, FTYPE *EOSextra);
-int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
-int f_u2p_cold(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
-int f_u2p_hotmax(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err, ldouble pgamma);
-double fWplim (double Wp, void *params);
-double fWplim_deriv (double Wp, void *params);
-void fWplim_fdf (double Wp, void *params, double *y, double *dy);
-int find_Wplim(ldouble *Wp,ldouble *cons);
-int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int f_u2p_solver_5d(ldouble *xxx, ldouble* uu0, ldouble* pp0, ldouble *f1, void *params, ldouble* err);
-int free_u2p_solver_5r(ldouble** J, ldouble** iJ, ldouble *tJ, ldouble *tiJ, ldouble *f1, ldouble *f2, ldouble *f3, ldouble *xxx, ldouble *xxx0,int N);
-int u2p_solver_5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int f_u2p_solver_5d_gsl(const gsl_vector * x, void *params, gsl_vector * f);
-int u2p_solver_5d_gsl(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_Wpplus5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int count_entropy(int *n, int *n2);
-int copy_entropycount();
-int test_inversion();
-int test_inversion_nonrel();
-int test_inversion_5d();
-int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
-int update_entropy();
-
-
-///////////////////////////////////////////////////////////////
-// u2prad.c ///////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////
-
-static int get_m1closure_gammarel2_cold(int verbose, void *ggg, FTYPE *Avcon,FTYPE *Avcov, FTYPE *gammarel2return, FTYPE *deltareturn, FTYPE *numeratorreturn, FTYPE *divisorreturn, FTYPE *Erfreturn, FTYPE *urfconrel);
-static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldouble *Avcov, ldouble *gammarel2return,ldouble *deltareturn, ldouble *numeratorreturn, ldouble *divisorreturn);
-static int get_m1closure_Erf(void *ggg, ldouble *Avcon, ldouble gammarel2, ldouble *Erfreturn);
-static int get_m1closure_urfconrel(int verbose, void *ggg, ldouble *pp, ldouble *Avcon, ldouble *Avcov, ldouble gammarel2, ldouble delta, ldouble numerator,ldouble divisor, ldouble *Erfreturn, ldouble *urfconrel, int *corflag);
-int u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected);
-int u2p_rad(ldouble *uu, ldouble *pp, void *ggg, int *corrected);
-int f_u2prad_num(ldouble *uu,ldouble *pp, void* ggg,ldouble *f);
-int print_state_u2prad_num (int iter, ldouble *x, ldouble *f);
-int u2p_rad_onff(ldouble *uu, ldouble *pp, void* ggg, int *corrected);
-int check_floors_rad(ldouble *pp, int whichvel,void *ggg);
-
 
 ///////////////////////////////////////////////////////////////
 // nonthermal.c ///////////////////////////////////////////////

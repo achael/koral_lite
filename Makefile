@@ -6,8 +6,10 @@ CFLAGS=-O3 -DMPI
 else
 //CC=gcc
 //CFLAGS=-O2 -Wno-unused-result -fopenmp
+//-fsanitize=address -g -fno-omit-frame-pointer -Wunused-function 
 CC=clang
-CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -fopenmp=libiomp5
+CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -fopenmp=libiomp5 -Wunused-function
+//-fsanitize=address -g -fno-omit-frame-pointer
 endif
 
 LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt

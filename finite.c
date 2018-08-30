@@ -1313,7 +1313,8 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
   ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV],fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
   ldouble fd_pLl[NV], fd_pRl[NV], fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
   ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-  ldouble gdet,gg[4][5],GG[4][5],eup[4][4],elo[4][4];
+  ldouble gdet,gg[4][5],GG[4][5];
+  //ldouble eup[4][4],elo[4][4];
 
   // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
   for(i=0;i<NV;i++) 

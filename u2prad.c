@@ -6,8 +6,133 @@
 #include "ko.h"
 
 
+static int get_m1closure_gammarel2_cold(int verbose, void *ggg,
+					FTYPE *Avcon,FTYPE *Avcov,
+					FTYPE *gammarel2return, FTYPE *deltareturn,
+					FTYPE *numeratorreturn, FTYPE *divisorreturn,
+					FTYPE *Erfreturn, FTYPE *urfconrel);
+static int get_m1closure_gammarel2(int verbose,void *ggg,
+				   ldouble *Avcon, ldouble *Avcov,
+				   ldouble *gammarel2return,ldouble *deltareturn,
+				   ldouble *numeratorreturn, ldouble *divisorreturn);
+static int get_m1closure_Erf(void *ggg, ldouble *Avcon, ldouble gammarel2, ldouble *Erfreturn);
+static int get_m1closure_urfconrel(int verbose, void *ggg,
+				   ldouble *pp, ldouble *Avcon,
+				   ldouble *Avcov, ldouble gammarel2,
+				   ldouble delta, ldouble numerator,
+				   ldouble divisor, ldouble *Erfreturn,
+				   ldouble *urfconrel, int *corflag);
+
+//**********************************************************************
+//Do U2P including for photon number
+//**********************************************************************
+
+int
+u2p_rad(ldouble *uu, ldouble *pp, void *ggg, int *corrected)
+{
+  //whether primitives corrected for caps, floors etc. - if so, conserved will be updated
+  *corrected=0;
+
+  int u2pret=u2p_rad_urf(uu,pp,ggg,corrected);
+
+  #ifdef EVOLVEPHOTONNUMBER
+  struct geometry *geom
+   = (struct geometry *) ggg;
+  ldouble gdetu=geom->gdet;
+  #if (GDETIN==0) //gdet out of derivatives
+  gdetu=1.;
+  #endif
+  ldouble urfcon[4];
+  urfcon[0]=0.;
+  urfcon[1]=pp[FX];
+  urfcon[2]=pp[FY];
+  urfcon[3]=pp[FZ];
+  conv_vels(urfcon,urfcon,VELPRIMRAD,VEL4,geom->gg,geom->GG);
+ 
+  pp[NF]=uu[NF]/urfcon[0]/gdetu;
+  #endif
+
+  return u2pret;
+}
+
+//**********************************************************************
+//basic conserved to primitives solver for radiation
+//uses M1 closure in arbitrary frame/metric
+//radiative primitives: (E,\tilde u^i)
+//  E - radiative energy density in the rad.rest frame
+//  u^i - relative velocity of the rad.rest frame
+//takes conserved R^t_mu in uu
+//**********************************************************************
+
+int
+u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected)
+{
+  struct geometry *geom
+    = (struct geometry *) ggg;
+
+  ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
+  gg=geom->gg;
+  GG=geom->GG;
+  gdet=geom->gdet;
+  gdetu=gdet;
+
+  #if (GDETIN==0) //gdet out of derivatives
+  gdetu=1.;
+  #endif
+
+  int verbose=0;
+  
+  //whether primitives corrected for caps, floors etc. - if so, conserved will be updated 
+  *corrected=0;
+
+  ldouble urfcon[4],Erf;
+
+  //conserved - R^t_mu
+  ldouble Avcov[4]={uu[EE]/gdetu,uu[FX]/gdetu,uu[FY]/gdetu,uu[FZ]/gdetu};
+  ldouble Avcon[4];
+
+  //indices up - R^tmu
+  indices_12(Avcov,Avcon,GG);
+
+  ldouble gammarel2,delta,numerator,divisor;
+
+  // get \gamma^2 for relative 4-velocity
+  if(get_m1closure_gammarel2(verbose,ggg,Avcon,Avcov,&gammarel2,&delta,&numerator,&divisor)<0)
+    {
+      //printf("get_m1closure_gammarel2 failed at %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      return -1;
+    }
+
+  // get E in radiation frame
+  get_m1closure_Erf(ggg,Avcon,gammarel2,&Erf);
+
+  // get relative 4-velocity
+  if(get_m1closure_urfconrel(verbose,ggg,pp,Avcon,Avcov,gammarel2,delta,numerator,divisor,&Erf,urfcon,corrected)<0)
+    {
+      //printf("get_m1closure_urfconrel failed at %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      return -1;
+    }
+
+  if (VELR != VELPRIMRAD)
+  {
+    conv_vels(urfcon,urfcon,VELR,VELPRIMRAD,gg,GG);
+  }
+
+  //new primitives
+  pp[EE]=Erf;
+  pp[FX]=urfcon[1];
+  pp[FY]=urfcon[2];
+  pp[FZ]=urfcon[3];
+
+  return 0;
+}
+
+
+//**********************************************************************
 //gets gamma assuming fixed E rather than using original R^t_t that we assume is flawed near floor regions.
 //We want to preserve R^t_i (i.e conserved momentum)
+//**********************************************************************
+
 static int get_m1closure_gammarel2_cold(int verbose,
 					void *ggg, 
 					FTYPE *Avcon, 
@@ -32,7 +157,8 @@ static int get_m1closure_gammarel2_cold(int verbose,
   int jj;
 
   //static
-  FTYPE gctt, gn11, gn12,  gn13,  gn14,  gn22,  gn23,  gn24,  gn33,  gn34,  gn44,  Rtt,  Rtx,  Rty,  Rtz,  Rdtt,  Rdtx,  Rdty,  Rdtz;
+  FTYPE gctt, gn11, gn12,  gn13,  gn14,  gn22,  gn23,  gn24,  gn33,  gn34,  gn44;
+  FTYPE Rtt,  Rtx,  Rty,  Rtz,  Rdtt,  Rdtx,  Rdty,  Rdtz;
   gn11=GG[0][0];
   gn12=GG[0][1];
   gn13=GG[0][2];
@@ -103,8 +229,18 @@ static int get_m1closure_gammarel2_cold(int verbose,
   return(0);
 }
 
+//**********************************************************************
 // gets gamma^2 for lab-frame gamma using Rd and gcon
-static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldouble *Avcov, ldouble *gammarel2return,ldouble *deltareturn, ldouble *numeratorreturn, ldouble *divisorreturn)
+//**********************************************************************
+
+static int get_m1closure_gammarel2(int verbose,
+				   void *ggg,
+				   ldouble *Avcon,
+				   ldouble *Avcov,
+				   ldouble *gammarel2return,
+				   ldouble *deltareturn,
+				   ldouble *numeratorreturn,
+				   ldouble *divisorreturn)
 {
   struct geometry *geom
    = (struct geometry *) ggg;
@@ -116,8 +252,8 @@ static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldoubl
   ldouble gamma2,gammarel2,delta,numerator,divisor;
   ldouble gamma2a,gamma2b;
 
-  // mathematica solution that avoids catastrophic cancellation when Rtt very small (otherwise above gives gamma2=1/2 oddly when gamma2=1) -- otherwise same as above
-  // well, then had problems for R~1E-14 for some reason when near BH.  Couldn't quickly figure out, so use no replacement of gv11.
+  // mathematica solution that avoids catastrophic cancellation when Rtt very small
+  // (otherwise above gives gamma2=1/2 oddly when gamma2=1) -- otherwise same as above
   // see u2p_inversion.nb
 
   //static
@@ -201,17 +337,6 @@ static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldoubl
     gammarel2=1.0;
   }
 
-  /*
-  if(isnan(gammarel2))
-    {
-      printf("nan in get_m1closure_gammarel2\n");
-      printf("%e %e %e\n",gamma2,gamma2a,gamma2b);
-      print_4vector(Avcon);
-      print_4vector(Avcov);
-      //      getchar();
-    }
-  */
-
   *gammarel2return=gammarel2; 
   *deltareturn=delta=0;
   *numeratorreturn=numerator=0;
@@ -219,7 +344,10 @@ static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldoubl
   return(0);
 }
 
+//**********************************************************************
 // get Erf
+//**********************************************************************
+
 static int get_m1closure_Erf(void *ggg, ldouble *Avcon, ldouble gammarel2, ldouble *Erfreturn)
 {
   struct geometry *geom
@@ -227,30 +355,17 @@ static int get_m1closure_Erf(void *ggg, ldouble *Avcon, ldouble gammarel2, ldoub
 
   ldouble alpha=geom->alpha;
 
-  //********************************************
   // get initial attempt for Erf
-  // If delta<0, then gammarel2=nan and Erf<RADLIMIT check below will fail as good.  
-  //********************************************
-
+  // If delta<0, then gammarel2=nan and Erf<RADLIMIT check below will fail 
   *Erfreturn = 3.*Avcon[0]*alpha*alpha/(4.*gammarel2-1.0);  // JCM
-
-  /*
-  if(isnan(*Erfreturn)) 
-    {
-      printf("nan in get_m1closure_Erf\n %d %d %d %e %e\n",geom->ix,geom->iy,geom->iz,*Erfreturn,gammarel2);
-      print_4vector(Avcon);
-      getchar();
-    }
-  */
 
   return(0);
 }
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 // get contravariant rad frame 4-velocity in lab frame
+//**********************************************************************
 static int get_m1closure_urfconrel(int verbose,
 				   void *ggg, 
 				   ldouble *pp, 
@@ -278,11 +393,8 @@ static int get_m1closure_urfconrel(int verbose,
   ldouble gammamax=GAMMAMAXRAD; 
   int ii,jj,kk,usingfast;
 
-  //********************************************
   // Fix-up inversion if problem with gamma (i.e. velocity)
   // or energy density in radiation rest-frame (i.e. Erf)
-  //********************************************
-
   // NOTE: gammarel2 just below 1.0 already fixed to be =1.0
   int nonfailure = gammarel2>=1.0 && Erf>ERADFLOOR && gammarel2<=gammamax*gammamax/GAMMASMALLLIMIT/GAMMASMALLLIMIT;
  
@@ -317,7 +429,7 @@ static int get_m1closure_urfconrel(int verbose,
     *corflag=0;
     return(0);
   }
-  else
+  else //failure -- try getting cold gammarel2
   {
     if(verbose) 
       {
@@ -395,7 +507,6 @@ static int get_m1closure_urfconrel(int verbose,
 	  mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
 	  printf("------------\nJONNAN: %e %e %e %e\n",Erf,*Erfreturn,Erfslow,Erffast);
 	  if(usingfast) printf("JONNAN: usingfast==1\n"); else printf("JONNAN: usingfast==0\n");
-	  
 	  printf("JONNAN: ijk=%d %d %d :  %g %g : %g %g %g %g : %d %d %d %d : %g %g %g %g\n",gix,giy,giz,Erf,gammarel2,urfconrel[0],urfconrel[1],urfconrel[2],urfconrel[3],failure1,failure2,failure3,failure,Avcon[0],Avcon[1],Avcon[2],Avcon[3]);
 	}
     
@@ -409,119 +520,8 @@ static int get_m1closure_urfconrel(int verbose,
 
 //**********************************************************************
 //**********************************************************************
-//**********************************************************************
-//basic conserved to primitives solver for radiation
-//uses M1 closure in arbitrary frame/metric
-//radiative primitives: (E,\tilde u^i)
-//  E - radiative energy density in the rad.rest frame
-//  u^i - relative velocity of the rad.rest frame
-//takes conserved R^t_mu in uu
-
-int
-u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected)
-{
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
-  gg=geom->gg;
-  GG=geom->GG;
-  gdet=geom->gdet;
-  gdetu=gdet;
-
-  #if (GDETIN==0) //gdet out of derivatives
-  gdetu=1.;
-  #endif
-
-  int verbose=0;
-  
-  //whether primitives corrected for caps, floors etc. - if so, conserved will be updated 
-  *corrected=0;
-
-  ldouble Rij[4][4];
-  ldouble urfcon[4],urfcov[4],Erf;
-
-  //conserved - R^t_mu
-  ldouble Avcov[4]={uu[EE]/gdetu,uu[FX]/gdetu,uu[FY]/gdetu,uu[FZ]/gdetu};
-  ldouble Avcon[4];
-
-  //indices up - R^tmu
-  indices_12(Avcov,Avcon,GG);
-
-  ldouble gammarel2,delta,numerator,divisor;
-
-  // get \gamma^2 for relative 4-velocity
-  if(get_m1closure_gammarel2(verbose,ggg,Avcon,Avcov,&gammarel2,&delta,&numerator,&divisor)<0)
-    {
-      //printf("get_m1closure_gammarel2 failed at %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
-      return -1;
-    }
-
-  // get E in radiation frame
-  get_m1closure_Erf(ggg,Avcon,gammarel2,&Erf);
-
-  // get relative 4-velocity
-  if(get_m1closure_urfconrel(verbose,ggg,pp,Avcon,Avcov,gammarel2,delta,numerator,divisor,&Erf,urfcon,corrected)<0)
-    {
-      //printf("get_m1closure_urfconrel failed at %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
-      return -1;
-    }
-
-  if (VELR != VELPRIMRAD)
-  {
-    conv_vels(urfcon,urfcon,VELR,VELPRIMRAD,gg,GG);
-  }
-
-  //new primitives
-  pp[EE]=Erf;
-  pp[FX]=urfcon[1];
-  pp[FY]=urfcon[2];
-  pp[FZ]=urfcon[3];
-
-  return 0;
-}
-
-
-
-
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
-//Do U2P including for photon number
-
-int
-u2p_rad(ldouble *uu, ldouble *pp, void *ggg, int *corrected)
-{
-  //whether primitives corrected for caps, floors etc. - if so, conserved will be updated
-  *corrected=0;
-
-  int u2pret=u2p_rad_urf(uu,pp,ggg,corrected);
-
-  #ifdef EVOLVEPHOTONNUMBER
-  struct geometry *geom
-   = (struct geometry *) ggg;
-  ldouble gdetu=geom->gdet;
-  #if (GDETIN==0) //gdet out of derivatives
-  gdetu=1.;
-  #endif
-  ldouble urfcon[4];
-  urfcon[0]=0.;
-  urfcon[1]=pp[FX];
-  urfcon[2]=pp[FY];
-  urfcon[3]=pp[FZ];
-  conv_vels(urfcon,urfcon,VELPRIMRAD,VEL4,geom->gg,geom->GG);
- 
-  pp[NF]=uu[NF]/urfcon[0]/gdetu;
-  #endif
-
-  //M1
-  return u2pret;
-}
-
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //checks if rad primitives make sense
+//**********************************************************************
 
 int
 check_floors_rad(ldouble *pp, int whichvel,void *ggg)
@@ -590,7 +590,7 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
       ret=-1;
     }
 
-  //ANDREW why is this SKIP_MAGNFIELD and not just MAGNFIELD
+  //ANDREW why is this SKIP_MAGNFIELD and not just ifndef MAGNFIELD
 #ifdef SKIP_MAGNFIELD
 
   ldouble ucond[4],ucovd[4];
@@ -619,6 +619,7 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
 #endif //SKIPRADSOURCE
 
 #ifdef EVOLVEPHOTONNUMBER
+  
   //velocities of the frames
   ldouble ut[4];ut[1]=pp[VX];ut[2]=pp[VY];ut[3]=pp[VZ];
   ldouble uffcov[4],uffcon[4];

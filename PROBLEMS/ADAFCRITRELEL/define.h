@@ -10,8 +10,7 @@
 //#define RESTARTFROMNORELEL
 #define RESTARTGENERALINDICES
 #define RESTARTNUM -1
-
-//#define RESCALEDENSITY 3
+//#define RESCALEDENSITY 10
 
 /************************************/
 //radiation choices
@@ -25,12 +24,13 @@
 //#define RADIMPSTOPWHENFAIL
 //#define RADIMP_START_WITH_BISECT
 //#define BALANCEENTROPYWITHRADIATION
+#define ALLOWRADCEILINGINIMPLICIT
 #define EVOLVEPHOTONNUMBER
-#define OPDAMPINIMPLICIT 0
+#define OPDAMPINIMPLICIT 1
 #define SCALE_JACOBIAN
 #endif
 
-#define U2PCONV 1.e-12
+#define U2PCONV 1.e-10
 #define CHECKENTROPYAFTEREXPLICIT 
 #define CHECKENTROPYAFTEREXPLICITFACTOR 1.// - accept everything
 #define RADIMPCONVREL 1.e-6
@@ -43,7 +43,7 @@
 #define RADIMPMAXITER 100
 #define RADIMPLICITDAMPINGFACTOR 5.
 #define RADIMPLICITMAXNPHCHANGE 100.
-#define RADIMPLICITMAXENCHANGEDOWN 10.
+#define RADIMPLICITMAXENCHANGEDOWN 100.
 #define RADIMPLICITMAXENCHANGEUP 10.
 #define RADIMPLICITMAXTECHANGE 5.
 #define MAXRADIMPDAMPING 1.e-6
@@ -52,7 +52,8 @@
 #define SCATTERING
 #define BREMSSTRAHLUNG
 #define SYNCHROTRON
-#define MAXDIFFTRADS 1.e4
+#define NO_SYNCHROTRON_BRIDGE_FUNCTIONS
+#define MAXDIFFTRADS 1.e3
 #define MAXDIFFTRADSNEARBH 1.e2
 
 //#define BOUNDFREE
@@ -65,9 +66,9 @@
 /************************************/
 //electron choices
 /************************************/
-/*
 //#define EVOLVEELECTRONS
 
+#ifdef EVOLVEELECTRONS
 #define CONSISTENTGAMMA
 #define GAMMAINTCONSISTENTWITHCV //Ramesh's routine for inverting gammaint
 #define RELELENTROPY
@@ -97,8 +98,8 @@
 #define TEMPIMINIMALFRACTION 1.e-6
 #define TEMPEMAXIMALFRACTION 1.e3
 #define TEMPIMAXIMALFRACTION 1.e3
+#endif
 
-*/
 /************************************/
 //Relativistic electron choices
 /************************************/
@@ -154,17 +155,17 @@
 //magnetic choices
 /************************************/
 
-//#define MAGNFIELD
+#define MAGNFIELD
 #define GDETIN 1
 #define VECPOTGIVEN
-#define INIT_MAGN_CORNERS //for consistent vec potential    
+#define INIT_MAGN_CORNERS    
 #define MAXBETA .01 //target pmag/pgas int the midplane
 //#define MAXBETA_SEPARATE
 
 /************************************/
 //dynamo choices
 /************************************/
-
+/*
 #define MIMICDYNAMO
 #define CALCHRONTHEGO
 #define THETAANGLE 0.25
@@ -174,11 +175,11 @@
 #define DAMPBETA
 #define BETASATURATED 0.1
 #define ALPHABETA 6.28
-
+*/
 /************************************/
 //reconstruction / Courant
 /************************************/
-#define INT_ORDER 1
+#define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
 #define TSTEPLIM .9
 #define FLUXMETHOD LAXF_FLUX
@@ -203,42 +204,42 @@
 #define RADVISCNUDAMP
 #define RADVISCMAXVELDAMP
 #define ALPHARADVISC 0.1
-#define MAXRADVISCVEL 0.05
+#define MAXRADVISCVEL 0.1
 #endif
 
 /************************************/
 //rmhd floors
 /************************************/
 #define CORRECT_POLARAXIS
-#define NCCORRECTPOLAR 2
+#define NCCORRECTPOLAR 3
 #define UURHORATIOMIN 1.e-8
 #define UURHORATIOMAX 1.e2
-#define EERHORATIOMIN 1.e-30
+#define EERHORATIOMIN 1.e-20
 #define EERHORATIOMAX 1.e20
 #define EEUURATIOMIN 1.e-20
 #define EEUURATIOMAX 1.e20
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 1.e5
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 100.
+#define B2RHORATIOMAX 50.
 #define GAMMAMAXRAD 20.
 #define GAMMAMAXHD 20.
-#define RHOFLOOR 1.e-50
+#define RHOFLOOR 1.e-32//1.e-50
 
 /************************************/
 //blackhole
 /************************************/
-#define MASS 4.e6
-#define BHSPIN 0.0
+#define MASS 6.2e9
+#define BHSPIN 0.9375
 
 /************************************/
 //coordinates / resolution
 /************************************/
 #define myMKS3COORDS
 #define METRICAXISYMMETRIC
-#define RMIN 1.5 
-#define RMAX 1000.
-#define MKSR0 -2.
+#define RMIN 1.
+#define RMAX 1.e3
+#define MKSR0 -1.35
 #define MKSH0 0.7
 #define MKSMY1 0.002
 #define MKSMY2 0.02
@@ -266,14 +267,14 @@
 #define MAXZ (PHIWEDGE/2.)
 
 //total resolution
-#define TNX 512//256 //16*16 //128 <->256
-#define TNY 64//192 //320 //14*9 //92 <->256
-#define TNZ 1//96
+#define TNX 128//288 //256 //16*16 //128 <->256
+#define TNY 64//224 //320 //14*9 //92 <->256
+#define TNZ 1//128//96
 
 //number of tiles
 #define NTX 32
-#define NTY 16
-#define NTZ 1//8
+#define NTY 16//32
+#define NTZ 8
 
 #define SPECIFIC_BC
 #define PERIODIC_ZBC
@@ -284,7 +285,7 @@
 //output
 /************************************/
 #define DTOUT1 10 //res
-#define DTOUT2 1000 //avg
+#define DTOUT2 100 //avg
 #define DTOUT3 100 //box,var
 
 #define OUTCOORDS BLCOORDS//KERRCOORDS                                                                    
@@ -292,22 +293,22 @@
 #define ALLSTEPSOUTPUT 0
 //#define RADOUTPUTINZAMO
 #define NSTEPSTOP 1.e20
-#define NOUTSTOP 2000
+#define NOUTSTOP 2
 
 //#define OUTPUTPERCORE
 #define COORDOUTPUT 0
-#define SILOOUTPUT 0
+#define SILOOUTPUT 1
 #define CGSOUTPUT
 #define OUTOUTPUT 0
-#define SIMOUTPUT 0
+#define SIMOUTPUT 2
 #define SIMOUTPUT_GILAB2FF
 //#define SIMOUTPUTWITHINDTHETA .05
 #define GRTRANSSIMOUTPUT
 
-#define RADOUTPUT 0
+#define RADOUTPUT 1
 //#define RADOUTPUTWITHINDTHETA .05
-#define SCAOUTPUT 0
-#define AVGOUTPUT 0
+#define SCAOUTPUT 1
+#define AVGOUTPUT 1
 #define NORELELAVGS
 #define THOUTPUT 0
 #define THPROFRADIUS 30
@@ -325,18 +326,22 @@
 #define GAMMA (5./3.)
 #define GAMMAI (5./3.)
 #define GAMMAE (4./3.)
-#define NTORUS 4
+#define NTORUS 0
 #define HFRAC 1. //mass fraction of the hydrogen X
 #define HEFRAC 0. //mass fraction of helium Y
 
-#if(NTORUS==4) //a=0 SANE, no rad, denser loops
+//#define RHOMAX_VPOT 1.39e-16
+#define RHOMAX_VPOT_CGS 1.88e-18//4.725e-17
+#define RMAX_VPOT 23
+#define RHO_VPOT_CUT .1
+#if(NTORUS==4 || NTORUS==0) //a=0 SANE, no rad, denser loops
 #define EXPECTEDHR 0.4
-#define LT_KAPPA (6.e11)
-#define LT_XI 0.708
+#define LT_KAPPA 3.e8//3.e10//6.e11
+#define LT_XI 0.7135
 #define LT_R1 42.
-#define LT_R2 1000.
+#define LT_R2 800
 #define LT_GAMMA 5./3.
-#define LT_RIN 10.
+#define LT_RIN 10.5
 #undef MAXBETA
 #define MAXBETA (1./100.) //target pmag/pgas inside torus
 #define BETANORMFULL
@@ -355,7 +360,7 @@
 //#define BETANORMFULL
 //#endif
 
-#define RHOATMMIN  1.e-27
+#define RHOATMMIN  1.e-30
 #define UINTATMMIN  (calc_PEQ_ufromTrho(1.e10,RHOATMMIN,0,0,0))
 #define ATMTRADINIT 3 //1.e-2
 #define ERADATMMIN  calc_LTE_EfromT(ATMTRADINIT) //((calc_LTE_EfromT(3.e6)/10)/1.e19)

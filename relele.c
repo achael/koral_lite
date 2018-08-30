@@ -454,7 +454,6 @@ calc_normalobs_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncon)
   return 0.;
 }
 
-
 //**********************************************************************
 //returns covariant and contravariant four-velocity of a normal observer, given the value of alpha
 //n_mu=(-alp,0,0,0);  nu^mu = nu_0 * GG[mu][0]
@@ -933,8 +932,7 @@ pick_gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
 int
 pick_Gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
 {
-  ldouble g00,g03,g11,g22,g33,gdet,dlgdet0,dlgdet1,dlgdet2;
-
+  
   //ix,iy,iz correspond to indices in cell-faces arrays
   if(idim==0)
     {

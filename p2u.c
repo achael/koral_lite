@@ -7,9 +7,8 @@
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
 //primitive to conserved converter
+//**********************************************************************
 
 int
 p2u(ldouble *p, ldouble *u, void *ggg)
@@ -25,9 +24,9 @@ p2u(ldouble *p, ldouble *u, void *ggg)
 
 
 //**********************************************************************
+//primitive to conserved converter -- hydro
 //**********************************************************************
-//**********************************************************************
-//primitive to conserved converter
+
 
 int
 p2u_mhd(ldouble *p, ldouble *u, void *ggg)
@@ -40,7 +39,6 @@ p2u_mhd(ldouble *p, ldouble *u, void *ggg)
 
   struct geometry *geom
    = (struct geometry *) ggg;
-
 
   ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
   gg=geom->gg;
@@ -63,7 +61,6 @@ p2u_mhd(ldouble *p, ldouble *u, void *ggg)
   ldouble S=p[5];
 
   conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
-  //calc_ucon_ucov_from_prims(p, geom, ucon, ucov);  // doesn't work here
 
 #ifdef MAGNFIELD
   calc_bcon_bcov_bsq_from_4vel(p, ucon, ucov, geom, bcon, bcov, &bsq);
@@ -75,8 +72,6 @@ p2u_mhd(ldouble *p, ldouble *u, void *ggg)
  
   ldouble ut=ucon[0];
   ldouble rhout = rho*ut;
-
-  //otherwise S=pp[5] updated appropriately in u2p_hot, u2p_entropy and floors so from outside
   ldouble Sut = S*ut;
 
   //ANDREW Do we need to ensure gamma is consistent here?
@@ -108,7 +103,6 @@ p2u_mhd(ldouble *p, ldouble *u, void *ggg)
   u[4]=gdetu*Ttph;
   u[5]=gdetu*Sut;
 
-
 #ifdef EVOLVEELECTRONS
   ldouble Seut=p[ENTRE]*ut;
   u[ENTRE]= gdetu*Seut;
@@ -126,8 +120,7 @@ p2u_mhd(ldouble *p, ldouble *u, void *ggg)
 
   //************************************
   //magnetic part
-  //************************************
- 
+  //************************************ 
 #ifdef MAGNFIELD
   u[B1]=gdetu*p[B1];
   u[B2]=gdetu*p[B2];
@@ -139,13 +132,76 @@ p2u_mhd(ldouble *p, ldouble *u, void *ggg)
 
 
 //**********************************************************************
+//this computes utp1=1+u_t , which for nonrelativistic cases is ~0.
+//If computed as 1+u_t, then if residual is small there will be a large error.
 //**********************************************************************
+
+ldouble
+calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg)
+{
+   struct geometry *geom
+   = (struct geometry *) ggg;
+
+  ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
+  gg=geom->gg;
+  gdet=geom->gdet;
+  GG=geom->GG;
+  gdetu=gdet;
+
+  ldouble utp1;
+  if(VELPRIM==VELR) //based on VELR
+  {
+      int i,j;
+      ldouble qsq=0.;
+      for(i=1;i<4;i++)
+	for(j=1;j<4;j++)
+	  qsq+=vcon[i]*vcon[j]*gg[i][j];
+      ldouble gamma2=(1.+qsq);
+      ldouble alpha = geom->alpha;
+      ldouble alphasq = alpha*alpha;
+      ldouble alpgam=sqrt(alphasq*gamma2);
+
+      //\beta^i \beta_i / \alpha^2 = g^{ti} g_{ti}
+      ldouble betasqoalphasq=gg[0][1]*GG[0][1] + gg[0][2]*GG[0][2] + gg[0][3]*GG[0][3];
+      
+      ldouble ud0tilde = 0.0;
+      SLOOPA(j) ud0tilde += vcon[j]*gg[0][j]; // \tilde{u}_t = \tilde{u}^i g_{ti} since \tilde{u}^t=0
+      utp1= ud0tilde + (geom->gttpert - alphasq*(betasqoalphasq + qsq))/(1.0+alpgam);
+  }
+  else //based on ucon[]
+  {
+      int i,j,k;
+
+      // 3-velocity in coordinate basis
+      ldouble vconp[4];
+      SLOOPA(j) vconp[j]=ucon[j]/ucon[0];
+
+      ldouble plus1gv00=geom->gttpert;
+      ldouble vsq=geom->gttpert;
+      SLOOPA(j) vsq+=2.0*geom->gg[0][j]*vconp[j];
+      SLOOP(j,k) vsq+=geom->gg[j][k]*vconp[j]*vconp[k];
+
+      ldouble gvtt=geom->gg[0][0];
+      
+      ldouble alpha=0.0;
+      SLOOPA(j) alpha+=geom->gg[j][0]*ucon[j];
+
+      ldouble uu0 = ucon[0];
+
+      utp1 = alpha + ((1.0-gvtt)*plus1gv00 - uu0*uu0*vsq*gvtt*gvtt)/(1.0-gvtt*uu0);
+  }
+  return utp1;
+}
+
+
 //**********************************************************************
 //primitive to conserved converter - non-relativistic!
+//**********************************************************************
 
 int
 p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg)
 {
+
   struct geometry *geom
    = (struct geometry *) ggg;
 
@@ -199,12 +255,6 @@ p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg)
   u[4]=gdetu*Ttph;
   u[5]=gdetu*S;
 
-
-#ifdef TRACER
-  ldouble tracerut=p[TRA]*ut;
-  u[TRA]= gdetu*tracerut;
-#endif
-
   //************************************
   //magnetic part
   //************************************
@@ -219,9 +269,7 @@ p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg)
 }
 
 /********************************************************/
-/********************************************************/
 /**** converts radiative primitives *********************/
-/********************************************************/
 /********************************************************/
 
 int p2u_rad(ldouble *pp, ldouble *uu, void *ggg)
@@ -240,7 +288,7 @@ int p2u_rad(ldouble *pp, ldouble *uu, void *ggg)
   gdetu = 1.;
 #endif
   
-  //M1
+  //Only M1 closure supported!
   {
     ldouble Erf = pp[EE];
     
@@ -254,23 +302,13 @@ int p2u_rad(ldouble *pp, ldouble *uu, void *ggg)
     //converting to lab four-velocity
     conv_vels(urf, urf, VELPRIMRAD, VEL4, gg, GG);
     
-    ldouble Rtopp[4];
-//    Rtopp[0] = four_third * Erf * urf[0] * urf[0] + one_third * Erf * GG[0][0]; //R^t_t
-//    Rtopp[1] = four_third * Erf * urf[0] * urf[1] + one_third * Erf * GG[0][1];
-//    Rtopp[2] = four_third * Erf * urf[0] * urf[2] + one_third * Erf * GG[0][2];
-//    Rtopp[3] = four_third * Erf * urf[0] * urf[3] + one_third * Erf * GG[0][3];
-    
+    ldouble Rtopp[4];    
     for (i = 0; i < 4; i++)  // write like this to help vectorization
     {
       Rtopp[i] = four_third * Erf * urf[0] * urf[i] + one_third * Erf * GG[0][i];
     }
     
     indices_21(Rtopp, Rtopp, gg); //R^t_mu
-    
-//    uu[EE] = gdetu * Rtopp[0]; //R^t_t
-//    uu[FX] = gdetu * Rtopp[1]; //R^t_i
-//    uu[FY] = gdetu * Rtopp[2];
-//    uu[FZ] = gdetu * Rtopp[3];
     
     for (i = 0; i < 4; i++)  // to help vectorization
     {
@@ -285,16 +323,14 @@ int p2u_rad(ldouble *pp, ldouble *uu, void *ggg)
   return 0;
 }
 
-
-//**********************************************************************
 //**********************************************************************
 //takes primitives and calculates quantities that are averaged for the avg file
-//**********************************************************************
 //**********************************************************************
 
 int
 p2avg(int ix,int iy,int iz,ldouble *avg)
 {
+
   struct geometry geom;
   fill_geometry(ix,iy,iz,&geom);
   struct geometry geomout;
@@ -412,6 +448,7 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
 
   //converting rest-mass flux to BLCOORDS 
   ldouble vector[4];
+
   //primitives and conserved at left faces - used to fill missing time-component
   ldouble uface[NV],pface[NV],fd_uLl[NV],fd_uRl[NV];
   int i;
@@ -433,9 +470,9 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
 
 #ifdef EVOLVEELECTRONS
   //electrons
-  //ldouble ne=rho/MU_E/M_PROTON; 
   ldouble ne=calc_thermal_ne(pp);
   ldouble pree=K_BOLTZ*ne*Te;
+
   //ions
   ldouble ni=rho/MU_I/M_PROTON; 
   ldouble prei=K_BOLTZ*ni*Ti;
@@ -454,7 +491,6 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
    
 #ifdef RADIATION
   ldouble Rtt,Ehat,ugas[4];
-  //calc_ff_Rtt(pp,&Rtt,ugas,&geomout); //this very slow - why?
 
   ldouble Rij[4][4];
   calc_Rij(pp,&geomout,Rij);
@@ -476,30 +512,19 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   ldouble urcon[4],urcov[4];
   conv_vels_both(vcon,urcon,urcov,VELPRIM,VEL4,gg,GG); 
 
-  //four fource
+  //radiation four-fource
   ldouble Gi[4],Gic[4],Giff[4],Gicff[4];
 
-
-  calc_Gi(pp,&geomout,Giff,0.,0,0);//urel_old=0, fluid frame 
-  //calc_Gi(pp,&geomout,Giff,0.,1,0);//urel_old=0, lab frame 
-
-  //in lab frame + boost
-  //calc_Gi(pp,&geomout,Gi,1); 
-  //boost2_lab2ff(Gi,Giff,pp,geomout.gg,geomout.GG);
+  calc_Gi(pp,&geomout,Giff,0.,0,0); //urel_old=0, fluid frame 
 
 #if defined(COMPTONIZATION) || defined(EVOLVEPHOTONNUMBER) || defined(NCOMPTONIZATION)
-  //uwaga! boost sprawia, ze znaki fluid frame Compt i abs part rozne! spojrzec dlaczego!
-
-  //test - directly in ff
+  //directly in ff
   ldouble uconff[4];
   uconff[1]=uconff[2]=uconff[3]=0.;
   uconff[0]=1.;
   ldouble kappaes=calc_kappaes(pp,&geomout);
   calc_Compt_Gi(pp,&geomout,Gicff,Ehat,Te,kappaes,uconff);
-  
-  //in lab frame + boost:
-  //calc_Compt_Gi(pp,&geomout,Gic,Ehat,Tgas,kappaes,uconff);
-  //boost2_lab2ff(Gic,Gicff,pp,geomout.gg,geomout.GG);
+
 #endif 
 
   //radiation temperature
@@ -508,6 +533,7 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   Thatrad=ThatradBB;
   #ifdef EVOLVEPHOTONNUMBER //number of photons conserved
   Thatrad = calc_ncompt_Thatrad(pp,&geomout,Ehat);  
+
   //Trad Limiter
 #ifdef MAXDIFFTRADS
   ldouble maxfac=MAXDIFFTRADS;
@@ -582,73 +608,11 @@ else{
   return 0.;
 }
 
-
-///////////////////////////////////////////////////////////////
-//this computes utp1=1+u_t , which for nonrelativistic cases is ~0.
-//If computed as 1+u_t, then if residual is small there will be a large error.
-
-ldouble
-calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg)
-{
-   struct geometry *geom
-   = (struct geometry *) ggg;
-
-  ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
-  gg=geom->gg;
-  gdet=geom->gdet;
-  GG=geom->GG;
-  gdetu=gdet;
-
-  ldouble utp1;
-  if(VELPRIM==VELR) //based on VELR
-  {
-      int i,j;
-      ldouble qsq=0.;
-      for(i=1;i<4;i++)
-	for(j=1;j<4;j++)
-	  qsq+=vcon[i]*vcon[j]*gg[i][j];
-      ldouble gamma2=(1.+qsq);
-      //ldouble alphasq=(-1./GG[0][0]);
-      //ldouble alpgam=sqrt(alphasq*gamma2);
-      ldouble alpha = geom->alpha;
-      ldouble alphasq = alpha*alpha;
-      ldouble alpgam=sqrt(alphasq*gamma2);
-      //\beta^i \beta_i / \alpha^2 = g^{ti} g_{ti}
-      ldouble betasqoalphasq=gg[0][1]*GG[0][1] + gg[0][2]*GG[0][2] + gg[0][3]*GG[0][3]; 
-
-      ldouble ud0tilde = 0.0;
-      SLOOPA(j) ud0tilde += vcon[j]*gg[0][j]; // \tilde{u}_t = \tilde{u}^i g_{ti} since \tilde{u}^t=0
-      utp1= ud0tilde + (geom->gttpert - alphasq*(betasqoalphasq + qsq))/(1.0+alpgam);
-  }
-  else //based on ucon[]
-  {
-      int i,j,k;
-      // 3-velocity in coordinate basis
-      ldouble vconp[4];
-      SLOOPA(j) vconp[j]=ucon[j]/ucon[0];
-
-      ldouble plus1gv00=geom->gttpert;
-      ldouble vsq=geom->gttpert;
-      SLOOPA(j) vsq+=2.0*geom->gg[0][j]*vconp[j];
-      SLOOP(j,k) vsq+=geom->gg[j][k]*vconp[j]*vconp[k];
-
-      ldouble gvtt=geom->gg[0][0];
-      
-      ldouble alpha=0.0;
-      SLOOPA(j) alpha+=geom->gg[j][0]*ucon[j];
-
-      ldouble uu0 = ucon[0];
-
-      utp1 = alpha + ((1.0-gvtt)*plus1gv00 - uu0*uu0*vsq*gvtt*gvtt)/(1.0-gvtt*uu0);
-  }
-  return utp1;
-}
-
-
-//////////////////////////////////////////////////////////////////////
+//**********************************************************************
 /*! int test_maginv()
  \brief Test p2u and u2p for MHD fluid
 */
+//**********************************************************************
 
 int
 test_maginv()

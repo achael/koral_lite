@@ -3313,11 +3313,11 @@ calc_nsource(ldouble *pp, void* ggg)
 ldouble
 calc_nsource_with_state(ldouble *pp, void *sss, void* ggg)
 {
-  int i,j, i1;
-  ldouble uffcon[4], uffcov[4], bsq, urfcon[4], urfcov[4],Ehatrad;
   
 #ifdef EVOLVEPHOTONNUMBER
-  
+  int i,j, i1;
+  ldouble uffcon[4], uffcov[4], bsq, urfcon[4], urfcov[4],Ehatrad;
+
   struct struct_of_state *state
   = (struct struct_of_state *) sss;
   
@@ -5046,6 +5046,8 @@ calc_Efield_battery(ldouble *pp,void *ggg,ldouble econ[4])
 ldouble
 estimate_gas_radiation_coupling(ldouble *pp, void *ggg)
 {
+  ldouble factor=0.;
+#ifdef RADIATION  
   //coordinate system to compute the four-velocities in
   int coords=BLCOORDS;
   if(MYCOORDS==MINKCOORDS)
@@ -5099,11 +5101,10 @@ estimate_gas_radiation_coupling(ldouble *pp, void *ggg)
   //***** computing the coupling measure *****************************
   //**********************************************************************
   
-  ldouble factor;
   factor = 1.0 - step_function(dvmag - COUPLING_MEASURE_THRESHOLD, COUPLING_MEASURE_THRESHOLD_SHARPNESS*COUPLING_MEASURE_THRESHOLD);
 
   //printf("%d %d > %e %e %e > %e %e %e > %e > %f\n",geom->ix,geom->iy,uconbl[1],uconbl[2],uconbl[3],urfconbl[1],urfconbl[2],urfconbl[3],dvmag,factor); 
-
+#endif
   return factor;
 }
 

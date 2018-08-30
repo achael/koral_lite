@@ -156,8 +156,8 @@
 //resolution 
 /************************************/
 //total resolution
-#define TNX 192
-#define TNY 96
+#define TNX 64//192
+#define TNY 64//96
 #define TNZ 1//96
 
 //number of tiles
@@ -183,17 +183,17 @@
 #define OUTCOORDS BLCOORDS//KERRCOORDS
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
-#define OUTPUTINZAMO
+//#define OUTPUTINZAMO
 #define NSTEPSTOP 1.e12
-#define NOUTSTOP 1
+#define NOUTSTOP 25
 
-#define SILOOUTPUT 1
+#define SILOOUTPUT 0
 #define OUTOUTPUT 0
 //#define RADOUTPUT 1
-//#define SCAOUTPUT 1
-#define AVGOUTPUT 1
+#define SCAOUTPUT 0
+#define AVGOUTPUT 0
 //#define SIMOUTPUT 2
-#define COORDOUTPUT 1
+#define COORDOUTPUT 0
 #define INIT_GU_OUTPUT
 #if(TNZ==1)
 #define SILO2D_XZPLANE

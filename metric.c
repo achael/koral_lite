@@ -3663,7 +3663,7 @@ int
 calc_G_arb_num(ldouble *xx, ldouble Gout[][5],int COORDS)
 {
   //base system of coordinates
-  ldouble xxb[4],Gb[4][4],dxdx[4][4],G[4][4],g[4][4],gtemp[4][5];
+  ldouble xxb[4],Gb[4][4],dxdx[4][4],G[4][4],gtemp[4][5];
   int BASECOORDS,i,j;
 
   if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS || COORDS==TKS3COORDS)
@@ -3817,7 +3817,7 @@ calc_gttpert_arb(double *xx, int COORDS)
 
 
   ldouble gpert[4][5],Gpert[4][5];
-  ldouble gbase[4][5],Gbase[4][5];
+  ldouble gbase[4][5];
   ldouble dxdxp[4][4];
 
   //analytical metric in BASECOORDS

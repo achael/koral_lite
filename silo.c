@@ -399,12 +399,14 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  else
 		    pp[iv]=get_u(p,iv,iix,iiy,iiz);
 		}
-	     
+
+	      #ifdef EVOLVEELECTRONS
               #ifdef CONSISTENTGAMMA
 	      ldouble newgamma=calc_gammagas(pp,ix,iy,iz);
 	      set_u_scalar(gammagas,ix,iy,iz,newgamma);
               #endif
-	    
+	      #endif
+	      
 	      ldouble exploc;
               int derdir[3] = {0,0,0};
               ldouble shear[4][4];
@@ -503,10 +505,11 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  Tit[3]=Tij[3][0];
 
 		  
-		  calc_PEQ_Teifrompp(pp,&tempeloc,&tempiloc,ix,iy,iz);
 		  ueloc=uiloc=0.;
 
 #ifdef EVOLVEELECTRONS
+		  calc_PEQ_Teifrompp(pp,&tempeloc,&tempiloc,ix,iy,iz);
+
 		  /**************/
 		  //electrons
 		  /**************/
@@ -534,7 +537,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 #endif
 #endif
 		  uiloc=pi/(gammai-1.);
-#endif
+#endif            //EVOLVEELECTRONS
+		  
 		  //Bernoulli flux / number
 		  muBe[zonalindex]=-(Tij[1][0] + rhouconr)/rhouconr;
 		  Be[zonalindex]=-(Tij[0][0] + rhoucont)/rhoucont;

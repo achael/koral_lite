@@ -454,7 +454,8 @@ initialize_arrays()
      long long NMetY = (SX)*(SY+1)*(SZMET)*gSIZE;
      long long MetYSize=NMetY*sizeof(ldouble);
      long long NMetZ = (SX)*(SY)*(SZMET+1)*gSIZE;
-     long long MetZSize=NMetZ*sizeof(ldouble);     
+     long long MetZSize=NMetZ*sizeof(ldouble);
+     
      long long NMetVec = (SX)*(SY)*(SZMET)*16;
      long long MetVecSize=NMetVec*sizeof(ldouble);
             
@@ -471,12 +472,12 @@ initialize_arrays()
      if((Gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
       
      //LNRF basis one-forms and vectors
-     if((emuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-     if((emulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((emuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((emulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
 
      //tetrad one-forms and vectors
-     if((tmuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-     if((tmulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((tmuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((tmulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
 
      //Fluxes and wavespeeds
      long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
@@ -570,24 +571,24 @@ initialize_arrays()
   return 0;
 }
 
-
 //**********************************************************************
 //Free arrays at end
 //**********************************************************************
 int
 free_arrays()
 {
-  int i1,i,j;
   free(cellflag);
   free(x);
   free(xb);
   free(p);
+  free(pavg);
   free(pinit);
   free(upreexplicit);
   free(ppreexplicit);
   free(ppostimplicit);
   free(pproblem1);
   free(pproblem2);
+  free(avgselftime);
   free(vischeating);
   free(vischeatingnegebalance);
   free(vischeatingnegibalance);
@@ -600,14 +601,19 @@ free_arrays()
   free(Rijviscglobal);
   free(radvisclasttime);
 #endif
+  
 #ifdef MAGNFIELD
   free(emf);
 #endif
 
   free(ptm1);
-  for(i=0;i<12;i++)
+#ifdef MPI
+  int i;
+  for(i=0;i<MPIMSGBUFSIZE;i++)
     free(msgbufs[i]);
   free(msgbufs);
+#endif
+  
   free(px);
   free(py);
   free(pz);
@@ -615,22 +621,22 @@ free_arrays()
   free(g);
   free(G);
   free(gKr);
-  free(emuup);
-  free(emulo);
-  free(emuupbx);
-  free(emulobx);
-  free(emuupby);
-  free(emuloby);
-  free(emuupbz);
-  free(emulobz);
-  free(tmuup);
-  free(tmulo);
-  free(tmuupbx);
-  free(tmulobx);
-  free(tmuupby);
-  free(tmuloby);
-  free(tmuupbz);
-  free(tmulobz);
+  //free(emuup);
+  //free(emulo);
+  //free(emuupbx);
+  //free(emulobx);
+  //free(emuupby);
+  //free(emuloby);
+  //free(emuupbz);
+  //free(emulobz);
+  //free(tmuup);
+  //free(tmulo);
+  //free(tmuupbx);
+  //free(tmulobx);
+  //free(tmuupby);
+  //free(tmuloby);
+  //free(tmuupbz);
+  //free(tmulobz);
 
   free(pbLx);
   free(pbRx);
@@ -689,10 +695,25 @@ free_arrays()
   free(ahdxr);
   free(ahdyr);
   free(ahdzr);
+
   free(cell_dt);
   free(cell_tstepden);
   free(gammagas);
 
+  #ifdef USE_PLANCK_TABLE
+  free(chiantilogkappa);
+  free(chiantilogT);
+  #endif
+  #ifdef USE_CHIANTI_ISM_TABLE
+  for(i=0,i<=ChiantiISMTableLength,i++)
+    free(ChiantiISMTable[idx]);
+  free(ChiantiISMTable);
+  #endif
+  //#ifdef SUTHERLAND_DOPITA_LAMBDA
+  //free(temperaturelog);
+  //free(Lambdalog);
+  //#endif
+  
   return 0;
 }
 

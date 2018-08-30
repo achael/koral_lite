@@ -145,7 +145,7 @@ main(int argc, char **argv)
   //*************************************
   // Startup from restart file
   //*************************************
-  printf("%d %d %d %d %d\n",NVMHD,NV,NX,NY,NZ);
+  printf("NV: %d NX: %d NY: %d NZ: %d \n",NV,NX,NY,NZ);
   int ifinit=1;
   ldouble tstart;  
 
@@ -438,8 +438,6 @@ main(int argc, char **argv)
     for(iy=0;iy<NY;iy++)
       for(ix=0;ix<NX;ix++)
 	set_u_scalar(avgselftime,ix,iy,iz,0.);
-
-
 
   //********************
   // Save initial files if starting from scratch

@@ -109,7 +109,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
     ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
     ldouble fd_pl[NV],fd_pr[NV],fd_plm1[NV],fd_prm1[NV],fd_plp1[NV],fd_prp1[NV];
     ldouble fd_ul[NV],fd_ur[NV],fd_ulm1[NV],fd_urm1[NV],fd_ulp1[NV],fd_urp1[NV];
-    ldouble du[NV],dul[NV],dur[NV],aaa[12],ahd,arad,Jvec[3];
+    ldouble du[NV],dul[NV],dur[NV],aaa[24],ahd,arad,Jvec[3];
     ldouble Gi[4],Giff[4];
     int injet;
     
