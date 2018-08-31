@@ -357,8 +357,7 @@ int doingpostproc_avg;
 ldouble Kr_tmp[4][4][4],g_tmp[4][4];
 ldouble inputarg[10];
 int **gcidx;
-FILE *fout1,*fout_scalars,*fout_radprofiles,*fout_fail,*fout_boxscalars,
-  *fout_boxcorrscalars,*fout_varscalars,*fhandle_problem1,*fout_boxvertscalars;
+FILE *fout1,*fout_scalars,*fout_radprofiles,*fout_fail,*fhandle_problem1;
 int nfout1,nfout2;
 
 /*****  loops   ******/

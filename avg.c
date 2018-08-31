@@ -1,12 +1,11 @@
 //KORAL - avg.c
 //avg files postprocessing
-//ANDREW -- what is procotg?
 
 //guide to ifavg & ifavgavg combinations: 
-//ifavg=1 + ifavgavg=1 : run on avgavg files
-//ifavg=0 + ifavgavg=1 : run on avgres files
-//ifavg=1 + ifavgavg=0 : run on res files (really should use ana instead)
-//ifavg=0 + ifavgavg=0 : run on avg files
+//ifavg=1 + ifoutavg=1 : run on avgavg files
+//ifavg=0 + ifoutavg=1 : run on avgres files
+//ifavg=1 + ifoutavg=0 : run on res files (really should be using ana instead!)
+//ifavg=0 + ifoutavg=0 : run on avg files
 
 
 #include "ko.h"
@@ -25,7 +24,7 @@ main(int argc, char **argv)
   #endif
 
   #ifdef AVGAVGOUTPUT
-  printf("AVGAVGOUTPUT is deprecated -- run avgavg.c instead!");
+  printf("AVGAVGOUTPUT is deprecated -- run the separate script outavg.c instead!");
   exit(-1);
   #endif
   
@@ -40,11 +39,11 @@ main(int argc, char **argv)
   initialize_constants();
   
   //which files to read
-  int no1,no2,nostep,procotg,ifphiavg,ifavg,ifavgavg;
+  int no1,no2,nostep,procotg,ifphiavg,ifavg,ifoutavg;
   if(argc!=8 && argc!=4 && argc!=7)
   {
     printf("Not enough input arguments.\n");
-    printf("Asks for ./avg no1 no2 nostep [ifavg=1 procotg=0 ifphiavg=0 ifavgavg=0]\n");
+    printf("Asks for ./avg no1 no2 nostep [ifavg=1 procotg=0 ifphiavg=0 ifoutavg=0]\n");
     return -1;
   }
   else
@@ -55,23 +54,23 @@ main(int argc, char **argv)
     if(argc==8)
     {
       ifavg=atoi(argv[4]); //run on avg files or average res files
-      procotg=atoi(argv[5]); //??
-      ifphiavg=atoi(argv[6]); //run on phiavg files or not
-      ifavgavg=atoi(argv[7]); //run on average of avg (or res) files or not
+      procotg=atoi(argv[5]); //DEPRECATED -- print scalars
+      ifphiavg=atoi(argv[5]); //run on phiavg files or not
+      ifoutavg=atoi(argv[6]); //run on average of avg (or res) files or not
     }
     else if(argc==7)
     {
       ifavg=atoi(argv[4]);
       procotg=atoi(argv[5]);
       ifphiavg=atoi(argv[6]);
-      ifavgavg=0;
+      ifoutavg=0;
     }
     else
     {
       ifavg=1;
       procotg=0;
       ifphiavg=0;
-      ifavgavg=0;
+      ifoutavg=0;
     }
   }
 
@@ -96,7 +95,7 @@ main(int argc, char **argv)
 
   //file base names
   int no1_loop,no2_loop;
-  if (ifavgavg)
+  if (ifoutavg)
   {
     if(ifavg)
       sprintf(base,"%s/avgavg%04d-",folderin,no1);   
@@ -105,7 +104,7 @@ main(int argc, char **argv)
 
     no1_loop=no2;
     no2_loop=no2;
-    doingavg=1; //we always run off of avg files ifavgavg==1
+    doingavg=1; //we always run off of avg files ifoutavg==1
 
     printf("working on single file %s%04d.dat \n",base,no2);
   }
@@ -156,13 +155,14 @@ main(int argc, char **argv)
   fprint_coordfile("analysis","coord");
   #endif
 
-  //??
-  if(procotg)
-  {
-    //opens the scalar file
-    sprintf(bufor,"%s/avgscalars.dat",folder);
-    fout_scalars=fopen(bufor,"w");
-  }
+  #if(SCAOUTPUT==1)
+  //opens the scalar file
+  //if(procotg)
+  //{
+  sprintf(bufor,"%s/avgscalars.dat",folder);
+  fout_scalars=fopen(bufor,"w");
+  //}
+  #endif
 
   //initialize avg array to 0
   long long i;  
@@ -186,7 +186,7 @@ main(int argc, char **argv)
       {
           #ifdef RESCALEDENSITYPOSTPROC
 	  printf("Cannot RESCALEDENSITYPOSTPROC on avg file input!\n");
-          printf("-- must run on res files (ifavgavg=0, ifavg=0)\n");
+          printf("-- must run on res files (ifoutavg=0, ifavg=0)\n");
 	  printf("Proceeding with avg with NO rescaling\n");
           #endif
 	  
@@ -368,10 +368,12 @@ main(int argc, char **argv)
 	  
       } //if(doingavg)
 
-      //Save Scalars for single file
+      //save scalars for single file
       global_time=t;
-      if(procotg)
-      {
+
+      #if(SCAOUTPUT==1)
+      //if(procotg)
+      //{
 	//calculates scaleheight etc.
 	calc_avgs_throughout();
 	  
@@ -383,8 +385,9 @@ main(int argc, char **argv)
 
 	fprint_scalars(t,scalars,NSCALARS);
 
-      }
-
+      //}
+      #endif
+      
       //Total average of all files
       add_u_core(1.,pavgtot,dt,pavg,pavgtot,avgarrsize);
 
@@ -474,12 +477,12 @@ main(int argc, char **argv)
   fprint_relel_avg_spectrum(t, ixx, iyy, izz, nfout1, folder, "avg_spe_cellavg",1);
 #endif
 
-
-  if(procotg)
-  {
+#if(SCAOUTPUT==1)
+  //if(procotg)
+  //{
     fclose(fout_scalars);
-  }
-
+  //}
+#endif
   return 0;
 }
 

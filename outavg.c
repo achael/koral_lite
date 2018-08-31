@@ -1,4 +1,4 @@
-//KORAL - avgavg.c
+//KORAL - outavg.c
 //make a new avg file from a series of dump files or avg files 
 //(replaces avg.c with AVGAVGOUTPUT defined)
 
@@ -8,7 +8,7 @@ int
 main(int argc, char **argv)
 {  
   #ifdef MPI
-  printf("avgavg works on shared memory only, do not use MPI, please\n");
+  printf("outavg works on shared memory only, do not use MPI, please\n");
   exit(-1);
   #endif
 
@@ -32,7 +32,7 @@ main(int argc, char **argv)
   if(argc!=4 && argc!=6)
   {
     printf("Not enough input arguments.\n");
-    printf("Asks for ./avgavg no1 no2 nostep [ifavg=1 ifphiavg=0]\n");
+    printf("Asks for ./outavg no1 no2 nostep [ifavg=1 ifphiavg=0]\n");
     return -1;
   }
   else
