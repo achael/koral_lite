@@ -44,6 +44,7 @@ main(int argc, char **argv)
   {
     printf("Not enough input arguments.\n");
     printf("Asks for ./avg no1 no2 nostep [ifavg=1 procotg=0 ifphiavg=0 ifoutavg=0]\n");
+    printf("NOTE: proctog is DEPRECATED and does nothing\n");
     return -1;
   }
   else

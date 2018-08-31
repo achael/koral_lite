@@ -598,7 +598,8 @@ if(doingpostproc_avg)
   avg[AVGVISCHEATINGNEGI]=0.;
   avg[AVGVISCHEATINGTIMESDELTAE]=fe;
 }
-else{
+else
+{
   avg[AVGVISCHEATING]=get_u_scalar(vischeating,ix,iy,iz);
   avg[AVGVISCHEATINGNEGE]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);
   avg[AVGVISCHEATINGNEGI]=get_u_scalar(vischeatingnegibalance,ix,iy,iz);

@@ -1338,19 +1338,13 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
 	      ue = calc_ufromSerho(pp[ENTRE], rho, ELECTRONS,ix,iy,iz);
 	      ui = calc_ufromSerho(pp[ENTRI], rho, IONS,ix,iy,iz);
 
-	    if(ix==550)
-	    {
-	    
-	      printf("energy frac diff ix=550 in output: %e \n", (pp[UU] - ue - ui)/pp[UU]); 
-	    }
-
-	    ldouble gammagas=calc_gammagas(pp, ix, iy, iz);
-	    gammagas=pick_gammagas(ix,iy,iz);
-	    fprintf(fout1,"%e %e %e %.5e %.5e %.5e %.5e %.5e %.5e %.5e",
-		    uugas,ui,ue,
-		    get_u_scalar(vischeating,ix,iy,iz),
-		    get_u_scalar(vischeatingnegebalance,ix,iy,iz),
-		    gammagas,Te,Ti,gammae,gammai);//17-21 with rad, 13-17 without
+	      ldouble gammagas=calc_gammagas(pp, ix, iy, iz);
+	      gammagas=pick_gammagas(ix,iy,iz);
+	      fprintf(fout1,"%e %e %e %.5e %.5e %.5e %.5e %.5e %.5e %.5e",
+	      	      uugas,ui,ue,
+		      get_u_scalar(vischeating,ix,iy,iz),
+		      get_u_scalar(vischeatingnegebalance,ix,iy,iz),
+		      gammagas,Te,Ti,gammae,gammai);//17-21 with rad, 13-17 without
 #endif //PROBLEM==115 || PROBLEM==135
 
 	      fprintf(fout1,"\n");
@@ -1864,7 +1858,6 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	       vischeat/=dtau;
                #endif
                
-
 	       ldouble meandeltae=get_uavg(pavg,AVGVISCHEATINGTIMESDELTAE,ix,iy,iz)/get_uavg(pavg,AVGVISCHEATING,ix,iy,iz);
 
 	       #ifndef OUTPUTINGU

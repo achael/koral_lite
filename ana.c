@@ -173,8 +173,10 @@ main(int argc, char **argv)
     {
       //copies initial primitives to pinit
       copy_u(1.,p,pinit);
+
       //evolves
       solve_the_problem(t, "dummy");
+
       //rewrite *ppostimplicit to *p and use below for outputs
       copyi_u(1.,ppostimplicit,p);
     }
@@ -240,8 +242,8 @@ main(int argc, char **argv)
     //suffix and prefix for saved files depending on phiavg
     char prefix[40];
     char suffix[10];
+    
     //sprintf(suffix,"");
-
     if(ifphiavg==1)
       sprintf(suffix,"%sphiavg",suffix);
     if(ifphiavg==2)
@@ -323,20 +325,16 @@ main(int argc, char **argv)
       //relativistic electron spectrum
 #if(RELELSPECTRUMOUTPUT==1)
       int ixx, iyy, izz;
-      ixx=50; iyy=127; izz=0;   //hardcoded -- equator approx 10M
+      ixx=50; iyy=127; izz=0;   //hardcoded -- equator at approx 10M
       fprint_relel_spectrum(t, ixx, iyy, izz, nfout1, folder, "spe",0);
       fprint_relel_avg_spectrum(t, ixx, iyy, izz, nfout1, folder, "spe_avg",0);
 #endif
       
-#ifdef INIT_GU_OUTPUT
-      write_initial();
-#endif
     } //if(phiavg==3)
   }  //for(ifile=no1;ifile<=no2;ifile+=nostep)
 
   //Done with all res files  
   //close scalar files
-
 #if(SCAOUTPUT==1)
   fclose(fout_scalars);
   char cpcommand[200];

@@ -25,23 +25,23 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   mpi_exchangedata();
   calc_avgs_throughout();
 
-  DBfile *file = NULL;/* The Silo file pointer */
-  char *coordnames[3];/* Names of the coordinates */
-  ldouble *nodex;/* The coordinate arrays */
+  DBfile *file = NULL; // The Silo file pointer 
+  char *coordnames[3]; // Names of the coordinates 
+  ldouble *nodex;      // The coordinate arrays 
   ldouble *nodey;
   ldouble *nodez;
-  ldouble *coordinates[3];/* The array of coordinatearrays */
-  int dimensions[3];/* The number of nodes */
+  ldouble *coordinates[3];// The array of coordinatearrays 
+  int dimensions[3];      // The number of nodes 
 
-  /* Create the Silo file */
+  // Create the Silo file 
   file = DBCreate(bufor, DB_CLOBBER, DB_LOCAL, NULL,DB_PDB);
 
-  /* Name the coordinate axes ‘X’ and ‘Y’ */
+  // Name the coordinate axes ‘X’ and ‘Y’ 
   coordnames[0] = strdup("X");
   coordnames[1] = strdup("Y");
   coordnames[2] = strdup("Z");
   
-  /* Give the cartesian coordinates of the mesh */
+  // Give the cartesian coordinates of the mesh 
   int ix,iy,iz,iv,imx,imy,imz;
   int i,j;
   ldouble pp[NV],uu[NV],xxvec[4],xxveccar[4],xxvecsph[4],xx1[4],xx2[4];
@@ -50,21 +50,25 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   int nx=NX;
   int ny=NY;
   int nz=NZ;
+  
   //number of nodes
   int nnx=NX+1;
   int nny=NY+1;
   int nnz=NZ+1;
   if(NY==1) nny=NY;
   if(NZ==1) nnz=NZ;
-#ifdef RELELECTRONS //ANDREW
+  #ifdef FULLPHI //printing one more cell in phi to close the sphere
+  nz++;nnz++;
+  #endif
+
+  //initialize shared gammabreak array for nonthermal  electrons
+#ifdef RELELECTRONS 
   int ie;
   ldouble gammapbrk[NRELBIN];
   for(ie=0; ie<NRELBIN; ie++) gammapbrk[ie] = pow(relel_gammas[ie], RELEL_HEAT_INDEX + 0.5);
 #endif  
-#ifdef FULLPHI //printing one more cell in phi to close the sphere
-  nz++;nnz++;
-#endif
 
+  // Allocate arrays for saved quantities
   nodex=(ldouble *)malloc(nnx*nny*nnz*sizeof(ldouble));
   nodey=(ldouble *)malloc(nnx*nny*nnz*sizeof(ldouble));
   nodez=(ldouble *)malloc(nnx*nny*nnz*sizeof(ldouble));
@@ -86,7 +90,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *expansion = (ldouble*)malloc(nx*ny*nz*sizeof(double));
 
   #ifdef PRINTVISCHEATINGTOSILO
-    ldouble *dtauarr= (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *dtauarr= (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vischeat= (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vischeatnege= (ldouble*)malloc(nx*ny*nz*sizeof(double));  
   ldouble *vischeatnegi= (ldouble*)malloc(nx*ny*nz*sizeof(double));  
@@ -191,7 +195,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   #endif //RADIATION
 
   //first fill coordinates on nodes
-
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
 #ifdef PRINTZGC_RIGHT
@@ -263,6 +266,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      int nodalindex=imz*(nny*nnx) + imy*nnx + imx;
 	    
 	      //coordinates
+	      
 	      ldouble coordscale=1.;
 	      #ifdef COORDSINPCINSILO
 	      coordscale=1./(PARSECCGS/MASSCM);
@@ -276,10 +280,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      nodex[nodalindex]=xxveccar[1]*coordscale;
 	      nodey[nodalindex]=xxveccar[2]*coordscale;
 	      nodez[nodalindex]=xxveccar[3]*coordscale;
-	      //printf("%e 2 %e %e %e\n",coordscale,xxveccar[1],xxveccar[2],xxveccar[3]);
-	      //printf("2 %e %e %e\n",xxveccar[1]*coordscale,xxveccar[2]*coordscale,xxveccar[3]*coordscale);
-	      //printf("1 %f %f %f\n",xxveccar[1],xxveccar[2],xxveccar[3]);
-
 #endif
 	      
 	     
@@ -289,8 +289,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 }
 
 
-  //then the zones with values
-  
+  //then fill the zones with values
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
 #ifdef PRINTZGC_RIGHT
@@ -510,9 +509,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 #ifdef EVOLVEELECTRONS
 		  calc_PEQ_Teifrompp(pp,&tempeloc,&tempiloc,ix,iy,iz);
 
-		  /**************/
 		  //electrons
-		  /**************/
 		  ne=calc_thermal_ne(pp); //thermal only
 		  ldouble pe=K_BOLTZ*ne*tempeloc;
 		  ldouble gammae=GAMMAE;
@@ -524,9 +521,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 #endif
 		  ueloc=pe/(gammae-1.);
 
-		  /**************/
 		  //ions
-		  /**************/
 		  ldouble ni=pp[RHO]/MU_I/M_PROTON; //number density of photons and electrons
 		  ldouble pi=K_BOLTZ*ni*tempiloc;
 		  ldouble gammai=GAMMAI;
@@ -549,7 +544,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 		  #ifdef SHEARINGBOX
 		  Qtheta[zonalindex]=2.*M_PI/SHEAROM/dx[2]*fabs(bcon[3])/sqrt(rho[zonalindex]);
-		  // if(ix==NX/2 && iy==NY/2 && iz==0) printf("%e %e %e %e\n",Qtheta[zonalindex],2.*M_PI/SHEAROM,dx[3],fabs(bcon[3])/sqrt(rho[zonalindex]));
 		  Qphi[zonalindex]=2.*M_PI/SHEAROM/dx[1]*fabs(bcon[2])/sqrt(rho[zonalindex]);
 		  #endif
 
@@ -586,6 +580,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               dtauarr[zonalindex]=-1.;
 	      #endif
 		}
+	      
 	      else //using averaged data
 		{
 		  entr[zonalindex]=get_uavg(pavg,ENTR,ix,iy,iz);
@@ -617,10 +612,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  vel[2]=get_uavg(pavg,AVGRHOUCON(2),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
 		  vel[3]=get_uavg(pavg,AVGRHOUCON(3),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
 		  for(i=0;i<4;i++) vcon[i]=vel[i];
-		  indices_21(vel,vcov,geomout.gg);
- 
-		  //conv_vels_ut(vel,velprim,VEL4,VELPRIM,geomout.gg,geomout.GG);
-		 
+		    indices_21(vel,vcov,geomout.gg);
+ 		 
 		  Omega[zonalindex]=vel[3]/vel[0];
 		  pp[VX]=vel[1]; //updates pp[VI] to have rho-weighted velocities there
 		  pp[VY]=vel[2];
@@ -651,10 +644,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 		  Qtheta[zonalindex]=2.*M_PI/Omega[zonalindex]/dx[1]*fabs(bcon[2])/sqrt(rho[zonalindex]);
 		  Qphi[zonalindex]=2.*M_PI/Omega[zonalindex]/dx[2]*fabs(bcon[3])/sqrt(rho[zonalindex]);
-		  //to calculate magn. field angle
 		  ldouble brbphi,bsq,bfake[4];
+		  
 		  #ifdef BHDISK_PROBLEMTYPE
-		  calc_angle_brbphibsq(ix,iy,iz,&brbphi,&bsq,bfake,bfake);
+		  calc_angle_brbphibsq(ix,iy,iz,&brbphi,&bsq,bfake,bfake); //to calculate magn. field angle
 		  Bangle[zonalindex]=-brbphi/bsq;
 		  #else
 		  Bangle[zonalindex]=-1.;
@@ -681,6 +674,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  #ifndef CONSISTENTGAMMA
 		  pi=pregas-pe;
 		  #endif
+
 		  //electrons
 		  ne=calc_thermal_ne(pp); 
 		  tempeloc=pe/K_BOLTZ/ne;
@@ -691,7 +685,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
                   #endif
 		  #endif
 		  ueloc=pe/(gammae-1.);
-		  //ueloc=0.;
+
 		  //ions
 		  ldouble ni=rho[zonalindex]/MU_I/M_PROTON; 
 		  tempiloc=pi/K_BOLTZ/ni;
@@ -715,31 +709,30 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		} //doingavg
 
 
-	      //ANDREW
-	      //in  avg vischeat was averaged as du, not du/dtau
-	      //recompute dt and use that as an estimate
-	      //copied from problem.c
+	        //ANDREW
+	        //in  avg vischeat was averaged as du, not du/dtau
+	        //here, recompute dt and use that as an estimate
 #ifdef PRINTVISCHEATINGTOSILO
 #ifdef DIVIDEVISCHEATBYDT
-              //get new prims in original coords 
-	      ldouble xxvecout[4];
-	      ldouble velcoord[4];
+                //get new prims in original coords 
+	        ldouble xxvecout[4];
+	        ldouble velcoord[4];
 
-               coco_N(xxvec,xxvecout,MYCOORDS,OUTCOORDS);
-	       fill_utinucon(vel,geomout.gg,geomout.GG);
-	       trans2_coco(xxvecout,vel,velcoord,OUTCOORDS,MYCOORDS); //vel should already be 4-velocity
+                 coco_N(xxvec,xxvecout,MYCOORDS,OUTCOORDS);
+	         fill_utinucon(vel,geomout.gg,geomout.GG);
+	         trans2_coco(xxvecout,vel,velcoord,OUTCOORDS,MYCOORDS); //vel should already be 4-velocity
 	       
-               dt=get_u_scalar(cell_dt,ix,iy,iz); //individual time step //?? but need min?
-	       dt=1./tstepdenmax;
+                 dt=get_u_scalar(cell_dt,ix,iy,iz); //individual time step //?? but need min?
+	         dt=1./tstepdenmax;
 
-	       ldouble dtau = dt/velcoord[0];
-	       dtauarr[zonalindex] = dtau;
-	       vischeat[zonalindex] /=dtau;
-	       vischeatnege[zonalindex]/=dtau;
-	       vischeatnegi[zonalindex]/=dtau;
+	         ldouble dtau = dt/velcoord[0];
+	         dtauarr[zonalindex] = dtau;
+	         vischeat[zonalindex] /=dtau;
+	         vischeatnege[zonalindex]/=dtau;
+	         vischeatnegi[zonalindex]/=dtau;
 #endif
 #endif
-	     
+	         //Nonthermal electron quantities
 #ifdef EVOLVEELECTRONS
 #ifdef RELELECTRONS
                   nethloc=ne;
@@ -813,7 +806,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      ldouble temploc=calc_PEQ_Tfromurho(uint[zonalindex],rho[zonalindex],ix,iy,iz);
 	      temp[zonalindex]=temploc;
 
-	      #ifdef CGSOUTPUT
+#ifdef CGSOUTPUT
 	      rho[zonalindex]=rhoGU2CGS(rho[zonalindex]);
 	      uint[zonalindex]=endenGU2CGS(uint[zonalindex]);
 
@@ -833,7 +826,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               #endif
               #ifdef PRINTGAMMATOSILO
 	      gammag[zonalindex]=gamma;
-	      #endif
+#endif
 	      	      
 	      //default, but can be non-ortonormal VEL4
 	      lorentz[zonalindex]=fabs(vel[0])/sqrt(fabs(geomout.GG[0][0]));
@@ -847,7 +840,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      Edotz[zonalindex]=Tit[3];
 
 	      //transform vel to cartesian
-	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS || MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
+	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
+		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS ||
+		  MYCOORDS==MKER1COORDS)
 		{
 		  vel[2]*=r;
 		  vel[3]*=r*sin(th);
@@ -862,10 +857,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 		  vz[zonalindex] = cos(th)*vel[1] 
 		    - sin(th)*vel[2];
-
-		  /*
-		  if(iy==TNY/2){
-		  printf("%d %d %d > %e %e %e\n",ix,iy,iz,vx[zonalindex],vy[zonalindex],vz[zonalindex]); getch();}*/
 
 		  Tit[2]*=r;
 		  Tit[3]*=r*sin(th);
@@ -978,7 +969,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      #endif
 
 	      //transform Bfield to cartesian
-	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS || MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
+	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
+		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS ||
+		  MYCOORDS==MKER1COORDS)
 		{
 		  bcon[2]*=r;
 		  bcon[3]*=r*sin(th);
@@ -1029,7 +1022,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		}
 	      #endif
 
-	      #ifdef RADIATION
+#ifdef RADIATION
 
 	      ldouble Rtt,ehat,ugas[4],urad[4],rvel[4],Rij[4][4],Rij22[4][4],Giff[4],tradloc,tradlteloc;
 	      struct opacities opac;  
@@ -1037,43 +1030,23 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      ldouble tauscaloc = vcon[0]*calc_kappaes(pp,&geomout);
 	      ldouble taueffloc = sqrt(tauabsloc*(tauabsloc+tauscaloc));
 
-	      if(doingavg==0)
+	      if(doingavg==0) //from snapshot
 		{
-
 		  calc_ff_Rtt(pp,&Rtt,ugas,&geomout);
 		  ehat=-Rtt;  	      							  
-		  //prad_lab2on(pp,pp,&geomout);
-		  //rvel[1]=pp[FX0];
-		  //rvel[2]=pp[FY0];
-		  //rvel[3]=pp[FZ0];
-		  //conv_vels(rvel,rvel,VELPRIM,VEL4,geomout.gg,geomout.GG);
-		  //calc_Rij_M1(pp,&geomout,Rij); //calculates R^munu in OUTCOORDS
 		  calc_Rij(pp,&geomout,Rij); //calculates R^munu in OUTCOORDS
 
 		  //four fource
                   
-		  calc_Gi(pp,&geomout,Giff,0.0,0,0); //ANDREW fluid frame = 0 
+		  calc_Gi(pp,&geomout,Giff,0.0,0,0); //ANDREW fluid frame 
 
 		  #ifdef RADFLUXFFINOUTPUT
 		  boost22_lab2ff(Rij,Rij,pp,geomout.gg,geomout.GG);
-		  //TEST
-		  /*
-		   if(geomout.ix==60 && geomout.iy==NY/2)
-		    {
-		      calc_Rij(pp,&geomout,Rij); //calculates R^munu in OUTCOORDS
-		          print_tensor(Rij);
-		      boost22_lab2ff(Rij,Rij,pp,geomout.gg,geomout.GG);
-		      print_tensor(Rij);
-		          print_primitives(pp);
-		      getch();
-		    }
-		  */
 		  #endif
 
 		  indices_2221(Rij,Rij,geomout.gg);
 		  //calculating radiation temperature
 		  tradlteloc=calc_LTE_TfromE(ehat);
-		  //tradlteloc=calc_Tnfromn(pp[NF]);
 		  tradloc=calc_LTE_TfromE(ehat);
 		  
 #ifdef EVOLVEPHOTONNUMBER
@@ -1086,7 +1059,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  tradlteloc=calc_LTE_TfromE(ehat);
 		  for(j=0;j<4;j++)
 		    Giff[j]=get_uavg(pavg,AVGGHAT(j),ix,iy,iz);
-		  //tradlteloc=calc_Tnfromn(get_uavg(pavg,NF,ix,iy,iz));
+
                   //ANDREW if Gi0 accidentally saved in lab frame:
                   #ifdef SIMOUTPUT_GILAB2FF
                   boost2_lab2ff(Giff,Giff,pp,geomout.gg,geomout.GG); //ANDREW avg Gff already in OUTCOORDS
@@ -1094,13 +1067,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  
 		  tradloc=calc_ncompt_Thatrad_fromEN(ehat,get_uavg(pavg,AVGNFHAT,ix,iy,iz));
 
-		  /*
-		  ldouble Rtop[4];
-		  Rtop[0]=get_uavg(pavg,AVGRIJ(0,0),ix,iy,iz);
-		  Rtop[1]=get_uavg(pavg,AVGRIJ(0,1),ix,iy,iz);
-		  Rtop[2]=get_uavg(pavg,AVGRIJ(0,2),ix,iy,iz);
-		  Rtop[3]=get_uavg(pavg,AVGRIJ(0,3),ix,iy,iz);
-		  */
 		  for(i=0;i<4;i++)
 		    for(j=0;j<4;j++)
 		      Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
@@ -1114,19 +1080,17 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 	      //correcting rad-velocities basing on <R^t_mu>
 	      int radcorr;
-	      //print_primitives(pp);
 	      
 	      p2u(pp,uu,&geomout);
-	      //print_conserved(uu);
+
 	      uu[EE0]=gdetu*Rij[0][0];
 	      uu[FX0]=gdetu*Rij[0][1];
 	      uu[FY0]=gdetu*Rij[0][2];
 	      uu[FZ0]=gdetu*Rij[0][3];
+	      
 	      //print_conserved(uu);
 	      u2p_rad(uu,pp,&geomout,&radcorr);
 	      
-	      //print_primitives(pp);getchar();
-
 	      #ifdef EVOLVEELECTRONS
 	      //Calculate thermal comptonization
 	      ldouble Gic_tmp[4];
@@ -1134,8 +1098,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      ucon_ff[1]=ucon_ff[2]=ucon_ff[3]=0.;
 	      ucon_ff[0]=1.;
 	      ldouble kappaes=calc_kappaes(pp, &geomout);
-	      calc_Compt_Gi(pp, &geomout, Gic_tmp, ehat, tempeloc, kappaes, ucon_ff); //!AC
-	      G0ic_th_loc = fabs(Gic_tmp[0]); //!AC
+	      calc_Compt_Gi(pp, &geomout, Gic_tmp, ehat, tempeloc, kappaes, ucon_ff);
+	      G0ic_th_loc = fabs(Gic_tmp[0]); 
 
 	      G0icth[zonalindex]=G0ic_th_loc;
               #ifdef CGSOUTPUT
@@ -1210,7 +1174,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 
 	      //transform rad flux to cartesian
-	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS || MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
+	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
+		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS ||
+		  MYCOORDS==MKER1COORDS)
 		{
 		  Rij22[2][0]*=sqrt(geomout.gg[2][2]);
 		  Rij22[3][0]*=sqrt(geomout.gg[3][3]);
@@ -1243,19 +1209,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		    - sin(th)*urad[2];
 		}
 
-	      if(iy==NY/2 && 0)
-		{
-		  printf("%d %d %d | %e %e %e | %e %e %e | %e %e %e | %e %e %e\n",ix,iy,iz,
-			 xxvec[1],xxvec[2],xxvec[3],
-			 xxveccar[1],xxveccar[2],xxveccar[3],
-			 //			 urad[1],urad[2],urad[3],
-			 //Rij[0][1],Rij[0][2],ij[0][3]
-			 uradx[zonalindex],urady[zonalindex],uradz[zonalindex],
-			 Fx[zonalindex],Fy[zonalindex],Fz[zonalindex]
-			 );getchar();
-		}
-
-	      #endif
+#endif //RADIATION
 	  
 	      
 	      
@@ -1384,7 +1338,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               #endif
 	      trans_pmhd_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
 
-//velocities etc
+              //velocities etc
 	      ldouble vel[4],vcov[4],vcon[4],velprim[4];
 
 	      if(doingavg==0) //using snapshot data
@@ -1405,9 +1359,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  vel[3]=get_uavg(pavg,AVGRHOUCON(3),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
 		  for(i=0;i<4;i++) vcon[i]=vel[i];
 		  indices_21(vel,vcov,geomout.gg);
- 
-		  //conv_vels_ut(vel,velprim,VEL4,VELPRIM,geomout.gg,geomout.GG);
-		}
+ 		}
 
 	      struct opacities opac;  
 	      ldouble tauabslocr = vcon[0]*(1.-fabs(vcon[1]))*calc_kappa(pp,&geomout,&opac);
@@ -1459,7 +1411,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 #endif
 
 
-  /* assign grid */
+  // assign grid 
   int ndim;
   int dimensionsnode[3];
   if(ny==1 && nz==1) //1d
@@ -1469,7 +1421,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       dimensionsnode[0]=nnx;
       coordinates[0]=nodex;
     }
-  else if(nz==1) //2d
+  else if(nz==1)     //2d
     {
       ndim=2;
 
@@ -1484,17 +1436,17 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       coordinates[1] = nodez;
 #endif
     }
-  else if(ny==1) //2d, switch order
+  else if(ny==1)     //2d, switch order
     {
       ndim=2;
       
-      /* How many nodes in each direction? */
+      // How many nodes in each direction? 
       dimensions[0] = nx;
       dimensions[1] = nz;
       dimensionsnode[0]=nnx;
       dimensionsnode[1]=nnz;
 
-      /* Assign coordinates to coordinates array */
+      // Assign coordinates to coordinates array 
       coordinates[0] = nodex;
       coordinates[1] = nodey;  //works for spherical-like coordinates
 
@@ -1511,7 +1463,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
     {
       ndim=3;
       
-      /* How many nodes in each direction? */
+      // How many nodes in each direction? 
       dimensions[0] = nx;
       dimensions[1] = ny;
       dimensions[2] = nz;
@@ -1520,7 +1472,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       dimensionsnode[1]=nny;
       dimensionsnode[2]=nnz;
 
-      /* Assign coordinates to coordinates array */
+      // Assign coordinates to coordinates array 
       coordinates[0] = nodex;
       coordinates[1] = nodey;
       coordinates[2] = nodez;
@@ -1533,12 +1485,11 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   DBAddOption(optList, DBOPT_CYCLE, (void*)&nstep);
 
 
-  /* Write out the mesh to the file */
+  // Write out the mesh to the file 
   DBPutQuadmesh(file, "mesh1", coordnames, coordinates,
   		dimensionsnode, ndim, DB_DOUBLE, DB_NONCOLLINEAR, optList);
 
-  /* Write scalars */
-
+  // Write scalars to the file
   DBPutQuadvar1(file, "entr","mesh1", entr,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
@@ -1709,17 +1660,6 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
-  /* optical depth calculated in lab frame using lorentz invariant quantities (more work needed, negative if I use result from notes and no obvious reason for including - sign)
-  DBPutQuadvar1(file, "tausca_rad2","mesh1", tauscar2,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-  DBPutQuadvar1(file, "tauabs_rad2","mesh1", tauabsr2,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-  DBPutQuadvar1(file, "taueff_rad2","mesh1", taueffr2,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-  */
   #ifdef EVOLVEPHOTONNUMBER
   DBPutQuadvar1(file, "nph","mesh1", Nph,
   		dimensions, ndim, NULL, 0, 
@@ -1775,7 +1715,7 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   #endif
 
 
-  /* Write vectors */
+  // Write vectors to file
   char *names[3];  
   ldouble *vels[3];
 
@@ -1790,7 +1730,6 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   DBPutQuadvar1(file, "velocity_z","mesh1", vy,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
-
 #endif
 
   names[0] = strdup("vel1");
@@ -1821,17 +1760,16 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
-  #ifdef MAGNFIELD
+#ifdef MAGNFIELD
   //magn field
   vels[0]=Bx;
   vels[1]=By;
   vels[2]=Bz;
 #ifdef SILO2D_XZPLANE
-#if (MYCOORDS!=CYLCOORDS)
- 
+#if (MYCOORDS!=CYLCOORDS) 
   vels[1]=Bz;
- #endif
- DBPutQuadvar1(file, "magn_field_z","mesh1", By,
+#endif
+  DBPutQuadvar1(file, "magn_field_z","mesh1", By,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 #endif
@@ -1846,7 +1784,6 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
 
 #ifdef BATTERY
   //magn field growth due to battery
-
 
   DBPutQuadvar1(file, "phibat","mesh1", phibat,
   		dimensions, ndim, NULL, 0, 
@@ -1871,14 +1808,13 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
 		DB_DOUBLE, DB_ZONECENT, optList);
 #endif
 
-  #ifdef MIMICDYNAMO
-//magn field
+#ifdef MIMICDYNAMO
+  //magn field due to dynamo
   vels[0]=Bxdyn;
   vels[1]=Bydyn;
   vels[2]=Bzdyn;
-  #ifdef SILO2D_XZPLANE
-#if (MYCOORDS!=CYLCOORDS)
- 
+#ifdef SILO2D_XZPLANE
+#if (MYCOORDS!=CYLCOORDS) 
   vels[1]=Bzdyn;
 #endif
   DBPutQuadvar1(file, "magn_field_dyn_z","mesh1", Bydyn,
@@ -1894,7 +1830,7 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   #endif
 
 
-  #endif
+#endif //MAGNFIELD
 
   #ifdef RADIATION 
   //radiative flux
@@ -1937,7 +1873,7 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
 		DB_DOUBLE, DB_ZONECENT, optList);
   #endif
  
-  /* Close the Silo file */
+  // Close the Silo file and free memory
   DBClose(file);
 
   free(nodex);
@@ -2012,8 +1948,8 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   #endif
  
  #ifdef PRINTVISCHEATINGTOSILO
-free(deltae);
- free(dtauarr);
+  free(deltae);
+  free(dtauarr);
   free(vischeat);
   free(vischeatnege);
   free(vischeatnegi);
@@ -2021,11 +1957,11 @@ free(deltae);
 
 #ifdef PRINTCOULOMBTOSILO
   free(coulomb);
-  #endif
+#endif
 
 #ifdef PRINTGAMMATOSILO
   free(gammag);
-  #endif
+#endif
  
   #ifdef RADIATION
   free(tausca);
@@ -2053,9 +1989,7 @@ free(deltae);
   free(taueffr2);
   #endif
 
-  
-
   return (0);
 }
 
-#endif
+#endif //NOSILO

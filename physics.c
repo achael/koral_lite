@@ -2292,8 +2292,6 @@ heat_electronions_with_state(ldouble dtin)
 	   
 #ifdef DISSIPATIONFROMGASONLY
 	  ldouble ut=state.ucon[0];
-
-	  
 	  ldouble spost=get_u(u,ENTR,ix,iy,iz)/ut/gdetu;
 	  ldouble utotentrgas=calc_ufromS(spost,pp[RHO],ix,iy,iz);
 	  du = uint - utotentrgas;	  
@@ -2304,7 +2302,7 @@ heat_electronions_with_state(ldouble dtin)
           #endif
 
 	  //track viscous heating
-	  set_u_scalar(vischeating,ix,iy,iz,du);
+	  set_u_scalar(vischeating,ix,iy,iz,du/dtau);
 	  
 	  /**********************************************/
 	  //determine fraction going into electrons 
@@ -2313,7 +2311,7 @@ heat_electronions_with_state(ldouble dtin)
           ldouble fe=calc_ViscousElectronHeatingFraction_from_state(pp,&state,&geom);
 
 	  //to calcuate avg delta_e later
-	  set_u_scalar(vischeatingtimesdeltae,ix,iy,iz,du*fe);
+	  set_u_scalar(vischeatingtimesdeltae,ix,iy,iz,du*fe/dtau);
 
 	  /************************************/
 	  //Heat the nonthermal distribution
