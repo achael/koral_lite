@@ -16,7 +16,7 @@ main(int argc, char **argv)
   #ifdef MPI
   mpi_myinit(argc,argv);
   if(PROCID==0)
-      printf("ana works mostly on shared memory only, do not use MPI, unless BOXOUTPUT\n");
+      printf("ana works mostly on shared memory only, do not use MPI\n");
   #endif
   
   #ifdef OMP
@@ -134,36 +134,10 @@ main(int argc, char **argv)
   
   //open the scalar files	
   char scalarsname[100];
-  char boxscalarsname[100];
-  char boxcorrname[100];
   #if(SCAOUTPUT==1)					
   sprintf(scalarsname,"analysis/scalars_%04d_%04d_%04d.dat",no1,no2,nostep);  
   fout_scalars=fopen(scalarsname,"w");
   #endif
-
-  #if (BOXCORROUTPUT==1)
-  sprintf(boxcorrname,"analysis/boxcorr_%04d_%04d_%04d.dat",no1,no2,nostep);  
-  fout_boxcorrscalars=fopen(boxcorrname,"w");
-  #endif
-
-  if(ifphiavg<3)
-  {
-    #if(BOXOUTPUT==1)
-    if(PROCID==0)
-    {
-      sprintf(boxscalarsname,"analysis/boxscalars_%04d_%04d_%04d.dat",no1,no2,nostep);  
-      fout_boxscalars=fopen(boxscalarsname,"w");
-    }
-    #endif
-  }
-
-  if(ifphiavg==2) //phisli only
-  {
-    #if(VAROUTPUT==1)
-    sprintf(bufer,"analysis/varscalars.dat");
-    fout_varscalars=fopen(bufer,"w");
-    #endif
-  }
 
   //loop through files
   int ifile,itot=0,readret;
@@ -296,14 +270,7 @@ main(int argc, char **argv)
     //th-sliced - these save files only make sense for phi-slices        
     else if(ifphiavg==2) //phisliced - only these below make sense for phi-slices
     {
-      //box scalar output
-#if(BOXOUTPUT==1)
-      fprint_boxscalars(t);
-#endif
-      //var scalar output
-#if(VAROUTPUT==1)
-      fprint_varscalars(t);
-#endif
+
       //silo output
 #if(SILOOUTPUT==1)
 #ifndef NOSILO
@@ -323,16 +290,6 @@ main(int argc, char **argv)
     else
     {
 
-      //box scalars
-#if(BOXOUTPUT==1)
-      fprint_boxscalars(t);
-#endif
-
-      //box corr scalars
-#if(BOXCORROUTPUT==1)
-      fprint_boxcorrscalars(t);
-#endif
-
       //scalar output
 #if(SCAOUTPUT==1)
       fprint_scalars(t,scalars,NSCALARS);
@@ -344,23 +301,12 @@ main(int argc, char **argv)
       fprint_radprofiles(t,nfout1,"analysis",prefix);
 #endif
 
-      //box vert ??
-#if(BOXVERTOUTPUT==1)
-      sprintf(prefix,"boxvert%s",suffix,no1);
-      fprint_boxvert(t,nfout1,"analysis",prefix);
-#endif
-
       //theta profiles
 #if(THOUTPUT==1)
       sprintf(prefix,"th%s",suffix);  
       fprint_thprofiles(t,nfout1,"analysis",prefix);
 #endif
 
-      //outout files ??
-#if(OUTOUTPUT==1)
-      sprintf(prefix,"out%s",suffix);  
-      fprint_outfile(t,nfout1,0,"analysis",prefix);
-#endif
       //silo output
 #if(SILOOUTPUT==1)
 #ifndef NOSILO
@@ -390,16 +336,6 @@ main(int argc, char **argv)
 
   //Done with all res files  
   //close scalar files
-#if(BOXOUTPUT==1)
-  if(PROCID==0)
-  {
-    fclose(fout_boxscalars);
-  }
-#endif
-
-#if(VAROUTPUT==1)
-  fclose(fout_varscalars);
-#endif
 
 #if(SCAOUTPUT==1)
   fclose(fout_scalars);
@@ -407,19 +343,7 @@ main(int argc, char **argv)
   if(PROCID==0)
     {
       sprintf(cpcommand, "cp %s analysis/scalars.dat",scalarsname);
-      system(cpcommand);  
-      sprintf(cpcommand, "cp %s analysis/boxscalars.dat",boxscalarsname);
-      system(cpcommand);  
-    }
-#endif
-
-#if(BOXCORROUTPUT==1)
-  fclose(fout_boxcorrscalars);
-  char cpcommand[200];
-  if(PROCID==0)
-    {
-      sprintf(cpcommand, "cp %s analysis/boxcorr.dat",boxcorrname);
-      system(cpcommand);  
+      system(cpcommand);
     }
 #endif
 

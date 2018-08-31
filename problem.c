@@ -21,15 +21,11 @@ solve_the_problem(ldouble tstart, char* folder)
   ldouble totalmass=0.;
   ldouble dtout = DTOUT1;
   ldouble dtoutavg = DTOUT2;
-  ldouble dtoutbox = DTOUT3;
-  ldouble dtoutvar = DTOUT4;
   
   ldouble dtsource, taim;
   ldouble fprintf_time = 0.;
   ldouble lasttout_floor=floor(t/dtout); 
   ldouble lasttoutavg_floor=floor(t/dtoutavg);
-  ldouble lasttoutbox_floor=floor(t/dtoutbox);
-  ldouble lasttoutvar_floor=floor(t/dtoutvar);
 
   int i1=0.,i2=0.;
   int fprintf_nstep=0;  
@@ -820,23 +816,6 @@ solve_the_problem(ldouble tstart, char* folder)
       }  // if(lasttoutavg_floor!=floor(t/dtoutavg))
 #endif  // if(AVGOUTPUT>0)
 
-      //save boxscalars.dat file
-#if(BOXOUTPUT==1) 
-      if(lasttoutbox_floor!=floor(t/dtoutbox))
-      {
-	  fprint_boxscalars(t);
-	  lasttoutbox_floor=floor(t/dtoutbox);	 
-      }
-#endif
-
-      //save varscalars.dat file
-#if(VAROUTPUT==1) 
-      if(lasttoutvar_floor!=floor(t/dtoutvar))
-      {
-	  fprint_varscalars(t);
-	  lasttoutvar_floor=floor(t/dtoutvar);	 
-      }
-#endif
 
       //save snapshot files
       if(lasttout_floor!=floor(t/dtout) || ALLSTEPSOUTPUT || t>.9999999*t1 || spitoutput==1)
@@ -861,18 +840,7 @@ solve_the_problem(ldouble tstart, char* folder)
           #if(RADOUTPUT==1) //radial  profiles
 	  fprint_radprofiles(t,nfout1,folder,"rad");
           #endif
-
-          #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum
-          int ixx,iyy,izz;
-          ixx=0;iyy=0;izz=0;
-          //ixx=TNX/2;iyy=TNY/2;izz=0;
-	  fprint_relel_spectrum(t,ixx,iyy,izz,nfout1,folder,"spe",0);
-          #endif
-
-          #if(OUTOUTPUT==1)
-	  fprint_outfile(t,nfout1,0,folder,"out");
-          #endif
-      
+	  
           #if(THOUTPUT==1) //theta profiles
 	  fprint_thprofiles(t,nfout1,folder,"th");
           #endif
@@ -887,9 +855,13 @@ solve_the_problem(ldouble tstart, char* folder)
 	  fprint_simplefile(tstart,nfout1,folder,"sim");
           #endif
       
-          #if(SLICEOUTPUT==1) //slice files
-	  fprint_slice(t,nfout1,folder,"slice");	    
+	  #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum
+          int ixx,iyy,izz;
+          ixx=0;iyy=0;izz=0;
+          //ixx=TNX/2;iyy=TNY/2;izz=0;
+	  fprint_relel_spectrum(t,ixx,iyy,izz,nfout1,folder,"spe",0);
           #endif
+
 #endif  // ifndef MPI
 	  
 	  nfout1++;

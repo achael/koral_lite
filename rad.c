@@ -9,7 +9,6 @@
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_bessel.h>
 
-
 /************************************************************************/
 /******* implicit radiative source term in lab frame ********************/
 /******* solves numerically in 4D ***************************************/
@@ -338,7 +337,8 @@ solve_implicit_lab(int ix,int iy,int iz,ldouble dt,int verbose)
 //**********************************************************************
 //**********************************************************************
 int
-solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,ldouble dt,int verbose,int *params,ldouble *pp)
+solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
+			  ldouble dt,int verbose,int *params,ldouble *pp)
 {
 #ifdef RADIATION
   int i1,i2,i3,iv,i,j,ie, ret_fill, ret_copy;
@@ -636,7 +636,8 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,ldouble dt,int v
   {
       printf("=== ix, iy, iz: %d %d %d\n\n",ix,iy,iz);
       printf("Conserveds:\n");
-      print_conserved(uu0); //ANDREW this uu0 may not be consistent with pp0 above, haven't applied p2u yet
+      //ANDREW this uu0 may not be consistent with pp0 above, haven't applied p2u yet
+      print_conserved(uu0); 
       printf("Primitives:\n");
       print_primitives(pp0);
       printf("Metric gg:\n");
@@ -1452,11 +1453,14 @@ implicit_apply_constraints(ldouble *pp, ldouble *uu, ldouble *uu0, void* ggg, in
 //******* rad or hydro (whichprim) *************************************
 //**********************************************************************
 
-//ANDREW: - before calling f_implicit_lab_4dprim_with_state, must make sure that the quantities in pp and sss are CONSISTENT
+//ANDREW: - before calling f_implicit_lab_4dprim_with_state,
+//must make sure that the quantities in pp and sss are CONSISTENT
 //with the conserved quantities uu0 by calling implicit_apply_constraints and fill_struct_of_state
 
 int
-f_implicit_lab_4dprim_with_state(ldouble *uu, ldouble *pp, void *sss, ldouble *uu0, ldouble *pp0, void *sss0, ldouble dt, void* ggg,
+f_implicit_lab_4dprim_with_state(ldouble *uu, ldouble *pp, void *sss,
+				 ldouble *uu0, ldouble *pp0, void *sss0,
+				 ldouble dt, void* ggg,
 				 ldouble *f, int *params, ldouble *err0)
 {
   int ret=0,i;
@@ -1806,7 +1810,8 @@ print_state_implicit_lab_4dprim (int iter, ldouble *x, ldouble *f,ldouble err,in
 //**********************************************************************
 int
 free_solve_implicit_lab_4dprim(ldouble** J, ldouble** iJ, ldouble *tJ, ldouble *tiJ,
-			       ldouble *f1, ldouble *f2, ldouble *f3, ldouble *xxx, ldouble *xxxbest,int N)
+			       ldouble *f1, ldouble *f2, ldouble *f3,
+			       ldouble *xxx,ldouble *xxxbest,int N)
 {
   int ib;
   for(ib=0;ib<N;ib++)
@@ -1831,7 +1836,6 @@ free_solve_implicit_lab_4dprim(ldouble** J, ldouble** iJ, ldouble *tJ, ldouble *
 ///******* 1D solver in energy densities ***********************************/
 ///******* totenergy is the total energy density in ff *********************/
 ///******* ratio is the radio of energy denisities between ff and rad.rest frame */
-///*************************************************************************/
 ///*********** always in FF frame! ************/
 /*! \fn ldouble f_implicit_1dprim_err(ldouble xxx,ldouble *uu0,ldouble *pp0,ldouble dtau,void *ggg,int *params,ldouble totenergy,ldouble ratio, int verbose)
  \brief Calculates error for 1D bisection routine
@@ -1853,10 +1857,12 @@ free_solve_implicit_lab_4dprim(ldouble** J, ldouble** iJ, ldouble *tJ, ldouble *
  
  \todo We only need Gi[0], not the whole vector. Check calc_Gi to see if we could simplify the computation.
  */
+///*************************************************************************/
 
-// Ramesh-modified version of f_implicit_1dprim_err
 ldouble
-f_implicit_1dprim_err(ldouble xxx, ldouble *uu0, ldouble *pp0, void *sss0, void *sss, ldouble dtau, void *ggg, int *params, ldouble totenergy, ldouble ratio, int verbose)
+f_implicit_1dprim_err(ldouble xxx, ldouble *uu0, ldouble *pp0, void *sss0, void *sss,
+		      ldouble dtau, void *ggg, int *params,
+		      ldouble totenergy, ldouble ratio, int verbose)
 {  
   int ret_update, ret_fill;
   
@@ -1966,7 +1972,7 @@ f_implicit_1dprim_err(ldouble xxx, ldouble *uu0, ldouble *pp0, void *sss0, void 
 }  // f_implicit_1dprim_err
 
 
-///////////////////////////////////////////////////////////////
+//******************************************************************************
 /*! \fn int solve_implicit_lab_1dprim(ldouble *uu0,ldouble *pp0,void *ggg,ldouble dt,int verbose,ldouble *ppout)
  \brief 1D solver of energy equation via the bisection method
  
@@ -1980,9 +1986,11 @@ f_implicit_1dprim_err(ldouble xxx, ldouble *uu0, ldouble *pp0, void *sss0, void 
  The routine decides whether to solve the MHD or radiation equation. In each case, it chooses between the energy equation and the entropy equation. All computations are done in the fluid frame.
 */
 // Ramesh-modified version
+//******************************************************************************
 
 int
-solve_implicit_lab_1dprim(ldouble *uu0, ldouble *pp0, void *sss0, void *ggg, ldouble dt,  int verbose, ldouble *ppout, void *sss)
+solve_implicit_lab_1dprim(ldouble *uu0, ldouble *pp0, void *sss0, void *ggg,
+			  ldouble dt,  int verbose, ldouble *ppout, void *sss)
 {
   int i1,i2,i3,iv,i,j,iter;
   ldouble pp[NV],uu[NV];
@@ -2203,7 +2211,8 @@ solve_implicit_lab_1dprim(ldouble *uu0, ldouble *pp0, void *sss0, void *ggg, ldo
 /*************************************************************************/
 
 ldouble
-f_implicit_photon_rad_1dprim_err(ldouble xxx, ldouble *uu0, ldouble *pp0, void *sss, ldouble dtaurad, void *ggg)
+f_implicit_photon_rad_1dprim_err(ldouble xxx, ldouble *uu0, ldouble *pp0, void *sss,
+				 ldouble dtaurad, void *ggg)
 {
   struct geometry *geom
     = (struct geometry *) ggg;
@@ -2231,7 +2240,8 @@ f_implicit_photon_rad_1dprim_err(ldouble xxx, ldouble *uu0, ldouble *pp0, void *
 }
 
 int
-solve_implicit_nphoton_rad_1dprim(ldouble *uu0,ldouble *pp0, void *sss, void *ggg, ldouble dt, int verbose, ldouble *ppout, void *sssout)
+solve_implicit_nphoton_rad_1dprim(ldouble *uu0,ldouble *pp0, void *sss, void *ggg,
+				  ldouble dt, int verbose, ldouble *ppout, void *sssout)
 {
   int i1,i2,i3,iv,i,j,iter;
   ldouble pp[NV],uu[NV]; 
@@ -2388,9 +2398,11 @@ solve_implicit_nphoton_rad_1dprim(ldouble *uu0,ldouble *pp0, void *sss, void *gg
 }
 
 
+//**********************************************************************
 /************************************************************************/
 /******* explicit radiative source term  ********************************/
 /************************************************************************/
+//**********************************************************************
 
 int explicit_rad_source_term(int ix,int iy, int iz,ldouble dt)
 {
@@ -2415,7 +2427,6 @@ int explicit_rad_source_term(int ix,int iy, int iz,ldouble dt)
 //******* solves explicitly gas - radiation interaction  ***************
 //******* in the lab frame, returns vector of deltas *******************
 //**********************************************************************
-
 int
 solve_explicit_lab(int ix,int iy,int iz,ldouble dt,ldouble* deltas,int verbose)
 {
@@ -2586,7 +2597,8 @@ calc_Gi(ldouble *pp, void *ggg, ldouble Gi[4], ldouble relel_dudtau, int type, i
 }
 
 ldouble
-calc_Gi_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], ldouble relel_dudtau, int type, int reltype)
+calc_Gi_with_state(ldouble *pp, void *sss, void *ggg,
+		   ldouble Gi[4], ldouble relel_dudtau, int type, int reltype)
 {
   // type = 0: thermal + nonthermal in fluid frame
   // type = 1: thermal + nonthermal in lab frame
@@ -2630,7 +2642,10 @@ calc_Gi_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], ldouble rel
 }
 
 ldouble
-calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble Gitot_ff[4], ldouble Gitot_lab[4], ldouble Gith_ff[4], ldouble Gith_lab[4], ldouble relel_dudtau, int reltype)
+calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
+		       ldouble Gitot_ff[4], ldouble Gitot_lab[4],
+		       ldouble Gith_ff[4], ldouble Gith_lab[4],
+		       ldouble relel_dudtau, int reltype)
 {
   // reltype = 1: compute G0_rel with relel_dudtau value directly to conserve energy
   // reltype = 0: compute G0_rel with integral over gamma dots
@@ -2757,7 +2772,7 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble Gitot_ff[4], l
 //****** and calculates nonrel contravariant four-force as in Jiang+14 ********
 //*****************************************************************************
 ldouble
-calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], int labframe)  // needs to be worked on
+calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], int labframe) 
 {
   int i,j,k;
   struct geometry *geom
@@ -2855,7 +2870,8 @@ calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], int 
 /***** energy transfer through G^t **************************/
 /************************************************************/
 int
-calc_Compt_Gi(ldouble *pp, void* ggg, ldouble *Gic, ldouble Ehatrad, ldouble Te, ldouble kappaes, ldouble *ucon)
+calc_Compt_Gi(ldouble *pp, void* ggg, ldouble *Gic,
+	      ldouble Ehatrad, ldouble Te, ldouble kappaes, ldouble *ucon)
 {
   
   struct geometry *geom
@@ -3353,7 +3369,8 @@ calc_nsource_with_state(ldouble *pp, void *sss, void* ggg)
   ldouble TradBB = state->TradBB;
   ldouble Trad=Thatrad; 
   ldouble B = sigma_rad_over_pi * Te * Te * Te * Te;
-  ldouble Tc_n=5.07783e9; //cross over temperature for non-relativistic to ultra-relativistic number opacity
+  // cross over temperature for non-relativistic to ultra-relativistic number opacity
+  ldouble Tc_n=5.07783e9; 
 
   ldouble Trad_lim = pow(TradBB,1.333333333333)/(pow(Te,0.333333333333));
   ldouble nph_lim = pp[NF]*(Trad/Trad_lim);
@@ -3392,7 +3409,8 @@ calc_nsource_with_state(ldouble *pp, void *sss, void* ggg)
   ndotffSynch = ndotffSynchCgs * per_volume_per_time_cgs2gu;
   
   #ifdef USE_SYNCHROTRON_BRIDGE_FUNCTIONS
-  ndotffSynch *= (Te/Tc_n)/(1.+(Te/Tc_n)); //Bridge Function: makes ndot -> non-relativistic solution for low temperatures
+  //Bridge Function: makes ndot -> non-relativistic solution for low temperatures
+  ndotffSynch *= (Te/Tc_n)/(1.+(Te/Tc_n)); 
   #else
   // Ramesh: suppress photon generation rate at nonrelativistic temperatures
   // avoids numerical problems at low temperatures
@@ -3403,7 +3421,8 @@ calc_nsource_with_state(ldouble *pp, void *sss, void* ggg)
   #endif
   
   //estimate the synchrotron radiation temperature produced
-  ldouble TradSynch = 2.05e-18 * Bmagcgs * Te * Te * 1.e-20 *k_boltz_cgs_inv / 2.70188; //Ramesh's fit
+  //Ramesh's fit
+  ldouble TradSynch = 2.05e-18 * Bmagcgs * Te * Te * 1.e-20 *k_boltz_cgs_inv / 2.70188; 
   ldouble Tratio=TradSynch/Te;
   
   //if too low/too high against electron temp - modify the photon generation rate
@@ -3443,7 +3462,7 @@ calc_nsource_with_state(ldouble *pp, void *sss, void* ggg)
   
   //remaining contributions to the thermal photon production rate are from opacity
   Ehatrad=state->Ehat;
-  ldouble ndotff_thermal = (0.370209) * k_boltz_inv *(kappaGasNum* fourmpi *B/Te - kappaRadNum * Ehatrad / Thatrad);
+  ldouble ndotff_thermal = (0.370209) * k_boltz_inv * (kappaGasNum*fourmpi*B/Te - kappaRadNum * Ehatrad / Thatrad);
   
   //the rate of change of number of photons is invariant
   ldouble ndotff = ndotff_thermal + ndotffSynch + ndot_relel_syn + ndot_relel_ff;
@@ -3469,6 +3488,9 @@ calc_ncompt_Ehatrad(ldouble Tradhat, ldouble nphhat)
   return Ehatrad;
 }
 
+//**********************************************************************
+//* calculates radiation color temperature from energy density
+//**********************************************************************
 ldouble
 calc_ncompt_Thatrad_fromEN(ldouble Ehat, ldouble nphhat)
 {
@@ -3677,7 +3699,6 @@ calc_ncompt_nphhat(ldouble *pp, void* ggg)
 //******* using the HARM algorithm - with taul limiter *************************/
 //******* or calculating numerically at cell centers ***************************/
 //******************************************************************************/
-// July 8, 17, Ramesh: Modified to make use of calc_wavespeeds_lr_core_new
 
 int
 calc_rad_wavespeeds(ldouble *pp,void *ggg,ldouble tautot[3],ldouble *aval,int verbose)
@@ -3718,7 +3739,7 @@ calc_rad_wavespeeds(ldouble *pp,void *ggg,ldouble tautot[3],ldouble *aval,int ve
 
   //first unlimited rad wavespeeds used for time step determination
   rv2 = one_third;
-  ret = calc_wavespeeds_lr_core_new(urfcon,GG,aret,rv2,rv2,rv2);
+  ret = calc_wavespeeds_lr_core(urfcon,GG,aret,rv2,rv2,rv2);
   
   for (i = 0; i < 6; i++)
   {
@@ -3781,7 +3802,7 @@ calc_rad_wavespeeds(ldouble *pp,void *ggg,ldouble tautot[3],ldouble *aval,int ve
   rv2y = rv2dim[1];
   rv2z = rv2dim[1];
   
-  ret = calc_wavespeeds_lr_core_new(urfcon,GG,aret,rv2x,rv2y,rv2z);
+  ret = calc_wavespeeds_lr_core(urfcon,GG,aret,rv2x,rv2y,rv2z);
   
   for (i = 0; i < 6; i++)
   {
@@ -3791,12 +3812,19 @@ calc_rad_wavespeeds(ldouble *pp,void *ggg,ldouble tautot[3],ldouble *aval,int ve
   return 0;
 }
 
-//****************************************************
+//**********************************************************************
+//**********************************************************************
+// Fluxes
+//**********************************************************************
+//**********************************************************************
+
+//***************************************************************************
 // calculates radiative tensor at faces or centers
 // returns total, pure and visc ~ R^i_j
-//****************************************************
+//***************************************************************************
 int
-f_flux_prime_rad_total(ldouble *pp, void *ggg,ldouble Rij[][4],ldouble Rij0[][4], ldouble Rijvisc[][4])
+f_flux_prime_rad_total(ldouble *pp, void *ggg,
+		       ldouble Rij[][4],ldouble Rij0[][4], ldouble Rijvisc[][4])
 {    
 
 #ifdef RADIATION
@@ -3835,7 +3863,8 @@ f_flux_prime_rad_total(ldouble *pp, void *ggg,ldouble Rij[][4],ldouble Rij0[][4]
       
   iix=ix;iiy=iy;iiz=iz;
 
-  //when face and shear viscosity put the face primitives at both cell centers and average the viscous stress tensor
+  //when face and shear viscosity put the face primitives at both cell centers
+  //and average the viscous stress tensor
   if(geom->ifacedim>-1)
     //face fluxes
     {      
@@ -3868,11 +3897,10 @@ f_flux_prime_rad_total(ldouble *pp, void *ggg,ldouble Rij[][4],ldouble Rij0[][4]
 	  }     
     }  
 
-  /**********************************/
   //damping the viscous term based on char. viscous velocity
-  /**********************************/
 #ifdef RADVISCMAXVELDAMP
-  //basing on radiative Reynolds number Re = diffusiv flux of conserved quantity / conserved quantity
+  //basing on radiative Reynolds number
+  //Re = diffusiv flux of conserved quantity / conserved quantity
   ldouble dampfac=1.;
   int idim;
   ldouble vel[3]={0.,0.,0.},maxvel=-1.;
@@ -3924,9 +3952,9 @@ f_flux_prime_rad_total(ldouble *pp, void *ggg,ldouble Rij[][4],ldouble Rij0[][4]
 }
 
 
-//***************************************
+//***********************************************************************************
 // calculates radiative fluxes at faces or centers
-//***************************************
+//***********************************************************************************
 
 int f_flux_prime_rad( ldouble *pp, int idim, void *ggg,ldouble *ff)
 {  
@@ -3972,10 +4000,15 @@ int f_flux_prime_rad( ldouble *pp, int idim, void *ggg,ldouble *ff)
   return 0;
 }
 
+//**********************************************************************
+//**********************************************************************
+// Viscosity
+//**********************************************************************
+//**********************************************************************
 
-/*******************************************/
+//***********************************************************************************
 /* rad viscosity and shear at cell centers */
-/*******************************************/
+//***********************************************************************************
 int
 calc_rad_shearviscosity(ldouble *pp,void* ggg,ldouble shear[][4],ldouble *nuret,int *derdir)
 {  
@@ -4303,7 +4336,10 @@ calc_shear_lab(ldouble *pp0, void* ggg,ldouble S[][4],ldouble *div, int hdorrad,
   return 0;
 }
 
+//****************************************************************************************
 //calculate the divergence of  4-velocity using u^\mu_;\mu = (sqrt(g)*u^\mu)_,\mu / sqrt(g)
+//****************************************************************************************
+
 int
 calc_fluid_div_lab(ldouble *pp0, void* ggg, ldouble dt, ldouble *div, int hdorrad, int *derdir)
 {
@@ -4752,17 +4788,9 @@ calc_Rij_visc(ldouble *pp, void* ggg, ldouble Rvisc[][4], int *derdir)
       else
 	minsize=my_min_N(sizevec,3);
             
-      //if(dtlast/dtmin < radsizefrac)
       if(dtlast < 0.5*minsize)
 	{
 	  recalcvisc=0.;
-	  /*
-	  if(iy==0 || 1)
-	    {
-	      printf("skipping recalculating Rijvisc at %d %d with radsizefrac = %e | %e %e %e %e\n",
-		     ix,iy,minsize,global_time,radvisclasttime[ix+NGCX][iy+NGCY][iz+NGCZ],dtmin,minsize);
-	    }
-	  */
 	}
     }
   #endif //ACCELRADVISCOSITY
@@ -4802,8 +4830,10 @@ calc_Rij_visc(ldouble *pp, void* ggg, ldouble Rvisc[][4], int *derdir)
 
 }
 
-///////////////////////////////////////////////////////////////
+//***********************************************************************
 //resetting accelerating arrays
+//***********************************************************************
+
 void
 reset_radviscaccel()
 {
@@ -4817,7 +4847,6 @@ reset_radviscaccel()
       ix=loop_02[ii][0];
       iy=loop_02[ii][1];
       iz=loop_02[ii][2]; 
-      //radvisclasttime[ix][iy][iz]=-1.;
       set_u_scalar(radvisclasttime,ix,iy,iz,-1);
     }
 
@@ -4826,8 +4855,10 @@ reset_radviscaccel()
 }
 
 
-///////////////////////////////////////////////////////////////
+//***********************************************************************
 //estimates dBi/dt from the battery term
+//***********************************************************************
+
 int
 estimate_Bgrowth_battery(int ix,int iy,int iz,ldouble dBdt[4])
 {
@@ -5008,7 +5039,8 @@ calc_Efield_battery(ldouble *pp,void *ggg,ldouble econ[4])
   for(i=0;i<4;i++)
     for(j=0;j<4;j++)
       {
-	//E^i = sigma_Th F^i / e / c = kappa_es mp F^i / e / c = kappa_es rho F^i mp / rho / e / c = G^i M / rho / e / c;
+	//E^i = sigma_Th F^i / e / c = kappa_es mp F^i / e / c
+	//    = kappa_es rho F^i mp / rho / e / c = G^i M / rho / e / c;
 	econ[i]+=suppfac*BATTERYMULTIPLIER*hmunu[i][j]*Gi[j]/pp[RHO]*M_PROTON/E_CHARGE;
       }
 
@@ -5034,7 +5066,7 @@ calc_Efield_battery(ldouble *pp,void *ggg,ldouble econ[4])
 }
 
 
-///////////////////////////////////////////////////////////////
+//***********************************************************************
 //estimates how much gas is coupled to radiation (or how large is the optical depth)
 //by looking at how close is the gas comoving radiation stress energy tensor to the
 //Eddington tensor - which is the limit for optically thick gas
@@ -5042,6 +5074,7 @@ calc_Efield_battery(ldouble *pp,void *ggg,ldouble econ[4])
 //if the two velocities agree - this is the optically thick limit, if they are far apart - this
 //corresponds to optically thin limit
 //returns a number in range 0...1 with 0 - optically thin, 1 - completely optically thick
+//***********************************************************************
 
 ldouble
 estimate_gas_radiation_coupling(ldouble *pp, void *ggg)

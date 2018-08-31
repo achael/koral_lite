@@ -1891,8 +1891,6 @@ fill_geometry(int ix,int iy,int iz,void *geom)
   return 0;
 }
 
-
-
 //**********************************************************************
 //fills geometry structure for cell ix,iy,iz in arbitrary metric
 //**********************************************************************

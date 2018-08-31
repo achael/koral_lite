@@ -156,8 +156,8 @@
 //resolution 
 /************************************/
 //total resolution
-#define TNX 64//192
-#define TNY 64//96
+#define TNX 96//192
+#define TNY 96//96
 #define TNZ 1//96
 
 //number of tiles
@@ -176,7 +176,7 @@
 /************************************/
 //output
 /************************************/
-#define DTOUT1 1.     //res - files
+#define DTOUT1 10.     //res - files
 #define DTOUT2 1000.  //avg - files
 #define DTOUT3 1.     //box,var - files
 
@@ -185,7 +185,7 @@
 #define ALLSTEPSOUTPUT 0
 //#define OUTPUTINZAMO
 #define NSTEPSTOP 1.e12
-#define NOUTSTOP 25
+#define NOUTSTOP 500
 
 #define SILOOUTPUT 0
 #define OUTOUTPUT 0

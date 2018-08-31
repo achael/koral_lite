@@ -456,10 +456,6 @@ main(int argc, char **argv)
     fprint_radprofiles(tstart,nfout1,folder,"rad");
     #endif
 
-    #if(OUTOUTPUT==1)
-    fprint_outfile(tstart,nfout1,0,folder,"out");
-    #endif
-      
     #if(SILOOUTPUT==1)
     #ifndef NOSILO
     fprint_silofile(tstart,nfout1,folder,"sil");
@@ -470,10 +466,6 @@ main(int argc, char **argv)
     fprint_simplefile(tstart,nfout1,folder,"sim");
     #endif
       
-    #if(SLICEOUTPUT==1)
-    fprint_slice(tstart,nfout1,folder,"slice");	    
-    printf("%e %e %e\n",get_u(u,RHO,-2,0,0),get_u(u,RHO,-1,0,0),get_u(u,RHO,0,0,0));
-    #endif
 #endif  // ifndef MPI
 
     nfout1++; //total number of output

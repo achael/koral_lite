@@ -4,11 +4,9 @@
 
 #include "ko.h"
 
-
-
-//***********************************************************
+//********************************************************************
 //calculates the state corresponding to the given primitives
-//***********************************************************
+//**********************************************************************
 
 int
 fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
@@ -213,8 +211,9 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
 }
 
 
-///////////////////////////////////////////////////////////////
+//**********************************************************************
 //Copies one struct_of_state to another
+//**********************************************************************
 
 int copy_state_to_state(void *sss1, void *sss2)
 {
@@ -297,8 +296,10 @@ int copy_state_to_state(void *sss1, void *sss2)
   return 0;
 }
 
-
+//**********************************************************************
 // Updates the state for a new value of nphoton
+//**********************************************************************
+
 int update_state_for_nphoton(ldouble *pp, void *ggg, void *sss)
 {
   struct geometry *geom
@@ -306,8 +307,7 @@ int update_state_for_nphoton(ldouble *pp, void *ggg, void *sss)
   struct struct_of_state *state
   = (struct struct_of_state *) sss;
 
-  // Trad changes when nphoton is changed and this also affects the opacities
-  
+  // Trad changes when nphoton is changed and this also affects the opacities  
 #ifdef EVOLVEPHOTONNUMBER
   
   ldouble nphhat = -state->relgamma * pp[NF];
@@ -339,9 +339,9 @@ int update_state_for_nphoton(ldouble *pp, void *ggg, void *sss)
   return 0;
 }
 
-//*************************************************
+//**********************************************************************
 //calculates fluid quantities for thermal electrons
-//*************************************************
+//**********************************************************************
 
 
 //Total number density of thermal electrons  
@@ -356,7 +356,8 @@ ldouble calc_thermal_ne(ldouble *pp)
 #ifdef RELELECTRONS
   ne_relel=calc_relel_ne(pp);
   
-  if(ne_relel/ne_tot > MAX_RELEL_FRAC_N) ne_relel = MAX_RELEL_FRAC_N*ne_tot; 
+  if(ne_relel/ne_tot > MAX_RELEL_FRAC_N)
+    ne_relel = MAX_RELEL_FRAC_N*ne_tot; 
 #endif
 
   return ne_tot - ne_relel;
@@ -366,138 +367,36 @@ ldouble calc_thermal_ne(ldouble *pp)
 //*****************************************************
 //calculates left and right wave speeds at cell center
 //******************************************************
-
 // July 8, 17, Ramesh: This version computes wavespeeds in all three directions simultaneously,
 // and save a little by not repeating certain direction-independent quantities.
 // Also, computes wavespeeds only for the relevant directions.
+//*****************************************************
+//calculates left and right wave speeds at cell center
+//*****************************************************
+
 int
-calc_wavespeeds_lr_core_new(ldouble *ucon, ldouble GG[][5], ldouble *aret, ldouble wspeed2x, ldouble wspeed2y, ldouble wspeed2z)
+calc_wavespeeds_lr(int ix, int iy, int iz, ldouble *aaa)
 {
-  int ierr = 0;
-  ldouble Acov[4], Acon[4], Bcov[4], Bcon[4], Asq, Bsq, Au, Bu, AB, Au2, Bu2, AuBu, A, B, discr, cst1, cst2;
-  
-  // Compute direction-independent quantities first
-  
-  Bcov[0] = 1.;
-  Bcov[1] = 0.;
-  Bcov[2] = 0.;
-  Bcov[3] = 0.;
-  
-  indices_12(Bcov, Bcon, GG);
-  Bsq = dot(Bcon, Bcov);
-  Bu = dot(Bcov, ucon);
-  Bu2 = Bu * Bu;
+  ldouble (*gg)[5],(*GG)[5];
 
-  // Now work on the relevant directions
-  if (TNX > 1)  // x-direction is needed
-  {
-    Acov[0] = 0.;
-    Acov[1] = 1.;
-    Acov[2] = 0.;
-    Acov[3] = 0.;
-    
-    indices_12(Acov, Acon, GG);
-    
-    Asq = dot(Acon, Acov);
-    Au = dot(Acov, ucon);
-    AB = dot(Acon, Bcov);
-    Au2 = Au * Au;
-    AuBu = Au * Bu;
-    
-    B = -2. * (AuBu * (1.0 - wspeed2x)  - AB * wspeed2x);
-    A = Bu2 * (1.0 - wspeed2x) - Bsq * wspeed2x;
-    discr = 4.0 * wspeed2x * ((AB * AB - Asq * Bsq) * wspeed2x + (2.0 * AB * Au * Bu - Asq * Bu2 - Bsq * Au2) * (wspeed2x - 1.0));
-    
-    if(discr < 0.) {printf("discr in x-wavespeeds lt 0\n"); ierr = -1;}
-    discr = sqrt(discr);
-    cst1 = (-B + discr) / (2. * A);
-    cst2 = (-B - discr) / (2. * A);
-    if(cst2 > cst1)
-    {
-      aret[0] = cst1;  aret[1] = cst2;
-    }
-    else
-    {
-      aret[0] = cst2;  aret[1] = cst1;
-    }
-  }
+  struct geometry geom;
+  fill_geometry(ix,iy,iz,&geom);
   
-  if (TNY > 1)  // y-direction is needed
-  {
-    Acov[0] = 0.;
-    Acov[1] = 0.;
-    Acov[2] = 1.;
-    Acov[3] = 0.;
-    
-    indices_12(Acov, Acon, GG);
-    
-    Asq = dot(Acon, Acov);
-    Au = dot(Acov, ucon);
-    AB = dot(Acon, Bcov);
-    Au2 = Au * Au;
-    AuBu = Au * Bu;
-    
-    B = -2. * (AuBu * (1.0 - wspeed2y)  - AB * wspeed2y);
-    A = Bu2 * (1.0 - wspeed2y) - Bsq * wspeed2y;
-    discr = 4.0 * wspeed2y * ((AB * AB - Asq * Bsq) * wspeed2y + (2.0 * AB * Au * Bu - Asq * Bu2 - Bsq * Au2) * (wspeed2y - 1.0));
-    
-    if(discr < 0.) {printf("discr in y-wavespeeds lt 0\n"); ierr = -1;}
-    discr = sqrt(discr);
-    cst1 = (-B + discr) / (2. * A);
-    cst2 = (-B - discr) / (2. * A);
-    if(cst2 > cst1)
-    {
-      aret[2] = cst1;  aret[3] = cst2;
-    }
-    else
-    {
-      aret[2] = cst2;  aret[3] = cst1;
-    }
-  }
-  
-  if (TNZ > 1)  // z-direction is needed
-  {
-    Acov[0] = 0.;
-    Acov[1] = 0.;
-    Acov[2] = 0.;
-    Acov[3] = 1.;
-    
-    indices_12(Acov, Acon, GG);
-    
-    Asq = dot(Acon, Acov);
-    Au = dot(Acov, ucon);
-    AB = dot(Acon, Bcov);
-    Au2 = Au * Au;
-    AuBu = Au * Bu;
-    
-    B = -2. * (AuBu * (1.0 - wspeed2z)  - AB * wspeed2z);
-    A = Bu2 * (1.0 - wspeed2z) - Bsq * wspeed2z;
-    discr = 4.0 * wspeed2z * ((AB * AB - Asq * Bsq) * wspeed2z + (2.0 * AB * Au * Bu - Asq * Bu2 - Bsq * Au2) * (wspeed2z - 1.0));
-    
-    if(discr < 0.) {printf("discr in z-wavespeeds lt 0\n"); ierr = -1;}
-    discr = sqrt(discr);
-    cst1 = (-B + discr) / (2. * A);
-    cst2 = (-B - discr) / (2. * A);
-    if(cst2 > cst1)
-    {
-      aret[4] = cst1;  aret[5] = cst2;
-    }
-    else
-    {
-      aret[4] = cst2;  aret[5] = cst1;
-    }
-  }
-  
-  if (ierr == 0)
-  {
-    return 0;
-  }
-  else
-  {
-    return -1;
-  }
+  //temporary using local arrays
+  gg=geom.gg;
+  GG=geom.GG;
+
+  ldouble pp[NV];
+  int iv;
+
+  //picking up primitives 
+  for(iv=0;iv<NV;iv++)
+    pp[iv]=get_u(p,iv,ix,iy,iz);
+
+  calc_wavespeeds_lr_pure(pp,&geom,aaa);
+
+  return 0;
 }
-
 
 //*************************************************
 //calculates left and right wave speeds at cell center
@@ -634,8 +533,7 @@ calc_wavespeeds_lr_pure(ldouble *pp,void *ggg,ldouble *aaa)
   ldouble aret[6];
   int ret;
   
-  // This uses the new version of calc_wavespeeds_lr_core
-  ret=calc_wavespeeds_lr_core_new(ucon,GG,aret,vtot2,vtot2,vtot2);
+  ret=calc_wavespeeds_lr_core(ucon,GG,aret,vtot2,vtot2,vtot2);
   if(ret<0) {printf("error occurred at %d | %d | %d\n",geom->ix,geom->iy,geom->iz);}
   axhdl=aret[0];
   axhdr=aret[1];
@@ -685,7 +583,8 @@ calc_wavespeeds_lr_pure(ldouble *pp,void *ggg,ldouble *aaa)
   azl=aval[6+4];
   azr=aval[6+5];
 
-  //in the other approach - radiative wavespeeds unlimited in optically thin medium (fcouple==0), and equal to gas wavespeeds in optically thick medium (fcouple==1)
+  //in the other approach - radiative wavespeeds unlimited in optically thin medium (fcouple==0)
+  //and equal to gas wavespeeds in optically thick medium (fcouple==1)
 #ifdef GASRADCOUPLEDWAVESPEEDS
   axl=fcouple*axhdl+(1.-fcouple)*axl;
   axr=fcouple*axhdr+(1.-fcouple)*axr;
@@ -757,34 +656,138 @@ calc_wavespeeds_lr_pure(ldouble *pp,void *ggg,ldouble *aaa)
   return 0;
 }
 
-
-//*****************************************************
-//calculates left and right wave speeds at cell center
-//*****************************************************
-
 int
-calc_wavespeeds_lr(int ix, int iy, int iz, ldouble *aaa)
+calc_wavespeeds_lr_core(ldouble *ucon, ldouble GG[][5], ldouble *aret,
+			ldouble wspeed2x, ldouble wspeed2y, ldouble wspeed2z)
 {
-  ldouble (*gg)[5],(*GG)[5];
-
-  struct geometry geom;
-  fill_geometry(ix,iy,iz,&geom);
+  int ierr = 0;
+  ldouble Acov[4], Acon[4], Bcov[4], Bcon[4];
+  ldouble Asq, Bsq, Au, Bu, AB, Au2, Bu2, AuBu, A, B, discr, cst1, cst2;
   
-  //temporary using local arrays
-  gg=geom.gg;
-  GG=geom.GG;
+  // Compute direction-independent quantities first
+  
+  Bcov[0] = 1.;
+  Bcov[1] = 0.;
+  Bcov[2] = 0.;
+  Bcov[3] = 0.;
+  
+  indices_12(Bcov, Bcon, GG);
+  Bsq = dot(Bcon, Bcov);
+  Bu = dot(Bcov, ucon);
+  Bu2 = Bu * Bu;
 
-  ldouble pp[NV];
-  int iv;
-
-  //picking up primitives 
-  for(iv=0;iv<NV;iv++)
-    pp[iv]=get_u(p,iv,ix,iy,iz);
-
-  calc_wavespeeds_lr_pure(pp,&geom,aaa);
-
-  return 0;
+  // Now work on the relevant directions
+  if (TNX > 1)  // x-direction is needed
+  {
+    Acov[0] = 0.;
+    Acov[1] = 1.;
+    Acov[2] = 0.;
+    Acov[3] = 0.;
+    
+    indices_12(Acov, Acon, GG);
+    
+    Asq = dot(Acon, Acov);
+    Au = dot(Acov, ucon);
+    AB = dot(Acon, Bcov);
+    Au2 = Au * Au;
+    AuBu = Au * Bu;
+    
+    B = -2. * (AuBu * (1.0 - wspeed2x)  - AB * wspeed2x);
+    A = Bu2 * (1.0 - wspeed2x) - Bsq * wspeed2x;
+    discr = 4.0 * wspeed2x * ((AB * AB - Asq * Bsq) * wspeed2x + (2.0 * AB * Au * Bu - Asq * Bu2 - Bsq * Au2) * (wspeed2x - 1.0));
+    
+    if(discr < 0.) {printf("discr in x-wavespeeds lt 0\n"); ierr = -1;}
+    discr = sqrt(discr);
+    cst1 = (-B + discr) / (2. * A);
+    cst2 = (-B - discr) / (2. * A);
+    if(cst2 > cst1)
+    {
+      aret[0] = cst1;  aret[1] = cst2;
+    }
+    else
+    {
+      aret[0] = cst2;  aret[1] = cst1;
+    }
+  }
+  
+  if (TNY > 1)  // y-direction is needed
+  {
+    Acov[0] = 0.;
+    Acov[1] = 0.;
+    Acov[2] = 1.;
+    Acov[3] = 0.;
+    
+    indices_12(Acov, Acon, GG);
+    
+    Asq = dot(Acon, Acov);
+    Au = dot(Acov, ucon);
+    AB = dot(Acon, Bcov);
+    Au2 = Au * Au;
+    AuBu = Au * Bu;
+    
+    B = -2. * (AuBu * (1.0 - wspeed2y)  - AB * wspeed2y);
+    A = Bu2 * (1.0 - wspeed2y) - Bsq * wspeed2y;
+    discr = 4.0 * wspeed2y * ((AB * AB - Asq * Bsq) * wspeed2y + (2.0 * AB * Au * Bu - Asq * Bu2 - Bsq * Au2) * (wspeed2y - 1.0));
+    
+    if(discr < 0.) {printf("discr in y-wavespeeds lt 0\n"); ierr = -1;}
+    discr = sqrt(discr);
+    cst1 = (-B + discr) / (2. * A);
+    cst2 = (-B - discr) / (2. * A);
+    if(cst2 > cst1)
+    {
+      aret[2] = cst1;  aret[3] = cst2;
+    }
+    else
+    {
+      aret[2] = cst2;  aret[3] = cst1;
+    }
+  }
+  
+  if (TNZ > 1)  // z-direction is needed
+  {
+    Acov[0] = 0.;
+    Acov[1] = 0.;
+    Acov[2] = 0.;
+    Acov[3] = 1.;
+    
+    indices_12(Acov, Acon, GG);
+    
+    Asq = dot(Acon, Acov);
+    Au = dot(Acov, ucon);
+    AB = dot(Acon, Bcov);
+    Au2 = Au * Au;
+    AuBu = Au * Bu;
+    
+    B = -2. * (AuBu * (1.0 - wspeed2z)  - AB * wspeed2z);
+    A = Bu2 * (1.0 - wspeed2z) - Bsq * wspeed2z;
+    discr = 4.0 * wspeed2z * ((AB * AB - Asq * Bsq) * wspeed2z + (2.0 * AB * Au * Bu - Asq * Bu2 - Bsq * Au2) * (wspeed2z - 1.0));
+    
+    if(discr < 0.) {printf("discr in z-wavespeeds lt 0\n"); ierr = -1;}
+    discr = sqrt(discr);
+    cst1 = (-B + discr) / (2. * A);
+    cst2 = (-B - discr) / (2. * A);
+    if(cst2 > cst1)
+    {
+      aret[4] = cst1;  aret[5] = cst2;
+    }
+    else
+    {
+      aret[4] = cst2;  aret[5] = cst1;
+    }
+  }
+  
+  if (ierr == 0)
+  {
+    return 0;
+  }
+  else
+  {
+    return -1;
+  }
 }
+
+
+
 
 //*************************************************************
 //returns geometrical source terms for all conserved quantities
@@ -1127,9 +1130,9 @@ int f_general_source_term(int ix, int iy, int iz,ldouble *ss)
 }
 
 
-//***************************************
+//***************************************************************
 // calculates fluxes at faces
-//***************************************
+//***************************************************************
 int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int lr)
 {  
 
@@ -1501,7 +1504,6 @@ calc_S2fromrhoT(ldouble rho, ldouble temp,int type)
   return calc_S2fromrhou(rho,u,type);
 }
 
-//Calculate internal energy from entropy and density
 ldouble
 calc_ufromS2rho(ldouble S2,ldouble rho,int type,int ix,int iy,int iz)
 {
@@ -1536,7 +1538,6 @@ calc_ufromS2rho(ldouble S2,ldouble rho,int type,int ix,int iy,int iz)
  return ret;
 }
 
-//Calculate temperature from entropy and density
 ldouble
 calc_TfromS2rho(ldouble S2,ldouble rho, int type,int ix,int iy,int iz)
 {
@@ -1567,7 +1568,6 @@ calc_TfromS2rho(ldouble S2,ldouble rho, int type,int ix,int iy,int iz)
 //////////////////////////////////////////////////////////////////
 //S3 - entropy which smoothly transitions from theta=0 to theta=1
 //used with CONSISTENTGAMMA
-//ANDREW densities here are inconsistent with nonthermal electrons - use S4
 ldouble
 calc_S3fromrhoT(ldouble rho, ldouble temp,int type)
 {  
@@ -1622,7 +1622,6 @@ calc_S3fromrhou(ldouble rho, ldouble uint,int type)
 }
 
 //Eq A9 from Sadowski, Wielgus, Narayan, Abarca, McKinney 2016
-//ANDREW inconsistent with rel electrons - use calc_TfromS4n 
 ldouble
 calc_TfromS3rho(ldouble S3,ldouble rho, int type,int ix,int iy,int iz)
 {
@@ -1662,7 +1661,6 @@ calc_TfromS3rho(ldouble S3,ldouble rho, int type,int ix,int iy,int iz)
   return T;
 }
 
-//Calculate internal energy from entropy and density
 ldouble
 calc_ufromS3rho(ldouble S3,ldouble rho,int type,int ix,int iy,int iz)
 {
@@ -1697,11 +1695,11 @@ calc_ufromS3rho(ldouble S3,ldouble rho,int type,int ix,int iy,int iz)
 }
 
 
-// Ramesh: This function is called by init.c in HIGHZBHS;
-// we should change all the others
 //**********************************************************************
 //updates entropy in the specified cell (p[5]) basing on new primitives
 //or stays with the old one if entropy u2p solver was involved
+// Ramesh: This function is called by init.c in HIGHZBHS;
+// we should change all the others
 //**********************************************************************
 int
 update_entropy_cell(int ix,int iy,int iz,int u2pflag)
@@ -1755,15 +1753,10 @@ entri_from_entre_energy_cons(ldouble *pp, int ix, int iy, int iz)
  rhoeth = (MU_E * M_PROTON) * neth; 
  #else
  uur = 0.0;
- //neth = one_over_mue_mp * pp[RHO];
  rhoeth=pp[RHO];
  #endif
 
- //#ifdef RELELENTROPY
- //ue = calc_ufromS4n(pp[ENTRE],neth,ELECTRONS,ix,iy,iz);
- //#else
  ue = calc_ufromSerho(pp[ENTRE],rhoeth,ELECTRONS,ix,iy,iz); 
- //#endif 
 
  ui = pp[UU] - ue - uur;
 
@@ -1771,12 +1764,8 @@ entri_from_entre_energy_cons(ldouble *pp, int ix, int iy, int iz)
  {
   ui = UIUINTMINRATIO*pp[UU];
  }
- 
- //#ifdef RELELENTROPY
- //entri = calc_S4fromnu(nith,ui,IONS);
- //#else
+
  entri = calc_Sefromrhou(pp[RHO],ui,IONS);
- //#endif
 
  return entri;
 }
@@ -1799,20 +1788,11 @@ ldouble calc_PEQ_Teifrompp(ldouble* pp, ldouble* Te, ldouble* Ti,int ix, int iy,
 #endif
 
 #else //EVOLVEELECTRONS
-  //ldouble mue,mui;
-  //mui=MU_I;
-  //mue=MU_E;
 
-  //#ifdef RELELENTROPY //ANDREW
   ldouble neth = calc_thermal_ne(pp);
   ldouble rhoeth = MU_E * M_PROTON * neth;
-  //ldouble ni = one_over_mui_mp * pp[RHO];
-  //ldouble Teloc=calc_TfromS4n(pp[ENTRE],neth,ELECTRONS,ix,iy,iz);
-  //ldouble Tiloc=calc_TfromS4n(pp[ENTRI],ni,IONS,ix,iy,iz);
-  //#else
   ldouble Teloc=calc_TfromSerho(pp[ENTRE],rhoeth,ELECTRONS,ix,iy,iz);
   ldouble Tiloc=calc_TfromSerho(pp[ENTRI],pp[RHO],IONS,ix,iy,iz);
-  //#endif 
 
   if(Teloc<TEMPEMINIMAL) Teloc=TEMPEMINIMAL;
   if(Tiloc<TEMPIMINIMAL) Tiloc=TEMPIMINIMAL;
@@ -1886,9 +1866,6 @@ calc_PEQ_ugasfromrhoTei(double rho,ldouble Te,ldouble Ti,int ix,int iy,int iz)
   mui=MU_I;
   mue=MU_E;
   mug=MU_GAS;
-  //ldouble Tgas=mug*(Ti/mui+Te/mue);
-  //ldouble p = kB_over_mugas_mp * rho * Tgas; //ANDREW inconsistent with rel. electrons
-  //ldouble u=p/(gamma-1.);
 
   ldouble ue = kB_over_mue_mp * rho * Te / (gammae-1.);
   ldouble ui = kB_over_mui_mp * rho * Ti / (gammai-1.);
@@ -1959,7 +1936,9 @@ set_gammagas(int type)
   return 0;
 }
 
+//********************************************************************************
 //Get adiabatic index of gas from memory
+//********************************************************************************
 ldouble pick_gammagas(int ix,int iy,int iz)
 {
   ldouble gamma;
@@ -2033,47 +2012,6 @@ calc_gammaintfromTei(ldouble Te, ldouble Ti)
   return gamma;
 }
 
-
-//********************************************************************************
-// Calculate species gammas
-//********************************************************************************
-//Eq A7 from Sadowski, Wielgus, Narayan, Abarca, McKinney 2016
-//used for the entropy
-/*
-ldouble
-calc_gammacvfromtemp(ldouble temp,int type)
-{
-  ldouble theta;
-  if(type==IONS) 
-    {
-      theta = kB_over_mui_mp * temp;
-    }
-  if(type==ELECTRONS)
-    {
-      theta = kB_over_me * temp;
-    }
-  if(type==GAS)
-    {
-      theta = kB_over_mugas_mp * temp;
-    }
-  return calc_gammacvfromtheta(theta);
-}
-
-ldouble
-calc_gammacvfromtheta(ldouble theta)
-{
-  ldouble gammacv;
-  gammacv = (5. + 20. * theta) / (3. + 15. * theta);
-  return gammacv;
-}
-
-//theta from gamma_cv
-ldouble
-calc_thetafromgamma(ldouble gamma)
-{
-  return  (5.-3.*gamma)/(5.*(-4.+3.*gamma));
-}
-*/
 
 //Eq A14 from Sadowski, Wielgus, Narayan, Abarca, McKinney 2016
 //used for the equation of state
@@ -2355,22 +2293,6 @@ heat_electronions_with_state(ldouble dtin)
 #ifdef DISSIPATIONFROMGASONLY
 	  ldouble ut=state.ucon[0];
 
-	  /*
-          //Ressler 15 method
-	  ldouble pref1 = pow(rho, gammam1) / gammam1; //at 1/2 step ??
-	  ldouble pref2 = rho; //at the end step??
-	  ldouble kappagas = gammam1 * uint / pow(rho, gamma);
-	  
-#ifdef NOLOGINS
-	  ldouble kappaadiab = gammam1*get_u(p,ENTR,ix,iy,iz)/rho;
-          //AA
-	  kappaadiab = gammam1 * get_u(u,ENTR,ix,iy,iz)/ut/gdetu/rho;
- 
-#else
-	  ldouble kappaadiab = exp(gammam1*get_u(u,ENTR,ix,iy,iz)/get_u(u,RHO,ix,iy,iz));
-#endif
-	  du = pref1 * pref2 * (kappagas - kappaadiab);
-          */
 	  
 	  ldouble spost=get_u(u,ENTR,ix,iy,iz)/ut/gdetu;
 	  ldouble utotentrgas=calc_ufromS(spost,pp[RHO],ix,iy,iz);
@@ -2435,7 +2357,7 @@ heat_electronions_with_state(ldouble dtin)
           #endif
 	  
 	  ldouble dtau_cgs = timeGU2CGS(dtau);
-	  gamma_injmax= calc_gammainj_max_syncool(bsq_cgs, dtau_cgs); //from synchrotron
+	  gamma_injmax= calc_gammainj_max_syncool(bsq_cgs, dtau_cgs); //from synchrotron cooling
 	  gamma_injmin= calc_gammainj_min_jointhermal(theta_e, frel, p_index, gamma_injmax); //from continuity w/ thermal
 	  #endif
 	  ldouble necgs = numdensGU2CGS(ne);
@@ -2542,8 +2464,6 @@ heat_electronions_with_state(ldouble dtin)
 	    //getch();
           }
 
-	  //if(ix==1)
-	  //    printf("due: %e dui: %e dne: %e dni: %e \n",due,dui,dne,dni);
 
 	  ldouble ue2, ui2;
 	  ue2 = apply_du_dn_2_species(pp, ue, ne, due, dne, &geom, ELECTRONS, &Senew);    
@@ -2551,26 +2471,8 @@ heat_electronions_with_state(ldouble dtin)
           pp[ENTRE] = Senew;
           pp[ENTRI] = Sinew;
 
-	  //ANDREW TODO OK???
-	  //make sure species energies add up after all of this 
-
-	  /*
-#ifdef ENFORCE_HEATING_ENERGY_SUM
-          pp[UU] = ue2 + ui2 + utotrelel2;
-#endif
-	  */
 #endif //HEATELECTRONS
 	 
-	  /*
-	  if(ix==550)
-	    {
-	      ue2 = calc_ufromSerho(pp[ENTRE], rho, ELECTRONS, ix, iy, iz);
-	      ui2 = calc_ufromSerho(pp[ENTRI], rho, IONS, ix, iy ,iz);
-
-	      printf("energy frac diff ix=550: before: %e intended: %e after: %e \n", (pp[UU] - ue - ui)/pp[UU], (pp[UU] - ue - ui - due - dui)/pp[UU], (pp[UU] - ue2 - ui2)/pp[UU]); 
-	    }
-	  */
-
 	  
 	  //updates the gamma of the gas
 	  ldouble gammanew=calc_gammagas(pp, ix, iy, iz);
@@ -2791,11 +2693,11 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
 
 //****************************************************************************
 //applies change in energy and number to the thermal electrons
-//ANDREW
 //****************************************************************************
 
 ldouble
-apply_du_dn_2_species(ldouble *pp, ldouble u, ldouble n, ldouble du, ldouble dn, void* ggg, int type, ldouble* Sreturn)
+apply_du_dn_2_species(ldouble *pp, ldouble u, ldouble n,ldouble du, ldouble dn,
+		      void* ggg, int type, ldouble* Sreturn)
 {
   struct geometry *geom
     = (struct geometry *) ggg;
@@ -2842,7 +2744,6 @@ apply_du_dn_2_species(ldouble *pp, ldouble u, ldouble n, ldouble du, ldouble dn,
   Tnew=solve_Teifromnmu(n, mass, u,type); //solve for gamma and Tnew
 
   //if(type==ELECTRONS)
-  //printf("Tnew::%e",(Tnew/1.e14-1));
   if(!isfinite(Tnew))
   {
       int iv;
@@ -2949,40 +2850,17 @@ apply_du_dn_2_species(ldouble *pp, ldouble u, ldouble n, ldouble du, ldouble dn,
    return u2;
 }
 
-
-//*********************************************************************************
-//reports on visc heating and tests
-//*********************************************************************************
-
-//reports in which cells dissipation is skewed by cutting down negative dissipation
-int
-report_negeibalance()
-{
-  int ii;
-  for(ii=0;ii<Nloop_0;ii++) 
-    { 
-      int ix,iy,iz;
-      ix=loop_0[ii][0];      iy=loop_0[ii][1];      iz=loop_0[ii][2];
-      ldouble negebalance=get_u_scalar(vischeatingnegebalance,ix,iy,iz);
-      ldouble negibalance=get_u_scalar(vischeatingnegibalance,ix,iy,iz);
-      ldouble uint=get_u(p,UU,ix,iy,iz);
-      ldouble reportfraction=0.1;
-
-      if(fabs(negebalance)>reportfraction*uint)
-	printf("neg balance in electrons large (%f) at %d %d\n",fabs(negebalance)/uint,ix,iy);
-      if(fabs(negibalance)>reportfraction*uint)
-	printf("neg balance in ions large (%f) at %d %d\n",fabs(negibalance)/uint,ix,iy);
-
-    }
-  return 0;
-}
-
-
 ldouble
-calc_ViscousHeating(int ix,int iy,int iz)
+pick_ViscousHeating(int ix,int iy,int iz)
 {
   return get_u_scalar(vischeating,ix,iy,iz);
 }
+
+
+
+//*********************************************************************************
+//tests
+//*********************************************************************************
 
 
 /*! int test_gammagas()
@@ -3009,7 +2887,6 @@ test_gammagas()
 /*! int test_calcgamma()
  \brief Test calculation of gamma from primitives
  */
-
 int
 test_calcgamma()
 {

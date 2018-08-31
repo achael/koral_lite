@@ -156,22 +156,12 @@ main(int argc, char **argv)
   fprint_coordfile("analysis","coord");
   #endif
 
-  //open  box file
-  #if(BOXOUTPUT==1)
-  sprintf(bufor,"analysis/avgboxscalars.dat");
-  fout_boxscalars=fopen(bufor,"w");
-  #endif
-
   //??
   if(procotg)
   {
     //opens the scalar file
     sprintf(bufor,"%s/avgscalars.dat",folder);
     fout_scalars=fopen(bufor,"w");
-    #if(VAROUTPUT==1)
-    sprintf(bufor,"analysis/avgvarscalars.dat");
-    fout_varscalars=fopen(bufor,"w");
-    #endif
   }
 
   //initialize avg array to 0
@@ -393,15 +383,6 @@ main(int argc, char **argv)
 
 	fprint_scalars(t,scalars,NSCALARS);
 
-	//save box scalars
-        #if(BOXOUTPUT==1)
-	fprint_boxscalars(t);
-        #endif
-
-	//save var scalars
-        #if(VAROUTPUT==1)
-	fprint_varscalars(t);
-        #endif
       }
 
       //Total average of all files
@@ -445,7 +426,6 @@ main(int argc, char **argv)
   save_timesteps();
   #endif
   
-
   //Prefix and Suffix for output files
   char prefix[40];
   char suffix[10];
@@ -457,22 +437,10 @@ main(int argc, char **argv)
   if(ifphiavg)
     sprintf(suffix,"%sphiavg",suffix);
 
-  //Box Scalars Output
-#if(BOXOUTPUT==1)
-  fprint_boxscalars(t);
-#endif
-
   //Radial Profiles Output
 #if(RADOUTPUT==1)
   sprintf(prefix,"radavg%s%04d-",suffix,no1);
   fprint_radprofiles(t,no2,"analysis",prefix);
-#endif
-
-  //Box Vert Output
-  //Andrew ??
-#if(BOXVERTOUTPUT==1)
-  sprintf(prefix,"boxvertavg%s%04d-",suffix,no1);
-  fprint_boxvert(t,no2,"analysis",prefix);
 #endif
 
   //Theta Profiles Output
@@ -481,13 +449,6 @@ main(int argc, char **argv)
   fprint_thprofiles(t,no2,"analysis",prefix);
 #endif
   
-  //Outavg files output
-  //ANDREW ??
-#if(OUTOUTPUT==1)
-  sprintf(prefix,"outavg%s%04d-",suffix,no1);
-  fprint_outfile(t,no2,0,"analysis",prefix);
-#endif
-
   //Silo file output
 #if(SILOOUTPUT==1)
 #ifndef NOSILO
@@ -513,16 +474,9 @@ main(int argc, char **argv)
   fprint_relel_avg_spectrum(t, ixx, iyy, izz, nfout1, folder, "avg_spe_cellavg",1);
 #endif
 
-  //Close open scalar files
-#if(BOXOUTPUT==1)
-  fclose(fout_boxscalars);
-#endif
 
   if(procotg)
   {
-#if(VAROUTPUT==1)
-    fclose(fout_varscalars);
-#endif
     fclose(fout_scalars);
   }
 

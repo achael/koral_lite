@@ -1,52 +1,52 @@
 /*! \file magn.c
  \brief Magnetic field related routines
- */
+*/
 
 #include "ko.h"
 
+//***********************************************************************
+/* calculate both magnetic field four-vectors and bsq knowing gas four-velocity ucov */
+//***********************************************************************
 
-///////////////////////////////////////////////////////////////
-/* calculate magnetic field four-vector knowing gas four-velocity ucov */
-
-void calc_bcon_bcov_bsq_from_4vel(double *pr, double *ucon, double *ucov, void* ggg, double *bcon, double *bcov, double *bsq)
+void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+				  ldouble *bcon, ldouble *bcov, ldouble *bsq)
 {
+
   int j;
   struct geometry *geom
   = (struct geometry *) ggg;
 
   // First calculate bcon0
-  
-  bcon[0] = pr[B1] * ucov[1] + pr[B2] * ucov[2] + pr[B3] * ucov[3] ;
+  bcon[0] = pr[B1]*ucov[1] + pr[B2] * ucov[2] + pr[B3] * ucov[3] ;
   
   // Then spatial components of bcon
   
 #ifdef NONRELMHD
-  
   for(j = 1; j < 4; j++)
     bcon[j] = pr[B1-1+j]; //b^i=B^i
-  
+
 #else  // relativistic case
   
   ldouble u0inv = 1. / ucon[0];
+
 #ifdef APPLY_OMP_SIMD
   //#pragma omp simd
 #endif
   for(j=1;j<4;j++)
     bcon[j] = (pr[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
   
-#endif
+#endif //NONRELMHD
   
   // Convert to bcov and calculate bsq
-  
   indices_21(bcon, bcov, geom->gg);
   *bsq = dotB(bcon, bcov);
 
   return ;
 }
 
-
-///////////////////////////////////////////////////////////////
+//***********************************************************************
 /* calculate magnetic field four-vector knowing gas four-velocity ucov */
+//***********************************************************************
 
 void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon)
 {
@@ -55,27 +55,28 @@ void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon)
   bcon[0] = pr[B1]*ucov[1] + pr[B2]*ucov[2] + pr[B3]*ucov[3] ;
 
 #ifdef NONRELMHD
-
   for(j=1;j<4;j++)
     bcon[j] = pr[B1-1+j]; //b^i=B^i
 
 #else  // relativistic case
 
   ldouble u0inv = 1. / ucon[0];
+
 #ifdef APPLY_OMP_SIMD
  //#pragma omp simd
 #endif
   for(j=1;j<4;j++)
       bcon[j] = (pr[B1-1+j] + bcon[0]*ucon[j]) * u0inv ;
   
-#endif
+#endif //NONRELMHD
 
   return ;
 }
 
 
-///////////////////////////////////////////////////////////////
-/* calculate B^i from bcon and gas four-velocity ucov */
+//***********************************************************************
+/* calculate B^i from bcon and gas four-velocity ucon */
+//***********************************************************************
 
 void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon)
 {
@@ -93,14 +94,14 @@ void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon)
   {
     Bcon[j] = bcon[j]*ucon[0] - bcon[0]*ucon[j];
   }
-#endif
+#endif //NONRELMHD
   
   return ;
 }
 
-
-///////////////////////////////////////////////////////////////
+//***********************************************************************
 /* calculate magnetic field four-vector from primitives */
+//***********************************************************************
 
 void calc_bcon_prim(double *pp, double *bcon, void* ggg)
 {
@@ -108,14 +109,7 @@ void calc_bcon_prim(double *pp, double *bcon, void* ggg)
   struct geometry *geom
     = (struct geometry *) ggg;
 
-  ldouble ucon[4],ucov[4], bcov[4], bsq;
-//  ucon[0]=0;
-//  ucon[1]=pp[2];
-//  ucon[2]=pp[3];
-//  ucon[3]=pp[4];
-//
-//  conv_vels(ucon,ucon,VELPRIM,VEL4,geom->gg,geom->GG);
-//  indices_21(ucon,ucov,geom->gg);
+  ldouble ucon[4],ucov[4];
 
   calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
 
@@ -124,10 +118,11 @@ void calc_bcon_prim(double *pp, double *bcon, void* ggg)
   return;
 }
 
-///////////////////////////////////////////////////////////////
+//***********************************************************************
 /* calculate B^i from bcon and primitives */
+//***********************************************************************
 
-void calc_Bcon_prim(double *pp, double *bcon,double *Bcon, void* ggg)
+void calc_Bcon_prim(double *pp, double *bcon, double *Bcon, void* ggg)
 {
   int j;
   
@@ -135,166 +130,100 @@ void calc_Bcon_prim(double *pp, double *bcon,double *Bcon, void* ggg)
     = (struct geometry *) ggg;
 
   ldouble ucon[4],ucov[4];
-  ucon[0]=0;
-  ucon[1]=pp[2];
-  ucon[2]=pp[3];
-  ucon[3]=pp[4];
 
-  conv_vels(ucon,ucon,VELPRIM,VEL4,geom->gg,geom->GG);
-  //indices_21(ucon,ucov,geom->gg); ucov is not needed in this function
+  calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
+  
 
   Bcon[0]=0.;
 
+#ifdef NONRELMHD
+   for(j=1;j<4;j++)
+     Bcon[j] = bcon[j];  
+#else
   for(j=1;j<4;j++)
     {
       Bcon[j] = bcon[j]*ucon[0] - bcon[0]*ucon[j];
     }
-  
-
- #ifdef NONRELMHD
-   for(j=1;j<4;j++)
-     Bcon[j] = bcon[j];  
- #endif
-
+#endif //NONRELMHD
 
   return;
 }
 
-
 /***********************************************************************************************/
-/***********************************************************************************************/
-/***********************************************************************************************/
-/***********************************************************************************************/
-///////////////////////////////////////////////////////////////
 /* wrappers for missing cells / dimensions */
+/***********************************************************************************************/
 
 int fl_x(int i)
-{ if(NX==1) return 0;
-  /*
-  if(i<0) {
-    #ifdef PERIODIC_XBC
-    return NX+i;
-    #else
-    return 0;
-    #endif 
-  }
-  if(i>=NX) {
-    #ifdef PERIODIC_XBC
-    return i-NX;
-    #else
-    return NX-1;
-    #endif 
-  }
-  */
-  return i; }
-
-
-///////////////////////////////////////////////////////////////
+{
+  if(NX==1) return 0;
+  return i;
+}
 
 int fl_y(int i)
-{ if(NY==1) return 0;
-  /*
-  if(i<0) {
-    #ifdef PERIODIC_YBC
-    return NY+i;
-    #else
-    return 0;
-    #endif 
-  }
-  if(i>=NY) {
-    #ifdef PERIODIC_YBC
-    return i-NY;
-    #else
-    return NY-1;
-    #endif 
-  }
-  */
-  return i; }
-
-
-///////////////////////////////////////////////////////////////
+{
+  if(NY==1) return 0;
+  return i;
+}
 
 int fl_z(int i)
-{ if(NZ==1) return 0;
-  /*
-  if(i<0) {
-    #ifdef PERIODIC_ZBC
-    return NZ+i;
-    #else
-    return 0;
-    #endif 
-  }
-  if(i>=NZ) {
-    #ifdef PERIODIC_ZBC
-    return i-NZ;
-    #else
-    return NZ-1;
-    #endif 
-  }
-  */
-  return i; }
-
-
-///////////////////////////////////////////////////////////////
+{
+  if(NZ==1) return 0;
+  return i;
+}
 
 int flx_x(int i)
-{ return i; }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return i;
+}
 
 int flx_y(int i)
-{ return fl_y(i); }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return fl_y(i);
+}
 
 int flx_z(int i)
-{ return fl_z(i); }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return fl_z(i);
+}
 
 int fly_x(int i)
-{ return fl_x(i); }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return fl_x(i);
+}
 
 int fly_y(int i)
-{ return i; }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return i;
+}
 
 int fly_z(int i)
-{ return fl_z(i); }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return fl_z(i);
+}
 
 int flz_x(int i)
-{ return fl_x(i); }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return fl_x(i);
+}
 
 int flz_y(int i)
-{ return fl_y(i); }
-
-
-///////////////////////////////////////////////////////////////
+{
+  return fl_y(i);
+}
 
 int flz_z(int i)
-{ return i; }
+{
+  return i;
+}
 
 
-/***********************************************************************************************/
 /***********************************************************************************************/
 /* flux constrained transport */
+/***********************************************************************************************/
 
 // B^i = \dF^{it}
-// E_i = - [ijk] v^j B^k  , such that (\detg B^i),t = - (\detg(B^i v^j - B^j v^i)),j = - (\detg [ijk] E_k),j = ([ijk] emf[k]),j
+// E_i = - [ijk] v^j B^k  , such that (\detg B^i),t = - (\detg(B^i v^j - B^j v^i)),j
+//                                                  = - (\detg [ijk] E_k),j = ([ijk] emf[k]),j
       
 // -> E_1 = v^3 B^2 - v^2 B^3
 // -> E_2 = v^1 B^3 - v^3 B^1
@@ -310,7 +239,8 @@ int flz_z(int i)
 // emf_3 = B^2 v^1 - B^1 v^2 = F1[B2] or -F2[B1]
 
 // Notice only 6 independent ways.  The diagonal terms vanish (e.g. Fi[Bi]=0).
-///////////////////////////////////////////////////////////////
+/***********************************************************************************************/
+
 
 int
 flux_ct()
@@ -336,7 +266,8 @@ flux_ct()
   
   int ix,iy,iz,iv,ii;
   
-  #pragma omp parallel for private(ix,iy,iz,iv) schedule (static)
+#pragma omp parallel for private(ix,iy,iz,iv) schedule (static)
+
   //calculating EMF at corners
   for(ii=0;ii<Nloop_4;ii++) 
     {
@@ -360,9 +291,9 @@ flux_ct()
 			    - get_ub(flbz,B2,flz_x(ix),flz_y(iy-1),flz_z(iz),2)
                             #endif
 			    ));
-#else  // end if doing EMF1
-      set_emf(1,ix,iy,iz,0.); // not really 0, but differences in emf will be 0, and that's all that matters
-#endif // end if not doing EMF1
+#else  
+      set_emf(1,ix,iy,iz,0.); // not really 0, but differences in emf will be 0
+#endif 
       
 	////////////////////
 	// EMF2
@@ -406,7 +337,7 @@ flux_ct()
   //reset certain emfs at the boundaries to ensure stationarity
   adjust_fluxcttoth_emfs();
 
-  #pragma omp parallel for private(ix,iy,iz,iv) schedule (static)
+#pragma omp parallel for private(ix,iy,iz,iv) schedule (static)
   for(ii=0;ii<Nloop_4;ii++) // 0...NX
     {
       ix=loop_4[ii][0];
@@ -419,7 +350,6 @@ flux_ct()
 #if(NX>1)
 	if(iy<NY && iz<NZ) //no need to fill x-face fluxes for iy=NY etc., 
 	  {
-	    //	    if(iy==0 && iz==0) printf("%d > %d\n",PROCID,ix);
 	    set_ubx(flbx,B1,ix,iy,iz,0.);
 	    set_ubx(flbx,B2,ix,iy,iz,0.5 * (get_emf(3,ix,iy,iz) + get_emf(3,ix,iy+1,iz)));
 	    set_ubx(flbx,B3,ix,iy,iz,-0.5 * (get_emf(2,ix,iy,iz) + get_emf(2,ix,iy,iz+1)));
@@ -457,10 +387,13 @@ flux_ct()
 }
 
 
-///////////////////////////////////////////////////////////////
+/***********************************************************************************************/
 // resets emf's near the boundaries where corresponding velocities are zero
+/***********************************************************************************************/
+
 int adjust_fluxcttoth_emfs()
 {
+
 #ifdef CORRECT_POLARAXIS
   int ix,iz;
 #ifdef MPI
@@ -475,6 +408,7 @@ int adjust_fluxcttoth_emfs()
 	    set_emf(3,ix,0,iz,0.);
 	  }
     }
+  
 #ifdef MPI
   if(TJ==NTY-1) //lower axis
 #endif
@@ -488,15 +422,16 @@ int adjust_fluxcttoth_emfs()
 	  }
     }
 
-#endif
+#endif //CORRECTPOLARAXIS
 
   return 0;
 }
 
 
-///////////////////////////////////////////////////////////////
+/***********************************************************************************************/
 //calculates magnetic field from vector potential given in pinput[B1..B3]
-//serial!
+/***********************************************************************************************/
+
 int
 calc_BfromA(ldouble* pinput, int ifoverwrite)
 {
@@ -520,7 +455,7 @@ calc_BfromA(ldouble* pinput, int ifoverwrite)
 
       for(iv=0;iv<3;iv++)
 	{
-#if defined(MONOPOLE_FIELD_CORNERS)
+#if defined(MONOPOLE_FIELD_CORNERS) // explicit monopole B field solution
 	  ldouble xxvec[4],xxvecBL[4],r,th;
 	  if (iv==2)
 	  {
@@ -533,9 +468,9 @@ calc_BfromA(ldouble* pinput, int ifoverwrite)
 	    A[iv] = 1.-cos(th);
 	  }
 	  else A[iv]=0.;
-#elif defined(INIT_MAGN_CORNERS)
+#elif defined(INIT_MAGN_CORNERS) // define the vecpot on the corners in the init.c
           A[iv]=get_u(pinput,B1+iv,ix,iy,iz);
-#else
+#else // linear interpolation to  corners
 	  if(NY==1 && NZ==1)
 	    A[iv]=1./2.*(get_u(pinput,B1+iv,ix,iy,iz) + get_u(pinput,B1+iv,ix-1,iy,iz));
 
@@ -553,12 +488,12 @@ calc_BfromA(ldouble* pinput, int ifoverwrite)
 			 +get_u(pinput,B1+iv,ix,iy,iz-1) + get_u(pinput,B1+iv,ix,iy-1,iz-1) 
 			 +get_u(pinput,B1+iv,ix-1,iy,iz-1) + get_u(pinput,B1+iv,ix-1,iy-1,iz-1));
 #endif 
-	  //saving to pvecpot used inside calc_BfromA_core(); 
+	  //saving to pvecpot
  	  set_u(pvecpot,B1+iv,ix,iy,iz,A[iv]);
 	}            
     } //cell loop
   
-  //calculating curl and B
+  //calculating curl to get B
   //new components of B^i in pvecpot[1...3]
   calc_BfromA_core();
   
@@ -599,7 +534,7 @@ calc_BfromA(ldouble* pinput, int ifoverwrite)
 
 
 /***********************************************************************************************/
-/** calculates B-field from A given on corners in B1-B3 primitives of pvecpot *******************/
+//calculates B-field from A given on corners in B1-B3 primitives of pvecpot
 //new components of B^i in pvecpot[1...3]
 /***********************************************************************************************/
 
@@ -630,6 +565,7 @@ calc_BfromA_core()
 
       ldouble B[4];
       ldouble dA[4][4];
+
       dA[1][1]=dA[2][2]=dA[3][3]=0.;
 
       if(TNZ==1) /* flux-ct-compatible, axisymmetric! */
@@ -720,19 +656,19 @@ calc_BfromA_core()
 ldouble
 calc_divB(int ix,int iy,int iz)
 {
-  //within domain:
   if(!if_indomain(ix,iy,iz)) return 0.; //do not calculate in ghost cells
   
   ldouble divB;
   
   if(NZ==1)
     {
-      //this is corner based, but takes cell centered values 
+      //this is corner based, but uses cell centered values 
       divB = (pick_gdet(ix,iy,iz)*get_u(p,B1,ix,iy,iz) + pick_gdet(ix,iy-1,iz)*get_u(p,B1,ix,iy-1,iz) 
 	      - pick_gdet(ix-1,iy,iz)*get_u(p,B1,ix-1,iy,iz) - pick_gdet(ix-1,iy-1,iz)*get_u(p,B1,ix-1,iy-1,iz))/(2.*(get_x(ix+1,0)-get_x(ix,0)))
 	+ (pick_gdet(ix,iy,iz)*get_u(p,B2,ix,iy,iz) + pick_gdet(ix-1,iy,iz)*get_u(p,B2,ix-1,iy,iz) 
 	   - pick_gdet(ix,iy-1,iz)*get_u(p,B2,ix,iy-1,iz) - pick_gdet(ix-1,iy-1,iz)*get_u(p,B2,ix-1,iy-1,iz))/(2.*(get_x(iy+1,1)-get_x(iy,1)));
     }
+
   if(NZ>1)
     {
       divB = (pick_gdet(ix,iy,iz)*get_u(p,B1,ix,iy,iz) + pick_gdet(ix,iy-1,iz)*get_u(p,B1,ix,iy-1,iz) 
@@ -758,7 +694,9 @@ calc_divB(int ix,int iy,int iz)
 }
 
 
-///////////////////////////////////////////////////////////////
+/***********************************************************************************************/
+//calculate Q_theta MRI parameter
+/***********************************************************************************************/
 
 int
 calc_Qthetaphi(int ix, int iy, int iz,ldouble *Qtheta,ldouble *Qphi)
@@ -813,9 +751,9 @@ calc_Qthetaphi(int ix, int iy, int iz,ldouble *Qtheta,ldouble *Qphi)
 }
 
 
-///////////////////////////////////////////////////////////////
-//calculates sqrt(g_rr g_phph) b^r b^phi and b^2
-
+/***********************************************************************************************/
+//calculates sqrt(g_rr g_phph) , (b^r b^phi) , and b^2
+/***********************************************************************************************/
 int
 calc_angle_brbphibsq(int ix, int iy, int iz, ldouble *brbphi, ldouble *bsq, ldouble *bcon,ldouble *bcov)
 {
@@ -860,9 +798,10 @@ calc_angle_brbphibsq(int ix, int iy, int iz, ldouble *brbphi, ldouble *bsq, ldou
 }
 
 
-///////////////////////////////////////////////////////////////
-//calculates b^p b^phi and b^2
+/***********************************************************************************************/
+//calculates (b^p b^phi) and b^2
 //here cannot work on averages (bpoloidal bphi is not averaged)
+/***********************************************************************************************/
 
 int
 calc_angle_bpbphibsq(int ix, int iy, int iz, ldouble *bpbphi, ldouble *bsq, ldouble *bcon, ldouble *bcov)
@@ -899,13 +838,14 @@ calc_angle_bpbphibsq(int ix, int iy, int iz, ldouble *bpbphi, ldouble *bsq, ldou
 }
 
 
-///////////////////////////////////////////////////////////////
+/***********************************************************************************************/
 //calculates curl of a 3-vector field from array ptu starting from index idx
 //returns to curl[1..4]
 //TODO: idx not used
+/***********************************************************************************************/
 
 int
-calc_curl(ldouble *ptu, ldouble idx, int ix, int iy, int iz, void* ggg, ldouble *curl)
+calc_curl(ldouble *ptu, int ix, int iy, int iz, void* ggg, ldouble *curl)
 {
   struct geometry *geom
     = (struct geometry *) ggg;
@@ -1003,7 +943,7 @@ calc_curl(ldouble *ptu, ldouble idx, int ix, int iy, int iz, void* ggg, ldouble 
 
 
 /***********************************************************************************************/
-/************************* mimics alpha-dynamo in axisymmetric sims involvin MRI ***************/
+// mimics alpha-dynamo in axisymmetric sims involving MRI ***************/
 /***********************************************************************************************/
 
 int
@@ -1014,9 +954,6 @@ mimic_dynamo(ldouble dtin)
 #ifdef BHDISK_PROBLEMTYPE
 
   int ii;
-  int verbose=0,stop=0;
-  int verix=75;
-  int veriy=100;
 
 #pragma omp parallel for schedule (static)
   for(ii=0;ii<Nloop_6;ii++) //inner domain plus 1-cell layer including corners
@@ -1043,25 +980,6 @@ mimic_dynamo(ldouble dtin)
       
       calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
 
-      if(verbose)// && ix+TOI==verix && iy+TOJ==veriy)
-	{
-	  /*
-	  printf("before dynamo: \n");
-	  print_primitives(&get_u(p,0,ix,iy,iz));
-	  print_conserved(&get_u(u,0,ix,iy,iz));
-	  */
-
-//	  calc_bcon_prim(&get_u(p,0,ix,iy,iz), bcon, &geom);
-//	  indices_21(bcon,bcov,geom.gg); 
-//	  bsqin = dotB(bcon,bcov);
-      
-      calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsqin);
-
-	  //ugasin=get_u(p,UU,ix,iy,iz);
-
-	  //printf("bsqin: %e\n",bsqin);
-	}
-
       //let's use ptemp1 to hold the extra vector potential
       set_u(ptemp1,B1,ix,iy,iz,0.);
       set_u(ptemp1,B2,ix,iy,iz,0.);
@@ -1084,9 +1002,6 @@ mimic_dynamo(ldouble dtin)
       Omk = 1./(BHSPIN+sqrt(xxBL[1]*xxBL[1]*xxBL[1]));
       Pk = 2.*M_PI/Omk;
 
-      //local omega based
-      //Pk = 2.*M_PI/Om;
-
       //angle
       ldouble facangle=0.;
       if(isfinite(angle))
@@ -1104,13 +1019,11 @@ mimic_dynamo(ldouble dtin)
       #endif
 
       //pre(gas+rad)
-
       ldouble gamma=GAMMA;
 #ifdef CONSISTENTGAMMA
       gamma=pick_gammagas(ix,iy,iz);
 #endif
       ldouble gammam1=gamma-1.;
-
       ldouble prermhd = gammam1*get_u(p,UU,ix,iy,iz);
 #ifdef RADIATION
       ldouble Rtt,Ehat,uconr[4],prad;
@@ -1121,9 +1034,10 @@ mimic_dynamo(ldouble dtin)
 #endif
       
       //magnetic beta
-      ldouble beta = bsq/2./prermhd;
+      ldouble beta = 0.5*bsq/prermhd;
+      
       //bsq/rho 
-      ldouble betarho = bsq/2./get_u(p,RHO,ix,iy,iz);
+      ldouble betarho = 0.5*bsq/get_u(p,RHO,ix,iy,iz);
 
       ldouble facmag1 = step_function(1.-beta,0.1);      
       ldouble facmag2 = step_function(.1-betarho,.01);
@@ -1134,7 +1048,6 @@ mimic_dynamo(ldouble dtin)
       if(gix<0) gix=0; 
       if(gix>=TNX) gix=TNX-1;
       ldouble HRDTHETA = scaleth_otg[gix];
-      //HRDTHETA *= 2.; //because scale height/photosphere = 1/3 --- 0.55
       if(HRDTHETA > 0.9*M_PI/2.) HRDTHETA=0.9*M_PI/2.; //to avoid the axis
 #else      
       ldouble HRDTHETA = EXPECTEDHR * M_PI/2.;
@@ -1143,11 +1056,9 @@ mimic_dynamo(ldouble dtin)
       ldouble zH = (M_PI/2. - xxBL[2])/HRDTHETA;
       ldouble zHpow = 1.;
       ldouble faczH = my_max(0.,pow(1. - zH*zH,zHpow));
-
-      
+      ldouble facmagnetization = faczH;
       //ldouble facmagnetization = my_min(facmag1,facmag2);		       
       //ldouble facmagnetization = my_min(faczH,my_min(facmag1,facmag2));
-      ldouble facmagnetization = faczH;
 
       //the extra vector potential
       ldouble effalpha=ALPHADYNAMO;
@@ -1167,16 +1078,12 @@ mimic_dynamo(ldouble dtin)
 	* facmagnetization 
 	* facangle;
 
-      //if(ix==NX/2 && iy>NY/3 && iy<2*NY/3) printf("%d %d > %e %e %e %e %e\n",ix,iy,Aphi,effalpha,xxBL[2],HRDTHETA,ALPHADYNAMO);
-
-
       //saving vector potential to ptemp1
       set_u(ptemp1,B3,ix,iy,iz,Aphi); 
 
-//damping azimuthal component of magnetic field if beta exceeds DAMPBETA
+      //damping azimuthal component of magnetic field if beta exceeds DAMPBETA
 #ifdef DAMPBETA      
      
-      
       ldouble dBphi = - ALPHABETA 
 	* facradius
 	* faczH
@@ -1185,14 +1092,6 @@ mimic_dynamo(ldouble dtin)
 	* Bphi;
       
       if((dBphi+Bphi)*Bphi<0.) dBphi=-Bphi; //not to overshoot zero 
-      
-      /*
-      if(verbose && ix+TOI==verix && iy+TOJ==veriy)
-	{
-	  printf("dBphi: %e \n",dBphi);
-	  if( dBphi!=0.) stop=1;
-	}
-      */
                                                    
       set_u(p,B3,ix,iy,iz,Bphi+dBphi);    
       
@@ -1201,8 +1100,8 @@ mimic_dynamo(ldouble dtin)
 
     }
 
-  //once the whole array is filled with cell centered A^phi we can 
-  //calculate the extra magnetic field returned through pvecpot[1..3]
+      //once the whole array is filled with cell centered A^phi we can 
+      //calculate the extra magnetic field returned through pvecpot[1..3]
       calc_BfromA(ptemp1,0);  
    
   //and superimpose it on the original one
@@ -1221,6 +1120,7 @@ mimic_dynamo(ldouble dtin)
       ldouble B[4]; ldouble xxBL[4];
 
       fill_geometry(ix,iy,iz,&geom);
+
       //BL radius
       coco_N(geom.xxvec,xxBL,MYCOORDS, BLCOORDS);
 
@@ -1228,79 +1128,19 @@ mimic_dynamo(ldouble dtin)
       B[2]=get_u(pvecpot,2,ix,iy,iz);
       B[3]=get_u(pvecpot,3,ix,iy,iz);
 
-      //if(PROCID==1 && ix==0 && iy==NY-1) printf("(2) %d > %e %e\n",ix,get_u(p,B1,ix,iy,iz),B[1]);
 
       set_u(p,B1,ix,iy,iz,get_u(p,B1,ix,iy,iz)+B[1]);
       set_u(p,B2,ix,iy,iz,get_u(p,B2,ix,iy,iz)+B[2]);
       set_u(p,B3,ix,iy,iz,get_u(p,B3,ix,iy,iz)+B[3]);
 
-      
-      if(verbose)// && ix+TOI==verix && iy+TOJ==veriy)
-	{
-	  //printf("dBvec = %e %e %e\n",B[1],B[2],B[3]);
-	
-	  ldouble pptemp[NV];
-	  PLOOP(iv) pptemp[iv]=get_u(p,iv,ix,iy,iz);
-	  pptemp[B1]+=B[1];
-	  pptemp[B2]+=B[2];
-	  pptemp[B3]+=B[3];
-	  
-
-//	  calc_bcon_prim(&get_u(p,0,ix,iy,iz), bcon, &geom);
-//	  indices_21(bcon,bcov,geom.gg); 
-//	  bsqout = dotB(bcon,bcov);
-      calc_bcon_bcov_bsq_from_4vel(pptemp, ucon, ucov, &geom, bcon, bcov, &bsqout);
-
-	  //printf("bsqout: %e\n",bsqout);
-
-	  
-	}
-
+     
       ldouble uutemp[NV];
       p2u(&get_u(p,0,ix,iy,iz),uutemp,&geom);
       set_u(u,B1,ix,iy,iz,uutemp[B1]);
       set_u(u,B2,ix,iy,iz,uutemp[B2]);
       set_u(u,B3,ix,iy,iz,uutemp[B3]);
       
-     
-      if(verbose)// && ix+TOI==verix && iy+TOJ==veriy)
-	{
-	  /*
-	  printf("after dynamo: \n");
-	  print_primitives(&get_u(p,0,ix,iy,iz));
-	  print_conserved(&get_u(u,0,ix,iy,iz));
-	  */
-
-	  ldouble pptemp[NV];
-	  PLOOP(iv) pptemp[iv]=get_u(p,0,ix,iy,iz);
-	  int corr[3],fixup[3];
-	  u2p(&get_u(u,0,ix,iy,iz),pptemp,&geom,corr,fixup,0);
-	  /*
-	    printf("after inversion: \n");
-	  print_primitives(pptemp);	
-	  */
-
-	  ugasout=pptemp[UU];			
-	  ugasin=get_u(p,UU,ix,iy,iz);
-	  
-	  /*
-	  printf("dbsq/2 = %e\n",(bsqout - bsqin)/2.);
-	  printf("dugas = %e\n",ugasout - ugasin);
-	  */
-
-	  //if(stop) getch();
-
-	  //if(iy==100) printf("%d > %e\n",ix,ugasout-ugasin);
-
-	}
-
     }
-
-  //done consistently only inside the inner domain
-  //need for set_bc / exchange information afterwards or executed as the last operator
-  //done
-  //if(PROCID==1) printf("(3) %d > %e\n",0,get_u(p,B1,0,NY-1,0));
-
 
 #endif
 #endif

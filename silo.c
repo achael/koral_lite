@@ -581,10 +581,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      #ifdef PRINTVISCHEATINGTOSILO
 	      deltae[zonalindex]=calc_ViscousElectronHeatingFraction(&get_u(p,0,ix,iy,iz),&geomout);
 	      vischeat[zonalindex]=get_u_scalar(vischeating,ix,iy,iz);
-	      vischeatnege[zonalindex]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);; //overwrites gas entropy when OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING
-	      vischeatnegi[zonalindex]=get_u_scalar(vischeatingnegibalance,ix,iy,iz);; //overwrites gas entropy when OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING
+	      vischeatnege[zonalindex]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);; 
+	      vischeatnegi[zonalindex]=get_u_scalar(vischeatingnegibalance,ix,iy,iz);; 
               dtauarr[zonalindex]=-1.;
-	      //	      vischeatnegbalance[zonalindex]=pp[ENTR]; //overwrites gas entropy when OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING
 	      #endif
 		}
 	      else //using averaged data
