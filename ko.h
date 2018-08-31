@@ -428,6 +428,15 @@ struct struct_of_state
   ldouble nenth, uenth, penth;
 };
 
+// CHIANTI and OPAL opacities definitions
+#define ONEOVERLOGTEN 0.43429448190325182765
+struct OpTable {
+  int NLOGT; 
+  int NLOGRHO; 
+  ldouble *logTgrid; 
+  ldouble *logRhogrid;
+  ldouble **table;
+};
 
 /*****  function wrappers  ******/
 
@@ -1310,6 +1319,7 @@ int calc_Bflux(ldouble radius,int type,ldouble *Bflux, ldouble* Bfluxquad);
 ///////////////////////////////////////////////////////////////
 // fileop.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
+//deleted OUTOUTPUT BOXOUTPUT BOXCORROUTPUT VAROUTPUT, BOXVERTOUTPUT ANARELRADOUTPUT SLICEOUTPUT
 
 int save_avg(ldouble dtin);
 int fprint_openfiles(char* folder);
@@ -1335,7 +1345,6 @@ int fprint_simplefile(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix);
 
-//deleted OUTOUTPUT BOXOUTPUT BOXCORROUTPUT VAROUTPUT, BOXVERTOUTPUT ANARELRADOUTPUT SLICEOUTPUT
 
 ///////////////////////////////////////////////////////////////
 // silo.c /////////////////////////////////////////////////////
@@ -1348,6 +1357,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix);
 ///////////////////////////////////////////////////////////////
 // opacities.c ////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
+
 ldouble calc_kappa(ldouble *pp,void *ggg,void *op);
 ldouble calc_kappa_from_state(ldouble *pp, void *sss, void *ggg, void *op);
 ldouble calc_kappaes_with_temperatures(ldouble rho, ldouble Tgas, ldouble Te, ldouble Ti, ldouble Trad);
@@ -1358,22 +1368,6 @@ int calc_tauabs(ldouble *pp, void *ggg, ldouble *dx, ldouble *tauabs);
 ldouble calc_opacities_from_state(ldouble *pp, void *ggg, void *sss, void *op);
 int init_OpTable(void *optab0, char *filename);
 int init_all_kappa_table();
-int init_ChiantiISMTable(void);
-ldouble return_ChiantiISMTableOpacity(ldouble Tgas, ldouble rhocgs);
-
-
-// CHIANTI and OPAL opacities definitions
-#define ONEOVERLOGTEN 0.43429448190325182765
-struct OpTable {
-  int NLOGT; 
-  int NLOGRHO; 
-  ldouble *logTgrid; 
-  ldouble *logRhogrid;
-  ldouble **table;
-};
-
-int init_all_kappa_table();
-int init_OpTable(void *optab0, char *filename) ;
 
 #ifdef USE_CHIANTI_ISM_TABLE
 int init_ChiantiISMTable(void);
@@ -1395,4 +1389,3 @@ ldouble return_PlanckOpacity_from_table(ldouble logTin, ldouble logrhoin);
 struct OpTable RossTable;
 ldouble return_RossOpacity_from_table(ldouble logTin, ldouble logrhoin);
 #endif
- 
