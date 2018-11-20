@@ -187,7 +187,6 @@ fprint_scalars(ldouble t, ldouble *scalars, int nscalars)
 }
 
 
-
 /*********************************************/
 /* prints radial profiles to radNNNN.dat */
 /*********************************************/
@@ -1366,8 +1365,10 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
 int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
  {
    char bufor[50];
-   #ifdef GRTRANSSIMOUTPUT
+   #if defined(GRTRANSSIMOUTPUT)
    sprintf(bufor,"%s/%s%04d_grtnew.dat",folder,prefix,nfile);
+   #elif defined(GRTRANSSIMOUTPUT_2)
+   sprintf(bufor,"%s/%s%04d_simcgs.dat",folder,prefix,nfile);
    #else
    sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
    #endif
@@ -1389,8 +1390,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 
    int xmin=-2;
   
-   //ANDREW header for grtrans
-#ifdef GRTRANSSIMOUTPUT
+   //ANDREW -- header for grtrans
+#if defined (GRTRANSSIMOUTPUT) || defined(GRTRANSSIMOUTPUT_2)
    for(iix=-2;iix<NX;iix++)
      {
         fill_geometry_arb(iix,NY/2,NZ/2,&geomBL,OUTCOORDS);
@@ -1401,7 +1402,6 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	  }
      }
        
-   //Can't have NaN in grtrans files!
    if(NZ==1)
      fprintf(fout1,"%.5e %5d %5d %.5e %.5e ",t,NX+2,NY,BHSPIN,MASS);
    else
@@ -1410,7 +1410,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 #ifdef RELELECTRONS
    fprintf(fout1,"%5d %.5e %.5e\n",NRELBIN, RELGAMMAMIN, RELGAMMAMAX);
 #endif
-#endif
+#endif //GRTRANSSIMOUTPUT
    
 #ifdef RELELECTRONS //ANDREW array for finding nonthermal gamma break
   int ie;
@@ -1418,6 +1418,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
   for(ie=0; ie<NRELBIN; ie++) gammapbrk[ie] = pow(relel_gammas[ie], RELEL_HEAT_INDEX + 0.5);
 #endif  
 
+   // loop over all cells  
    for(iz=0;iz<nz;iz++)
      {
        #ifndef RAD_INTEGRATION
@@ -1452,7 +1453,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	       ldouble th=geomBL.yy;
 	       ldouble ph=geomBL.zz;
 
-#ifdef GRTRANSSIMOUTPUT //ANDREW 2D ONLY
+#if defined(GRTRANSSIMOUTPUT) || defined(GRTRANSSIMOUTPUT_2)
 	       ldouble x1=geom.xx;
 	       ldouble x2=geom.yy;
 	       ldouble x3=geom.zz;
@@ -1460,7 +1461,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	       fprintf(fout1,"%.5e %.5e %.5e ",x1,x2,x3); //(4-6)
 	       fprintf(fout1,"%.5e %.5e %.5e ",r,th,ph); //(7-9)
 	       
-               //ANDREW fill values below horizon with values right above horizon
+               //ANDREW in grtrans, fill values below horizon with values right above horizon
 	       if(r<rhorizonBL)
 	       {
                  ix=xmin;
@@ -1504,24 +1505,26 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	      ldouble gdet=geom.gdet;
 	      ldouble volume=gdet*get_size_x(ix,0)*get_size_x(iy,1)*get_size_x(iz,2);
 	       
-               //ANDREW volume is just gdet for grtrans output 
-#ifdef GRTRANSSIMOUTPUT
-               volume=gdet;
+               
+#if defined(GRTRANSSIMOUTPUT) || defined(GRTRANSSIMOUTPUT_2)
+	       volume=gdet; // For grtrans output, replace volume with gdet
 #endif
-	       ldouble rho,uint,pgas,temp,bsq,bcon[4],bcov[4],utcon[4],utcov[4],ucon[4],ucov[4],Tij[4][4],Tij22[4][4];
+	       ldouble rho,rhoucont,uint,pgas,temp,bsq,bcon[4],bcov[4];
+	       ldouble utcon[4],utcov[4],ucon[4],ucov[4],Tij[4][4],Tij22[4][4];
 	       ldouble Ti,Te;
+	       ldouble gamma=GAMMA;
 
 	       int i,j;
 
-	       ldouble gamma=GAMMA;
 #ifdef CONSISTENTGAMMA
 	       gamma=pick_gammagas(ix,iy,iz);
 #endif
 	     
 	       if(doingavg)
 		 {
-                   //ANDREW need pp for some relel computations below
+                   //ANDREW we need pp for some relel computations below
 		   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+		   rhoucont=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz);
 
 		   rho=get_uavg(pavg,RHO,ix,iy,iz);
 		   uint=get_uavg(pavg,UU,ix,iy,iz);
@@ -1547,8 +1550,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 
 		   indices_2122(Tij,Tij22,geomBL.gg);  
                  
-                   //ANDREW NORMALIZE u^0
-#ifdef GRTRANSSIMOUTPUT
+#if defined(GRTRANSSIMOUTPUT) || defined(GRTRANSSIMOUTPUT_2)
+                   //ANDREW NORMALIZE u^0 for grtrans
                    fill_utinucon(utcon,geomBL.gg,geomBL.GG);
 		   indices_21(utcon,utcov,geomBL.gg); 
 #endif
@@ -1561,7 +1564,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		   bcon[2]=get_uavg(pavg,AVGBCON(2),ix,iy,iz);
 		   bcon[3]=get_uavg(pavg,AVGBCON(3),ix,iy,iz);
 
-#ifdef GRTRANSSIMOUTPUT
+#if defined(GRTRANSSIMOUTPUT) || defined(GRTRANSSIMOUTPUT_2)
                   //ANDREW NORMALIZE b^0 to be orthogonal with u^\mu
 		  bcon[0]=-dot3nr(bcon,utcov)/utcov[0];
 		  indices_21(bcon,bcov,geomBL.gg);
@@ -1601,7 +1604,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		 
 #endif                
 		 }
-	       else //on the go from the primitives
+	       else //not doingavg; on the go from the primitives
 		 { 
 		   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
 
@@ -1617,6 +1620,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	           conv_vels(vel,vel,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
                    for(i=0;i<4;i++) vcon[i]=vel[i];
                    lorentz = fabs(vel[0])/sqrt(fabs(geomBL.GG[0][0]));
+		   rhoucont=pp[RHO]*vcon[0];
 
                    calc_Tij(pp,&geomBL,Tij22);
 		   indices_2221(Tij22,Tij,geomBL.gg);
@@ -1628,19 +1632,21 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 #endif
 		 }
 
-	       rho=rhoGU2CGS(pp[RHO]);
 #ifdef OUTPUTINGU
 	       rho=pp[RHO];
+#else
+	       rho=rhoGU2CGS(pp[RHO]);
 #endif
 	     
 #ifdef RHOLABINSIM
 	       rho*=utcon[0];
 #endif
 
-	       fprintf(fout1,"%.5e %.5e ",rho,temp); //(7-8) //or (10-11) for grtrans 
-	       fprintf(fout1,"%.5e %.5e %.5e %.5e ",utcon[0],utcon[1],utcon[2],utcon[3]); //(9-12) //or (12-15) for grtrans
-	       fprintf(fout1,"%.5e ", volume);// (13) //(16) for grtrans
-
+	       fprintf(fout1,"%.5e %.5e ",rho,temp); //(7-8) , (10-11) for grtrans 
+	       fprintf(fout1,"%.5e %.5e %.5e %.5e ",utcon[0],utcon[1],utcon[2],utcon[3]); //(9-12) , (12-15) for grtrans
+#ifndef GRTRANSSIMOUTPUT_2
+	       fprintf(fout1,"%.5e ", volume); // (13) , (16) for grtrans
+#endif
 	       ldouble ehat=0.;
 #ifdef RADIATION
 	       ldouble Rtt,Rij[4][4],Rij22[4][4],vel[4];
@@ -1650,7 +1656,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	       ldouble Trad;
 
 	       ldouble CoulombCoupling=0.;
-	       if(doingavg==0) 
+	       if(doingavg==0) // from primitives
 		{
 		  calc_ff_Rtt(pp,&Rtt,ugas,&geomBL);
 		  ehat=-Rtt;  
@@ -1677,7 +1683,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 #endif
 #endif
 		}
-	      else
+	       else //from avg
 		{
 		  ehat=get_uavg(pavg,AVGEHAT,ix,iy,iz);
 		  int i,j;
@@ -1689,7 +1695,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		    
 		  indices_2122(Rij,Rij22,geomBL.gg);  
 
-		  //ANDREW recompute if Giff in avg accidentally saved as lab frame
+		  //ANDREW recompute if Giff in avg, if we accidentally saved it as lab frame
                   #ifdef SIMOUTPUT_GILAB2FF
 		  calc_Gi(pp,&geomBL,Giff,0.0,0,0); //ANDREW 0 for fluid frame, 2 for fluid frame thermal only
                   #endif
@@ -1705,28 +1711,29 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	       Fx=Rij[1][0];
 	       Fy=Rij[2][0];
 	       Fz=Rij[3][0];
+#ifndef GRTRANSSIMOUTPUT_2
 #ifdef OUTPUTINGU
 	       fprintf(fout1,"%.5e %.5e %.5e %.5e ",ehat,Fx,Fy,Fz); //(14) - (17) 
 	       fprintf(fout1,"%.5e %.5e ",Giff[0],Gicff[0]); //(18)-(19)
                fprintf(fout1,"%.5e %.5e ",ehat, Trad); //(20), (21)         
 #else
-	       fprintf(fout1,"%.5e %.5e %.5e %.5e ",endenGU2CGS(ehat),fluxGU2CGS(Fx),fluxGU2CGS(Fy),fluxGU2CGS(Fz)); //(14) - (17)  //17-20 for grtrans
+	       fprintf(fout1,"%.5e %.5e %.5e %.5e ",endenGU2CGS(ehat),fluxGU2CGS(Fx),fluxGU2CGS(Fy),fluxGU2CGS(Fz)); //(14) - (17), (17)-(20) for grtrans
 	       ldouble conv=kappaGU2CGS(1.)*rhoGU2CGS(1.)*endenGU2CGS(1.)*CCC; //because (cE-4piB) in non-geom
-	       fprintf(fout1,"%.5e %.5e ",Giff[0]*conv,Gicff[0]*conv); //(18)-(19)  //21-22 for grtrans
-               fprintf(fout1,"%.5e %.5e ",CoulombCoupling*conv, Trad); //(20), (21) //23-24 for grtrans      
+	       fprintf(fout1,"%.5e %.5e ",Giff[0]*conv,Gicff[0]*conv); //(18)-(19) , (21)-(22) for grtrans
+               fprintf(fout1,"%.5e %.5e ",CoulombCoupling*conv, Trad); //(20), (21) , (23)-(24) for grtrans      
 #endif
-
+#endif
 #endif //RADIATION
 
 	       ldouble gammam1=gamma-1.;
-
 	       ldouble betarad=ehat/3./(pgas);
-	      
+	       ldouble muBe = (-Tij[1][0]-Rij[1][0] - rhouconr)/rhouconr;
+	       ldouble bernoulli=(-Tij[0][0] -Rij[0][0] - rhoucont)/rhoucont;
 
 	       //magn. field components
 #ifdef MAGNFIELD
 	       if(doingavg==0) 
-	       {
+	        {
 	          calc_ucon_ucov_from_prims(pp, &geomBL, utcon, ucov);
                   calc_bcon_bcov_bsq_from_4vel(pp, utcon, ucov, &geomBL, bcon, bcov, &bsq);
 		}
@@ -1738,7 +1745,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		  bcon[2]=get_uavg(pavg,AVGBCON(2),ix,iy,iz);
 		  bcon[3]=get_uavg(pavg,AVGBCON(3),ix,iy,iz);
 
-                  #ifdef GRTRANSSIMOUTPUT
+                  #if defined(GRTRANSSIMOUTPUT) || defined(GRTRANSSIMOUTPUT_2)
                   //ANDREW NORMALIZE b^0 to be orthogonal with u^\mu
 		  bcon[0]=-dot3nr(bcon,utcov)/utcov[0];
 		  indices_21(bcon,bcov,geomBL.gg);
@@ -1802,26 +1809,36 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
                #endif
                #endif
 
-               // ANDREW no b^2, just b[0] in output for grtrans
-#ifdef GRTRANSSIMOUTPUT	       
-	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bcon[0],bcon[1],bcon[2],bcon[3],bsq,phi); //(14) - (19) or (22) - (27) if radiation included (+3 with grtrans 3d)
-	       fprintf(fout1,"%.5e %.5e ",betamag,betarad); // (28) - (29) when rad and magn field on, (20) - (21) with no radiation (+3 with grtrans 3d)
-
+	       
+	       //(14) - (19) or (22) - (27) if radiation included (+3 with grtrans 3d)
+#if defined(GRTRANSSIMOUTPUT)
+	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bcon[0],bcon[1],bcon[2],bcon[3],bsq,phi);
+#elif defined(GRTRANSSIMOUTPUT_2)
+	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e ", bcon[0],bcon[1],bcon[2],bcon[3],bsq); 
 #else    
-	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bsq,bcon[1],bcon[2],bcon[3],phi,betamag); //(14) - (19) or (22) - (27) if radiation included (+3 with  grtrans 3d)
-               #ifndef RAD_INTEGRATION
-	       fprintf(fout1,"%.5e %.5e ",betarad,tausca); // (28) - (29) when rad and magn field on, (20) - (21) with no radiation (+3 with grtrans 3d)
-               #else
-	       fprintf(fout1,"%.5e %.5e ",betarad,tauscar); // (28) - (29) when rad and magn field on, (20) - (21) with no radiation (+3 with grtrans 3d)
-               #endif
+	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bsq,bcon[1],bcon[2],bcon[3],phi,betamag);
+#endif //GRTRANSSIMOUTPUT
 
-#endif
+	       // (28) - (29) when rad and magn field on, (20) - (21) with no radiation (+3 with grtrans 3d)
+#ifndef GRTRANSSIMOUTPUT_2
+#ifndef RAD_INTEGRATION
+               fprintf(fout1,"%.5e %.5e ",betarad,bernoulli); 	       
+	       //fprintf(fout1,"%.5e %.5e ",betarad,tausca); 
+	       //fprintf(fout1,"%.5e %.5e ",betarad,muBe); 
+#else
+	       fprintf(fout1,"%.5e %.5e ",betarad,bernoulli); 	       
+	       //fprintf(fout1,"%.5e %.5e ",betarad,tauscar); 
+	       //fprintf(fout1,"%.5e %.5e ",betarad,muBe); 
+#endif //RAD_INTEGRATION
+#endif //GRTRANSSIMOUTPUT_2
 #endif //MAGNFIELD
+	       
 	       
 
 #ifdef EVOLVEELECTRONS
-	       
-	       fprintf(fout1,"%.5e %.5e %.5e ",Te, Ti, gamma); // (30) - (32) when rad and magn field on, (22) - (24) with no radiation (+3 with grtrans 3d)
+
+	       // (30) - (32) when rad and magn field on, (22) - (24) with no radiation (+3 with grtrans 3d)
+	       fprintf(fout1,"%.5e %.5e %.5e ",Te, Ti, gamma); 
 	       
 	       ldouble vischeat,pe,ue,gammae,ne,tempeloc;
 	       gammae=GAMMAE;
@@ -1844,14 +1861,12 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		   vischeat=get_u_scalar(vischeating,ix,iy,iz);
 		   ldouble rhoeth=calc_thermal_ne(pp)*M_PROTON*MU_E;
 		   ue=calc_ufromSerho(pp[ENTRE],rhoeth,ELECTRONS,ix,iy,iz); 
-                   
 		 }
 
 
 	       //ANDREW
-	       //in  avg vischeat was averaged as du, not du/dtau
+	       //in avg, vischeat was averaged as du, not du/dtau
 	       //recompute dt and use that as an estimate
-	       //copied from problem.c              
                #ifdef DIVIDEVISCHEATBYDT
                dt=get_u_scalar(cell_dt,ix,iy,iz); //individual time step
 	       ldouble dtau = dt/vel[0];
@@ -1937,8 +1952,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 #endif //EVOLVEELECTRONS
 
                //Full output - Leave off for output for HEROIC
-               #ifndef GRTRANSSIMOUTPUT
-               #ifdef FULLOUTPUT
+#ifndef GRTRANSSIMOUTPUT
+#ifdef FULLOUTPUT
                fprintf(fout1," %.5e ",lorentz); //(30) if rad and magn on and no relele, (40) with relele
 	
                fprintf(fout1," %.5e %.5e %.5e %.5e ",ucon[0],ucon[1],ucon[2],ucon[3]); // 31-34  
@@ -1983,8 +1998,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
                  }
                }
                #endif
-               #endif
-               #endif
+#endif
+#endif
 
 	       fprintf(fout1,"\n");
 	     }
