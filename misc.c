@@ -595,13 +595,13 @@ free_arrays()
   free(vischeatingtimesdeltae);
   free(ptemp1);
   free(pvecpot);
-
+#ifdef RADIATION
 #if (RADVISCOSITY==SHEARVISCOSITY)
   free(Rijviscprev);
   free(Rijviscglobal);
   free(radvisclasttime);
 #endif
-  
+#endif  
 #ifdef MAGNFIELD
   free(emf);
 #endif

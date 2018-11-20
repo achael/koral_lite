@@ -657,7 +657,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         profiles[44][ix]+=rho*Be*dxph[1];
         
         //rho-weighted Bernoulli without thermal component (59)
-	       profiles[57][ix]+=rho*Benoth*dxph[1];
+	profiles[57][ix]+=rho*Benoth*dxph[1];
         
         //integrated dissipation
         profiles[58][ix]+=vischeating*dxph[1];
