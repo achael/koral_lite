@@ -1,3 +1,3 @@
 # README #
 
-This is a "lighter" version of KORAL, a two-temperature, radiative GRMHD code written by Aleksander Sadowski
+This is a somewhat "lighter" version of KORAL, a two-temperature, radiative GRMHD code written by Aleksander Sadowski
