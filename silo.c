@@ -88,6 +88,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *taucoupling = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   int *entropyinv = (int*)malloc(nx*ny*nz*sizeof(int));
   ldouble *expansion = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *NHr = (ldouble*)malloc(nx*ny*nz*sizeof(double));
 
   #ifdef PRINTVISCHEATINGTOSILO
   ldouble *dtauarr= (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -1361,18 +1362,24 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  indices_21(vel,vcov,geomout.gg);
  		}
 
+	      #ifdef RADIATION
 	      struct opacities opac;  
-	      ldouble tauabslocr = vcon[0]*(1.-fabs(vcon[1]))*calc_kappa(pp,&geomout,&opac);
-	      ldouble tauscalocr = vcon[0]*(1.-fabs(vcon[1]))*calc_kappaes(pp,&geomout);
+	      //ldouble tauabslocr = vcon[0]*(1.-fabs(vcon[1]))*calc_kappa(pp,&geomout,&opac);
+	      //ldouble tauscalocr = vcon[0]*(1.-fabs(vcon[1]))*calc_kappaes(pp,&geomout);
+	      ldouble tauabslocr = (vcon[0]-vcon[1])*calc_kappa(pp,&geomout,&opac);
+              ldouble tauscalocr = (vcon[0]-vcon[1])*calc_kappaes(pp,&geomout);
+
 	      ldouble tauefflocr = sqrt(tauabslocr*(tauabslocr+tauscalocr));
 
 	      ldouble tauabslocr2 = -(vcov[0]+vcov[1])*calc_kappa(pp,&geomout,&opac);
 	      ldouble tauscalocr2 = -(vcov[0]+vcov[1])*calc_kappaes(pp,&geomout);
 	      ldouble tauefflocr2 = sqrt(tauabslocr2*(tauabslocr2+tauscalocr2));
-
+              #endif
+	      
 	      //Radial integration (tau_theta)
 	      if(ix==NX-1)
 		{
+		  #ifdef RADIATION
 		  tauscar[zonalindex]=tauscalocr*dxph[0];
 		  tauabsr[zonalindex]=tauabslocr*dxph[0];
 		  taueffr[zonalindex]=tauefflocr*dxph[0];
@@ -1380,6 +1387,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  tauscar2[zonalindex]=tauscalocr2*dxph[0];
 		  tauabsr2[zonalindex]=tauabslocr2*dxph[0];
 		  taueffr2[zonalindex]=tauefflocr2*dxph[0];
+		  #endif
+		  //Column density (N_H) in CGS
+                  NHr[zonalindex] = rho[zonalindex]*dxph[0]/(MU_GAS*M_PROTON)/lenGU2CGS(1)/lenGU2CGS(1);
+
 		}
 	      else
 		{
@@ -1396,7 +1407,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  imy=iy-NG;
 #endif
 		  int idx=imz*(ny*nx) + imy*nx + (imx+1);
-
+                  #ifdef RADIATION
                   tauscar[zonalindex]=tauscar[idx]+tauscalocr*dxph[0];
 		  tauabsr[zonalindex]=tauabsr[idx]+tauabslocr*dxph[0];
 		  taueffr[zonalindex]=taueffr[idx]+tauefflocr*dxph[0];
@@ -1404,6 +1415,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
                   tauscar2[zonalindex]=tauscar2[idx]+tauscalocr2*dxph[0];
 		  tauabsr2[zonalindex]=tauabsr2[idx]+tauabslocr2*dxph[0];
 		  taueffr2[zonalindex]=taueffr2[idx]+tauefflocr2*dxph[0];
+		  #endif
+                  //Column density (N_H) in CGS
+                  NHr[zonalindex] = NHr[idx] + rho[zonalindex]*dxph[0]/(MU_GAS*M_PROTON)/lenGU2CGS(1)/lenGU2CGS(1);		  
 		}
 	    }
 	}
@@ -1497,6 +1511,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   DBPutQuadvar1(file, "rho","mesh1", rho,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
+  
+  DBPutQuadvar1(file, "NH","mesh1", NHr,
+               dimensions, ndim, NULL, 0, 
+               DB_DOUBLE, DB_ZONECENT, optList);
 
   DBPutQuadvar1(file, "entropyinv","mesh1", entropyinv,
   		dimensions, ndim, NULL, 0, 
@@ -1889,7 +1907,7 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   free(divB);
   free(taucoupling);
   free(expansion);
-
+  free(NHr);
 
 #ifdef EVOLVEELECTRONS
   free(tempe);

@@ -1727,9 +1727,14 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 
 	       ldouble gammam1=gamma-1.;
 	       ldouble betarad=ehat/3./(pgas);
-	       ldouble muBe = (-Tij[1][0]-Rij[1][0] - rhouconr)/rhouconr;
+#ifdef RADIATION
+	       //ldouble muBe = (-Tij[1][0]-Rij[1][0] - rhouconr)/rhouconr;
 	       ldouble bernoulli=(-Tij[0][0] -Rij[0][0] - rhoucont)/rhoucont;
-
+#else
+	       //ldouble muBe = (-Tij[1][0] - rhouconr)/rhouconr;
+	       ldouble bernoulli=(-Tij[0][0] - rhoucont)/rhoucont;
+#endif
+	       
 	       //magn. field components
 #ifdef MAGNFIELD
 	       if(doingavg==0) 
@@ -1796,7 +1801,9 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
                #ifdef RADIATION
 	       if(ix>=0)
 		 {
-		   tauscarloc = vcon[0]*(1.-abs(vcon[1]))*calc_kappaes(pp,&geomBL); //rho already converted to cgs
+		   //tauscarloc = vcon[0]*(1.-abs(vcon[1]))*calc_kappaes(pp,&geomBL); //rho already converted to cgs
+		   tauscarloc = (vcon[0]-vcon[1])*calc_kappaes(pp,&geomBL); //rho already converted to cgs
+
                    if(ix==NX-1)
 		   {
 		       tauscar=tauscarloc*dxph[0];
