@@ -2554,7 +2554,7 @@ calc_mdot(ldouble radius, int type)
         dx[2] = 2. * M_PI;
       }
       
-      if(type==0 || (type==1 && rhouconr<0.) || (type==2 && ronuconr>0.))
+      if(type==0 || (type==1 && rhouconr<0.) || (type==2 && rhouconr>0.))
         mdot += gdet * rhouconr * dx[1] * dx[2];
     }
   }
