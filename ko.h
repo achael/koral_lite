@@ -984,16 +984,16 @@ int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim);
 int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
 int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
 
-int copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, int N);
+int copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, long long N);
 int copy_u(ldouble factor,ldouble *uu1,ldouble* uu2 );
 int copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2);
-int add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, int N);
+int add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, long long N);
 int add_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3);
 int addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3);
 int add_u_core_3(ldouble f1, ldouble* uu1,
 		 ldouble f2, ldouble *uu2,
 		 ldouble f3, ldouble *uu3,
-		 ldouble *uu4,int N);
+		 ldouble *uu4,long long N);
 int add_u_3(ldouble f1, ldouble* uu1,
 	    ldouble f2, ldouble *uu2,
 	    ldouble f3, ldouble *uu3,

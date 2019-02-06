@@ -291,6 +291,25 @@ main(int argc, char **argv)
 		  } //TNZ==1
 		  else //in 3d - in phi
 		  {
+		    int iiz = iz;
+		    do
+		      iiz--;
+		    while(flag[ix][iy][iiz]<0 && iiz>0);
+		    if(iiz<=0)
+		    {
+		      iiz=iz;
+                      do
+		       iiz++;
+		      while(flag[ix][iy][iiz]<0 && iiz<TNZ);
+		    }
+		    if(iiz<TNZ && iiz>0)
+		    {
+		      printf("correcting3D %d %d %d with %d/%d\n",ix,iy,iz,iiz,TNZ);
+		      for(iv=0;iv<NV+NAVGVARS;iv++)
+		      {
+		        set_uavg(pavg,iv,ix,iy,iz,get_uavg(pavg,iv,ix,iy,iiz));
+		      }
+		    }		    
 		    //printf("%d %d %d uncorrected : correcting in 3d not implemented yet.\n",ix,iy,iz); 
 		  }
 		}//if(flag[ix][iy][iz]<0) 
@@ -300,9 +319,9 @@ main(int argc, char **argv)
       {
 
 	  readret=fread_restartfile(ifile,folderin,&t);
-	  //dt=1.;
+	 
 	  if(ifile==no1)
-            dt=0.;  
+            dt=1.;  
 	  else
             dt=t-global_time;
          

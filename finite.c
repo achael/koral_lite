@@ -2430,9 +2430,9 @@ ldouble get_u_scalar(ldouble* uarr,int ix,int iy,int iz)
 //array multiplication
 //uu2=factor*uu1
 int
-copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, int N)
+copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, long long N)
 {
-  int i;
+  long long i;
 #ifdef APPLY_OMP_SIMD
   #pragma omp parallel for simd
 #else
@@ -2448,7 +2448,9 @@ copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, int N)
 int
 copy_u(ldouble factor,ldouble *uu1,ldouble* uu2 )
 {
-  copy_u_core(factor,uu1,uu2,SX*SY*SZ*NV);
+  long long Ngrid=SX*SY*SZ;
+  long long Nprim=Ngrid*NV;
+  copy_u_core(factor,uu1,uu2,Nprim);
   return 0;
 }
 
@@ -2482,9 +2484,9 @@ copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2)
 //array multiplication plus addition
 //uu3=f1*uu1+f2*uu2
 int
-add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, int N)
+add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, long long N)
 {
-  int i;
+  long long i;
 #ifdef APPLY_OMP_SIMD
   #pragma omp parallel for simd private(i)
 #else
@@ -2501,7 +2503,9 @@ add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, int
 int
 add_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 {
-  add_u_core(f1,uu1,f2,uu2,uu3,SX*SY*SZ*NV);
+  long long Ngrid=SX*SY*SZ;
+  long long Nprim=Ngrid*NV;
+  add_u_core(f1,uu1,f2,uu2,uu3,Nprim);
   return 0;
 }
 
@@ -2535,9 +2539,9 @@ addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 //array multiplication plus addition on 3 matrices
 //uu3=f1*uu1+f2*uu2
 int
-add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4,int N)
+add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4,long long N)
 {
-  int i;
+  long long i;
 #ifdef APPLY_OMP_SIMD
   #pragma omp parallel for simd private(i)
 #else
@@ -2553,7 +2557,9 @@ add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldo
 int
 add_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4)
 {
-  add_u_core_3(f1,uu1,f2,uu2,f3,uu3,uu4,SX*SY*SZ*NV);
+  long long Ngrid=SX*SY*SZ;
+  long long Nprim=Ngrid*NV;
+  add_u_core_3(f1,uu1,f2,uu2,f3,uu3,uu4,Nprim);
   return 0;
 }
 
