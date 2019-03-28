@@ -145,7 +145,7 @@ main(int argc, char **argv)
   //*************************************
   // Startup from restart file
   //*************************************
-  printf("NV: %d NX: %d NY: %d NZ: %d \n",NV,NX,NY,NZ);
+  //printf("NV: %d NX: %d NY: %d NZ: %d \n",NV,NX,NY,NZ);
   int ifinit=1;
   ldouble tstart;  
 
@@ -446,26 +446,33 @@ main(int argc, char **argv)
   {
     fprint_restartfile(tstart,folder);
 
-    // dump on-the-fly only for shared memory
-#ifndef MPI
-    #if(SCAOUTPUT==1)
+#ifndef MPI // dump on-the-fly only for shared memory
+    #if(SCAOUTPUT==1) //scalar dumps
     fprint_scalars(tstart,scalars,NSCALARS);
     #endif
       
-    #if(RADOUTPUT==1)
+    #if(RADOUTPUT==1) //radial profiles
     fprint_radprofiles(tstart,nfout1,folder,"rad");
     #endif
 
-    #if(SILOOUTPUT==1)
+    #if(THOUTPUT==1) //theta profiles
+    fprint_thprofiles(t,nfout1,folder,"th");
+    #endif
+	  
+    #if(SILOOUTPUT==1) //silo files
     #ifndef NOSILO
     fprint_silofile(tstart,nfout1,folder,"sil");
     #endif
     #endif 
       
-    #if(SIMOUTPUT!=0)
+    #if(SIMOUTPUT!=0) //simple files
     fprint_simplefile(tstart,nfout1,folder,"sim");
     #endif
-      
+
+    #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum
+    fprint_relel_spectrum(tstart,NTH_SPEC_IX,NTH_SPEC_IY,NTH_SPEC_IZ,nfout1,folder,"spe",0);
+    #endif
+
 #endif  // ifndef MPI
 
     nfout1++; //total number of output

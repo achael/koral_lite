@@ -232,7 +232,7 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
   gamma_min=RELEL_INJ_MIN;
 #else
 
-#ifdef CALC_GAMMAMIN_OLD
+#ifdef CALC_GAMMAMIN_FAST
   if(p_index <= 2.) my_err("in calc_gammainj_min, injection power law index must be > 2!");
 
   #if defined(RELEL_HEAT_FIX_FRAC) && defined(RELEL_HEAT_FIX_INDEX)
@@ -250,7 +250,7 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
   if(gamma_min < RELEL_INJ_MIN)
     gamma_min = RELEL_INJ_MIN;
 
-#else //CALC_GAMMAMIN_OLD
+#else 
   // New method -- iterative
   ldouble ep=1.e-8;
   if(fabs(p_index-2.0) < ep)
@@ -305,7 +305,7 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
     gamma_min = RELEL_INJ_MAX;
   
   
-#endif //CALC_GAMMAMIN_OLD
+#endif //CALC_GAMMAMIN_FAST
 #endif //RELEL_HEAT_FIX_LIMITS
 #endif //RELELECTRONS
 
@@ -319,6 +319,7 @@ ldouble calc_gammainj_max_syncool(ldouble bsq_cgs, ldouble dtau_cgs)
   ldouble gamma_max=1.;
 #ifdef RELELECTRONS
   gamma_max = RELEL_INJ_MAX;
+  
 #ifndef RELEL_HEAT_FIX_LIMITS
 #ifdef RELEL_SYN
   
@@ -414,134 +415,6 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
 //*********************************************/
 //* Thermal Physics
 //*********************************************/
-
-//S4 - entropy which smoothly transitions from theta=0 to theta=1 & accounts for species density
-//NO LONGER USED --> just use S3 with appropriate rho
-/*
-ldouble calc_S4fromnT(ldouble n, ldouble temp, int type)
-{  
-  ldouble gamma,mu,theta,rho,m;
-
-  if(type==IONS) 
-  {
-      mu=MU_I;
-      theta = temp*kB_over_mui_mp;
-  }
-  if(type==ELECTRONS)
-  {
-      mu=MU_E;
-      theta = temp*kB_over_me;
-  }
-  if(type==GAS)
-  {
-      my_err("calc_S4fromnT with type==GAS is inconsistent!");
-  }
-  
-  ldouble S4= n*K_BOLTZ*log(sqrt(theta*theta*theta)*sqrt((theta+0.4)*(theta+0.4)*(theta+0.4))/n); 
-  return S4;
-}
-
-
-//Solve for T(n,uint), then compute entropy
-ldouble
-calc_S4fromnu(ldouble n, ldouble uint,int type)
-{  
-  ldouble mass, T, S;
-
-  if (type==IONS) 
-  {
-    mass = M_PROTON*MU_I;
-  }
-  if (type==ELECTRONS) 
-  {
-    mass = M_ELECTR;
-  } 
-  if(type==GAS)
-  {
-    my_err("calc_S4fromnu with type==GAS is inconsistent!");
-  }
-  
-  T=solve_Teifromnmu(n, mass, uint,type); //solves in parallel for gamma and temperature
-  S=calc_S4fromnT(n,T,type); 
-
-  return S;
-}
-
-
-//Eq A9 from Sadowski, Wielgus, Narayan, Abarca, McKinney 2016
-//used  for the electron/ion evolution w/ RELELECTRONS
-ldouble
-calc_TfromS4n(ldouble S4,ldouble n, int type,int ix,int iy,int iz)
-{
-  ldouble gamma,mu,mass,T,tmin;
-  if(type==IONS) 
-  {
-      mu=MU_I;
-      mass=M_PROTON*MU_I;
-      tmin=TEMPIMINIMAL;
-  }
-  if(type==ELECTRONS)
-  {
-      mu=MU_E;
-      mass=M_ELECTR;
-      tmin=TEMPEMINIMAL;
-  }
-  if(type==GAS)
-  {
-      my_err("calc_TfromS4n with type==GAS is inconsistent!");
-  }
-  
-  ldouble ex = exp(S4 / (n * K_BOLTZ));
-  ldouble rhs,theta;
-  if(isfinite(ex)) //well defined temperature
-  {
-      rhs=cbrt(n*ex*n*ex);  
-      theta=0.2*(sqrt(1.+25.*rhs)-1.);
-      T =  theta*mass/K_BOLTZ;
-  }
-
-  else
-  {
-      T = BIG; //ceiling put in calc_PEQ_Tei.... and in floors_mhd
-  }
-
-  if(T<tmin) T=tmin;
-  if(!isfinite(T))
-    T=BIG;
-
-  return T;
-}
-
-//ANDREW TODO can we use FIXEDGAMMASPECIES with  S4??
-//when is S4 even used? 
-ldouble
-calc_ufromS4n(ldouble S4,ldouble n,int type,int ix,int iy,int iz)
-{
-  ldouble uint=0.;
-  ldouble T=calc_TfromS4n(S4,n,type,ix,iy,iz);
-  if(type==ELECTRONS)
-    {
-      ldouble pe=K_BOLTZ*n*T;
-      ldouble gammae=GAMMAE;
-#ifdef CONSISTENTGAMMA
-      gammae=calc_gammaintfromtemp(T,ELECTRONS);
-#endif
-       uint=pe/(gammae-1.);
-    }
-
- if(type==IONS)
-    {
-      ldouble pi=K_BOLTZ*n*T;
-      ldouble gammai=GAMMAI;
-#ifdef CONSISTENTGAMMA
-      gammai=calc_gammaintfromtemp(T,IONS);
-#endif
-       uint=pi/(gammai-1.);
-    }
-
- return uint;
-}
-*/
 
 //Calculate total gas adiabatic index with nonthermal population 
 ldouble calc_gammaint_relel(ldouble* pp, ldouble Te, ldouble Ti)
@@ -664,7 +537,8 @@ apply_relel_visc_heating(ldouble pp[NV], ldouble durelel, ldouble p_index, ldoub
       
       #endif
       pref = durelel / (xx * M_ELECTR);
-      
+      //printf("%e %e\n",numdensGU2CGS(pref), numdensGU2CGS(pref)/timeGU2CGS(dtau));
+      //exit(-1);
       //Calculate and heating rate in all bins, and the total energy added
       qheat_app_tot=0.;
       for (ie=0; ie<NRELBIN; ie++) 
@@ -956,7 +830,6 @@ ldouble remove_lowgamma_electrons(ldouble thetae, ldouble neth, ldouble *pp)
   //energy in rel electrons before zeroing
   uintold = calc_relel_uint(pp);
  
-
   //zero out all bins below the approximate location of the thermal peak
   ldouble pkgamma = 2.*thetae; //high theta approx
   int pkbin = NRELBIN;
@@ -1001,12 +874,12 @@ ldouble remove_lowgamma_electrons(ldouble thetae, ldouble neth, ldouble *pp)
   }
 
   //calculate the missing energy to add to the thermal electron distribution
-
   if (zeroed_bins>0)
   {
     du = fabs(uintold - calc_relel_uint(pp));
   }
-#endif //RELELECTRONS  
+#endif //RELELECTRONS
+  
   return du;
   
 }
@@ -1268,6 +1141,8 @@ gdot_ic(ldouble gamma, ldouble trad_cgs, ldouble eradhat_cgs)
   ldouble out;
   g2b2 = gamma*gamma - 1.;
   bic1 = 3.248e-8 * eradhat_cgs;
+  //printf("%e %e \n",eradhat_cgs, bic1);
+  //exit(-1);
   bic2 = 11.2 * K_BOLTZ_CGS * trad_cgs / (M_ELECTR_CGS * CCC_CGS * CCC_CGS);
   out = bic1 * g2b2 * pow((1. + bic2 * gamma), -1.5) * timegu2cgs;
   return out;
@@ -1299,16 +1174,18 @@ calc_relel_f_and_fmag_from_state(ldouble *pp, void *sss, ldouble *pp0, void *ggg
     = (struct geometry *) ggg;
   struct struct_of_state *state
     = (struct struct_of_state *) sss;
-#ifdef RELELECtRONS  
+#ifdef RELELECTRONS  
   ldouble qcool[NRELBIN];
   int fac=1;
   int ie;
+  int done=-1;
   
 #ifdef RELEL_IMPLICIT_LOGSPACE_LF 
-  calc_relel_cooling_lf_from_state(pp, state, pp0, dtau, qcool); //Lax-Freidrichs
-#else
-  calc_relel_cooling_from_state(pp, state, pp0, dtau, qcool); //simple upwind
-#endif 
+  done = calc_relel_cooling_lf_from_state(pp, state, pp0, dtau, qcool); //Lax-Freidrichs
+#endif
+
+  if (done==-1)
+     calc_relel_cooling_from_state(pp, state, pp0, dtau, qcool); //simple upwind 
 
 #ifdef NORELELCOOLATBH
   ldouble xxBL[4];
@@ -1405,7 +1282,7 @@ calc_relel_cooling_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble dtau
       
       gdots[ie] = gdot_bin;
   }
-
+  
   ldouble gdot_plus_1, n_plus_1;
   //Direct Upwind in Log Space
   for (ie=0; ie<(NRELBIN); ie++) 
@@ -1590,15 +1467,16 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   }
 
   //calculates derivatives at cell
+  int out = 0;
   for(ie=0; ie<NRELBIN; ie++)
   {
-    
     qcool[ie] = (f[ie] - f[ie+1]) * logbinspace_inv * relel_gammas_inv[ie];
-
+    if isnan(qcool[ie]) out = -1;
   }
 #endif
   //getch();
-  return 0;
+  //if (out==-1) printf("\n \n -1 -1 -1 \n\n\n");
+  return out;
 }
 
 

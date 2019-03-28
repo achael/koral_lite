@@ -1337,8 +1337,8 @@ int calc_scalars(ldouble *scalars,ldouble t)
   ldouble neth=calc_thermal_ne(pp);
   ldouble rhoeth=neth*M_PROTON*MU_E;
   
-  uth  = calc_ufromSen(pp[ENTRE],rhoeth,ELECTRONS,0,0,0);
-  uthi = calc_ufromSen(pp[ENTRI],pp[RHO],IONS,0,0,0);
+  uth  = calc_ufromSerho(pp[ENTRE],rhoeth,ELECTRONS,0,0,0);
+  uthi = calc_ufromSerho(pp[ENTRI],pp[RHO],IONS,0,0,0);
 
   scalars[0]=Te; //(2nd)
   scalars[1]=Ti;

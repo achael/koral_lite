@@ -845,7 +845,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 	      
               if (verbose==2)
               {
-                printf("parameter: %d  equation: %d  Delta p: %e  Delta f: %e\n", j, i, del, f2[i] - f1[i]);
+                //printf("parameter: %d  equation: %d  Delta p: %e  Delta f: %e\n", j, i, del, f2[i] - f1[i]);
               }
 	    }
 
@@ -1649,12 +1649,15 @@ f_implicit_lab_4dprim_with_state(ldouble *uu, ldouble *pp, void *sss,
     ldouble frel[NRELBIN], frelmag[NRELBIN];
     
     calc_relel_f_and_fmag_from_state(pp,state,pp0,geom,dtau,frel,frelmag);
-    
+
+    //printf("durelel: %e\n",relel_dudtau);
     for(ibin=0;ibin<NRELBIN;ibin++)
     {
+      //if(geom->ix==0) printf("frel[%d]: %e\n",ibin,frel[ibin]);
       f[irelel+ibin]=frel[ibin];
       err[irelel+ibin]=fabs(frel[ibin]/my_max(frelmag[ibin], 1.e-20*pp[RHO]*one_over_mue_mp));
     }
+    //if(geom->ix==0) exit(-1);
   }
 #endif //RELELECTRONS
 #endif //EVOLVEELECTRONS

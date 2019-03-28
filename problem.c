@@ -19,9 +19,16 @@ solve_the_problem(ldouble tstart, char* folder)
 {
   ldouble t = tstart, t1 = TMAX;
   ldouble totalmass=0.;
+
+#ifdef DTOUT_LOG
+  ldouble dtout = pow(10,DTOUT1_LOG_INIT);
+  printf("dtout 1 %e\n",dtout);
+#else  
   ldouble dtout = DTOUT1;
-  ldouble dtoutavg = DTOUT2;
+#endif
   
+  ldouble dtoutavg = DTOUT2;
+
   ldouble dtsource, taim;
   ldouble fprintf_time = 0.;
   ldouble lasttout_floor=floor(t/dtout); 
@@ -818,7 +825,11 @@ solve_the_problem(ldouble tstart, char* folder)
 
 
       //save snapshot files
+#ifdef DTOUT_LOG
+      if(lasttout_floor!=floor(t/dtout))
+#else
       if(lasttout_floor!=floor(t/dtout) || ALLSTEPSOUTPUT || t>.9999999*t1 || spitoutput==1)
+#endif
       {
 	  my_clock_gettime(&temp_clock);    
 	  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
@@ -832,7 +843,8 @@ solve_the_problem(ldouble tstart, char* folder)
 	  fprint_restartfile(t,folder);
 
 	  //dump on-the-go dump files if not MPI
-#ifndef MPI 
+#ifndef MPI
+
           #if(SCAOUTPUT==1) // scalar  dumpfiles
 	  fprint_scalars(t,scalars,NSCALARS);
           #endif
@@ -856,16 +868,20 @@ solve_the_problem(ldouble tstart, char* folder)
           #endif
       
 	  #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum
-          int ixx,iyy,izz;
-          ixx=0;iyy=0;izz=0;
-          //ixx=TNX/2;iyy=TNY/2;izz=0;
-	  fprint_relel_spectrum(t,ixx,iyy,izz,nfout1,folder,"spe",0);
+          fprint_relel_spectrum(t,NTH_SPEC_IX,NTH_SPEC_IY,NTH_SPEC_IZ,nfout1,folder,"spe",0);
           #endif
 
 #endif  // ifndef MPI
-	  
+
+
 	  nfout1++;
 
+	  
+	  #ifdef DTOUT_LOG
+          dtout = pow(10, DTOUT1_LOG_INIT + DTOUT_LOG*(nfout1-1));
+	  printf("dtout %d  %e\n",nfout1, dtout);
+          #endif
+	  
 	  lasttout_floor=floor(t/dtout);	 
 
 	  my_clock_gettime(&temp_clock);    

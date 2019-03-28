@@ -465,18 +465,20 @@ struct OpTable {
 #define get_u(uarr,iv,ix,iy,iz) uarr[iv + (iX(ix)+(NGCX))*NV + \
 				           (iY(iy)+(NGCY))*(SX)*NV + \
 					   (iZ(iz)+(NGCZ))*(SY)*(SX)*NV]
-  
-#define get_uavg(uarr,iv,ix,iy,iz) uarr[iv + (iX(ix)+(NGCX))*(NV+(NAVGVARS)) + \
-					     (iY(iy)+(NGCY))*(SX)*(NV+(NAVGVARS)) + \
-					     (iZ(iz)+(NGCZ))*(SY)*(SX)*(NV+(NAVGVARS))]
-  
+
 #define set_u(uarr,iv,ix,iy,iz,val) uarr[iv + (iX(ix)+(NGCX))*NV + \
 					      (iY(iy)+(NGCY))*(SX)*NV + \
 					      (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] = val
-  
-#define set_uavg(uarr,iv,ix,iy,iz,val) uarr[iv + (iX(ix)+(NGCX))*(NV+(NAVGVARS)) + \
-					         (iY(iy)+(NGCY))*(SX)*(NV+(NAVGVARS)) + \
-					         (iZ(iz)+(NGCZ))*(SY)*(SX)*(NV+(NAVGVARS))] = val
+
+#define NVAVG ((NV+NAVGVARS))
+#define SXNVAVG ((long long)(SX*NVAVG))
+#define SXSYNVAVG ((long long)(SY*SXNVAVG))
+#define get_uavg(uarr,iv,ix,iy,iz) (uarr[iv + (iX(ix)+(NGCX))*(NVAVG) + \
+					      (iY(iy)+(NGCY))*(SXNVAVG) + \
+					      (iZ(iz)+(NGCZ))*(SXSYNVAVG)])
+#define set_uavg(uarr,iv,ix,iy,iz,val) uarr[iv + (iX(ix)+(NGCX))*(NVAVG) + \
+					         (iY(iy)+(NGCY))*(SXNVAVG) + \
+						 (iZ(iz)+(NGCZ))*(SXSYNVAVG)]=val
   
 #define get_u_scalar(uarr,ix,iy,iz) uarr[(iX(ix)+(NGCX)) + \
 					  (iY(iy)+(NGCY))*(SX) + \
@@ -1254,10 +1256,10 @@ ldouble calc_relel_p(ldouble *pp);
 ldouble calc_gammainj_max_syncool(ldouble bsq, ldouble dtau);
 ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble p_index, ldouble gammamax);
 int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldouble* delta_back, ldouble* pindex_back);
-ldouble calc_S4fromnT(ldouble n, ldouble temp, int type);
-ldouble calc_S4fromnu(ldouble n, ldouble uint,int type);
-ldouble calc_TfromS4n(ldouble S4,ldouble n, int type,int ix,int iy,int iz);
-ldouble calc_ufromS4n(ldouble S4,ldouble n,int type,int ix,int iy,int iz);
+//ldouble calc_S4fromnT(ldouble n, ldouble temp, int type);
+//ldouble calc_S4fromnu(ldouble n, ldouble uint,int type);
+//ldouble calc_TfromS4n(ldouble S4,ldouble n, int type,int ix,int iy,int iz);
+//ldouble calc_ufromS4n(ldouble S4,ldouble n,int type,int ix,int iy,int iz);
 ldouble calc_gammaint_relel(ldouble* pp, ldouble Te, ldouble Ti);
 ldouble calc_PEQ_ugasfrom_Tei_relel(ldouble *pp, ldouble Te,ldouble Ti);
 ldouble chemical_potential_short(ldouble theta, ldouble neth);

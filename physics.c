@@ -2327,25 +2327,23 @@ heat_electronions_with_state(ldouble dtin)
 #ifdef RELELECTRONS
 #ifndef SKIPRELELHEATING
 	  //Determine injection power law slope and fraction
-	  //David's reconnection  fits
-	  #ifdef RELEL_HEAT_RECONNECTION
-
+	  
+	  #ifdef RELEL_HEAT_RECONNECTION //David's reconnection  fits
           reconnection_plaw_params_from_state(pp, &geom, &state, &frel, &p_index);
-	  #endif
-	  #ifdef RELEL_HEAT_FIX_FRAC 
+          #else //fixed frel & p_index
+
+          #ifdef RELEL_HEAT_FIX_FRAC 
           frel=RELEL_HEAT_FRAC; 
           #endif  
 	  #ifdef RELEL_HEAT_FIX_INDEX
 	  p_index=RELEL_HEAT_INDEX;
 	  #endif
 
+          #endif
 
 	  //Determine gamma_inj_min & gamma_inj_max
-	  #ifdef RELEL_HEAT_FIX_LIMITS
-	  gamma_injmax=RELEL_INJ_MAX;	  
-	  gamma_injmin=RELEL_INJ_MIN;
-	  #else
-         
+	  #ifndef RELEL_HEAT_FIX_LIMITS
+	  
 	  ldouble bsq_cgs = 0.;
 
           #ifdef RELEL_SYN_ART
@@ -2357,33 +2355,38 @@ heat_electronions_with_state(ldouble dtin)
 	  ldouble dtau_cgs = timeGU2CGS(dtau);
 	  gamma_injmax= calc_gammainj_max_syncool(bsq_cgs, dtau_cgs); //from synchrotron cooling
 	  gamma_injmin= calc_gammainj_min_jointhermal(theta_e, frel, p_index, gamma_injmax); //from continuity w/ thermal
-	  #endif
-	  ldouble necgs = numdensGU2CGS(ne);
 
- 
+          #else // fix injection minimum and maximum 
+	  gamma_injmax=RELEL_INJ_MAX;	  
+	  gamma_injmin=RELEL_INJ_MIN;
+          #endif
+	  
           //energy density injected into relativistic distribution
+
 	  durelel = frel*fe*du;  
-         
+          
           //ceilings and floors to limit heating
 	  if((durelel+utotrelel)>uint*MAX_RELEL_FRAC_U)
 	    durelel=uint*MAX_RELEL_FRAC_U - utotrelel;
           
-	  if((durelel+utotrelel)<0.)
+	  else if((durelel+utotrelel)<0.)
 	    durelel=0.0;
 
-          #ifdef NORELELHEATATBH
+          #ifdef NORELELHEATATBH // no rel heating inside bh
           ldouble xxBL[4];
           coco_N(geom.xxvec, xxBL, MYCOORDS, BLCOORDS);
-          if(xxBL[1]<=rhorizonBL) durelel=0.;
+          if(xxBL[1]<=rhorizonBL)
+	    durelel=0.;
           #endif     
 
-          #ifdef NORELELNEGHEAT
-	  if(durelel<0.) durelel=0.;
+          #ifdef NORELELNEGHEAT // no negative rel heating
+	  if(durelel<0.)
+	    durelel=0.;
           #endif
 
-	  //heating parameters for test problem
+	  //heating parameters for test problems
 	  //RELEL_HEAT_NORM is total injected NUMBER DENSITY (cgs) 
-#ifdef RELEL_HEAT_ART
+          #ifdef RELEL_HEAT_ART
 	  ldouble xxx;
 	  
 	  xxx = (pow(gamma_injmax, 2.0-p_index) - pow(gamma_injmin, 2.0-p_index))/(2.0-p_index);
@@ -2394,19 +2397,25 @@ heat_electronions_with_state(ldouble dtin)
           fe=1.;
 	  frel=1.; //ANDREW override??
           durelel = du;
-#endif    //RELEL_HEAT_ART
-	 
+
+	  //printf("%e %e %e %e\n",durelel, p_index, gamma_injmin, gamma_injmax);
+	  //exit(-1);
+          #endif    //RELEL_HEAT_ART
+
 	  //Add electrons to nonthermal population
           apply_relel_visc_heating(pp, durelel, p_index, gamma_injmin, gamma_injmax, dtau);
            
-          // Ensure energy is conserved by recomputing the actual energy fraction put into nonthermal
+          // Ensure energy is conserved by recomputing the *actual* energy fraction put into nonthermal
           utotrelel2 = calc_relel_uint(pp);
 	  durelel = utotrelel2 - utotrelel;
-          if (du!=0.0 && fe!=0.0) frel = durelel / (du*fe); 
+          if (du!=0.0 && fe!=0.0)
+	    frel = durelel / (du*fe); 
 
-#ifdef ZERO_NONTHERMAL_LOWGAMMA
+	  // Optional: Remove nonthermal electrons below the thermal peak 
+          // TODO: are we doing anything with due2? 
+          #ifdef ZERO_NONTHERMAL_LOWGAMMA
 	  due2 = remove_lowgamma_electrons(theta_e, ne, pp);
-#endif
+          #endif
 
           //The (total) change of thermal number density
 	  dne = calc_thermal_ne(pp) - ne; 
@@ -2434,8 +2443,7 @@ heat_electronions_with_state(ldouble dtin)
 	      due=0.;
 	      dui=0.;
 	    }
-          #endif     
-
+          #endif
 	  
 	  //Apply floors
 	  //electrons
@@ -2461,7 +2469,6 @@ heat_electronions_with_state(ldouble dtin)
 	    dui=0.;
 	    //getch();
           }
-
 
 	  ldouble ue2, ui2;
 	  ue2 = apply_du_dn_2_species(pp, ue, ne, due, dne, &geom, ELECTRONS, &Senew);    
@@ -2683,7 +2690,73 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   else if(delta<0.)
     delta=0.;
     
+#elif defined(HEATELECTRONS_ROWAN3)
+  //Michael's fit to the reconnection electron heating fraction with guide field
+  //Rowan 2019 eqn 19
+  
+  // get beta = gas pressure / magn pressure
+  // and sigma = magn energy density / enthalpy
+
+  #ifndef GUIDE_RATIO
+  #define GUIDE_PREF -0.069
+  #else
+  #define GUIDE_PREF 1.7*0.5*(tanh(0.33*GUIDE_RATIO)-0.4)
+  #endif
+  
+  ldouble beta=0.;
+  ldouble sigmaw=0.;
+  ldouble betamax=0.;
+  ldouble betanorm=0.;
+
+  ldouble rho=state->rho;
+  ldouble bsq=state->bsq;
+  ldouble Ti = state->Ti;
+  ldouble Te = state->Te;
+  ldouble ue = state->ue;
+  ldouble ui = state->ui;
+  ldouble pion = state->pi;
+  ldouble gammae = state->gammae;
+  ldouble gammai = state->gammai;
+    
+  ldouble enth_tot = rho + gammai*ui + gammae*ue;
+  ldouble tratio = Te/Ti;
+  if(!isfinite(tratio) || tratio>1.e10) tratio=1.e10;
+  
+  #ifdef MAGNFIELD
+  beta = 2.*pion/bsq;
+  sigmaw = bsq/enth_tot;
+
+  if(beta<1.e-10) beta=1.e-10;
+  if(sigmaw<1.e-10) sigmaw=1.e-10;
+  if(!isfinite(sigmaw) || sigmaw>1.e10) sigmaw=1.e10; //magnetic field dominates, delta->.5
+  if(!isfinite(beta) || sigmaw>1.e10) beta=1.e10; //no magnetic field, delta->.5
+  
+  betamax = 0.25/sigmaw;
+
+  if(betamax<1.e-10) betamax=1.e-10;
+  if(!isfinite(betamax)) betamax=1.e10; //no magnetic field, delta->.4
+
+  betanorm = beta/betamax;
+  if(!isfinite(betanorm) || betanorm>1.) betanorm=1.;
+  if(betanorm<0.) betanorm=0.;
+  #endif
+
+  //Fit to simulation numbers
+  ldouble numer = sqrt(1-betanorm) * (1-betanorm);
+  ldouble denom = pow(sigmaw,0.3) * (0.41 + tratio);
+
+  delta = GUIDE_PREF * tanh(numer/denom) + 0.5;
+  
+  if(!isfinite(delta))
+    {
+      delta=1.;
+    }
+  else if(delta<0.)
+    delta=0.;
+    
 #endif  
+
+
 #endif //HEATELECTRONS
 
   return delta;

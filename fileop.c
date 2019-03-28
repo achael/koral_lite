@@ -175,7 +175,7 @@ fprint_scalars(ldouble t, ldouble *scalars, int nscalars)
 #ifdef TIMEINSCALARSINSEC
       t=timeGU2CGS(t);
 #endif
-      
+
   fprintf(fout_scalars,"%e ",t);
   for(iv=0;iv<nscalars;iv++)
     fprintf(fout_scalars,"%.20e ",scalars[iv]);
