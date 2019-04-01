@@ -392,12 +392,24 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
 
   //Andrew's fit to David's fit to simulation numbers
 
-  //TODO is this fraction of the total or the ratio?
-  delta = 1./((1+115.994*beta)*(1+0.2838673/sqrt(sigma)));
+  
 
   //TODO find a better fit!!
-  ldouble rtsigi = 1./sqrt(sigma);
-  pindex = 1. + 2*(1+3.65*rtsigi)/(1+pow(betanorm,0.422)) + 0.435*rtsigi;
+  
+  ldouble ap = 1.8 + 0.7/sqrt(sigma);
+  ldouble bp = 3.7*pow(sigma, -0.19);
+  ldouble cp = 23.4*pow(sigma, 0.26);
+  pindex = ap + bp*tanh*cp*beta);
+
+  ldouble ae = 1-1./(4.2*pow(sigma,0.55) + 1);
+  ldouble be = 0.63*pow(sigma,0.07);
+  ldouble ce = -68*pow(sigma,0.13);
+  delta = ae + be*tanh(ce*beta);
+
+  //TODO is this fraction of the total or the ratio?
+  //delta = 1./((1+115.994*beta)*(1+0.2838673/sqrt(sigma)));
+  //ldouble rtsigi = 1./sqrt(sigma);
+  //pindex = 1. + 2*(1+3.65*rtsigi)/(1+pow(betanorm,0.422)) + 0.435*rtsigi;
   
   if(!isfinite(delta))
     {

@@ -133,6 +133,7 @@
 #endif
 
 #define ldouble double
+//#define int long long int
 #define FTYPE ldouble
 #define gSIZE 20 //size of metric arrays = 16 + 1 (gdet) + 3 (dlgdet)
 
