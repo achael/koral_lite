@@ -1328,6 +1328,8 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   struct struct_of_state *state
     = (struct struct_of_state *) sss;
 
+  int out = 0;  // RN: moved this outside the ifdef RELELECTRONS block
+
   //all in cgs
   ldouble bsq_cgs=0.; //gauss
   ldouble nion_cgs=0.; //cm^-3
@@ -1479,13 +1481,12 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   }
 
   //calculates derivatives at cell
-  int out = 0;
   for(ie=0; ie<NRELBIN; ie++)
   {
     qcool[ie] = (f[ie] - f[ie+1]) * logbinspace_inv * relel_gammas_inv[ie];
     if isnan(qcool[ie]) out = -1;
   }
-#endif
+#endif  // RELELECTRONS
   //getch();
   //if (out==-1) printf("\n \n -1 -1 -1 \n\n\n");
   return out;
