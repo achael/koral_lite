@@ -808,7 +808,8 @@ solve_the_problem(ldouble tstart, char* folder)
       
 	  //zero out avg values over domain
 
-	  copy_u_core(0.,pavg,pavg,SX*SY*SZ*(NV+NAVGVARS)); 
+    long long Navg = (long long) SX*SY*SZ*(NV+NAVGVARS); // RN: Apr 2, 2019
+	  copy_u_core(0., pavg, pavg, Navg);
 	  avgtime=0.;
 	  
 	  nfout2++;
