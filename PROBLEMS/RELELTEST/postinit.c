@@ -1,0 +1,1 @@
+int ix,iy,iz;
