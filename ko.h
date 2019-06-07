@@ -175,6 +175,19 @@ ldouble min_dx,min_dy,min_dz;
 //precalculated metric parameters
 ldouble rhorizonBL,rISCOBL,rmboundBL,rphotonBL,etaNT;
 
+// jet coordinate specific
+#if (MYCOORDS==JETCOORDS)
+ldouble hypx1in,hypx1out,hypx1brk;
+#endif
+#ifdef CYLINDRIFY
+ldouble thetaCYL;
+ldouble thetaAX;
+ldouble x2cyl;
+ldouble sinthetaCYL;
+ldouble sinthetaAX;
+ldouble rmidcyl;
+#endif
+
 //tile specific
 int TI,TJ,TK; //tile order
 int TOI,TOJ,TOK; //indices of the tile origin
@@ -751,7 +764,9 @@ int coco_MKER12KER(ldouble *xMKER1, ldouble *xKER);
 int coco_KER2MKER1(ldouble *xKER, ldouble *xMKER1);
 int coco_SPH2MINK(ldouble *xSPH, ldouble *xMINK);
 int coco_MINK2SPH(ldouble *xMINK, ldouble *xSPH);
-
+int coco_JET2KS(ldouble *xJET, ldouble *xKS);
+int coco_KS2JET(ldouble *xKS, ldouble *xJET);
+  
 int dxdx_BL2KS(ldouble *xx, ldouble dxdx[][4]);
 int dxdx_KS2BL(ldouble *xx, ldouble dxdx[][4]);
 int dxdx_KS2MKS1(ldouble *xx, ldouble dxdx[][4]);
@@ -772,7 +787,11 @@ int dxdx_SPH2MSPH1(ldouble *xx, ldouble dxdx[][4]);
 int dxdx_MSPH12SPH(ldouble *xx, ldouble dxdx[][4]);
 int dxdx_KER2MKER1(ldouble *xx, ldouble dxdx[][4]);
 int dxdx_MKER12KER(ldouble *xx, ldouble dxdx[][4]);
-
+int dxdx_JET2KS(ldouble *xx, ldouble dxdx[][4]);
+int dxdx_KS2JET(ldouble *xx, ldouble dxdx[][4]);
+ldouble dxdxF(ldouble x, void* params);
+int dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2);
+  
 int calc_g_arb_num(ldouble *xx, ldouble gout[][5],int COORDS);
 int calc_G_arb_num(ldouble *xx, ldouble Gout[][5],int COORDS);
 ldouble fg (double x, void * params);
@@ -787,6 +806,31 @@ int print_Krzysie(ldouble g[][4][4]);
 int print_g(ldouble g[][5]);
 int test_metric();
 
+ldouble psi_smooth(ldouble x);
+ldouble theta_smooth(ldouble x);
+ldouble minn(ldouble a, ldouble b, ldouble df);
+ldouble maxx(ldouble a, ldouble b, ldouble df);
+ldouble wjet(ldouble x2, ldouble fdisk, ldouble fjet);
+ldouble theta_disk_or_jet(ldouble r, ldouble x2, ldouble rdecoll, ldouble rcoll, ldouble runi, ldouble a1, ldouble a2);
+ldouble theta_diskjet(ldouble r, ldouble x2, void *params);
+ldouble jetcoords_theta(ldouble r, ldouble x2, void *params);
+ldouble jetcoords_theta_root(ldouble x2, void *params);
+ldouble jetcoords_theta_inv(ldouble r, ldouble theta, void *params);
+ldouble hyperexp_func(ldouble x1, void *params);
+ldouble hyperexp_func_root(ldouble x1, void *params);
+ldouble hyperexp_func_inv(ldouble r, void *params);
+ldouble hyperexp_x1max(ldouble rmax, ldouble rbrk, ldouble r0);
+
+ldouble to1stquad(ldouble  x2);
+ldouble calc_theta0(ldouble rcyl, ldouble x2cyl);
+//ldouble sinth0(ldouble r, ldouble x2, void* params);
+//ldouble sinth1(ldouble r, ldouble x2, void* params);
+//ldouble sinth2(ldouble r, ldouble x2, void* params);
+
+int set_cyl_params();
+ldouble sinth2(ldouble r, ldouble theta, ldouble theta2); 
+ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params);
+ldouble cylindrify(ldouble r, ldouble x2, void* params);
 ///////////////////////////////////////////////////////////////
 // frames.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
@@ -828,6 +872,7 @@ int boost2_lab2ff_4vel(ldouble A1[4], ldouble A2[4], ldouble *pp, ldouble gg[][5
 int boost2_lab2rf(ldouble A1[4],ldouble A2[4],ldouble *pp0,ldouble gg[][5],ldouble GG[][5]);
 int boost2_ff2lab(ldouble A1[4],ldouble A2[4],ldouble *pp,ldouble gg[][5],ldouble GG[][5]);
 
+int multiply11(ldouble T1[][4],ldouble T2[][4],ldouble A[][4]);
 int multiply22(ldouble T1[][4],ldouble T2[][4],ldouble A[][4]);
 int multiply2(ldouble *u1,ldouble *u2,ldouble A[][4]);
 

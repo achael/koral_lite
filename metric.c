@@ -4,6 +4,8 @@
 
 
 #include "ko.h"
+#include <gsl/gsl_roots.h>
+#include <gsl/gsl_deriv.h>
 
 //**********************************************************************
 /*! \fn int calc_metric()
@@ -26,6 +28,8 @@ calc_metric()
 {
   int ix,iy,iz,ii;
 
+  if(PROCID==0) {printf("Precalculating metrics... "); fflush(stdout);}  
+
   #ifdef METRICNUMERIC
   if(GDETIN==0)
     {
@@ -36,17 +40,18 @@ calc_metric()
 
   //it is not loop_5 because NGCZ != NGCZMET
   // Note: NGCX=NG, NGCY=NG if NY>1 else 0, NGCZMET=NG if NZ>1 and the metric is non-axisymmetric, else NGCZMET=0
-#pragma omp parallel for private(ix,iy,iz,ii) 
+  
+  #pragma omp parallel for private(ix,iy,iz,ii) 
     for(ix=-NGCX;ix<NX+NGCX;ix++)
       for(iy=-NGCY;iy<NY+NGCY;iy++)
         for(iz=-NGCZMET;iz<NZ+NGCZMET;iz++)
           {
 
-
+	    //printf("%d %d %d \n", ix,iy,iz);
 #ifdef METRICAXISYMMETRIC
 	if(iz!=0) continue;
 #endif
-
+       
 	ldouble gloc[4][5];
 	ldouble Kr[4][4][4];
 	ldouble xx[4];
@@ -72,7 +77,7 @@ calc_metric()
 	    set_g(G,i,j,ix,iy,iz,gloc[i][j]);
 
 	set_g(G,3,4,ix,iy,iz,calc_gttpert(xx));
-            
+	
 	calc_Krzysie_at_center(ix,iy,iz,Kr);
 	for(i=0;i<4;i++)
 	  for(j=0;j<4;j++)
@@ -81,7 +86,6 @@ calc_metric()
 	      	      
 	if(doingpostproc==0) //metric at faces needed only for time evolution
 	  {
-	
 	    //x-faces
 	    if(ix==-NG)
 	      {
@@ -167,7 +171,6 @@ calc_metric()
 
 	    set_gb(Gby,3,4,ix,iy+1,iz,calc_gttpert(xx),1);
 		
-		  
 	    //z-faces
 	    if(iz==-NG)
 	      {
@@ -221,6 +224,7 @@ calc_metric()
     rmboundBL = r_mbound_BL(BHSPIN);
     rphotonBL = r_photon_BL(BHSPIN);
     etaNT = 1.-sqrt(1.-2./3./r_ISCO_BL(BHSPIN));
+    if(PROCID==0) printf("done!\n");
 
   return 0;
 }
@@ -278,7 +282,8 @@ calc_gdet_arb(ldouble *xx,int COORDS)
 {
 #ifdef METRICNUMERIC
   if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS ||
-     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS)
+     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS ||
+     COORDS==JETCOORDS)
     return calc_gdet_arb_num(xx,COORDS);
   else
     return calc_gdet_arb_ana(xx,COORDS);
@@ -504,8 +509,9 @@ int
 calc_g_arb(ldouble *xx, ldouble g[][5],int COORDS)
 {
   #ifdef METRICNUMERIC
-  if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS ||
-     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS)
+  if(COORDS==MKS1COORDS || COORDS==MKS2COORDS || COORDS==MKS3COORDS ||
+     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS ||
+     COORDS==JETCOORDS)
     calc_g_arb_num(xx,g,COORDS); 
   else
     calc_g_arb_ana(xx,g,COORDS);
@@ -777,7 +783,8 @@ calc_G_arb(ldouble *xx, ldouble G[][5],int COORDS)
 {
   #ifdef METRICNUMERIC
   if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS ||
-     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS)
+     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS ||
+     COORDS==JETCOORDS)
     calc_G_arb_num(xx,G,COORDS); 
   else
     calc_G_arb_ana(xx,G,COORDS); 
@@ -1046,7 +1053,8 @@ calc_Krzysie_arb(ldouble *xx, ldouble Krzys[][4][4],int COORDS)
 {
   #ifdef METRICNUMERIC
   if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS ||
-     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS)
+     COORDS==TKS3COORDS || COORDS==MSPH1COORDS || COORDS==TFLATCOORDS ||
+     COORDS==JETCOORDS)
     calc_Krzysie_arb_num(xx,Krzys,COORDS);
   else
     calc_Krzysie_arb_ana(xx,Krzys,COORDS);
@@ -1070,6 +1078,7 @@ calc_Krzysie_at_center(int ix,int iy,int iz, ldouble Krzys[][4][4])
 
 #if(MODYFIKUJKRZYSIE==0) //
   calc_Krzysie(xx,Krzys);
+  
 #else
 
   ldouble Krzys_org[4][4][4];
@@ -2133,6 +2142,8 @@ coco_N(ldouble *x1, ldouble *x2,int CO1, int CO2)
     coco_KS2MKS2(x1,x2);
   else if (CO1==KSCOORDS && CO2==MKS3COORDS)
     coco_KS2MKS3(x1,x2);
+  else if (CO1==KSCOORDS && CO2==JETCOORDS)
+    coco_KS2JET(x1,x2);
   else if (CO1==KSCOORDS && CO2==TKS3COORDS)
     coco_KS2TKS3(x1,x2);
   else if (CO1==MKS1COORDS && CO2==KSCOORDS)
@@ -2141,6 +2152,8 @@ coco_N(ldouble *x1, ldouble *x2,int CO1, int CO2)
     coco_MKS22KS(x1,x2);
   else if (CO1==MKS3COORDS && CO2==KSCOORDS)
     coco_MKS32KS(x1,x2);
+  else if (CO1==JETCOORDS && CO2==KSCOORDS)
+    coco_JET2KS(x1,x2);
   else if (CO1==TKS3COORDS && CO2==KSCOORDS)
     coco_TKS32KS(x1,x2);
   else if (CO1==MCYL1COORDS && CO2==CYLCOORDS)
@@ -2170,6 +2183,11 @@ coco_N(ldouble *x1, ldouble *x2,int CO1, int CO2)
       coco_MKS32KS(x1,x2);
       coco_KS2BL(x2,x2);
     }
+ else if (CO1==JETCOORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      coco_JET2KS(x1,x2);
+      coco_KS2BL(x2,x2);
+    }
  else if (CO1==TKS3COORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
     {
       coco_TKS32KS(x1,x2);
@@ -2189,6 +2207,11 @@ coco_N(ldouble *x1, ldouble *x2,int CO1, int CO2)
     {
       coco_BL2KS(x1,x2);
       coco_KS2MKS3(x2,x2);
+    }
+  else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS) && CO2==JETCOORDS)
+    {
+      coco_BL2KS(x1,x2);
+      coco_KS2JET(x2,x2);
     }
   else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS) && CO2==TKS3COORDS)
     {
@@ -2239,7 +2262,13 @@ coco_N(ldouble *x1, ldouble *x2,int CO1, int CO2)
       coco_BL2KS(x2,x2);
       coco_KS2MKS3(x2,x2);
     }
-else if (CO1==MINKCOORDS && CO2==TKS3COORDS)
+ else if (CO1==MINKCOORDS && CO2==JETCOORDS)
+    {
+      coco_MINK2SPH(x1,x2);
+      coco_BL2KS(x2,x2);
+      coco_KS2JET(x2,x2);
+    }
+ else if (CO1==MINKCOORDS && CO2==TKS3COORDS)
     {
       coco_MINK2SPH(x1,x2);
       coco_BL2KS(x2,x2);
@@ -2268,31 +2297,36 @@ else if (CO1==MINKCOORDS && CO2==TKS3COORDS)
       coco_KS2BL(x2,x2);
       coco_SPH2MINK(x2,x2);
     }
-   else if (CO1==TKS3COORDS && CO2==MINKCOORDS)
+  else if (CO1==JETCOORDS && CO2==MINKCOORDS)
+    {
+      coco_JET2KS(x1,x2);
+      coco_KS2BL(x2,x2);
+      coco_SPH2MINK(x2,x2);
+    }
+  else if (CO1==TKS3COORDS && CO2==MINKCOORDS)
     {
       coco_TKS32KS(x1,x2);
       coco_KS2BL(x2,x2);
       coco_SPH2MINK(x2,x2);
     }
-   else if (CO1==CYLCOORDS && CO2==MINKCOORDS)
+  else if (CO1==CYLCOORDS && CO2==MINKCOORDS)
     {
       coco_CYL2SPH(x1,x2);
       coco_SPH2MINK(x2,x2);
     }
-   else if (CO1==CYLCOORDS && (CO2==SPHCOORDS || CO2==BLCOORDS))
+  else if (CO1==CYLCOORDS && (CO2==SPHCOORDS || CO2==BLCOORDS))
     {
       coco_CYL2SPH(x1,x2);
     }
-   else if ((CO1==SPHCOORDS || CO1==BLCOORDS) && CO2==CYLCOORDS)
+  else if ((CO1==SPHCOORDS || CO1==BLCOORDS) && CO2==CYLCOORDS)
     {
       coco_SPH2CYL(x1,x2);
     }
-   else if (CO1==MINKCOORDS && CO2==CYLCOORDS)
+  else if (CO1==MINKCOORDS && CO2==CYLCOORDS)
      {
        coco_MINK2SPH(x1,x2);
        coco_SPH2CYL(x2,x2);
      }
-
   else
     {
       printf("coco: %d -> %d\n",CO1,CO2);
@@ -2643,6 +2677,210 @@ KSx3
   return 0;
 }
 
+//ANEW
+//for JETCOORDS -> KS
+
+//radial hyperexponential functions
+struct hyperexp_params
+{
+  ldouble r_test;
+  ldouble rbrk, r0;
+};
+
+//combine theta_disk and theta_jet to get theta(x2)
+struct jetcoords_params
+{
+  ldouble r_test, theta_test;
+  ldouble r0, rbrk, runi;
+  ldouble rdecoll_jet, rcoll_jet, rdecoll_disk, rcoll_disk;
+  ldouble alpha_1, alpha_2;
+  ldouble fdisk, fjet;
+};
+
+int
+coco_JET2KS(ldouble *xJET, ldouble *xKS)
+{
+  ldouble x0=xJET[0];
+  ldouble x1=xJET[1];
+  ldouble x2=xJET[2];
+  ldouble x3=xJET[3];
+  ldouble x1sc;
+  ldouble KSx0,KSx1,KSx2,KSx3;
+  ldouble r0,rbrk,x1brk,x1in,x1out,alpha_1,alpha_2;
+  ldouble fdisk, fjet, runi, rcoll_jet, rcoll_disk, rdecoll_jet, rdecoll_disk;
+  ldouble theta_disk, theta_jet, wfrac;
+  struct hyperexp_params rpar;
+  struct jetcoords_params tpar;
+
+  
+#if(MYCOORDS==JETCOORDS)
+  r0=MKSR0;
+  rbrk=HYPRBRK;
+  x1in = hypx1in;
+  x1out = hypx1out;
+  x1brk = hypx1brk;
+
+  fdisk = FDISK;
+  fjet = FJET;
+  runi = RUNI;
+  rcoll_jet = RCOLL_JET;
+  rcoll_disk = RCOLL_DISK;
+  rdecoll_jet = RDECOLL_JET;
+  rdecoll_disk = RDECOLL_DISK;
+  alpha_1 = ALPHA_1;
+  alpha_2 = ALPHA_2;
+
+#else //defaults
+  r0=0.;
+  rbrk=500;
+  fdisk=0.3;
+  fjet=0.4;
+  runi=1;
+  rdecoll_disk=2;
+  rcoll_disk=5;
+  rdecoll_jet=2;
+  rcoll_jet=500;
+  alpha_1 = 1;
+  alpha_2 = 0.375;
+  x1in = log(1-r0);
+  x1brk= log(rbrk-r0);
+  x1out= hyperexp_x1max(1000, rbrk, r0);
+#endif
+
+  //time coordinate unchanged
+  KSx0 = x0;
+
+  //phi coordinate unchanged
+  KSx3 = x3;
+
+  //radial grid
+  x1sc = x1in + x1*(x1out - x1in); //scale out of 0-1 range
+  if(x1sc<x1brk)
+    KSx1 = exp(x1sc) + r0;
+  else
+  {
+    rpar.rbrk = rbrk;
+    rpar.r0 = r0;
+    KSx1 = hyperexp_func(x1sc, &rpar);
+  }
+
+  //poloidal grid
+  tpar.r0 = r0;
+  tpar.rbrk = rbrk;
+  tpar.runi = runi;
+  tpar.rdecoll_jet = rdecoll_jet;
+  tpar.rdecoll_disk = rdecoll_disk;
+  tpar.rcoll_jet = rcoll_jet;
+  tpar.rcoll_disk = rcoll_disk;
+  tpar.alpha_1 = alpha_1;
+  tpar.alpha_2 = alpha_2;
+  tpar.fdisk = fdisk;
+  tpar.fjet = fjet;
+
+  KSx2 = jetcoords_theta(KSx1, x2, &tpar);
+  
+  //assign coordinates
+  xKS[0]=KSx0;
+  xKS[1]=KSx1;
+  xKS[2]=KSx2;
+  xKS[3]=KSx3;
+
+  return 0;
+}
+
+//ANEW
+//for KS -> JETCOORDS
+//uses gsl inverse in both radial and theta
+int
+coco_KS2JET(ldouble *xKS, ldouble *xJET)
+{
+  ldouble x0=xKS[0];
+  ldouble x1=xKS[1];
+  ldouble x2=xKS[2];
+  ldouble x3=xKS[3];
+  ldouble x1s;
+  ldouble KSx0,KSx1,KSx2,KSx3;
+  ldouble r0,rbrk,x1brk,x1in,x1out,alpha_1,alpha_2;
+  ldouble fdisk, fjet, runi, rcoll_jet, rcoll_disk, rdecoll_jet, rdecoll_disk;
+  ldouble theta_disk, theta_jet, wfrac;
+  struct hyperexp_params rpar;
+  struct jetcoords_params tpar;
+  
+#if(MYCOORDS==JETCOORDS)
+  r0=MKSR0;
+  rbrk=HYPRBRK;
+  x1in = hypx1in;
+  x1out = hypx1out;
+  x1brk = hypx1brk;
+
+  fdisk = FDISK;
+  fjet = FJET;
+  runi = RUNI;
+  rcoll_jet = RCOLL_JET;
+  rcoll_disk = RCOLL_DISK;
+  rdecoll_jet = RDECOLL_JET;
+  rdecoll_disk = RDECOLL_DISK;
+  alpha_1 = ALPHA_1;
+  alpha_2 = ALPHA_2;
+  //all other params should be defined directly by name in define.h
+#else //defaults
+  r0=0.;
+  rbrk=500;
+  fdisk=0.3;
+  fjet=0.4;
+  runi=1;
+  rdecoll_disk=2;
+  rcoll_disk=5;
+  rdecoll_jet=2;
+  rcoll_jet=500;
+  alpha_1 = 1;
+  alpha_2 = 0.375;
+  x1in = log(1-r0);
+  x1brk= log(rbrk-r0);
+  x1out= hyperexp_x1max(1000, rbrk, r0);
+#endif
+
+  //time coordinate unchanged
+  KSx0 = x0;
+
+  //phi coordinate unchanged
+  KSx3 = x3;
+  
+  //radial grid
+  if(x1<rbrk)
+    x1s = log(x1 - r0);
+  else
+  {
+    rpar.rbrk = rbrk;
+    rpar.r0 = r0;
+    x1s = hyperexp_func_inv(x1, &rpar);
+  }
+  KSx1 = (x1s - x1in)/(x1out - x1in); //scale into 0-1 range
+	 
+  //poloidal grid
+  tpar.r0 = r0;
+  tpar.rbrk = rbrk;
+  tpar.runi = runi;
+  tpar.rdecoll_jet = rdecoll_jet;
+  tpar.rdecoll_disk = rdecoll_disk;
+  tpar.rcoll_jet = rcoll_jet;
+  tpar.rcoll_disk = rcoll_disk;
+  tpar.alpha_1 = alpha_1;
+  tpar.alpha_2 = alpha_2;
+  tpar.fdisk = fdisk;
+  tpar.fjet = fjet;
+  
+  KSx2 = jetcoords_theta_inv(x1, x2, &tpar);
+      
+  //assign coordinates
+  xJET[0]=KSx0;
+  xJET[1]=KSx1;
+  xJET[2]=KSx2;
+  xJET[3]=KSx3;
+
+  return 0;
+}
+
 //for TKS3 -> KS
 int
 coco_TKS32KS(ldouble *xMKS, ldouble *xKS)
@@ -2684,6 +2922,7 @@ KSx3
 
   return 0;
 }
+
 
 //for TFLAT -> MINK
 int
@@ -3103,8 +3342,6 @@ dxdx_KS2MKS3(ldouble *xx, ldouble dxdx[][4])
 ;dxdx[3][3]= 1
 ;
 
-
-
   return 0;
 }
 
@@ -3324,8 +3561,6 @@ dxdx_MKS32KS(ldouble *xx, ldouble dxdx[][4])
 ;dxdx[3][2]= 0
 ;dxdx[3][3]= 1
 ;
-
-
 
   return 0;
 }
@@ -3601,19 +3836,109 @@ dxdx_MKER12KER(ldouble *xx, ldouble dxdx[][4])
   return 0;
 }
 
+//ANEW
+//for the rest, calculate transformation matrix numerically
+struct dxdx_params
+{
+  int i,j,CO1,CO2; //i is target coordinate to differentiate by base coord j
+  ldouble xx[4];
+};
+
+ldouble dxdxF(ldouble x, void* params)
+{
+  struct dxdx_params *par = (struct dxdx_params *) params;
+  ldouble xin[4], xout[4];
+  //current coordinate
+  xin[0]=par->xx[0];
+  xin[1]=par->xx[1];
+  xin[2]=par->xx[2];
+  xin[3]=par->xx[3];
+  //replace with test value
+  xin[par->j]=x;
+  //convert to new coordinates
+  coco_N(xin,xout,par->CO1,par->CO2);
+  //return ith value of new coordinate
+  return xout[par->i];
+}
+
+int
+dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
+{
+
+  int i,j,k;
+  ldouble delta=1.e-5;
+
+  #ifdef DERIVS_NOGSL
+  ldouble xinL[4],xinH[4],xoutL[4],xoutH[4];
+
+  DLOOPA(j)
+  {
+    DLOOPA(k) xinL[k]=xx[k];
+    DLOOPA(k) xinH[k]=xx[k];
+
+    xinL[j] -= delta;
+    xinH[j] += delta;
+
+    coco_N(xinL,xoutL,CO1,CO2);
+    coco_N(xinH,xoutH,CO1,CO2);
+
+    DLOOPA(i)
+    {dxdx[i][j] = (xoutH[i]-xoutL[i])/(xinH[j]-xinL[j]);}
+  }
+  #else
+  double result, abserr;
+  struct dxdx_params params;
+  params.CO1 = CO1;
+  params.CO2 = CO2;
+  DLOOPA(k) params.xx[k] = xx[k];
+
+  gsl_function F;
+  F.function = &dxdxF;
+  F.params = &params;
+
+  DLOOP(i,j)
+  {
+      params.i = i;
+      params.j = j;
+      gsl_deriv_central(&F, xx[j], delta, &result, &abserr);
+      dxdx[i][j]=result;
+  }
+  #endif
+  return 0;
+}
+
+int dxdx_JET2KS(ldouble *xx, ldouble dxdx[][4])
+{
+  return dxdx_arb_num(xx, dxdx, JETCOORDS, KSCOORDS); 
+}
+
+int dxdx_KS2JET(ldouble *xx, ldouble dxdx[][4])
+{
+  ldouble dxdxinv[4][4], xxKS[4];
+  return dxdx_arb_num(xx, dxdxinv, JETCOORDS, KSCOORDS);
+
+  // calculate jet2ks jacobian, then invert
+  //coco_N(xx,xxKS,KSCOORDS,JETCOORDS);
+  //dxdx_arb_num(xxKS, dxdxinv, JETCOORDS, KSCOORDS);
+  //return inverse_44matrix(dxdxinv,dxdx);
+  
+}  
 
 /******************************************************/
 //calculates metric in COORDS using other coordinates
 //and appropriate dxdx as base
 /******************************************************/
+
 int
 calc_g_arb_num(ldouble *xx, ldouble gout[][5],int COORDS)
 {
   //base system of coordinates
-  ldouble xxb[4],Gb[4][4],dxdx[4][4],G[4][4],g[4][4],gtemp[4][5];
-  int BASECOORDS,i,j;
+  ldouble xxb[4],gb[4][4],Gb[4][4],dxdx[4][4],G[4][4],g[4][4],gtemp[4][5];
+  int BASECOORDS,whichg,i,j,k,l;
 
-  if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS || COORDS==TKS3COORDS)
+  //base system of coordinates
+  if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS||
+     COORDS==TKS3COORDS || COORDS==JETCOORDS)
     BASECOORDS=KSCOORDS;
   else if(COORDS==MSPH1COORDS)
     BASECOORDS=SPHCOORDS;   
@@ -3623,28 +3948,56 @@ calc_g_arb_num(ldouble *xx, ldouble gout[][5],int COORDS)
     BASECOORDS=MINKCOORDS;
   else
     my_err("calc_g_arb_num() called with unsupported COORDS\n");
-
+  
   //let's transform coordinates first
   coco_N(xx,xxb,COORDS,BASECOORDS);
 
-  //analytical metric in BASECOORDS
-  calc_G_arb_ana(xxb,gtemp,BASECOORDS);
-  DLOOP(i,j) Gb[i][j]=gtemp[i][j];
+  //transform covarient or contravarint metric?
+  if(COORDS==JETCOORDS) whichg=1; // for jetcoords, it is must faster to compute JET2KS jacobian
+  else whichg=2;
+  
+  if(whichg==2) //transform  the contravariant metric then invert
+  {
 
-  //transformation matrix
-  if(COORDS==MKS1COORDS) dxdx_KS2MKS1(xxb,dxdx);
-  if(COORDS==MKS2COORDS) dxdx_KS2MKS2(xxb,dxdx);
-  if(COORDS==MKS3COORDS) dxdx_KS2MKS3(xxb,dxdx);
-  if(COORDS==MKER1COORDS) dxdx_KER2MKER1(xxb,dxdx);
-  if(COORDS==TKS3COORDS) dxdx_KS2TKS3(xxb,dxdx);
-  if(COORDS==TFLATCOORDS) dxdx_MINK2TFLAT(xxb,dxdx);
-  if(COORDS==MSPH1COORDS) dxdx_SPH2MSPH1(xxb,dxdx);
+    //analytical metric in BASECOORDS
+    calc_G_arb_ana(xxb,gtemp,BASECOORDS);
+    DLOOP(i,j) Gb[i][j]=gtemp[i][j];
 
-  //G = dxdx dxdx Gb
-  multiply22(Gb,G,dxdx);
+    //transformation matrix
+    if(COORDS==MKS1COORDS) dxdx_KS2MKS1(xxb,dxdx);
+    if(COORDS==MKS2COORDS) dxdx_KS2MKS2(xxb,dxdx);
+    if(COORDS==MKS3COORDS) dxdx_KS2MKS3(xxb,dxdx);
+    if(COORDS==MKER1COORDS) dxdx_KER2MKER1(xxb,dxdx);
+    if(COORDS==TKS3COORDS) dxdx_KS2TKS3(xxb,dxdx);
+    if(COORDS==TFLATCOORDS) dxdx_MINK2TFLAT(xxb,dxdx);
+    if(COORDS==MSPH1COORDS) dxdx_SPH2MSPH1(xxb,dxdx);
+    if(COORDS==JETCOORDS) dxdx_KS2JET(xxb,dxdx);
 
-  //g = G^-1
-  inverse_44matrix(G,g);
+    //G = dxdx dxdx Gb
+    multiply22(Gb,G,dxdx);
+
+    //g = G^-1
+    inverse_44matrix(G,g);
+  }
+  else if(whichg==1) // transform the covarient metric directly
+  {
+    calc_g_arb_ana(xxb, gtemp, BASECOORDS);
+    DLOOP(i,j) gb[i][j]=gtemp[i][j];
+
+    //transformation matrix
+    if(COORDS==MKS1COORDS) dxdx_MKS12KS(xx,dxdx);
+    if(COORDS==MKS2COORDS) dxdx_MKS22KS(xx,dxdx);
+    if(COORDS==MKS3COORDS) dxdx_MKS32KS(xx,dxdx);
+    if(COORDS==MKER1COORDS) dxdx_MKER12KER(xx,dxdx);
+    if(COORDS==TKS3COORDS) dxdx_TKS32KS(xx,dxdx);
+    if(COORDS==TFLATCOORDS) dxdx_TFLAT2MINK(xx,dxdx);
+    if(COORDS==MSPH1COORDS) dxdx_MSPH12SPH(xx,dxdx);
+    if(COORDS==JETCOORDS) dxdx_JET2KS(xx,dxdx);
+
+    multiply11(gb,g,dxdx);
+
+  }
+      
   DLOOP(i,j) gout[i][j]=g[i][j];
 
   //voila!
@@ -3652,7 +4005,6 @@ calc_g_arb_num(ldouble *xx, ldouble gout[][5],int COORDS)
   return 0;
 }
    
-
 /******************************************************/
 //calculates metric in COORDS using other coordinates
 //and appropriate dxdx as base
@@ -3661,10 +4013,11 @@ int
 calc_G_arb_num(ldouble *xx, ldouble Gout[][5],int COORDS)
 {
   //base system of coordinates
-  ldouble xxb[4],Gb[4][4],dxdx[4][4],G[4][4],gtemp[4][5];
-  int BASECOORDS,i,j;
+  ldouble xxb[4],gb[4][4],Gb[4][4],dxdx[4][4],G[4][4],g[4][4],gtemp[4][5];
+  int BASECOORDS,i,j,k,l,whichg;
 
-  if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS || COORDS==TKS3COORDS)
+  if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS ||
+     COORDS==TKS3COORDS || COORDS==JETCOORDS)
     BASECOORDS=KSCOORDS;
   else if(COORDS==MSPH1COORDS)
     BASECOORDS=SPHCOORDS;
@@ -3675,28 +4028,56 @@ calc_G_arb_num(ldouble *xx, ldouble Gout[][5],int COORDS)
   else
     my_err("calc_G_arb_num() called with unsupported COORDS\n");
 
+  //transform covarient or contravarient metric?
+  if(COORDS==JETCOORDS) whichg=1; // for jetcoords, it is must faster to compute JET2KS jacobian
+  else whichg=2;
+  
   //let's transform coordinates first
   coco_N(xx,xxb,COORDS,BASECOORDS);
 
-  //analytical metric in BASECOORDS
-  calc_G_arb_ana(xxb,gtemp,BASECOORDS);
-  DLOOP(i,j) Gb[i][j]=gtemp[i][j];
+  if(whichg==2) //transform the contravarient metric directly
+  {
+  
+    //analytical metric in BASECOORDS
+    calc_G_arb_ana(xxb,gtemp,BASECOORDS);
+    DLOOP(i,j) Gb[i][j]=gtemp[i][j];
 
-  //transformation matrix
-  if(COORDS==MKS1COORDS) dxdx_KS2MKS1(xxb,dxdx);
-  if(COORDS==MKS2COORDS) dxdx_KS2MKS2(xxb,dxdx);
-  if(COORDS==MKS3COORDS) dxdx_KS2MKS3(xxb,dxdx);
-  if(COORDS==MKER1COORDS) dxdx_KER2MKER1(xxb,dxdx);
-  if(COORDS==TKS3COORDS) dxdx_KS2TKS3(xxb,dxdx);
-  if(COORDS==TFLATCOORDS) dxdx_MINK2TFLAT(xxb,dxdx);
-  if(COORDS==MSPH1COORDS) dxdx_SPH2MSPH1(xxb,dxdx);
+    //transformation matrix
+    if(COORDS==MKS1COORDS) dxdx_KS2MKS1(xxb,dxdx);
+    if(COORDS==MKS2COORDS) dxdx_KS2MKS2(xxb,dxdx);
+    if(COORDS==MKS3COORDS) dxdx_KS2MKS3(xxb,dxdx);
+    if(COORDS==MKER1COORDS) dxdx_KER2MKER1(xxb,dxdx);
+    if(COORDS==TKS3COORDS) dxdx_KS2TKS3(xxb,dxdx);
+    if(COORDS==TFLATCOORDS) dxdx_MINK2TFLAT(xxb,dxdx);
+    if(COORDS==MSPH1COORDS) dxdx_SPH2MSPH1(xxb,dxdx);
+    if(COORDS==JETCOORDS) dxdx_KS2JET(xxb,dxdx);
+ 
+    //G = dxdx dxdx Gb
+    multiply22(Gb,G,dxdx); 
+  }
+  else if(whichg==1) //transform the covarient metric then invert
+  {
+    calc_g_arb_ana(xxb,gtemp,BASECOORDS);
+    DLOOP(i,j) gb[i][j]=gtemp[i][j];
 
-  //G = dxdx dxdx Gb
-  multiply22(Gb,G,dxdx);
-  DLOOP(i,j) Gout[i][j]=G[i][j];
+    //transformation matrix
+    if(COORDS==MKS1COORDS) dxdx_MKS12KS(xx,dxdx);
+    if(COORDS==MKS2COORDS) dxdx_MKS22KS(xx,dxdx);
+    if(COORDS==MKS3COORDS) dxdx_MKS32KS(xx,dxdx);
+    if(COORDS==MKER1COORDS) dxdx_MKER12KER(xx,dxdx);
+    if(COORDS==TKS3COORDS) dxdx_TKS32KS(xx,dxdx);
+    if(COORDS==TFLATCOORDS) dxdx_TFLAT2MINK(xx,dxdx);
+    if(COORDS==MSPH1COORDS) dxdx_MSPH12SPH(xx,dxdx);
+    if(COORDS==JETCOORDS) dxdx_JET2KS(xx,dxdx);
 
+    multiply11(gb,g,dxdx);
+
+    //G = g^-1
+    inverse_44matrix(g,G);    
+  }
+  
   //voila!
-
+  DLOOP(i,j) Gout[i][j]=G[i][j];
   return 0;
 }
    
@@ -3729,9 +4110,32 @@ calc_Krzysie_arb_num(ldouble *xx, ldouble Krzys[][4][4],int COORDS)
 {
   //derivative of metric against coordinates
   ldouble dgdx[4][4][4];
+  int i,j,k,l;
+  ldouble delta=1.e-5; //coordinate difference
+
+  #ifdef DERIVS_NOGSL
+  ldouble xL[4],xH[4];
+  ldouble gH[4][5],gL[4][5];
+
+  DLOOPA(k)
+  {
+    DLOOPA(l) xL[l]=xx[l];
+    DLOOPA(l) xH[l]=xx[l];
+
+    xL[k] -= delta;
+    xH[k] += delta;
+
+    calc_g_arb(xL,gL,COORDS);
+    calc_g_arb(xH,gH,COORDS);
+ 
+    DLOOP(i,j)
+      {dgdx[i][j][k] = (gH[i][j]-gL[i][j])/(xH[k]-xL[k]);}
+  }
+
+  #else
   gsl_function F;
   double result, abserr;
-  int i,j,k,l;
+
   struct fg_params par;
   F.function = &fg;
   F.params = &par;
@@ -3739,13 +4143,14 @@ calc_Krzysie_arb_num(ldouble *xx, ldouble Krzys[][4][4],int COORDS)
   DLOOPA(i)
     par.xx[i]=xx[i];
   DLOOPB(i,j,k)
-    {
-      //dg_ij , k
-      par.i=i; par.j=j; par.k=k;    
-      gsl_deriv_central (&F, xx[k], 1.e-6, &result, &abserr);
-      dgdx[i][j][k]=result;
-    }
-
+  {
+    //dg_ij , k
+    par.i=i; par.j=j; par.k=k;    
+    gsl_deriv_central(&F, xx[k], delta, &result, &abserr);
+    dgdx[i][j][k]=result;
+  }
+  #endif
+  
   //Kristoffels with all lower indices
   ldouble gamma[4][4][4];
   DLOOPB(i,j,k)
@@ -3799,7 +4204,8 @@ calc_gttpert_arb(double *xx, int COORDS)
 {
   int BASECOORDS,i,j;
   
-  if(COORDS==MKS1COORDS  || COORDS==MKS2COORDS || COORDS==MKS3COORDS || COORDS==TKS3COORDS || COORDS==KSCOORDS)
+  if(COORDS==MKS1COORDS || COORDS==MKS2COORDS || COORDS==MKS3COORDS ||
+     COORDS==TKS3COORDS || COORDS==KSCOORDS || COORDS==JETCOORDS)
     BASECOORDS=KSCOORDS;
   else if(COORDS==BLCOORDS || COORDS==MKER1COORDS)
     BASECOORDS=BLCOORDS;
@@ -3837,6 +4243,7 @@ calc_gttpert_arb(double *xx, int COORDS)
       if(COORDS==MKS1COORDS) dxdx_MKS12KS(xx,dxdxp);
       if(COORDS==MKS2COORDS) dxdx_MKS22KS(xx,dxdxp);
       if(COORDS==MKS3COORDS) dxdx_MKS32KS(xx,dxdxp);
+      if(COORDS==JETCOORDS) dxdx_JET2KS(xx,dxdxp);
       if(COORDS==TKS3COORDS) dxdx_TKS32KS(xx,dxdxp);
       if(COORDS==KSCOORDS) {DLOOP(i,j) if(i==j) dxdxp[i][i]=1.0; else dxdxp[i][j]=0.;}
     }
@@ -3875,6 +4282,428 @@ calc_gttpert_arb(double *xx, int COORDS)
   return gttpert;
 }
 
+
+/******************************************************/
+//helper functions for jet coordinates and cylindrification
+/******************************************************/
+
+//smoothed integrated Heaviside Function
+ldouble psi_smooth(ldouble x)
+{
+  ldouble xout;
+  if(x<-1)
+    return 0.;
+  else if(x>=1)
+    return x;
+  else
+  {
+    xout = (-35*cos(0.5*Pi*x) - (5./6.)*cos(1.5*Pi*x) + 0.1*cos(2.5*Pi*x))/(32*Pi);
+    xout += 0.5*(x+1);
+    return xout;
+  }
+}
+
+//smoothed Heaviside Function
+ldouble theta_smooth(ldouble x)
+{
+  ldouble xout;
+  if(x<-1)
+    return 0.;
+  else if(x>=1)
+    return 1.;
+  else
+  {
+    xout=0.5 + (70*sin(0.5*Pi*x) + 5*sin(1.5*Pi*x) - sin(2.5*Pi*x))/128.;
+    return xout;
+  }
+}
+
+//smoothed minimum function
+ldouble minn(ldouble a, ldouble b, ldouble df)
+{
+  ldouble delta = (b-a)/df;
+  return b - psi_smooth(delta)*df;
+}
+
+//smoothed maximum function
+ldouble maxx(ldouble a, ldouble b, ldouble df)
+{
+  return -1*minn(-a,-b,df);
+}
+
+//jet vs disk fraction at a given x
+ldouble wjet(ldouble x2, ldouble fdisk, ldouble fjet)
+{
+  //NOTE! fjet and fdisk must both be positive and sum to < 1. 
+  //NOTE! fjet is NOT defined as in Ressler 2017: their fjet = 1 - (our fjet)
+  ldouble delta = 2*(fabs(x2) - fdisk)/(1 - fjet - fdisk) - 1.;
+  return theta_smooth(delta);
+}
+
+//theta(x2, r) for the jet OR disk grid
+ldouble theta_disk_or_jet(ldouble r, double x2, ldouble rdecoll, ldouble rcoll, ldouble runi,
+		      ldouble a1, ldouble a2)
+{
+  ldouble r1 = minn(r, rdecoll, 0.5*rdecoll)/runi;
+  ldouble r2 = minn(r/(r1*runi), rcoll/rdecoll, 0.5*rcoll/rdecoll);
+  ldouble y = pow(r2, a2)*tan(0.5*x2*Pi);
+  ldouble x = pow(r1, a1); //opposite sign convention for alpha1 from ressler 2017!
+  ldouble theta = 0.5*Pi + atan2(y,x);
+  return theta;
+}
+
+//combine jet and disk theta grid 
+ldouble theta_diskjet(ldouble r, ldouble x2, void * params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+  ldouble theta_disk, theta_jet, wfrac, theta;
+
+  theta_disk = theta_disk_or_jet(r, x2, par->rdecoll_disk, par->rcoll_disk, par->runi,
+			         par->alpha_1, par->alpha_2);
+  theta_jet = theta_disk_or_jet(r, x2, par->rdecoll_jet, par->rcoll_jet, par->runi,
+			        par->alpha_1, par->alpha_2);
+  wfrac = wjet(x2, par->fdisk, par->fjet);
+  theta = wfrac*theta_jet + (1-wfrac)*theta_disk;
+
+  return theta;
+}
+
+ldouble jetcoords_theta(ldouble r, ldouble x2, void *params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+
+  #ifdef CYLINDRIFY
+    return cylindrify(r, x2, par);
+  #else
+    return theta_diskjet(r, x2, par);
+  #endif
+}
+
+//root finding function for inverting x2(theta)
+ldouble jetcoords_theta_root(ldouble x2, void *params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+  ldouble theta;
+  theta = jetcoords_theta(par->r_test, x2, par);
+  return ((par->theta_test) - theta);
+}
+
+//invert theta(x2) numerically
+ldouble jetcoords_theta_inv(ldouble r, ldouble theta, void *params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+  par->theta_test = theta;
+  par->r_test = r;
+
+  
+  ldouble x_lo = -1+1.e-8;
+  ldouble x_hi = 1-1.e-8;
+  ldouble root;
+  int status, status2, iter = 0, maxiter = 100;
+  ldouble convcrit = 1.e-8;
+
+  const gsl_root_fsolver_type *T;
+  gsl_root_fsolver *s;
+  gsl_function F;
+    
+  F.function = jetcoords_theta_root;
+  F.params = par;
+  
+  T = gsl_root_fsolver_brent;
+  //T = gsl_root_fsolver_bisection;
+  //T = gsl_root_fsolver_falsepos;
+  s = gsl_root_fsolver_alloc (T);
+  gsl_root_fsolver_set(s, &F, x_lo, x_hi);
+  
+  do {
+
+    root = gsl_root_fsolver_root (s);
+    x_lo = gsl_root_fsolver_x_lower (s);
+    x_hi = gsl_root_fsolver_x_upper (s);
+    status = gsl_root_test_interval (x_lo, x_hi, 0, convcrit);
+
+    //printf ("%5d [%.7f, %.7f] %.7f\n",iter, x_lo, x_hi, root);
+    
+    iter++;
+    status2 = gsl_root_fsolver_iterate (s);
+	
+  } while (status == GSL_CONTINUE && iter < maxiter);
+
+  //ldouble test = jetcoords_theta_root(root,par);
+  //ldouble test2 = jetcoords_theta(r,root,par);
+  //printf("ROOT: %.7f %.7f %.7f %.7f %.7f\n",root,test,test2,par->theta_test,par->r_test);
+
+  gsl_root_fsolver_free(s);
+  return root;
+}
+
+// hyperexponential function for radial grid
+ldouble hyperexp_func(ldouble x1, void *params)
+{
+  struct hyperexp_params *par
+    = (struct hyperexp_params *) params;
+
+  ldouble rbrk = par->rbrk;
+  ldouble r0 = par->r0;
+  ldouble x1brk = log(rbrk - r0);
+  ldouble rout = r0 + exp(x1 + 4*pow(x1-x1brk,4));
+  return rout;
+}
+
+// root finding function for inverting to find x1(r)
+ldouble hyperexp_func_root(ldouble x1, void *params)
+{
+  struct hyperexp_params *par
+    = (struct hyperexp_params *) params;
+
+  ldouble r = par->r_test;
+  ldouble rbrk = par->rbrk;
+  ldouble r0 = par->r0;
+  ldouble x1brk = log(rbrk - r0);
+  return log(r - r0) - (x1 + 4*pow(x1-x1brk,4)); //better to find the root in log space
+
+  //ldouble rout = hyperexp_func(x1, par);
+  //return (par->r) - rout;
+}
+
+
+//find x1 coordinate from radius in hyperexponential coordinates numerically 
+ldouble hyperexp_func_inv(ldouble r, void *params)
+{
+
+  struct hyperexp_params *par = (struct hyperexp_params*) params;
+  ldouble rbrk = par->rbrk;
+  ldouble r0 = par->r0;
+  par->r_test = r;
+
+  ldouble x_lo = log(rbrk-r0);
+  ldouble x_hi = 2*log(r-r0);
+
+  ldouble root;
+  int status,status2;
+  int iter = 0, maxiter = 100;
+  ldouble convcrit = 1.e-8;
+
+  const gsl_root_fsolver_type *T;
+  gsl_root_fsolver *s;
+  gsl_function F;
+    
+  F.function = &hyperexp_func_root;
+  F.params = par;
+  T = gsl_root_fsolver_brent;
+  //T = gsl_root_fsolver_bisection;
+  //T = gsl_root_fsolver_falsepos;
+  s = gsl_root_fsolver_alloc (T);
+  gsl_root_fsolver_set (s, &F, x_lo, x_hi);
+  
+  do
+  {
+    root = gsl_root_fsolver_root (s);
+    x_lo = gsl_root_fsolver_x_lower (s);
+    x_hi = gsl_root_fsolver_x_upper (s);
+    status = gsl_root_test_interval (x_lo, x_hi, 0, convcrit);
+
+    //printf ("%5d [%.7f, %.7f] %.7f \n",iter, x_lo, x_hi, root);
+
+    iter++;
+    status2 = gsl_root_fsolver_iterate (s);
+
+  } while (status == GSL_CONTINUE && iter < maxiter);
+
+  gsl_root_fsolver_free (s);
+
+  return root;
+}
+
+//find the x1 coordinate of rmax for hyperexponential grid
+ldouble hyperexp_x1max(ldouble rmax, ldouble rbrk, ldouble r0)
+{
+  struct hyperexp_params params;
+  params.rbrk = rbrk;
+  params.r0 = r0;
+  params.r_test = rmax;
+
+  ldouble test = hyperexp_func(6.,&params);
+  return hyperexp_func_inv(rmax, &params);
+}
+
+//ANEW -- Cylindrification functions
+//ANEW -- all assume that r is independent of x2, and all use jet coords only 
+//ANEW -- TODO -- generalize these following harmpi for any coord system??
+
+#ifdef CYLINDRIFY
+//precalculate two angles used throughout cylindrification
+int set_cyl_params()
+{
+   struct jetcoords_params tpar;
+   x2cyl = MINY + 0.5*NCYL/((ldouble)TNY);
+   rmidcyl = 0.5 * (RCYL + RMIN);
+    
+   #if(MYCOORDS==JETCOORDS)
+   tpar.r0=MKSR0;
+   tpar.rbrk=HYPRBRK;
+   tpar.fdisk = FDISK;
+   tpar.fjet = FJET;
+   tpar.runi = RUNI;
+   tpar.rcoll_jet = RCOLL_JET;
+   tpar.rcoll_disk = RCOLL_DISK;
+   tpar.rdecoll_jet = RDECOLL_JET;
+   tpar.rdecoll_disk = RDECOLL_DISK;
+   tpar.alpha_1 = ALPHA_1;
+   tpar.alpha_2 = ALPHA_2;
+   #else //defaults
+   tpar.r0=0.;
+   tpar.rbrk=500;
+   tpar.fdisk=0.3;
+   tpar.fjet=0.4;
+   tpar.runi=1;
+   tpar.rdecoll_disk=2;
+   tpar.rcoll_disk=5;
+   tpar.rdecoll_jet=2;
+   tpar.rcoll_jet=500;
+   tpar.alpha_1 = 1;
+   tpar.alpha_2 = 0.375;
+   #endif
+
+   thetaCYL = theta_diskjet(RCYL, x2cyl, &tpar);
+   sinthetaCYL = sin(thetaCYL);
+   thetaAX = theta_diskjet(RCYL, MAXY, &tpar);
+   sinthetaAX = sin(thetaAX);
+   
+   return 0;
+}
+
+/*
+ldouble sinth0(ldouble r, ldouble x2, void* params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+  
+  //theta0: at (rcyl, x2cyl)
+  ldouble theta0 = theta_diskjet(par->rcyl, par->x2cyl, p);
+
+  return (par->rcyl/r) * sin(theta0);
+}
+
+ldouble sinth1(ldouble r, ldouble x2, void* params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+
+  //theta1: at (rcyl, x2)
+  ldouble theta1 = theta_diskjet(par->rcyl, x2, par);
+
+  return (par->rcyl/r)*sin(theta1);
+}
+*/
+
+//ldouble sinth2(ldouble r, ldouble x2, void* params)
+ldouble sinth2(ldouble r, ldouble theta, ldouble theta2)
+{
+  //struct jetcoords_params *par = (struct jetcoords_params *) params;
+  //ldouble rcyl=par->rcyl;
+  
+  //theta: at (r, x2)
+  //ldouble theta = theta_diskjet(r, x2, par);
+
+  //theta1: at (rcyl, x2)
+  //ldouble theta1 = theta_diskjet(par->rcyl, x2, par);
+  
+  //theta2: at (r, x2cyl)
+  //ldouble theta2 = theta_diskjet(r, par->x2cyl, par);
+
+  //thetamid: at (r, 0): (pi/2 for jetcoords)
+  ldouble thetamid = 0.5*Pi;
+  
+  //ldouble thetaA = asin(sinth0(r,x2,par));
+  ldouble thetaA = asin((RCYL/r)*sinthetaCYL);
+  ldouble thetaB = thetaA + (theta-theta2)*(thetamid-thetaA)/(thetamid-theta2);
+  return sin(thetaB);
+}
+
+ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+
+  //ANDREW ANEW TODO -- ok to hardcode MAXY here?
+  
+  //theta: at (r, x2)
+  //ldouble theta = theta_diskjet(r, x2, par);
+
+  //theta0: at (r, MAXY)
+  ldouble theta0 = theta_diskjet(r, MAXY, par);
+  
+  //theta1: at (rcyl, x2)
+  ldouble theta1 = theta_diskjet(RCYL, x2, par);
+
+  //theta2: at (r, x2cyl)
+  ldouble theta2 = theta_diskjet(r, x2cyl, par);
+  
+  ldouble s1in = (RCYL/r)*sin(theta1); // sinth1(r, x2, par);
+  ldouble s2in = sinth2(r, theta, theta2); //sinth2(r, x2, par);
+
+  ldouble s1ax = (RCYL/r)*sinthetaAX; //sinth1(r, MAXY, par); 
+  ldouble s2ax = sinth2(r, theta0, thetaAX); //sinth2(r, MAXY, par);
+  ldouble df = fabs(s2ax - s1ax) + 1.e-16; //is this offset ok?
+
+  //printf("F2FUNC\n");
+  //printf("%.7f %.7f %.7f\n",r,x2,MAXY);
+  //printf("%.7f %.7f %.7f %.7f %.7f\n",s1in, s2in, s1ax, s2ax, df);
+
+  if(r>=RCYL)
+  {
+    return maxx(s1in, s2in, df);
+  }
+  else
+  {
+    return minn(s1in, s2in, df);
+  }
+}
+
+ldouble to1stquad(ldouble  x2) //ANDRE ANEW TODO -- assumes that x2 range is (-1,1) -- ok?
+{
+  ldouble ntimes = floor(0.25*(x2+2));
+  ldouble x2out = x2 - 4*ntimes;
+  if(x2out>0)
+    x2out = -x2out;
+  if(x2out<-1)
+    x2out = -2-x2out;
+  return x2out;
+}
+
+ldouble cylindrify(ldouble r, ldouble x2, void* params)
+{
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+
+  ldouble thin = theta_diskjet(r, x2, par);  
+  ldouble thmir = thin;
+  
+  ldouble x2mir = to1stquad(x2);
+
+  if(x2mir!=x2)
+    thmir = Pi - thin;
+    //ldouble thmir = theta_diskjet(r, x2mir, par);
+  
+  ldouble f1 = sin(thmir);
+  ldouble f2 = f2func(r, x2mir, thmir,  par);
+
+  ldouble thmid = theta_diskjet(rmidcyl, x2mir, par);
+  ldouble f1mid = sin(thmid);
+  ldouble f2mid = f2func(rmidcyl, x2mir, thmid, par);
+  
+  ldouble df = fabs(f2mid - f1mid);
+
+  ldouble thout = asin(maxx(r*f1, r*f2, r*df + 1.e-16)/r);
+  if(x2!=x2mir)
+    thout = thin + thmir - thout;
+
+  //printf("CYLINDRIFY\n");
+  //printf("%.7f %.7f\n",RCY, x2cyl);
+  //printf("%.7f %.7f %.7f %.7f %.7f\n",thin, x2mir, thmir, f1, f2);
+  //printf("%.7f %.7f %.7f %.7f %.7f\n",rmid, thmid, f1mid, f2mid, df);
+  //printf("%.7f\n",thout);
+  return thout;
+}
+
+#endif //CYLINDRIFY
 /******************************************************/
 //if coordinates spherical like
 /******************************************************/
@@ -3887,6 +4716,7 @@ if_coords_sphericallike(int coords)
      coords==MKS1COORDS ||
      coords==MKS2COORDS ||
      coords==MKS3COORDS ||
+     coords==JETCOORDS ||
      coords==TKS3COORDS ||
      coords==MSPH1COORDS ||
      coords==MKER1COORDS)
@@ -3970,5 +4800,6 @@ test_metric()
   exit(1);
   return 0;
 }
+
 
 

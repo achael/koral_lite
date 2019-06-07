@@ -2646,7 +2646,6 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
           
 #ifdef SPECIFIC_BC  // BC specific for given problem
   calc_bc(ix,iy,iz,t,uval,pval,ifinit,BCtype);
-
 #else   //standard BC  
  
   if(BCtype==XBCLO || BCtype==XBCHI)

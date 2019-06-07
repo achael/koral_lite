@@ -399,7 +399,7 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
   ldouble ap = 1.8 + 0.7/sqrt(sigma);
   ldouble bp = 3.7*pow(sigma, -0.19);
   ldouble cp = 23.4*pow(sigma, 0.26);
-  pindex = ap + bp*tanh*cp*beta);
+  pindex = ap + bp*tanh(cp*beta);
 
   ldouble ae = 1-1./(4.2*pow(sigma,0.55) + 1);
   ldouble be = 0.63*pow(sigma,0.07);
@@ -414,8 +414,17 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
   if(!isfinite(delta))
     {
       printf("problem with David delta fit: %d %d f : %e %e %e %e %e\n",geom->ix,geom->iy,delta,beta,sigma,Te,Ti);
+      delta = 0;
       //print_primitives(pp);
     }
+  if(delta>1)
+    delta=1.;
+  if(!isfinite(pindex));
+   {
+    printf("problem with David pindex fit: %d %d f : %e %e %e %e %e\n",geom->ix,geom->iy,delta,beta,sigma,Te,Ti);
+    pindex = 10.;
+    delta=0.;
+   }
 #endif
 #endif
 
@@ -1328,8 +1337,8 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   struct struct_of_state *state
     = (struct struct_of_state *) sss;
 
-  int out = 0;  // RN: moved this outside the ifdef RELELECTRONS block
-
+  int out = 0;
+  
   //all in cgs
   ldouble bsq_cgs=0.; //gauss
   ldouble nion_cgs=0.; //cm^-3
@@ -1481,12 +1490,13 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   }
 
   //calculates derivatives at cell
+  
   for(ie=0; ie<NRELBIN; ie++)
   {
     qcool[ie] = (f[ie] - f[ie+1]) * logbinspace_inv * relel_gammas_inv[ie];
     if isnan(qcool[ie]) out = -1;
   }
-#endif  // RELELECTRONS
+#endif
   //getch();
   //if (out==-1) printf("\n \n -1 -1 -1 \n\n\n");
   return out;

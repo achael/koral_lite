@@ -1226,7 +1226,8 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
 	       
 	       //transform to cartesian
 	       if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS   || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
-		   MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
+		   MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==JETCOORDS ||
+		   MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
 		 {
 		   ldouble r=geomsph.xx;
 		   ldouble th=geomsph.yy;

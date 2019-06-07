@@ -10,6 +10,25 @@ int iix,iiy,iiz,iv;
 struct geometry geom;
 fill_geometry(ix,iy,iz,&geom);
 
+/**********************/
+
+#ifdef COPY_XBC //simple inflow/outflow
+if(BCtype==XBCHI || BCtype==XBCLO)
+{
+  iiy=iy;
+  iiz=iz;
+  if(BCtype==XBCHI) iix=NX-1;
+  else if(BCtype==XBCLO) iix=0;
+  
+  for(iv=0;iv<NV;iv++)
+  {
+    pp[iv]=get_u(p,iv,iix,iiy,iiz);
+  }
+  p2u(pp,uu,&geom);
+  return 0;
+}
+#else
+
 struct geometry geomBL;
 fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
 
@@ -17,10 +36,9 @@ ldouble gg[4][5],GG[4][5],ggsrc[4][5],eup[4][4],elo[4][4];
 pick_g(ix,iy,iz,gg);
 pick_G(ix,iy,iz,GG);
 
-/**********************/
-
 //radius
 if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
+                  //this can take a long time bc of coord transforms!
   {
     iix=NX-1;
     iiy=iy;
@@ -125,6 +143,7 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
      p2u(pp,uu,&geom);
      return 0;
    }
+#endif
 
 //reflections/outflow in theta 
 //in 3D polar cells overwritten with #define CORRECT_POLARAXIS_3D
@@ -170,20 +189,22 @@ if(BCtype==YBCHI) //lower spin axis
     p2u(pp,uu,&geom); 
     return 0; 
   }
-   
-//periodic in phi:
-iiz=iz;
-iiy=iy;
-iix=ix;
-if(BCtype==ZBCLO) iiz=iz+NZ;
-if(BCtype==ZBCHI) iiz=iz-NZ;
 
-for(iv=0;iv<NV;iv++)
+if(BCtype==ZBCHI || BCtype==ZBCLO) //periodic in phi:
+{
+  iiz=iz;
+  iiy=iy;
+  iix=ix;
+  if(BCtype==ZBCLO) iiz=iz+NZ;
+  if(BCtype==ZBCHI) iiz=iz-NZ;
+
+  for(iv=0;iv<NV;iv++)
   {
     uu[iv]=get_u(u,iv,iix,iiy,iiz);
     pp[iv]=get_u(p,iv,iix,iiy,iiz);      
   }
-
+  return 0;
+}
 //testing if interpolated primitives make sense
 //check_floors_hd(pp,VELPRIM,gg,GG);
 //end of floor section

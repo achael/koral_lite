@@ -5,7 +5,7 @@
 #include "ko.h"
 
 //**********************************************************************
-/*! \fn int initialize_constants()
+/*! \fn int initialize_consants()
  \brief Set constants to be used throughout
 */
 //**********************************************************************
@@ -86,6 +86,99 @@ void initialize_constants()
   one_third = 1. / 3.;
   log_2p6 = log(2.6);
   one_over_log_2p6 = 1. / log_2p6;
+
+  // Coordinate specific factors
+  #if (MYCOORDS==JETCOORDS)
+  //printf("Finding hypx1out\n");
+  hypx1in = log(RMIN-MKSR0);
+  hypx1brk= log(HYPRBRK-MKSR0);
+  hypx1out= hyperexp_x1max(RMAX, HYPRBRK, MKSR0);
+
+  #ifdef CYLINDRIFY
+  set_cyl_params();
+  #endif
+  
+  //ANDREW -- diagnostics for new jet coordinates/metric
+
+  /*
+  //printf("%.7f %.7f %.7f\n",hypx1in,hypx1brk,hypx1out);
+
+  ldouble x0[4] = {0, .15, 0.14863, 1};
+  ldouble x1[4], x2[4];
+
+  printf("%.7f %.7f %.7f %.7f\n",x0[0],x0[1],x0[2],x0[3]);
+
+  struct timespec temp_clock;
+  my_clock_gettime(&temp_clock);    
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  
+  coco_JET2KS(x0,x1);
+  
+  my_clock_gettime(&temp_clock);    
+  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("Transform Time %.7f\n",end_time-start_time);
+  
+  printf("%.7f %.7f %.7f %.7f\n",x1[0],x1[1],x1[2],x1[3]);  
+
+  coco_KS2JET(x1,x2);
+  printf("%.7f %.7f %.7f %.7f\n",x2[0],x2[1],x2[2],x2[3]);
+
+  
+  ldouble dxdx[4][4], dxdxinv[4][4], dxdxinv2[4][4];
+  int i,j,tmp;
+
+  my_clock_gettime(&temp_clock);    
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  tmp = dxdx_arb_num(x0, dxdx, MYCOORDS, KSCOORDS);
+
+  my_clock_gettime(&temp_clock);    
+  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("DXDX Time %.7f\n",end_time-start_time);
+
+  tmp = dxdx_arb_num(x1, dxdxinv, KSCOORDS, MYCOORDS);
+  inverse_44matrix(dxdx,dxdxinv2);    
+
+  print_tensor(dxdx);
+  print_tensor(dxdxinv);
+  //print_tensor(dxdxinv2);
+  printf("\n\n====================\n\n");
+  ldouble gtmp[4][5], g[4][4], G[4][4], ginv[4][4], Ginv[4][4];
+
+  my_clock_gettime(&temp_clock);    
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  calc_g_arb_num(x0, gtmp, MYCOORDS);
+  my_clock_gettime(&temp_clock);    
+  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("Metric Time %.7f\n",end_time-start_time);
+  
+  DLOOP(i,j) g[i][j]=gtmp[i][j];
+  calc_G_arb_num(x0, gtmp, MYCOORDS);
+  DLOOP(i,j) G[i][j]=gtmp[i][j];
+  inverse_44matrix(g,ginv);
+  inverse_44matrix(G,Ginv);
+
+  //DLOOP(i,j) {if(fabs(g[i][j])<1.e-9) g[i][j]=0;}
+  //DLOOP(i,j) {if(fabs(G[i][j])<1.e-9) G[i][j]=0;}
+  //DLOOP(i,j) {if(fabs(ginv[i][j])<1.e-9) ginv[i][j]=0;}
+  //DLOOP(i,j) {if(fabs(Ginv[i][j])<1.e-9) Ginv[i][j]=0;}
+  
+  print_tensor(g);
+  //print_tensor(Ginv);
+  //DLOOP(i,j) Ginv[i][j] = (g[i][j]-Ginv[i][j])/(g[i][j]+SMALL);
+  //print_tensor(Ginv);
+  
+  printf("\n\n====================\n\n");
+  print_tensor(G);
+  //print_tensor(ginv);
+  //DLOOP(i,j) ginv[i][j] = (G[i][j]-ginv[i][j])/(G[i][j]+SMALL);
+  //print_tensor(ginv);
+
+ 
+  exit(-1);
+  */
+  #endif
   
   return;
 }
@@ -182,6 +275,22 @@ void
 am_i_sane()
 {
 
+  if(!(MYCOORDS==SPHCOORDS || MYCOORDS==CYLCOORDS || MYCOORDS==MINKCOORDS ||
+     MYCOORDS==KERRCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==MKS1COORDS ||
+     MYCOORDS==MKS2COORDS || MYCOORDS==MCYL1COORDS || MYCOORDS==MSPH1COORDS ||
+     MYCOORDS==MKER1COORDS))
+  {
+    if(GDETIN==0)
+    {
+      printf("GDETIN==1 does not work with this coordinate system!\n");
+      exit(-1);
+    }
+     #ifndef METRICNUMERIC
+    //printf("this coordinate system requires METRICNUMERIC!\n");
+    //exit(-1);
+     #endif
+  }
+
   if(HFRAC+HEFRAC+MFRAC != 1.)
   {
     printf("Chosen H, He, and Metal abundance does not sum to 1.\n");
@@ -233,12 +342,12 @@ am_i_sane()
 #if defined(RADIATION) && !defined(SKIPRADSOURCE)
 #ifdef HEATELECTRONSATENDRK2
   printf("HEATELECTRONSATENDRK2 only works without RADIATION!");
+  exit(-1);
 #endif
 #endif  
 #endif
   
 #ifdef SHEARINGBOX
-  
 #ifdef MPI
   printf("SHEARINGBOX BC not implemented into MPI\n");
   exit(-1);
@@ -332,7 +441,6 @@ am_i_sane()
   exit(-1);
 #endif
 
-
 #ifdef RADOUTPUTINFF
   printf("RADOUTPUTINFF no longer supported!\n");
   exit(-1);
@@ -345,6 +453,8 @@ am_i_sane()
 
   return;
 }
+
+
 //**********************************************************************
 // allocate arrays
 //**********************************************************************

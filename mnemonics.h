@@ -90,6 +90,7 @@
 #define MKS3COORDS 12
 #define TKS3COORDS 13
 #define TFLATCOORDS 14
+#define JETCOORDS 15
 
 //type of boundary
 #define XBCLO 1

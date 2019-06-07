@@ -834,6 +834,42 @@ multiply22(ldouble T1[][4],ldouble T2[][4],ldouble A[][4])
 
 
 /*****************************************************************/
+//multiplies 11 tensor T1 by 21 tensor A
+//T2_ij = A^k_i A^l_j T1_kl
+/*****************************************************************/
+
+int
+multiply11(ldouble T1[][4],ldouble T2[][4],ldouble A[][4])
+{
+  int i,j,k,l;
+  ldouble Tt[4][4];
+
+  for(i=0;i<4;i++)
+    {
+      for(j=0;j<4;j++)
+	{
+	  Tt[i][j]=T1[i][j];
+	}
+    }
+
+  for(i=0;i<4;i++)
+    {
+      for(j=0;j<4;j++)
+	{
+	  T2[i][j]=0.;
+	  for(k=0;k<4;k++)
+	    {
+	      for(l=0;l<4;l++)
+		{
+		  T2[i][j]+=A[k][i]*A[l][j]*Tt[k][l];
+		}
+	    }
+	}
+    }
+  return 0;
+}
+
+/*****************************************************************/
 //multiplies 2 vector u1 by 21 tensor A
 //u2^i = A^i_j u1^j
 /*****************************************************************/
@@ -967,7 +1003,12 @@ trans2_coco(ldouble *xx,ldouble *u1,ldouble *u2,int CO1, int CO2)
       dxdx_MKS32KS(xx,dxdx);
       multiply2(u1,u2,dxdx);
     }
-   else if(CO1==TKS3COORDS && CO2==KSCOORDS)
+  else if(CO1==JETCOORDS && CO2==KSCOORDS)
+    {
+      dxdx_JET2KS(xx,dxdx);
+      multiply2(u1,u2,dxdx);
+    }
+  else if(CO1==TKS3COORDS && CO2==KSCOORDS)
     {
       dxdx_TKS32KS(xx,dxdx);
       multiply2(u1,u2,dxdx);
@@ -985,6 +1026,11 @@ trans2_coco(ldouble *xx,ldouble *u1,ldouble *u2,int CO1, int CO2)
   else if(CO1==KSCOORDS && CO2==MKS3COORDS)
     {
       dxdx_KS2MKS3(xx,dxdx);
+      multiply2(u1,u2,dxdx);
+    }
+  else if(CO1==KSCOORDS && CO2==JETCOORDS)
+    {
+      dxdx_KS2JET(xx,dxdx);
       multiply2(u1,u2,dxdx);
     }
   else if(CO1==KSCOORDS && CO2==TKS3COORDS)
@@ -1046,6 +1092,14 @@ trans2_coco(ldouble *xx,ldouble *u1,ldouble *u2,int CO1, int CO2)
       dxdx_KS2BL(xx2,dxdx);
       multiply2(u2,u2,dxdx);
     }
+  else if (CO1==JETCOORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      dxdx_JET2KS(xx,dxdx);
+      multiply2(u1,u2,dxdx);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2BL(xx2,dxdx);
+      multiply2(u2,u2,dxdx);
+    }
   else if (CO1==TKS3COORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
     {
       dxdx_TKS32KS(xx,dxdx);
@@ -1078,6 +1132,14 @@ trans2_coco(ldouble *xx,ldouble *u1,ldouble *u2,int CO1, int CO2)
       dxdx_KS2MKS3(xx2,dxdx);
       multiply2(u2,u2,dxdx);  
     }
+  else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==JETCOORDS)
+    {
+      dxdx_BL2KS(xx,dxdx);
+      multiply2(u1,u2,dxdx);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2JET(xx2,dxdx);
+      multiply2(u2,u2,dxdx);  
+    }  
   else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==TKS3COORDS)
     {
       dxdx_BL2KS(xx,dxdx);

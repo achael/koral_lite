@@ -155,7 +155,7 @@
 //magnetic choices
 /************************************/
 
-#define MAGNFIELD
+//#define MAGNFIELD
 #define GDETIN 1
 #define VECPOTGIVEN
 #define INIT_MAGN_CORNERS    
@@ -233,25 +233,53 @@
 #define BHSPIN 0.9375
 
 /************************************/
-//coordinates / resolution
+//resolution
 /************************************/
-#define myMKS3COORDS
+//total resolution
+#define TNX 64//320//288 //256 //16*16 //128 <->256
+#define TNY 64//256//224 //320 //14*9 //92 <->256
+#define TNZ 1//128//96
+
+//number of tiles
+#define NTX 32
+#define NTY 16//32
+#define NTZ 8
+
+/************************************/
+//coordinates
+/************************************/
+#define myJETCOORDS
+//#define myMKS3COORDS
+//#define myMKS2COORDS
 #define METRICAXISYMMETRIC
 #define RMIN 1.
-#define RMAX 1.e3
+#define RMAX 1.e5
+
 #define MKSR0 -1.35
 #define MKSH0 0.7
 #define MKSMY1 0.002
 #define MKSMY2 0.02
 #define MKSMP0 1.3
 
-//#ifdef myMKS2COORDS //modified Kerr-Shild
-//#define MYCOORDS MKS2COORDS
-//#define MINX (log(RMIN-MKSR0))
-//#define MAXX (log(RMAX-MKSR0))
-//#define MINY (0.001)
-//#define MAXY (1.-0.001)
-//#endif
+#define HYPRBRK 5000
+#define FJET 0.4
+#define FDISK 0.5
+#define RUNI RMIN
+#define RCOLL_JET 1000
+#define RDECOLL_JET 2*RMIN
+#define RCOLL_DISK 5*RMIN
+#define RDECOLL_DISK 2*RMIN
+#define ALPHA_1 1
+#define ALPHA_2 0.375
+
+#ifdef myMKS2COORDS //modified Kerr-Shild
+#define METRICNUMERIC
+#define MYCOORDS MKS2COORDS
+#define MINX (log(RMIN-MKSR0))
+#define MAXX (log(RMAX-MKSR0))
+#define MINY (0.001)
+#define MAXY (1.-0.001)
+#endif
 
 #ifdef myMKS3COORDS //modified Kerr-Shild further from axis
 #define METRICNUMERIC
@@ -262,20 +290,25 @@
 #define MAXY 1.
 #endif
 
+#ifdef myJETCOORDS //concentrate resolution in jet and disk zones
+#define MYCOORDS JETCOORDS
+//#define CYLINDRIFY
+#define METRICNUMERIC
+#define DERIVS_NOGSL
+#define MINX 0
+#define MAXX 1.
+#define MINY -(1.-1.e-8) //10^-9 away from the poles seems to be the last safe point
+#define MAXY 1.-1.e-8    //TODO -- can we fix this!??!?!?
+#define RCYL 20
+#define NCYL 1
+#endif
+
 #define PHIWEDGE (2*M_PI)
 #define MINZ (-PHIWEDGE/2.)
 #define MAXZ (PHIWEDGE/2.)
 
-//total resolution
-#define TNX 128//288 //256 //16*16 //128 <->256
-#define TNY 64//224 //320 //14*9 //92 <->256
-#define TNZ 1//128//96
-
-//number of tiles
-#define NTX 32
-#define NTY 16//32
-#define NTZ 8
-
+#define COPY_XBC
+//#define COPY_YBC
 #define SPECIFIC_BC
 #define PERIODIC_ZBC
 //#define PERIODIC_XBC
@@ -293,22 +326,23 @@
 #define ALLSTEPSOUTPUT 0
 //#define RADOUTPUTINZAMO
 #define NSTEPSTOP 1.e20
-#define NOUTSTOP 2
+#define NOUTSTOP 5
 
 //#define OUTPUTPERCORE
-#define COORDOUTPUT 0
+#define COORDOUTPUT 1
+#define GRIDOUTPUT 1
 #define SILOOUTPUT 1
 #define CGSOUTPUT
 #define OUTOUTPUT 0
-#define SIMOUTPUT 2
+#define SIMOUTPUT 0//2
 #define SIMOUTPUT_GILAB2FF
 //#define SIMOUTPUTWITHINDTHETA .05
 #define GRTRANSSIMOUTPUT
 
-#define RADOUTPUT 1
+#define RADOUTPUT 0
 //#define RADOUTPUTWITHINDTHETA .05
-#define SCAOUTPUT 1
-#define AVGOUTPUT 1
+#define SCAOUTPUT 0
+#define AVGOUTPUT 0
 #define NORELELAVGS
 #define THOUTPUT 0
 #define THPROFRADIUS 30

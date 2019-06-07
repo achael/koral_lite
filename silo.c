@@ -407,10 +407,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               #endif
 	      #endif
 	      
-	      ldouble exploc;
+	      ldouble exploc=0.;
               int derdir[3] = {0,0,0};
               ldouble shear[4][4];
-              calc_shear_lab(pp, &geom, shear, &exploc, MHD, derdir);
+              //calc_shear_lab(pp, &geom, shear, &exploc, MHD, derdir);
 
 	      //primitives to OUTCOORDS
               #ifdef RADIATION
@@ -842,8 +842,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 	      //transform vel to cartesian
 	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
-		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS ||
-		  MYCOORDS==MKER1COORDS)
+		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==JETCOORDS ||
+		  MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
 		{
 		  vel[2]*=r;
 		  vel[3]*=r*sin(th);
@@ -971,8 +971,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 	      //transform Bfield to cartesian
 	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
-		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS ||
-		  MYCOORDS==MKER1COORDS)
+		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==JETCOORDS ||
+		  MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
 		{
 		  bcon[2]*=r;
 		  bcon[3]*=r*sin(th);
@@ -1176,8 +1176,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 	      //transform rad flux to cartesian
 	      if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
-		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==MSPH1COORDS ||
-		  MYCOORDS==MKER1COORDS)
+		  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==JETCOORDS ||
+		  MYCOORDS==MSPH1COORDS || MYCOORDS==MKER1COORDS)
 		{
 		  Rij22[2][0]*=sqrt(geomout.gg[2][2]);
 		  Rij22[3][0]*=sqrt(geomout.gg[3][3]);

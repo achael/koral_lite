@@ -7,7 +7,6 @@
 
 #include "ko.h"
 
-
 int
 main(int argc, char **argv)
 {
@@ -75,7 +74,7 @@ main(int argc, char **argv)
   
   //initialize constants
   initialize_constants();
-
+  
   //set gamma bins for relativistic electrons
   #ifdef RELELECTRONS
   set_relel_gammas();
@@ -97,7 +96,7 @@ main(int argc, char **argv)
 
   //precalculates metric, Christoffels, etc.
   calc_metric();
-
+  
   //save coordinate file
   #ifdef COORDOUTPUT
   fprint_coordfile(folder,"coord");
@@ -482,8 +481,10 @@ main(int argc, char **argv)
   //******************************************************
   // Main evolution is all here
   //******************************************************
+  #include <gperftools/profiler.h>
+  ProfilerStart("profile.log");
   solve_the_problem(tstart, folder);
-
+  ProfilerStop();
   //******************************************************
   // Evolution done. Clean up and finish.
   //******************************************************

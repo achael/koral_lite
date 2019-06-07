@@ -847,7 +847,7 @@ pick_G(int ix,int iy,int iz,ldouble GG[][5])
 int
 pick_gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
 {
-  ldouble g00,g03,g11,g22,g33,gdet,dlgdet0,dlgdet1,dlgdet2;
+  ldouble g00,g03,g11,g22,g33,gdet;//,dlgdet0,dlgdet1,dlgdet2;
 
   //ix,iy,iz correspond to indices in cell-faces arrays
   if(idim==0)
