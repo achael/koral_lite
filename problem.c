@@ -26,14 +26,21 @@ solve_the_problem(ldouble tstart, char* folder)
 #else  
   ldouble dtout = DTOUT1;
 #endif
-  
   ldouble dtoutavg = DTOUT2;
-
+  
+  ldouble dtsaveavg;
+  #ifndef DTAVG
+  dtsaveavg = 1;
+  #else
+  dtsaveavg = DTAVG;
+  #endif
+  
   ldouble dtsource, taim;
   ldouble fprintf_time = 0.;
   ldouble lasttout_floor=floor(t/dtout); 
   ldouble lasttoutavg_floor=floor(t/dtoutavg);
-
+  ldouble lastsaveavg_floor=floor(t/dtsaveavg);
+  
   int i1=0.,i2=0.;
   int fprintf_nstep=0;  
   int i,j,ii;
@@ -258,10 +265,19 @@ solve_the_problem(ldouble tstart, char* folder)
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
 	    count_entropy(&nentr[3],&nentr2[3]);
 
-            #if(AVGOUTPUT>0) 
-	    // Save to avg arrays
-	    // ANDREW why here and not below? 
+	    #if(AVGOUTPUT>0) // Save to avg arrays
+            #ifdef DTAVG //Dont save every step
+            if(lastsaveavg_floor!=floor(t/dtsaveavg))
+	    {
+	      if(nstep>1)
+	      {
+		save_avg(dt);
+                lastsaveavg_floor=floor(t/dtsaveavg);	 
+              }
+	    }
+	    #else
 	    if(nstep>1) save_avg(dt);
+            #endif 
             #endif
 
 	    // Calculate 2nd implicit deriv
@@ -481,10 +497,19 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Set ppostimplicit = p over domain + ghost cells
 	    copyi_u(1.,p,ppostimplicit);
 
-	    // Save to avg arrays
-	    // ANDREW -- why here and not below?
-            #if(AVGOUTPUT>0) 	   	    
+	    #if(AVGOUTPUT>0) // Save to avg arrays
+            #ifdef DTAVG // Don't average every step
+            if(lastsaveavg_floor!=floor(t/dtsaveavg))
+	    {
+	      if(nstep>1)
+	      {
+		save_avg(dt);
+                lastsaveavg_floor=floor(t/dtsaveavg);	 
+              }
+	    }
+	    #else
 	    if(nstep>1) save_avg(dt);
+            #endif 
             #endif
 
 	    // Together      
@@ -610,11 +635,21 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Set ppostimplicit = p over domain + ghost cells
 	    copyi_u(1.,p,ppostimplicit);
 
-	    // Save to avg ararays
-            #if(AVGOUTPUT>0) 	  	    
+	    #if(AVGOUTPUT>0) // Save to avg arrays
+            #ifdef DTAVG //Don't average every step
+            if(lastsaveavg_floor!=floor(t/dtsaveavg))
+	    {
+	      if(nstep>1)
+	      {
+		save_avg(dt);
+                lastsaveavg_floor=floor(t/dtsaveavg);	 
+              }
+	    }
+	    #else
 	    if(nstep>1) save_avg(dt);
+            #endif 
             #endif
-
+	    
 	    // Together      
 	    addi_u(1.,u,-1.,ut1,ut3);  // dt * (R(U(2)))
 	    addi_u_3(1.,ut0,0.,ut2,1.,ut3,u); //U(0) + dt R(U(2)) in *u
@@ -683,11 +718,21 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Set ppostimplicit = p over domain + ghost cells
 	    copyi_u(1.,p,ppostimplicit);
 
-            #if(AVGOUTPUT>0)
-	    // Save to avg arrays	    
+            #if(AVGOUTPUT>0) // Save to avg arrays
+            #ifdef DTAVG //Don't average every step
+            if(lastsaveavg_floor!=floor(t/dtsaveavg))
+	    {
+	      if(nstep>1)
+	      {
+		save_avg(dt);
+                lastsaveavg_floor=floor(t/dtsaveavg);
+	      }
+	    }
+	    #else
 	    if(nstep>1) save_avg(dt);
             #endif 
-
+            #endif
+	    
 	    // Calculate primitves
 	    // ANDREW is this excessive? Should be consistent after implicit!
 	    calc_u2p(0,1); //do not calculate visc. heating, do count entropy inversions

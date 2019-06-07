@@ -481,10 +481,10 @@ main(int argc, char **argv)
   //******************************************************
   // Main evolution is all here
   //******************************************************
-  #include <gperftools/profiler.h>
-  ProfilerStart("profile.log");
+  //#include <gperftools/profiler.h>
+  //ProfilerStart("profile.log");
   solve_the_problem(tstart, folder);
-  ProfilerStop();
+  //ProfilerStop();
   //******************************************************
   // Evolution done. Clean up and finish.
   //******************************************************

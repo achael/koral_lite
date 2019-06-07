@@ -138,14 +138,26 @@
 //135 WINDACCRETION
 //136 CONTACTELECTRONTEST - Contact discontinuity electron heating test
 //137 KATOTORUS_TILTED - radiative torus initiated like in Kato+2004 with a tilt from BH spin axis
+//138 JETCOORDS -- test jet coordinate system
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
-//Should we do something similar for kappaes? 
 
-#define PROBLEM 119
+#define PROBLEM 138
+
+
+#if(PROBLEM==138)
+
+#define PR_DEFINE "PROBLEMS/JETCOORDS/define.h"
+#define PR_BC "PROBLEMS/JETCOORDS/bc.c"
+#define PR_INIT "PROBLEMS/JETCOORDS/init.c"
+#define PR_KAPPAES "PROBLEMS/JETCOORDS/kappaes.c"
+#define PR_TOOLS "PROBLEMS/JETCOORDS/tools.c"
+#define PR_POSTINIT "PROBLEMS/JETCOORDS/postinit.c"
+
+#endif
 
 #if(PROBLEM==137)
 

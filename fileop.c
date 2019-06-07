@@ -1406,8 +1406,10 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
    if(NZ==1)
      fprintf(fout1,"%.5e %5d %5d %.5e %.5e ",t,NX+2,NY,BHSPIN,MASS);
    else
-     fprintf(fout1,"%.5e %5d %5d %5d %.5e %.5e ",t,NX+2,NY,NZ,BHSPIN,MASS);     
+     fprintf(fout1,"%.5e %5d %5d %5d %.5e %.5e ",t,NX+2,NY,NZ,BHSPIN,MASS);
+#if(MYCOORDS==MKS3COORDS)
    fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e\n",MKSR0,MKSH0,MKSMY1,MKSMY2,MKSMP0);
+#endif
 #ifdef RELELECTRONS
    fprintf(fout1,"%5d %.5e %.5e\n",NRELBIN, RELGAMMAMIN, RELGAMMAMAX);
 #endif
