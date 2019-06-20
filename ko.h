@@ -477,8 +477,8 @@ struct OpTable {
 
 //primitive and flux arrays
 #define get_u(uarr,iv,ix,iy,iz) uarr[iv + (iX(ix)+(NGCX))*NV + \
-				           (iY(iy)+(NGCY))*(SX)*NV + \
-					   (iZ(iz)+(NGCZ))*(SY)*(SX)*NV]
+				          (iY(iy)+(NGCY))*(SX)*NV + \
+					  (iZ(iz)+(NGCZ))*(SY)*(SX)*NV]
 
 #define set_u(uarr,iv,ix,iy,iz,val) uarr[iv + (iX(ix)+(NGCX))*NV + \
 					      (iY(iy)+(NGCY))*(SX)*NV + \

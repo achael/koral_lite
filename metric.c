@@ -2,7 +2,6 @@
  \brief Metric-related routines
  */
 
-
 #include "ko.h"
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_deriv.h>
@@ -273,7 +272,7 @@ r_photon_BL(ldouble a)
 ldouble
 calc_gdet(ldouble *xx)
 {
-  return calc_gdet_arb(xx,MYCOORDS);
+  return calc_gdet_arb(xx, MYCOORDS);
 }
  
 ///////////////////////////////////////////////////////////////
@@ -4790,7 +4789,7 @@ int
 test_metric()
 {
   //test perturbation to g_tt
-  struct geometry geom,geomBL;
+  struct geometry geom, geomBL;
   fill_geometry_arb(NX-4,NY/2,0,&geomBL,BLCOORDS);
   fill_geometry(NX-4,NY/2,0,&geom);
   print_metric(geomBL.gg);

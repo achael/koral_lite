@@ -1021,7 +1021,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		    - sin(th)*bcondyn[2];
                   #endif
 		}
-	      #endif
+#endif //MAGNFIELD
 
 #ifdef RADIATION
 
@@ -1422,7 +1422,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	    }
 	}
     }
-#endif
+#endif //RADIATION
 
 
   // assign grid 
@@ -1497,7 +1497,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   DBAddOption(optList, DBOPT_DTIME, (void*)&time);
   DBAddOption(optList, DBOPT_TIME, (void*)&ftime);
   DBAddOption(optList, DBOPT_CYCLE, (void*)&nstep);
-
 
   // Write out the mesh to the file 
   DBPutQuadmesh(file, "mesh1", coordnames, coordinates,

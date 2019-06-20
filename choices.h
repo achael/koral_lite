@@ -698,9 +698,10 @@
 
 /*********synchrotron*********/
 #ifdef SYNCHROTRON
-#ifndef NO_SYNCHROTRON_BRIDGE_FUNCTIONS
-#define USE_SYNCHROTRON_BRIDGE_FUNCTIONS
-#endif
+// TODO -- do we want synchrotron bridge functions on by default?
+//#ifndef NO_SYNCHROTRON_BRIDGE_FUNCTIONS
+//#define USE_SYNCHROTRON_BRIDGE_FUNCTIONS
+//#endif
 
 #ifndef MAXDIFFTRADS
 #define MAXDIFFTRADS 1.e2

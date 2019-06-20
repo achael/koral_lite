@@ -20,7 +20,7 @@
 /************************************/
 //magnetic choices
 /************************************/
-//#define MAGNFIELD
+#define MAGNFIELD
 #define GDETIN 1 //must be 1 for MAGNFIELD
 #define VECPOTGIVEN
 #define INIT_MAGN_CORNERS    
@@ -29,7 +29,7 @@
 /************************************/
 //dynamo choices
 /************************************/
-/*
+
 #define MIMICDYNAMO
 #define CALCHRONTHEGO
 #define THETAANGLE 0.25
@@ -39,7 +39,7 @@
 #define DAMPBETA
 #define BETASATURATED 0.1
 #define ALPHABETA 6.28
-*/
+
 
 /************************************/
 //radiation choices
@@ -143,7 +143,7 @@
 /************************************/
 #define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .9
+#define TSTEPLIM .5
 #define FLUXMETHOD LAXF_FLUX
 
 #define FLUXLIMITER 0
@@ -169,7 +169,7 @@
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 1.e5
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 50.
+#define B2RHORATIOMAX 100.
 #define GAMMAMAXRAD 20.
 #define GAMMAMAXHD 20.
 #define RHOFLOOR 1.e-50
@@ -178,8 +178,8 @@
 //resolution
 /************************************/
 //total resolution
-#define TNX 128//320//288 //256 //16*16 //128 <->256
-#define TNY 128//256//224 //320 //14*9 //92 <->256
+#define TNX 64//320//288 //256 //16*16 //128 <->256
+#define TNY 64//256//224 //320 //14*9 //92 <->256
 #define TNZ 1//128//96
 
 //number of tiles
@@ -261,7 +261,7 @@
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
 #define NSTEPSTOP 1.e20
-#define NOUTSTOP 100
+#define NOUTSTOP 1000
 
 #define COORDOUTPUT 1
 #define GRIDOUTPUT 1
@@ -286,7 +286,7 @@
 #define GAMMA (5./3.)
 #define GAMMAI (5./3.)
 #define GAMMAE (4./3.)
-#define NTORUS 14
+#define NTORUS 0
 #define HFRAC 1. //mass fraction of the hydrogen X
 #define HEFRAC 0. //mass fraction of helium Y
 
@@ -312,7 +312,7 @@
 #define BETANORMFULL
 #endif
 
-#if(NTORUS==14) //a=0 SANE, no rad, fewer loops
+#if(NTORUS==14 || NTORUS==10) //a=0 SANE, no rad, fewer loops
 #define EXPECTEDHR 0.4
 #define LT_KAPPA 1.e16
 #define LT_XI 0.708
@@ -321,7 +321,7 @@
 #define LT_GAMMA 5./3.
 #define LT_RIN 10.
 #undef MAXBETA
-#define MAXBETA (1./30.) //target pmag/pgas inside torus
+#define MAXBETA (1./100.) //target pmag/pgas inside torus
 #define BETANORMFULL
 #endif
 
