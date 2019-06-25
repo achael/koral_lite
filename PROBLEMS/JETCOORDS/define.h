@@ -40,7 +40,6 @@
 #define BETASATURATED 0.1
 #define ALPHABETA 6.28
 
-
 /************************************/
 //radiation choices
 /************************************/
@@ -190,8 +189,8 @@
 /************************************/
 //coordinates
 /************************************/
-#define myJETCOORDS
-//#define myMKS2COORDS
+//#define myJETCOORDS
+#define myMKS2COORDS
 #define METRICAXISYMMETRIC
 #define RMIN 1.
 #define RMAX 1.e5
@@ -256,6 +255,9 @@
 #define DTOUT1 10 //res
 #define DTOUT2 100 //avg
 #define DTOUT3 100 //box,var
+
+//#define DUMPS_READ_HDF5
+#define DUMPS_WRITE_HDF5
 
 #define OUTCOORDS BLCOORDS
 #define OUTVEL VEL4

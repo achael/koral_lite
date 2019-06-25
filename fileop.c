@@ -5,7 +5,6 @@
 
 #include "ko.h"
 
-
 /*************************************************/
 /*  adds up current quantities to the pavg array */
 /*************************************************/
@@ -769,41 +768,51 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
     
   dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
 
-  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  printf("1\n");
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar,
+				 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &file_number);
   status = H5Dclose(dumps_dataset_int);
-    
+  printf("2\n");
+
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_AVG", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &file_avg);
   status = H5Dclose(dumps_dataset_int);
-    
+     printf("3\n");
+ 
   dumps_dataset_double = H5Dcreate2(dumps_file_id, "/HEADER/TIME", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &t);
   status = H5Dclose(dumps_dataset_double);
-    
+      printf("4\n");
+
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/PROBLEM_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &problem_number);
   status = H5Dclose(dumps_dataset_int);
-    
+      printf("5\n");
+
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NX", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &nxx);
   status = H5Dclose(dumps_dataset_int);
-    
+      printf("6\n");
+
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NY", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &nyy);
   status = H5Dclose(dumps_dataset_int);
-    
+      printf("7\n");
+
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NZ", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &nzz);
   status = H5Dclose(dumps_dataset_int);
-    
+
+    printf("8\n");
+
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NPRIM", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
                     &nprimitives);
@@ -871,7 +880,9 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
   // Then find the primitive name and save in the hdf5 file
 
     get_prim_name(prim_name, iv);
-    //printf("  prim_name: %s\n", prim_name);
+    printf("  prim_name: %s\n", prim_name);
+
+      printf("1\n");
 
     dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT, &(primitive[0][0][0]));
@@ -1282,7 +1293,7 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
 
   plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, comm, info);
-  dumps_file_id = H5Fopen (fname_h5, H5F_ACC_RDONLY, plist_id);
+  dumps_file_id = H5Fopen(fname_h5, H5F_ACC_RDONLY, plist_id);
   H5Pclose(plist_id);
 
   if(&dumps_file_id==NULL)

@@ -155,7 +155,7 @@
 //magnetic choices
 /************************************/
 
-//#define MAGNFIELD
+#define MAGNFIELD
 #define GDETIN 1
 #define VECPOTGIVEN
 #define INIT_MAGN_CORNERS    
