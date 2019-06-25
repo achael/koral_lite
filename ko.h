@@ -107,6 +107,10 @@
 #include <mach/mach.h>
 #endif
 
+#if defined COORDOUTPUT_HDF5 || defined DUMPS_CONVERT_HDF5 || defined DUMPS_READ_HDF5 || defined DUMPS_WRITE_HDF5
+#include "hdf5.h"
+#endif
+
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
@@ -1391,6 +1395,12 @@ int fprint_coordBL(char* folder,char* prefix);
 int fprint_simplefile(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix);
+
+int fprint_restartfile_mpi_hdf5(ldouble t, char* folder);
+int fprint_restartfile_serial_hdf5(ldouble t, char* folder);
+int fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t);
+int fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t);
+void get_prim_name(char* prim_name, int iv);
 
 
 ///////////////////////////////////////////////////////////////

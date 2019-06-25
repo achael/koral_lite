@@ -280,14 +280,23 @@ fprint_thprofiles(ldouble t, int nfile, char* folder, char* prefix)
 int
 fprint_restartfile(ldouble t, char* folder)
 {
+#ifdef DUMPS_WRITE_HDF5
+
+  #ifdef MPI
+  fprint_restartfile_mpi_hdf5(t, folder);
+  #else
+  fprint_restartfile_serial_hdf5(t, folder);
+  #endif
+
+#else
+  
   #ifdef MPI
   fprint_restartfile_mpi(t,folder);
-
   #else 
-
   fprint_restartfile_bin(t,folder); 
-
   #endif
+
+#endif
   
   return 0;
 }
@@ -479,6 +488,428 @@ fprint_restartfile_bin(ldouble t, char* folder)
 }
 
 
+int //parallel MPI hdf5 output
+fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
+{
+#if defined DUMPS_WRITE_HDF5 && defined MPI
+
+  MPI_Comm comm  = MPI_COMM_WORLD;
+  MPI_Info info  = MPI_INFO_NULL;
+
+  char bufor[250];
+  
+#ifndef FOLDER_HDF5
+#define FOLDER_HDF5 "./dumps"
+#endif
+
+  // Write out header information in group HEADER in HDF5 file
+  // Only PROCID=0 does this, but all processes open the file, group and dataspace
+
+  hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dataspace_array, dumps_memspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id, plist_id;
+  hsize_t dims_h5[3], chunk_dims[3], offset_3d[3], stride_3d[3], count_3d[3], block_3d[3];
+  herr_t status;
+    
+  int file_number = nfout1, file_avg = nfout2, problem_number = PROBLEM, nxx = TNX, nyy = TNY, nzz = TNZ, nprimitives = NV;
+    
+  plist_id = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fapl_mpio(plist_id, comm, info);
+    
+  char fname_h5[256];
+  sprintf(fname_h5, "%s/res%04d.h5", FOLDER_HDF5, nfout1);
+  dumps_file_id = H5Fcreate(fname_h5, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+  H5Pclose(plist_id);
+
+  dumps_group_id = H5Gcreate2(dumps_file_id, "/HEADER", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
+  dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
+
+  plist_id = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
+
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_number);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_AVG", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_avg);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/HEADER/TIME", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &t);
+  status = H5Dclose(dumps_dataset_double);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/PROBLEM_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &problem_number);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NX", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nxx);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NY", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nyy);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NZ", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nzz);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NPRIM", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nprimitives);
+  status = H5Dclose(dumps_dataset_int);
+  
+  status = H5Pclose(plist_id);
+  status = H5Gclose(dumps_group_id);
+
+  // Now work on the body of the dumps file. First set up the array and chunking information
+
+  int ret, ix, iy, iz, iv, i, ic, gix, giy, giz;
+  int ixx[NX][NY][NZ], iyy[NX][NY][NZ], izz[NX][NY][NZ];
+  
+  for(ix = 0; ix < NX; ix++)
+    for(iy = 0; iy < NY; iy++)
+      for(iz = 0; iz < NZ; iz++)
+      {
+        mpi_local2globalidx(ix,iy,iz,&gix,&giy,&giz);
+
+        ixx[ix][iy][iz] = gix;
+        iyy[ix][iy][iz] = giy;
+        izz[ix][iy][iz] = giz;
+      }
+
+  dims_h5[0] = TNX;
+  dims_h5[1] = TNY;
+  dims_h5[2] = TNZ;
+
+  chunk_dims[0] = TNX / NTX;
+  chunk_dims[1] = TNY / NTY;
+  chunk_dims[2] = TNZ / NTZ;
+
+  count_3d[0] = 1;
+  count_3d[1] = 1;
+  count_3d[2] = 1;
+
+  stride_3d[0] = 1;
+  stride_3d[1] = 1;
+  stride_3d[2] = 1;
+
+  block_3d[0] = chunk_dims[0];
+  block_3d[1] = chunk_dims[1];
+  block_3d[2] = chunk_dims[2];
+
+  offset_3d[0] = ixx[0][0][0];
+  offset_3d[1] = iyy[0][0][0];
+  offset_3d[2] = izz[0][0][0];
+
+  /*
+  // Save indices in HDF5 file. Is this needed? If not, get rid of ixx, iyy, izz arrays
+    
+  for (iv = 0; iv < 3; iv++)
+  {
+    // This sequence of H5 commands, which is taken from an example code, looks very complicated, but it works. Probably could be streamlined a lot.
+
+    dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
+    dumps_memspace_array = H5Screate_simple(3, chunk_dims, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(plist_id, 3, chunk_dims);
+
+    if (iv == 0)
+    {
+      dumps_dataset_array = H5Dcreate2(dumps_file_id, "/GIX", H5T_STD_I32BE, dumps_dataspace_array, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    }
+    else if (iv == 1)
+    { 
+      dumps_dataset_array = H5Dcreate2(dumps_file_id, "/GIY", H5T_STD_I32BE, dumps_dataspace_array, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    } 
+    else
+    { 
+      dumps_dataset_array = H5Dcreate2(dumps_file_id, "/GIZ", H5T_STD_I32BE, dumps_dataspace_array, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    } 
+
+    H5Pclose(plist_id);
+    H5Sclose(dumps_dataspace_array);
+
+    dumps_dataspace_array = H5Dget_space(dumps_dataset_array);
+    status = H5Sselect_hyperslab(dumps_dataspace_array, H5S_SELECT_SET, offset_3d, stride_3d, count_3d, block_3d);
+
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+    if (iv == 0)
+    {
+      status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_INT, dumps_memspace_array, dumps_dataspace_array, plist_id, ixx);
+    }
+    else if (iv == 1)
+    { 
+      status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_INT, dumps_memspace_array, dumps_dataspace_array, plist_id, iyy);
+    } 
+    else
+    { 
+      status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_INT, dumps_memspace_array, dumps_dataspace_array, plist_id, izz);
+    } 
+
+    status = H5Dclose(dumps_dataset_array);
+  }
+   */
+
+  // Next work on the primitives one by one
+
+  double primitive[NX][NY][NZ];
+  int iattribute = 0;
+  char prim_name[256], attribute_name[256];
+
+  //dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
+  //dumps_memspace_array = H5Screate_simple(3, chunk_dims, NULL);
+
+  for(iv = 0; iv < NV; iv++)
+  {
+
+  // First copy the primitive to the 3D array
+
+  for(ix = 0; ix < NX; ix++)
+    for(iy = 0; iy < NY; iy++)
+      for(iz = 0; iz < NZ; iz++)
+      {
+        primitive[ix][iy][iz] = get_u(p, iv, ix, iy, iz);
+      }
+    
+  // Then find the primitive name and save in the hdf5 file
+
+    get_prim_name(prim_name, iv);
+    //printf("  prim_name: %s\n", prim_name);
+
+    dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
+    dumps_memspace_array = H5Screate_simple(3, chunk_dims, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(plist_id, 3, chunk_dims);
+
+    dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, plist_id, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(dumps_dataspace_array);
+
+    dataspace_array = H5Dget_space(dumps_dataset_array);
+    status = H5Sselect_hyperslab(dataspace_array, H5S_SELECT_SET, offset_3d, stride_3d, count_3d, block_3d);
+
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+    status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, dumps_memspace_array, dataspace_array, plist_id, primitive);
+    status = H5Dclose(dumps_dataset_array);
+  }  
+
+  status = H5Pclose(plist_id);
+  status = H5Sclose(dumps_dataspace_scalar);
+  status = H5Sclose(dumps_memspace_array);
+  status = H5Fclose (dumps_file_id);
+
+#ifdef RESTARTOUTPUTINBL
+  printf("\n RESTARTOUTPUTINBL not allowed in hdf5 output!\n";
+  exit(1);
+    //struct geometry geom,geomBL;
+    //fill_geometry(ix,iy,iz,&geom);
+    //fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
+    //trans_pall_coco(ppout, ppout, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
+#endif
+
+#ifdef OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING
+  printf("\n OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING not allowed in hdf5 output!\n";
+  exit(1);
+    //ppout[ENTR]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);
+#endif
+
+  // Finally, redefine restart files to the current dump
+
+  if (PROCID == 0)
+  {
+    sprintf(bufor, "rm %s/reslast.h5", FOLDER_HDF5);
+    iv=system(bufor);
+    sprintf(bufor,"ln -s res%04d.h5 %s/reslast.h5", nfout1, FOLDER_HDF5);
+    iv=system(bufor);
+  }
+
+#endif  // DUMPS_WRITE_HDF5
+
+  return 0;
+}
+
+							  
+/*********************************************/
+/*********************************************/
+
+int //serial hdf5 output
+fprint_restartfile_serial_hdf5(ldouble t, char* folder)
+{
+#ifdef DUMPS_WRITE_HDF5
+
+  char bufor[250];
+  
+#ifndef FOLDER_HDF5
+#define FOLDER_HDF5 "./dumps"
+#endif
+
+  // Write out header information in group HEADER in HDF5 file
+
+  hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id;
+  hsize_t dims_h5[3];
+  herr_t status;
+    
+  int file_number = nfout1, file_avg = nfout2, problem_number = PROBLEM, nxx = TNX, nyy = TNY, nzz = TNZ, nprimitives = NV;
+    
+  dims_h5[0] = NX;
+  dims_h5[1] = NY;
+  dims_h5[2] = NZ;
+    
+  char fname_h5[256];
+  sprintf(fname_h5, "%s/res%04d.h5", FOLDER_HDF5, nfout1);
+  dumps_file_id = H5Fcreate (fname_h5, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+  dumps_group_id = H5Gcreate2(dumps_file_id, "/HEADER", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
+  dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
+
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &file_number);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_AVG", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &file_avg);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/HEADER/TIME", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &t);
+  status = H5Dclose(dumps_dataset_double);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/PROBLEM_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &problem_number);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NX", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &nxx);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NY", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &nyy);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NZ", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &nzz);
+  status = H5Dclose(dumps_dataset_int);
+    
+  dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NPRIM", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                    &nprimitives);
+  status = H5Dclose(dumps_dataset_int);
+  
+  status = H5Gclose(dumps_group_id);
+
+  // Now work on the body of the dumps file
+
+  // Create arrays of indices
+
+  int ret, ix, iy, iz, iv, i, ic, gix, giy, giz;
+  int ixx[NX][NY][NZ], iyy[NX][NY][NZ], izz[NX][NY][NZ];
+  
+  for(ix = 0; ix < NX; ix++)
+    for(iy = 0; iy < NY; iy++)
+      for(iz = 0; iz < NZ; iz++)
+      {
+        mpi_local2globalidx(ix,iy,iz,&gix,&giy,&giz);
+
+        ixx[ix][iy][iz] = gix;
+        iyy[ix][iy][iz] = giy;
+        izz[ix][iy][iz] = giz;
+      }
+
+  /*
+  // Save indices in HDF5 file. Is this needed? If not, get rid of ixx, iyy, izz arrays
+    
+  dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
+    
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/GIX", H5T_STD_I32BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    ixx);
+  status = H5Dclose(dumps_dataset_array);
+    
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/GIY", H5T_STD_I32BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    iyy);
+  status = H5Dclose(dumps_dataset_array);
+    
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/GIZ", H5T_STD_I32BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    izz);
+  status = H5Dclose(dumps_dataset_array);
+   */
+    
+  // Next work on the primitives one by one
+
+  double primitive[NX][NY][NZ];
+  int iattribute = 0;
+  char prim_name[256], attribute_name[256];
+
+  for(iv = 0; iv < NV; iv++)
+  {
+
+  // First copy the primitive to the 3D array
+
+    for(ix = 0; ix < NX; ix++)
+      for(iy = 0; iy < NY; iy++)
+	for(iz = 0; iz < NZ; iz++)
+	{
+	  primitive[ix][iy][iz] = get_u(p, iv, ix, iy, iz);
+	}
+    
+  // Then find the primitive name and save in the hdf5 file
+
+    get_prim_name(prim_name, iv);
+    //printf("  prim_name: %s\n", prim_name);
+
+    dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT, &(primitive[0][0][0]));
+    status = H5Dclose(dumps_dataset_array);
+  }  
+
+  status = H5Sclose(dumps_dataspace_scalar);
+  status = H5Sclose(dumps_dataspace_array);
+  status = H5Fclose (dumps_file_id);
+
+#ifdef RESTARTOUTPUTINBL
+  printf("\n RESTARTOUTPUTINBL not allowed in hdf5 output!\n";
+  exit(1);
+    //struct geometry geom,geomBL;
+    //fill_geometry(ix,iy,iz,&geom);
+    //fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
+    //trans_pall_coco(ppout, ppout, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
+#endif
+
+#ifdef OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING
+  printf("\n OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING not allowed in hdf5 output!\n";
+  exit(1);
+    //ppout[ENTR]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);
+#endif
+
+  // Finally, redefine restart files to the current dump
+
+  sprintf(bufor, "rm %s/reslast.h5", FOLDER_HDF5);
+  iv=system(bufor);
+  sprintf(bufor,"ln -s res%04d.h5 %s/reslast.h5", nfout1, FOLDER_HDF5);
+  iv=system(bufor);
+
+#endif  // DUMPS_WRITE_HDF5
+
+  return 0;
+}
+
+
 /*********************************************/
 /* reads dump file */
 /* puts conserved into the memory */
@@ -491,15 +922,24 @@ fread_restartfile(int nout1, char* folder,ldouble *t)
 
 
   int ret;
-   
+     
+#ifdef DUMPS_READ_HDF5
   
   #ifdef MPI
-  ret=fread_restartfile_mpi(nout1,folder,t);
+  ret = fread_restartfile_mpi_hdf5(nout1, folder, t);
+  #else
+  ret = fread_restartfile_serial_hdf5(nout1, folder, t);
+  #endif
 
+#else
+
+  #ifdef MPI
+  ret=fread_restartfile_mpi(nout1,folder,t);
   #else //no MPI 
   ret=fread_restartfile_bin(nout1,folder,t);  
-
   #endif
+
+#endif
   
   return ret;
 }
@@ -803,7 +1243,464 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 #endif
   return 0;
 }
-							    
+
+	 
+/*********************************************/
+/*********************************************/
+
+int //parallel MPI hdf5 input
+fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
+{
+#if defined DUMPS_READ_HDF5 && defined MPI
+
+  MPI_Comm comm  = MPI_COMM_WORLD;
+  MPI_Info info  = MPI_INFO_NULL;
+
+#ifndef FOLDER_HDF5
+#define FOLDER_HDF5 "./dumps"
+#endif
+
+  hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dataspace_array, dumps_memspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id, plist_id;
+  hsize_t dims_h5[3], chunk_dims[3], offset_3d[3], stride_3d[3], count_3d[3], block_3d[3];
+  herr_t status;
+    
+  int file_number, file_avg, problem_number, nxx, nyy, nzz, nprimitives;
+    
+  char fname_h5[400];
+
+  if(nout1>=0)
+  {
+    sprintf(fname_h5, "%s/res%04d.h5", FOLDER_HDF5, nout1);
+  }
+  else
+  {
+    sprintf(fname_h5, "%s/reslast.h5", FOLDER_HDF5);
+  }
+
+  /***********/
+  // Open hdf5 file and read header information from group HEADER
+
+  plist_id = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fapl_mpio(plist_id, comm, info);
+  dumps_file_id = H5Fopen (fname_h5, H5F_ACC_RDONLY, plist_id);
+  H5Pclose(plist_id);
+
+  if(&dumps_file_id==NULL)
+  {
+    printf("Input hdf5 file not available!\n");
+    exit(1);
+  }
+
+  dumps_group_id = H5Gopen2(dumps_file_id, "/HEADER", H5P_DEFAULT);
+  dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
+
+  plist_id = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "FILE_NUMBER", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_number);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "FILE_AVG", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_avg);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_double = H5Dopen2(dumps_group_id, "TIME", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, t);
+  status = H5Dclose(dumps_dataset_double);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "PROBLEM_NUMBER", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &problem_number);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NX", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nxx);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NY", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nyy);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NZ", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nzz);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NPRIM", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nprimitives);
+  status = H5Dclose(dumps_dataset_int);
+  
+  status = H5Pclose(plist_id);
+  status = H5Gclose(dumps_group_id);
+  status = H5Sclose(dumps_dataspace_scalar);
+
+  if (PROCID == 0) printf("PROCID: %d  restart file (%s) read no. %d at time: %f of PROBLEM: %d with NXYZ: %d %d %d and NV: %d\n", PROCID, fname_h5, file_number, *t, problem_number, nxx, nyy, nzz, nprimitives);
+
+  nfout1 = file_number + 1; //global file no.
+  nfout2 = file_avg; //global file no. for avg
+
+  if (nxx != TNX || nyy != TNY || nzz != TNZ)
+  {
+    printf("Array sizes do not match!!\nnxx nyy nzz TNX TNY TNZ: %d %d %d %d %d %d\n", nxx, nyy, nzz, TNX, TNY, TNZ);
+    exit(1);
+  }
+
+  if (nprimitives != NV)
+  {
+    printf("Number of primitives does not match!!\nprimitves NV: %d %d\n", nprimitives, NV);
+    exit(1);
+  }
+  
+  /***********/
+  // Now read the primitives one by one and save in array p
+
+  int ret, ix, iy, iz, iv, i, ic, gix, giy, giz;
+
+  mpi_local2globalidx(0, 0, 0, &gix, &giy, &giz);
+
+  dims_h5[0] = TNX;
+  dims_h5[1] = TNY;
+  dims_h5[2] = TNZ;
+
+  chunk_dims[0] = TNX / NTX;
+  chunk_dims[1] = TNY / NTY;
+  chunk_dims[2] = TNZ / NTZ;
+
+  count_3d[0] = 1;
+  count_3d[1] = 1;
+  count_3d[2] = 1;
+
+  stride_3d[0] = 1;
+  stride_3d[1] = 1;
+  stride_3d[2] = 1;
+
+  block_3d[0] = chunk_dims[0];
+  block_3d[1] = chunk_dims[1];
+  block_3d[2] = chunk_dims[2];
+
+  offset_3d[0] = gix;
+  offset_3d[1] = giy;
+  offset_3d[2] = giz;
+    
+  double primitive[NX][NY][NZ];
+  char prim_name[256];
+
+  for(iv = 0; iv < NV; iv++)
+  {
+    // Find the primitive name and read primitive values from the hdf5 file
+
+    get_prim_name(prim_name, iv);
+    //printf("  prim_name: %s\n", prim_name);
+
+    dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
+    dumps_memspace_array = H5Screate_simple(3, chunk_dims, NULL);
+
+    plist_id = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(plist_id, 3, chunk_dims);
+
+    dumps_dataset_array = H5Dopen2(dumps_file_id, prim_name, H5P_DEFAULT);
+    H5Pclose(plist_id);
+    H5Sclose(dumps_dataspace_array);
+
+    dataspace_array = H5Dget_space(dumps_dataset_array);
+    status = H5Sselect_hyperslab(dataspace_array, H5S_SELECT_SET, offset_3d, stride_3d, count_3d, block_3d);
+
+    plist_id = H5Pcreate(H5P_DATASET_XFER);
+    H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+    status = H5Dread(dumps_dataset_array, H5T_NATIVE_DOUBLE, dumps_memspace_array, dataspace_array, plist_id, primitive);
+    status = H5Dclose(dumps_dataset_array);
+
+    // Copy the primitives to p array
+
+    for(ix = 0; ix < NX; ix++)
+    {
+      for(iy = 0; iy < NY; iy++)
+      {
+	for(iz = 0; iz < NZ; iz++)
+	{
+          set_u(p, iv, ix, iy, iz, primitive[ix][iy][iz]);
+	}
+      }
+    }  
+  }
+
+  status = H5Pclose(plist_id);
+  status = H5Sclose(dumps_memspace_array);
+  status = H5Fclose (dumps_file_id);
+
+  //printf("Done reading hdf5 file\n");
+
+#ifdef RESTARTFROMNORELEL
+  printf("RESTARTFROMNORELEL not yet available with HDF5!\n");
+  exit(1);
+#endif
+
+  // Loop over cells, calculate geometry, modify primitives as needed, compute conserveds and save
+
+  struct geometry geom;
+  ldouble xxvec[4], xxvecout[4];
+  ldouble uu[NV], pp[NV];
+
+  for(ix = 0; ix < NX; ix++)
+  {
+    for(iy = 0; iy < NY; iy++)
+    {
+      for(iz = 0; iz < NZ; iz++)
+      {
+	for (iv = 0; iv < NV; iv++)
+	{
+	  pp[iv] = get_u(p, iv, ix, iy, iz);
+	}
+
+	fill_geometry(ix,iy,iz,&geom);
+
+#ifdef RESTARTOUTPUTINBL
+	struct geometry geomBL;
+	fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
+	trans_pall_coco(pp, pp, BLCOORDS,MYCOORDS, geomBL.xxvec,&geomBL,&geom);
+#endif
+
+#ifdef CONVERTLOGTONOLOGWHENRESTARTING
+	printf("CONVERTLOGTONOLOGWHENRESTARTING not yet available with HDF5!\n");
+	exit(1);
+#endif
+      
+#ifdef CONSISTENTGAMMA
+	ldouble Te,Ti;
+	calc_PEQ_Teifrompp(pp,&Te,&Ti,ix,iy,iz);
+	ldouble gamma=calc_gammaintfromTei(Te,Ti);
+	set_u_scalar(gammagas,ix,iy,iz,gamma);
+#endif
+      
+	p2u(pp,uu,&geom);
+
+#ifdef OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING //recover entropy
+	if(!doingpostproc)
+	{
+	  pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);
+	  uu[ENTR]=pp[ENTR]*(uu[RHO]/pp[RHO]);
+	}
+#endif
+
+	//save primitives and conserveds
+	for(iv=0;iv<NV;iv++)    
+	{
+	  set_u(u,iv,ix,iy,iz,uu[iv]);
+	  set_u(p,iv,ix,iy,iz,pp[iv]);
+	}
+      }
+    }
+  }
+
+#endif  // DUMPS_READ_HDF5
+
+  return 0;
+}
+
+
+/*********************************************/
+/*********************************************/
+
+int //serial hdf5 input
+fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
+{
+#ifdef DUMPS_READ_HDF5
+
+  hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id;
+  hsize_t dims_h5[3];
+  herr_t status;
+    
+  int file_number, file_avg, problem_number, nxx, nyy, nzz, nprimitives;
+    
+  dims_h5[0] = NX;
+  dims_h5[1] = NY;
+  dims_h5[2] = NZ;
+    
+  int ret, ix,iy,iz,iv,i,ic,gix,giy,giz;
+  char fname_h5[400];
+
+#ifndef FOLDER_HDF5
+#define FOLDER_HDF5 "./dumps"
+#endif
+
+  if(nout1>=0)
+  {
+    sprintf(fname_h5, "%s/res%04d.h5", FOLDER_HDF5, nout1);
+  }
+  else
+  {
+    sprintf(fname_h5, "%s/reslast.h5", FOLDER_HDF5);
+  }
+
+  /***********/
+  // Open hdf5 file and read header information from group HEADER
+
+  dumps_file_id = H5Fopen (fname_h5, H5F_ACC_RDWR, H5P_DEFAULT);
+  if(&dumps_file_id==NULL)
+  {
+    printf("Input hdf5 file not available!\n");
+    exit(1);
+  }
+
+  dumps_group_id = H5Gopen2(dumps_file_id, "/HEADER", H5P_DEFAULT);
+  dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "FILE_NUMBER", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_number);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "FILE_AVG", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_avg);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_double = H5Dopen2(dumps_group_id, "TIME", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, t);
+  status = H5Dclose(dumps_dataset_double);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "PROBLEM_NUMBER", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &problem_number);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NX", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nxx);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NY", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nyy);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NZ", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nzz);
+  status = H5Dclose(dumps_dataset_int);
+
+  dumps_dataset_int = H5Dopen2(dumps_group_id, "NPRIM", H5P_DEFAULT);
+  status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nprimitives);
+  status = H5Dclose(dumps_dataset_int);
+  
+  status = H5Gclose(dumps_group_id);
+  status = H5Sclose(dumps_dataspace_scalar);
+
+  printf("restart file (%s) read no. %d at time: %f of PROBLEM: %d with NXYZ: %d %d %d and NV: %d\n", fname_h5, file_number, *t, problem_number, nxx, nyy, nzz, nprimitives);
+  nfout1 = file_number + 1; //global file no.
+  nfout2 = file_avg; //global file no. for avg
+
+  if (nxx != NX || nyy != NY || nzz != NZ)
+  {
+    printf("Array sizes do not match!!\nnxx nyy nzz NX NY NZ: %d %d %d %d %d %d\n", nxx, nyy, nzz, NX, NY, NZ);
+    exit(1);
+  }
+
+  if (nprimitives != NV)
+  {
+    printf("Number of primitives does not match!!\nnxx nprimitives NV: %d %d\n", nprimitives, NV);
+    exit(1);
+  }
+  
+  /***********/
+  // Now read the primitives one by one and save in array p
+
+  double primitive[NX][NY][NZ];
+  char prim_name[256];
+
+  dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
+
+  for(iv = 0; iv < NV; iv++)
+  {
+    // Find the primitive name and read primitive values from the hdf5 file
+
+    get_prim_name(prim_name, iv);
+    //printf("  prim_name: %s\n", prim_name);
+
+    dumps_dataset_array = H5Dopen2(dumps_file_id, prim_name, H5P_DEFAULT);
+    status = H5Dread(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, primitive);
+    status = H5Dclose(dumps_dataset_array);
+
+    // Copy the primitives to p array
+
+    for(ix = 0; ix < NX; ix++)
+    {
+      for(iy = 0; iy < NY; iy++)
+      {
+	for(iz = 0; iz < NZ; iz++)
+	{
+          set_u(p, iv, ix, iy, iz, primitive[ix][iy][iz]);
+	}
+      }
+    }  
+  }
+
+  status = H5Sclose(dumps_dataspace_array);
+  status = H5Fclose (dumps_file_id);
+
+  //printf("Done reading hdf5 file\n");
+
+#ifdef RESTARTFROMNORELEL
+  printf("RESTARTFROMNORELEL not yet available with HDF5!\n");
+  exit(1);
+#endif
+
+  // Loop over cells, calculate geometry, modify primitives as needed, compute conserveds and save
+
+  struct geometry geom;
+  ldouble xxvec[4], xxvecout[4];
+  ldouble uu[NV], pp[NV];
+
+  for(ix = 0; ix < NX; ix++)
+  {
+    for(iy = 0; iy < NY; iy++)
+    {
+      for(iz = 0; iz < NZ; iz++)
+      {
+	for (iv = 0; iv < NV; iv++)
+	{
+	  pp[iv] = get_u(p, iv, ix, iy, iz);
+	}
+
+	fill_geometry(ix,iy,iz,&geom);
+
+#ifdef RESTARTOUTPUTINBL
+	struct geometry geomBL;
+	fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
+	trans_pall_coco(pp, pp, BLCOORDS,MYCOORDS, geomBL.xxvec,&geomBL,&geom);
+#endif
+
+#ifdef CONVERTLOGTONOLOGWHENRESTARTING
+	printf("CONVERTLOGTONOLOGWHENRESTARTING not yet available with HDF5!\n");
+	exit(1);
+#endif
+      
+#ifdef CONSISTENTGAMMA
+	ldouble Te,Ti;
+	calc_PEQ_Teifrompp(pp,&Te,&Ti,ix,iy,iz);
+	ldouble gamma=calc_gammaintfromTei(Te,Ti);
+	set_u_scalar(gammagas,ix,iy,iz,gamma);
+#endif
+      
+	p2u(pp,uu,&geom);
+
+#ifdef OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING //recover entropy
+	if(!doingpostproc)
+	{
+	  pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);
+	  uu[ENTR]=pp[ENTR]*(uu[RHO]/pp[RHO]);
+	}
+#endif
+
+	//save primitives and conserveds
+	for(iv=0;iv<NV;iv++)    
+	{
+	  set_u(u,iv,ix,iy,iz,uu[iv]);
+	  set_u(p,iv,ix,iy,iz,pp[iv]);
+	}
+      }
+    }
+  }
+
+#endif  // DUMPS_READ_HDF5
+
+  return 0;
+}
+
 /*********************************************/
 /* prints avg files */
 /*********************************************/
@@ -1112,6 +2009,30 @@ int fprint_coordBL(char* folder,char* prefix)
    sprintf(bufor,"%s/%sBL.dat",folder,prefix);
    FILE* fout1=fopen(bufor,"w");
 
+
+#ifdef COORDOUTPUT_HDF5
+   hid_t coordBL_file_id, coordBL_dataspace_id, r_dataset_id, theta_dataset_id, phi_dataset_id;
+   hsize_t dims_h5[3];
+   herr_t status;
+   
+   char bufor_h5[256];
+   sprintf(bufor_h5, "./%s/%sBL.h5", folder, prefix);
+   printf("\n%s\n", bufor_h5);
+   
+   coordBL_file_id = H5Fcreate (bufor_h5, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+   
+   dims_h5[0] = NX;
+   dims_h5[1] = NY;
+   dims_h5[2] = NZ;
+   coordBL_dataspace_id = H5Screate_simple(3, dims_h5, NULL);
+   
+   double r_h5[NX][NY][NZ], theta_h5[NX][NY][NZ], phi_h5[NX][NY][NZ];
+   
+   r_dataset_id = H5Dcreate2(coordBL_file_id, "/r", H5T_IEEE_F32BE, coordBL_dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   theta_dataset_id = H5Dcreate2(coordBL_file_id, "/theta", H5T_IEEE_F32BE, coordBL_dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   phi_dataset_id = H5Dcreate2(coordBL_file_id, "/phi", H5T_IEEE_F32BE, coordBL_dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+#endif
+   
    int ix,iy,iz,iv;
    ldouble pp[NV];
    for(iz=0;iz<NZ;iz++)
@@ -1133,6 +2054,12 @@ int fprint_coordBL(char* folder,char* prefix)
 	       fprintf(fout1,"%.5e %.5e %.5e ",r,th,ph);
 
 	       fprintf(fout1,"\n");
+#ifdef COORDOUTPUT_HDF5
+           r_h5[ix][iy][iz] = r;
+           theta_h5[ix][iy][iz] = th;
+           phi_h5[ix][iy][iz] = ph;
+#endif
+	       
 	     }
 	 }
      }
@@ -1140,6 +2067,22 @@ int fprint_coordBL(char* folder,char* prefix)
    fflush(fout1);
    fclose(fout1);
 
+ #ifdef COORDOUTPUT_HDF5
+   status = H5Dwrite(r_dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                     r_h5);
+   status = H5Dwrite(theta_dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                     theta_h5);
+   status = H5Dwrite(phi_dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                     phi_h5);
+   
+   status = H5Dclose(r_dataset_id);
+   status = H5Dclose(theta_dataset_id);
+   status = H5Dclose(phi_dataset_id);
+   
+   status = H5Sclose(coordBL_dataspace_id);
+   status = H5Fclose (coordBL_file_id);
+#endif
+  
    return 0;
  }
 
@@ -2021,4 +2964,117 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 
    return 0;
  }
+
+
+void get_prim_name
+  (
+   char* prim_name,
+  int iv
+   )
+{
+  if (iv == RHO)
+    {
+      sprintf(prim_name,"/RHO");
+      return;
+    }
+  else if (iv == UU)
+    {
+      sprintf(prim_name,"/UU");
+      return;
+    }
+  else if (iv == VX)
+    {
+      sprintf(prim_name,"/VX");
+      return;
+    }
+  else if (iv == VY)
+    {
+      sprintf(prim_name,"/VY");
+      return;
+    }
+  else if (iv == VZ)
+    {
+      sprintf(prim_name,"/VZ");
+      return;
+    }
+  else if (iv == ENTR)
+    {
+      sprintf(prim_name,"/ENTR");
+      return;
+    }
+  
+#ifdef MAGNFIELD
+  if (iv == B1)
+    {
+      sprintf(prim_name,"/B1");
+      return;
+    }
+  else if (iv == B2)
+    {
+      sprintf(prim_name,"/B2");
+      return;
+    }
+  else if (iv == B3)
+    {
+      sprintf(prim_name,"/B3");
+      return;
+    }
+#endif
+  
+#ifdef EVOLVEELECTRONS
+  if (iv == ENTRE)
+    {
+      sprintf(prim_name,"/ENTRE");
+      return;
+    }
+  else if (iv == ENTRI)
+    {
+      sprintf(prim_name,"/ENTRI");
+      return;
+    }
+#endif
+  
+#ifdef RADIATION
+  if (iv == EE)
+    {
+      sprintf(prim_name,"/EE");
+      return;
+    }
+  else if (iv == FX)
+    {
+      sprintf(prim_name,"/FX");
+      return;
+    }
+  else if (iv == FY)
+    {
+      sprintf(prim_name,"/FY");
+      return;
+    }
+  else if (iv == FZ)
+    {
+      sprintf(prim_name,"/FZ");
+      return;
+    }
+  
+#ifdef EVOLVEPHOTONNUMBER
+  if (iv == NF)
+    {
+      sprintf(prim_name,"/NF");
+      return;
+    }
+#endif
+#endif
+
+#ifdef RELELECTRONS
+  if (iv >= 8 && iv < NVHD)
+    {
+      int relbin = iv - 8;
+      sprintf(prim_name,"/RELBIN%d", relbin);
+      return;
+    }
+#endif
+  
+  sprintf(prim_name,"/UNKNOWN");
+  return;
+}
 

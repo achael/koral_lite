@@ -8,16 +8,16 @@ else
 //CFLAGS=-O2 -Wno-unused-result -fopenmp
 //-fsanitize=address -g -fno-omit-frame-pointer -Wunused-function 
 CC=clang
-CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -Wunused-function -fopenmp=libiomp5 -g
+CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp=libiomp5 -g
 //-fsanitize=address -fno-omit-frame-pointer
 endif
 
-LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt
+LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt -lhdf5_serial
 RM=/bin/rm
 
-OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o
+OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o 
 
-all: ko ana avg outavg phisli thsli phiavg regrid
+all: ko ana avg outavg phisli thsli phiavg regrid dumps2hdf5
 
 ko: ko.o $(OBJS) Makefile ko.h problem.h mnemonics.h 
 	$(CC) $(CFLAGS) -o ko ko.o $(OBJS) $(LIBS)
@@ -42,6 +42,9 @@ phiavg: phiavg.o $(OBJS)  Makefile ko.h problem.h mnemonics.h
 
 regrid: regrid.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
 	$(CC) $(CFLAGS) -o regrid regrid.o $(OBJS) $(LIBS)
+
+dumps2hdf5: dumps2hdf5.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
+	$(CC) $(CFLAGS) -o dumps2hdf5 dumps2hdf5.o $(OBJS) $(LIBS)
 
 clean:
 	$(RM) -f ko ana avg phiavg phisli thsli outavg regrid *~ *.o *.oo

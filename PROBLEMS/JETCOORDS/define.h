@@ -44,7 +44,7 @@
 /************************************/
 //radiation choices
 /************************************/
-//#define RADIATION
+#define RADIATION
 //#define SKIPRADSOURCE    //advective only
 //#define SKIPRADEVOLUTION //keeps initial values
 
