@@ -1277,6 +1277,14 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
     sprintf(fname_h5, "%s/reslast.h5", FOLDER_HDF5);
   }
 
+  // Check if hdf5 file exists
+  FILE *fhdf5;
+  fhdf5=fopen(fname_h5,"r");
+  if(fhdf5==NULL) 
+  {
+    return 1; //request start from scratch
+  }
+
   /***********/
   // Open hdf5 file and read header information from group HEADER
 
@@ -1530,6 +1538,14 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
   else
   {
     sprintf(fname_h5, "%s/reslast.h5", FOLDER_HDF5);
+  }
+
+  // Check if hdf5 file exists
+  FILE *fhdf5;
+  fhdf5=fopen(fname_h5,"r");
+  if(fhdf5==NULL) 
+  {
+    return 1; //request start from scratch
   }
 
   /***********/
