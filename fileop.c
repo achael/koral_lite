@@ -448,6 +448,7 @@ fprint_restartfile_bin(ldouble t, char* folder)
 	  ldouble ppout[NV];
 	  PLOOP(iv)
 	    ppout[iv]=get_u(p,iv,ix,iy,iz);
+	  
 #ifdef RESTARTOUTPUTINBL
 	  struct geometry geom,geomBL;
 	  fill_geometry(ix,iy,iz,&geom);
@@ -1669,15 +1670,15 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		  //four fource
 		  calc_Gi(pp,&geomBL,Giff,0.0,0,0); //ANDREW 0 for fluid frame
 		  
-#if defined(COMPTONIZATION) || defined(EVOLVEPHOTONNUMBER)
+#if defined(COMPTONIZATION)
 		  ldouble kappaes=calc_kappaes(pp,&geomBL);
 		  //directly in ff
 		  vel[1]=vel[2]=vel[3]=0.; vel[0]=1.;
 		  calc_Compt_Gi(pp,&geomBL,Gicff,ehat,Te,kappaes,vel);
 #endif 
-
+                  Trad = calc_LTE_TfromE(ehat);
 #ifdef EVOLVEPHOTONNUMBER //the color temperature of radiation
-  Trad = calc_ncompt_Thatrad_full(pp,&geomBL);
+                  Trad = calc_ncompt_Thatrad_full(pp,&geomBL);
 #endif
 	
 #ifdef EVOLVEELECTRONS	 
@@ -1698,16 +1699,15 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		    
 		  indices_2122(Rij,Rij22,geomBL.gg);  
 
-		  //ANDREW recompute if Giff in avg, if we accidentally saved it as lab frame
-                  #ifdef SIMOUTPUT_GILAB2FF
-		  calc_Gi(pp,&geomBL,Giff,0.0,0,0); //ANDREW 0 for fluid frame, 2 for fluid frame thermal only
-                  #endif
-
-#if defined(COMPTONIZATION) || defined(EVOLVEPHOTONNUMBER)
+#if defined(COMPTONIZATION)
 		  for(j=0;j<4;j++)
 		    Gicff[j]=get_uavg(pavg,AVGGHATCOMPT(j),ix,iy,iz);
-#endif			  
+#endif
+
+		  Trad = calc_LTE_TfromE(ehat);
+#ifdef EVOLVEPHOTONNUMBER
 		  Trad=calc_ncompt_Thatrad_fromEN(ehat,get_uavg(pavg,AVGNFHAT,ix,iy,iz));
+#endif
 		}
 	       
 	       //flux

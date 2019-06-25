@@ -112,7 +112,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *tempi = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *ue = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *ui = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  ldouble *G0icth = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   #endif 
 
   #ifdef RELELECTRONS
@@ -185,6 +184,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *urady = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *uradz = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *Gtff =  (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *G0icth = (ldouble*)malloc(nx*ny*nz*sizeof(double));
 
   ldouble *tauscar = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *tauabsr = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -195,6 +195,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *taueffr2 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   #endif //RADIATION
 
+    
   //first fill coordinates on nodes
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
@@ -1057,6 +1058,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      else //using avg
 		{
 		  ehat=get_uavg(pavg,AVGEHAT,ix,iy,iz);
+		  tradloc=calc_LTE_TfromE(ehat);
 		  tradlteloc=calc_LTE_TfromE(ehat);
 		  for(j=0;j<4;j++)
 		    Giff[j]=get_uavg(pavg,AVGGHAT(j),ix,iy,iz);
@@ -1065,9 +1067,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
                   #ifdef SIMOUTPUT_GILAB2FF
                   boost2_lab2ff(Giff,Giff,pp,geomout.gg,geomout.GG); //ANDREW avg Gff already in OUTCOORDS
                   #endif
-		  
+#ifdef EVOLVEPHOTONNUMBER		  
 		  tradloc=calc_ncompt_Thatrad_fromEN(ehat,get_uavg(pavg,AVGNFHAT,ix,iy,iz));
-
+#endif
 		  for(i=0;i<4;i++)
 		    for(j=0;j<4;j++)
 		      Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
@@ -1092,7 +1094,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      //print_conserved(uu);
 	      u2p_rad(uu,pp,&geomout,&radcorr);
 	      
-	      #ifdef EVOLVEELECTRONS
+	      #ifdef COMPTONIZATION
 	      //Calculate thermal comptonization
 	      ldouble Gic_tmp[4];
 	      ldouble ucon_ff[4];
@@ -1111,13 +1113,18 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      Ehat[zonalindex]=ehat;
 	      Gtff[zonalindex]=-Giff[0];
 	      Erad[zonalindex]=Rij22[0][0];
-	      Nph[zonalindex]=pp[NF0];
 
+	      #ifdef EVOLVEPHOTONNUMBER
+	      Nph[zonalindex]=pp[NF0];
+              #endif
+	      
 	      #ifdef CGSOUTPUT
 	      Ehat[zonalindex]=endenGU2CGS(Ehat[zonalindex]);
 	      Gtff[zonalindex]=endenGU2CGS(Gtff[zonalindex])*timeCGS2GU(1.);
 	      Erad[zonalindex]=endenGU2CGS(Erad[zonalindex]);
+	      #ifdef EVOLVEPHOTONNUMBER
 	      Nph[zonalindex]=numdensGU2CGS(Nph[zonalindex]);
+	      #endif
               #endif
           
 	      trad[zonalindex]=tradloc;
@@ -1605,9 +1612,6 @@ DBPutQuadvar1(file, "vischeatnegi","mesh1", vischeatnegi,
   DBPutQuadvar1(file, "ui","mesh1", ui,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
-  DBPutQuadvar1(file, "G0thiC","mesh1", G0icth,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
   
   #ifdef RELELECTRONS
   DBPutQuadvar1(file, "urelel","mesh1", urelel,
@@ -1688,6 +1692,11 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   DBPutQuadvar1(file, "tradlte","mesh1", tradlte,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
+  #ifdef COMPTONIZATION
+  DBPutQuadvar1(file, "G0thiC","mesh1", G0icth,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+  #endif
   #endif
 
   #ifdef MAGNFIELD
@@ -1913,7 +1922,6 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   free(tempi);
   free(ue);
   free(ui);
-  free(G0icth);
 #ifdef RELELECTRONS
   free(gammabrk);
   free(urelel);
@@ -1989,6 +1997,8 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   free(tradlte);
   free(Ehat);
   free(Gtff);
+  free(G0icth);
+  
   free(Fx);
   free(Fy);
   free(Fz);

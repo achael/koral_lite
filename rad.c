@@ -2723,11 +2723,11 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
   Gith_ff[0] = -kappaGasAbs * fourpi * B + kappaRadAbs * Ehatrad;
   
   //Comptonization
-#if defined(COMPTONIZATION) || defined(EVOLVEPHOTONNUMBER)
+#if defined(COMPTONIZATION)
   ldouble Gic_ff[4];
   ldouble Gic_lab[4];
   calc_Compt_Gi_with_state(pp, state, ggg, Gic_lab, ucon);
-  calc_Compt_Gi_with_state(pp, state, ggg,Gic_ff, ucon_ff);
+  calc_Compt_Gi_with_state(pp, state, ggg, Gic_ff, ucon_ff);
   
   ldouble fac=1.;
 #ifdef DAMPCOMPTONIZATIONATBH
@@ -2742,7 +2742,7 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
     Gith_lab[i] += fac * Gic_lab[i];
     Gith_ff[i] += fac * Gic_ff[i];
   }
-#endif
+#endif //COMPTONIZATION
   
   // Set total Gi equal to thermal
   for(i = 0; i < 4; i++)
@@ -5180,7 +5180,7 @@ test_solve_implicit_lab()
   pp0[FY]=0.0;
   pp0[FZ]=0.0;
 
-#ifdef NCOMPTONNIZATION
+#if defined(EVOLVEPHOTONNUMBER)
   pp0[NF]=1./2.70118/K_BOLTZ * pp0[EE]/calc_PEQ_Tfromurho(pp0[UU],pp0[RHO],geom.ix,geom.iy,geom.iz);
 #endif
 

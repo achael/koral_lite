@@ -314,7 +314,6 @@ am_i_sane()
 #endif
 
 #ifdef RADIATION  
-#ifndef EVOLVEPHOTONNUMBER
 #ifndef NO_COMPTONIZATION
 #define COMPTONIZATION
   if (PROCID == 0)
@@ -322,9 +321,13 @@ am_i_sane()
     printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     printf("\nAutomatically switching on COMPTONIZATION\n");
     printf("Please define NO_COMPTONIZATION if Comptonization should remain off\n");
+#ifdef EVOLVEPHOTONNUMBER
+    printf("EVOLVEPHOTONNUMBER is ON\n");
+#else
+    printf("EVOLVEPHOTONNUMBER is OFF\n");
+#endif
     printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
   }
-#endif
 #endif
 #endif
 

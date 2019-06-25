@@ -716,6 +716,15 @@
 #define SYNCHROTRONALLOWEDTRATIO 1.e30
 #endif
 
+/*********comptonization*********/
+
+// comptonization is on by default
+#ifdef RADIATION
+#ifndef NO_COMPTONIZATION
+#define COMPTONIZATION
+#endif
+#endif
+
 
 /*******battery and dynamo********/
 #ifndef DYNAMORADIUS

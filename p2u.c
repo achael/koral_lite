@@ -513,18 +513,18 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   conv_vels_both(vcon,urcon,urcov,VELPRIM,VEL4,gg,GG); 
 
   //radiation four-fource
-  ldouble Gi[4],Gic[4],Giff[4],Gicff[4];
+  ldouble Gi[4],Giff[4]={0.,0.,0.,0.};
+  ldouble Gic[4],Gicff[4]={0.,0.,0.,0.};
+  
+  calc_Gi(pp,&geomout,Giff,0.,0,0); //fluid frame 
 
-  calc_Gi(pp,&geomout,Giff,0.,0,0); //urel_old=0, fluid frame 
-
-#if defined(COMPTONIZATION) || defined(EVOLVEPHOTONNUMBER) || defined(NCOMPTONIZATION)
+#if defined(COMPTONIZATION)
   //directly in ff
   ldouble uconff[4];
   uconff[1]=uconff[2]=uconff[3]=0.;
   uconff[0]=1.;
   ldouble kappaes=calc_kappaes(pp,&geomout);
   calc_Compt_Gi(pp,&geomout,Gicff,Ehat,Te,kappaes,uconff);
-
 #endif 
 
   //radiation temperature

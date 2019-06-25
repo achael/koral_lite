@@ -59,7 +59,7 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
     ldouble rghost = geomBL.xx;
     ldouble rbound = geombdBL.xx;
     ldouble deltar = rbound - rghost;
-    ldouble scale1 =  rbound*rbound/rghost/rghost;
+    ldouble scale1 = rbound*rbound/rghost/rghost;
     ldouble scale2 = rbound/rghost;
 
     pp[RHO]*=scale1;
