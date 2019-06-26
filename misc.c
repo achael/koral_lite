@@ -303,6 +303,22 @@ am_i_sane()
     exit(-1);
   }
 
+#ifdef PRECOMPUTE_MY2OUT
+  printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  printf("\nWarning -- using precomputed MYCOORDS --> OUTCOORDS for floors, averages, and boundary conditions\n");
+  printf("Check your bcs.c!!\n");
+  
+#ifdef BHDISK_PROBLEMTYPE
+  if(!((OUTCOORDS == BLCOORDS) || (OUTCOORDS == KSCOORDS))) {
+    printf("For BHDISK_PROBLEMTYPE PRECOMPUTE_MY2OUT currently only works with OUTCOORDS=BLCOORDS!\n");
+    printf("(It should also work with KSCOORDS, but just being safe for now...)\n");
+      exit(-1);
+  }
+#endif
+ printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
+
+#endif
+  
 #ifdef PWPOTENTIAL
   printf("PWPOTENTIAL has been removed!\n");
   exit(-1);
@@ -314,7 +330,7 @@ am_i_sane()
 #endif
 
 #ifdef RADIATION  
-#ifndef NO_COMPTONIZATION
+#if !defined(NO_COMPTONIZATION) && !defined(COMPTONIZATION)
 #define COMPTONIZATION
   if (PROCID == 0)
   {
@@ -475,8 +491,10 @@ initialize_arrays()
   long long PrimSize=Nprim*sizeof(ldouble);
   long long Navg=Ngrid*(NV+NAVGVARS);
   long long AvgSize=Navg*sizeof(ldouble);
-    
-  long long Nmet=(SX)*(SY)*(SZMET)*gSIZE;
+
+
+  long long Ngridmet=(SX)*(SY)*(SZMET);
+  long long Nmet=Ngridmet*gSIZE;
   long long MetSize=Nmet*sizeof(ldouble);
   long long Nkris=(SX)*(SY)*(SZMET)*64;
   long long KrisSize=Nkris*sizeof(ldouble);
@@ -488,6 +506,13 @@ initialize_arrays()
   if((x=(ldouble*)malloc((NX+NY+NZ+6*NG)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
   if((xb=(ldouble*)malloc((NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
 
+#ifdef PRECOMPUTE_MY2OUT
+  //arrays for MYCOORDS->OUTCOORDS transformation
+  if((xout=(ldouble*)malloc((Ngrid*3)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  if((dxdx_my2out=(ldouble*)malloc((Ngridmet*16)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  if((dxdx_out2my=(ldouble*)malloc((Ngridmet*16)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");  
+#endif
+  
   //primitives at cell centers
   if((p=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
 
@@ -902,6 +927,29 @@ inverse_matrix(ldouble *a, ldouble *ia, int N)
   gsl_matrix_free(im);
   gsl_permutation_free(p);
   
+  return 0;
+}
+
+//**********************************************************************
+//multiply 4by4 matrices
+//**********************************************************************
+
+int
+multiply_44matrices(ldouble T1[][4],ldouble T2[][4],ldouble Tout[][4])
+{
+  int i,j,k;
+
+  for(i=0;i<4;i++)
+    {
+      for(j=0;j<4;j++)
+	{
+	  Tout[i][j]=0.;
+	  for(k=0;k<4;k++)
+	    {
+	      Tout[i][j] += T1[i][k] * T2[k][j]; 
+	    }
+	}
+    }
   return 0;
 }
 
@@ -1495,8 +1543,10 @@ decompose_vels(ldouble *pp,int velidx, ldouble v[4],void *ggg,  void *gggBL)
 int
 get_cell_size_arb(int ix,int iy,int iz,ldouble *dx,int COORDS)
 {
+  
   ldouble xx1[4],xx2[4],xx[4],xxBL[4]; 
   get_xx(ix,iy,iz,xx);	      
+  // AA! Since this coco is on the boundary and not the cell center we can't use precompute
   coco_N(xx,xxBL,MYCOORDS,COORDS);
   xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
   xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);

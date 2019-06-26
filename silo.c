@@ -330,7 +330,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      fill_geometry(iix,iiy,iiz,&geom);
 	      struct geometry geomout;
 	      fill_geometry_arb(iix,iiy,iiz,&geomout,OUTCOORDS);
-	      
+
+	      // !AA can't use precomputed here, because it uses cell faces
 	      ldouble dxph[3],dx[3];
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
@@ -367,13 +368,19 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               #if (GDETIN==0) //gdet out of derivatives
 	      gdetu=1.;
               #endif
-
+	      
+              #ifdef PRECOMPUTE_MY2OUT
+              get_xxout(ix-1, iiy, iiz, xx1);
+              get_xxout(ix+1, iiy, iiz, xx2);	      
+              #else
 	      get_xx(iix-1,iiy,iiz,xx1);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      gdet1=calc_gdet_arb(xx1,OUTCOORDS);
-
 	      get_xx(iix+1,iiy,iiz,xx2);
+    	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+              #endif
+
+	      // AA! speed up calc_gdet? 
+	      gdet1=calc_gdet_arb(xx1,OUTCOORDS);
 	      gdet2=calc_gdet_arb(xx2,OUTCOORDS);
 
 	      imz=iz;
@@ -414,11 +421,20 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               //calc_shear_lab(pp, &geom, shear, &exploc, MHD, derdir);
 
 	      //primitives to OUTCOORDS
+              #ifdef PRECOMPUTE_MY2OUT
+              trans_pall_coco_my2out(pp,pp,&geom,&geomout);
+              #else      
+              trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
+              #endif
+
+              // AA -- replaced with trans_pall -- ok?
+	      /*
               #ifdef RADIATION
 	      trans_prad_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
               #endif
 	      trans_pmhd_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
-
+              */
+	      
 	      //magnetic fields
               #ifdef MAGNFIELD
 	      ldouble bcon[4],bcov[4];
@@ -442,8 +458,14 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      PLOOP(idyn) ppdyn[idyn]=get_u(p,idyn,ix,iy,iz);	      
 	      ppdyn[B1]=get_u(pvecpot,1,ix,iy,iz);
 	      ppdyn[B2]=get_u(pvecpot,2,ix,iy,iz);
-	      ppdyn[B3]=get_u(pvecpot,3,ix,iy,iz);	      
+	      ppdyn[B3]=get_u(pvecpot,3,ix,iy,iz);
+
+              #ifdef PRECOMPUTE_MY2OUT
+              trans_pmhd_coco_my2out(ppdyn,ppdyn, &geom,&geomout);
+              #else      
 	      trans_pmhd_coco(ppdyn, ppdyn, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
+              #endif
+	      
 	      calc_bcon_prim(ppdyn,bcondyn,&geomout);
 	      indices_21(bcondyn,bcovdyn,geomout.gg); 
 	      #endif
@@ -711,14 +733,15 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		} //doingavg
 
 
+	      /*
 	        //ANDREW
 	        //in  avg vischeat was averaged as du, not du/dtau
 	        //here, recompute dt and use that as an estimate
 #ifdef PRINTVISCHEATINGTOSILO
 #ifdef DIVIDEVISCHEATBYDT
                 //get new prims in original coords 
-	        ldouble xxvecout[4];
-	        ldouble velcoord[4];
+	         ldouble xxvecout[4];
+	         ldouble velcoord[4];
 
                  coco_N(xxvec,xxvecout,MYCOORDS,OUTCOORDS);
 	         fill_utinucon(vel,geomout.gg,geomout.GG);
@@ -732,8 +755,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	         vischeat[zonalindex] /=dtau;
 	         vischeatnege[zonalindex]/=dtau;
 	         vischeatnegi[zonalindex]/=dtau;
+#endif   
 #endif
-#endif
+	      */
 	         //Nonthermal electron quantities
 #ifdef EVOLVEELECTRONS
 #ifdef RELELECTRONS
@@ -1268,7 +1292,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      fill_geometry(iix,iiy,iiz,&geom);
 	      struct geometry geomout;
 	      fill_geometry_arb(iix,iiy,iiz,&geomout,OUTCOORDS);
-	      
+
+	      //!AA can't use precomputed here, since it uses cell faces
 	      ldouble dxph[3],dx[3];
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
@@ -1306,12 +1331,17 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      gdetu=1.;
 #endif
 
+	      #ifdef PRECOMPUTE_MY2OUT
+              get_xxout(ix-1, iiy, iiz, xx1);
+              get_xxout(ix+1, iiy, iiz, xx2);	      
+              #else
 	      get_xx(iix-1,iiy,iiz,xx1);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      gdet1=calc_gdet_arb(xx1,OUTCOORDS);
-
 	      get_xx(iix+1,iiy,iiz,xx2);
+    	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+              #endif
+
+	      gdet1=calc_gdet_arb(xx1,OUTCOORDS);
 	      gdet2=calc_gdet_arb(xx2,OUTCOORDS);
 
 
@@ -1341,11 +1371,20 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		}
 
 	      //primitives to OUTCOORDS
+              #ifdef PRECOMPUTE_MY2OUT
+              trans_pall_coco_my2out(pp,pp,&geom,&geomout);
+              #else      
+              trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
+              #endif
+
+              // AA -- replaced with trans_pall -- ok?
+              /*	      
               #ifdef RADIATION
 	      trans_prad_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
               #endif
 	      trans_pmhd_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
-
+              */
+	      
               //velocities etc
 	      ldouble vel[4],vcov[4],vcon[4],velprim[4];
 

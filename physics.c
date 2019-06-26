@@ -2374,7 +2374,12 @@ heat_electronions_with_state(ldouble dtin)
 
           #ifdef NORELELHEATATBH // no rel heating inside bh
           ldouble xxBLh[4];
-          coco_N(geom.xxvec, xxBLh, MYCOORDS, BLCOORDS);
+          #ifdef PRECOMPUTE_MY2OUT
+          get_xxout(geom.ix, geom.iy, geom.iz, xxBLh);
+          #else
+          coco_N(geom.xxvec,xxBLh,MYCOORDS,BLCOORDS);
+          #endif
+	  
           if(xxBLh[1]<=rhorizonBL)
 	    durelel=0.;
           #endif     
@@ -2437,7 +2442,13 @@ heat_electronions_with_state(ldouble dtin)
 
           #ifdef NOHEATATBH
           ldouble xxBL[4];
-          coco_N(geom.xxvec, xxBL, MYCOORDS, BLCOORDS);
+
+          #ifdef PRECOMPUTE_MY2OUT
+          get_xxout(geom.ix, geom.iy, geom.iz, xxBL);
+          #else
+          coco_N(geom.xxvec,xxBL,MYCOORDS,BLCOORDS);
+          #endif
+	  
           if(xxBL[1]<=rhorizonBL)
 	    {
 	      due=0.;

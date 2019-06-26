@@ -211,8 +211,14 @@ fprint_radprofiles(ldouble t, int nfile, char* folder, char* prefix)
       for(ix=0;ix<NX;ix++)
 	{
 	  ldouble xx[4],xxout[4];
+
+          #ifdef PRECOMPUTE_MY2OUT
+          get_xxout(ix, 0, 0, xxout);
+          #else
 	  get_xx(ix,0,0,xx);
-	  coco_N(xx,xxout,MYCOORDS,OUTCOORDS); 
+          coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
+          #endif
+	  
 	  if(xxout[1]<rhorizonBL) continue;
 	  fprintf(fout_radprofiles,"%e ",xxout[1]);
 	  for(iv=0;iv<NRADPROFILES;iv++)
@@ -248,8 +254,13 @@ fprint_thprofiles(ldouble t, int nfile, char* folder, char* prefix)
   #endif
   for(ix=0;ix<NX;ix++)
     {
+      #ifdef PRECOMPUTE_MY2OUT
+      get_xxout(ix, 0, 0, xxBL);
+      #else
       get_xx(ix,0,0,xx);
       coco_N(xx,xxBL,MYCOORDS,BLCOORDS);
+      #endif
+
       if(xxBL[1]>radius) break;
     }
 
@@ -259,8 +270,12 @@ fprint_thprofiles(ldouble t, int nfile, char* folder, char* prefix)
   //printing th profiles  
   for(iy=0;iy<NY;iy++)
     {
+      #ifdef PRECOMPUTE_MY2OUT
+      get_xxout(ix, iy, 0, xxBL);
+      #else
       get_xx(ix,iy,0,xx);
-      coco_N(xx,xxBL,MYCOORDS,BLCOORDS); 
+      coco_N(xx,xxBL,MYCOORDS,BLCOORDS);
+      #endif
       
       fprintf(fout_thprofiles,"%e ",xxBL[2]);
       for(iv=0;iv<NTHPROFILES;iv++)
@@ -768,50 +783,41 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
     
   dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
 
-  printf("1\n");
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar,
 				 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &file_number);
   status = H5Dclose(dumps_dataset_int);
-  printf("2\n");
 
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_AVG", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &file_avg);
   status = H5Dclose(dumps_dataset_int);
-     printf("3\n");
  
   dumps_dataset_double = H5Dcreate2(dumps_file_id, "/HEADER/TIME", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &t);
   status = H5Dclose(dumps_dataset_double);
-      printf("4\n");
 
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/PROBLEM_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &problem_number);
   status = H5Dclose(dumps_dataset_int);
-      printf("5\n");
 
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NX", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &nxx);
   status = H5Dclose(dumps_dataset_int);
-      printf("6\n");
-
+  
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NY", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &nyy);
   status = H5Dclose(dumps_dataset_int);
-      printf("7\n");
-
+  
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NZ", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &nzz);
   status = H5Dclose(dumps_dataset_int);
-
-    printf("8\n");
 
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/NPRIM", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
@@ -881,8 +887,6 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
 
     get_prim_name(prim_name, iv);
     printf("  prim_name: %s\n", prim_name);
-
-      printf("1\n");
 
     dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT, &(primitive[0][0][0]));
@@ -2181,7 +2185,13 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
 	       dx[2]=get_size_x(iz,2);
 	       ldouble gdet=geom.gdet;
 	       ldouble volume=dx[0]*dx[1]*dx[2]*gdet;
-	       trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
+
+               #ifdef PRECOMPUTE_MY2OUT
+               trans_pall_coco_my2out(pp,pp,&geom,&geomout);
+               #else      
+               trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
+               #endif
+	       
 	       ldouble rho=rhoGU2CGS(pp[RHO]);
 	       #ifdef SIMOUTPUTINTERNAL
 	       rho=pp[RHO];
@@ -2455,6 +2465,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		    pp[iv]=get_u(p,iv,ix,iy,iz);
 	      }
 
+	      // AA! can't use precomputed coords here, because it's at the boundaries
 	      ldouble dxph[3],dx[3],xx1[4],xx2[4];
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
@@ -2497,7 +2508,12 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	       if(doingavg)
 		 {
                    //ANDREW we need pp for some relel computations below
-		   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+                   #ifdef PRECOMPUTE_MY2OUT
+                   trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+                   #else      
+                   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+                   #endif
+		   
 		   rhoucont=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz);
 
 		   rho=get_uavg(pavg,RHO,ix,iy,iz);
@@ -2580,7 +2596,11 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		 }
 	       else //not doingavg; on the go from the primitives
 		 { 
-		   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+                   #ifdef PRECOMPUTE_MY2OUT
+                   trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+                   #else      
+                   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+                   #endif
 
 		   rho=pp[0];
 		   uint=pp[1];

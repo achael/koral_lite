@@ -380,12 +380,24 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       fill_geometry_arb(geom->ix,geom->iy,geom->iz,&geomBL,BLCOORDS);
       ldouble ucon[4]={0.,pp[VX],pp[VY],pp[VZ]};
       conv_vels(ucon,ucon,VELPRIM,VEL4,geom->gg,geom->GG);
+
+      #ifdef PRECOMPUTE_MY2OUT
+      trans2_coco_my2out(ucon,ucon,geom->ix, geom->iy, geom->iz);
+      #else
       trans2_coco(geom->xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
+      #endif
+
       if(fabs(ucon[1])<VXFLOOR)
       {
 	  ucon[1]=my_sign(ucon[1])*VXFLOOR;
       }
-      trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+      
+      #ifdef PRECOMPUTE_MY2OUT
+      trans2_coco_out2my(ucon,ucon,geomBL->ix, geomBL->iy, geomBL->iz);
+      #else
+      trans2_coco(geomBL->xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+      #endif
+      
       conv_vels(ucon,ucon,VEL4,VELPRIM,geom->gg,geom->GG);
      
       pp[VX]=ucon[1];
@@ -398,7 +410,12 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   //rho too small, BH-disk like
 #ifdef RHOFLOOR_BH
   ldouble xxBL[4];
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
   coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+
   ldouble rr = xxBL[1] / rhorizonBL;
   ldouble rhofloor = RHOFLOOR_BH_NORM / sqrt(rr*rr*rr);
   if(pp[0]<rhofloor) 
@@ -419,7 +436,13 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   //rho too small, BH-disk like: Here we use the initial atmosphere as the floor on both density and pressure
 #ifdef RHOFLOOR_INIT
   ldouble xxBL[4], rout = 2.;
-  coco_N(geom->xxvec, xxBL, MYCOORDS, BLCOORDS);
+
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
+  coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+
   ldouble rr = xxBL[1] / rout;
   ldouble rhofloor = RHOATMMIN / sqrt(rr*rr*rr);
   ldouble uintfloor = UINTATMMIN / sqrt(rr*rr*rr*rr*rr);

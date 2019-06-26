@@ -335,11 +335,15 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   fill_geometry(ix,iy,iz,&geom);
   struct geometry geomout;
   fill_geometry_arb(ix,iy,iz,&geomout,OUTCOORDS);
+
+  // AA now that we have set avg[AVGRHOURDIFF] = 0, we don't need these
+
+  /*
   struct geometry geoml;
   fill_geometry_face(ix,iy,iz,0,&geoml);
   struct geometry geomoutl;
   fill_geometry_face_arb(ix,iy,iz,0,&geomoutl,OUTCOORDS);
-
+  */
  
   int iv,iv2;ldouble pp[NV],uu[NV];
   for(iv=0;iv<NV;iv++)
@@ -353,11 +357,20 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
     avg[iv]=0.;
 
   //primitives to OUTCOORDS
+#ifdef PRECOMPUTE_MY2OUT
+  trans_pall_coco_my2out(pp,pp,&geom,&geomout);
+#else      
+  trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
+#endif
+
+  // AA -- replaced with trans_pall -- ok?
+  /*
 #ifdef RADIATION
   trans_prad_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
 #endif
   trans_pmhd_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
-
+  */
+  
   ldouble (*gg)[5],(*GG)[5];
   gg=geomout.gg;
   GG=geomout.GG;
@@ -446,6 +459,10 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
       avg[AVGFLUXZL(iv)]=get_ub(flbz,iv,ix,iy,iz,2);
     }
 
+  // AA - unclear why this is necessary
+  // and it has a bug! (iv != 0 in vector[1] = get_ub)
+  avg[AVGRHOURDIFF] = 0;
+/*
   //converting rest-mass flux to BLCOORDS 
   ldouble vector[4];
 
@@ -467,7 +484,8 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   vector[3]=0.;
   trans2_coco(geoml.xxvec,vector,vector,MYCOORDS, OUTCOORDS); //this does not work?
   avg[AVGRHOURDIFF]=vector[1];
-
+*/
+    
 #ifdef EVOLVEELECTRONS
   //electrons
   ldouble ne=calc_thermal_ne(pp);

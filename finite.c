@@ -1803,9 +1803,34 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
   *mindz=mdz;
   *maxdtfac=maxdt;
 
+#ifdef PRECOMPUTE_MY2OUT
+  set_grid_outcoords();
+#endif
   return 0;
 }
-  
+
+// sets the output grid coordinates at the cell centers in xout
+int set_grid_outcoords()
+{
+
+  int ix,iy,iz,ii;
+  #pragma omp parallel for private(ix,iy,iz,ii) 
+  for(ix=-NGCX;ix<NX+NGCX;ix++)
+    for(iy=-NGCY;iy<NY+NGCY;iy++)
+      for(iz=-NGCZ;iz<NZ+NGCZ;iz++)
+      {
+	ldouble xx[4], xxout[4];
+	
+	//cell centers
+	get_xx(ix,iy,iz,xx);
+        coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
+
+	for(ii=0;ii<3;ii++)
+	  set_xout(ii,ix,iy,iz,xxout[ii+1]);
+     }
+
+ return 0;
+}
 
 //**********************************************************************
 /*! \fn int alloc_loops(int init,ldouble t,ldouble dt)
@@ -2223,15 +2248,41 @@ get_xx(int ix,int iy,int iz,ldouble *xx)
   return 0;
 }
 
+// in OUTCOORDS
+// NOTE that the time coordinate is useless here!!
+int
+get_xxout(int ix,int iy,int iz,ldouble *xx)
+{
+  xx[0]=-1;
+  xx[1]=get_xout(0,ix,iy,iz);
+  xx[2]=get_xout(1,ix,iy,iz);
+  xx[3]=get_xout(2,ix,iy,iz);
+  return 0;
+}
+
 //***********************************************************
-//returns four-vector of coordinates in arbitrary coordinates
+//returns four-vector of cell-centered coordinates in arbitrary coordinates
 //***********************************************************
 int 
 get_xx_arb(int ix,int iy,int iz,ldouble *xx,int COORDSOUT)
 {
-  ldouble xx0[4];
-  get_xx(ix,iy,iz,xx0);
-  coco_N(xx0,xx,MYCOORDS,COORDSOUT);
+  
+#ifdef PRECOMPUTE_MY2OUT // use precomputed coordinates if COORDS == OUTCOORDS
+  if(COORDSOUT == OUTCOORDS)
+  {
+    get_xxout(ix, iy, iz, xx); // time will be nonsense! seems ok everywhere this is used
+  }
+  else
+  {
+    ldouble xx0[4];
+    get_xx(ix,iy,iz,xx0);
+    coco_N(xx0,xx,MYCOORDS,COORDSOUT);
+  }
+#else
+    ldouble xx0[4];
+    get_xx(ix,iy,iz,xx0);
+    coco_N(xx0,xx,MYCOORDS,COORDSOUT);
+#endif  
   return 0;
 }
 
@@ -5214,9 +5265,13 @@ correct_nssurface()
                 for(iv=0; iv<NV; iv++) ppnc[iv]= get_u(p, iv, nc, iy, iz);
                 
                 //transform to BL coordinates at the cell to extrapolate from
-                trans_pall_coco(ppnc, ppnc, MYCOORDS, BLCOORDS,
-                geomNC.xxvec, &geomNC, &geomBLNC);
+#ifdef PRECOMPUTE_MY2OUT
+		trans_pall_coco_my2out(ppnc, ppnc, &geomNC, &geomBLNC);
+#else
+                trans_pall_coco(ppnc, ppnc, MYCOORDS, BLCOORDS, geomNC.xxvec, &geomNC, &geomBLNC);
+#endif
 
+	    
                 // get the value for velocity at cell nc to extrapolate
                 ldouble vnc;
                 vnc = ppnc[VX];
@@ -5259,9 +5314,11 @@ correct_nssurface()
                 for (iv=0; iv<NV; iv++) pp[iv]=get_u(p, iv, ix, iy, iz);
 
                 //transform to BL coordinates at cell to correct
-                trans_pall_coco(pp,pp,MYCOORDS, BLCOORDS, geom.xxvec,
-                &geom, &geomBL);
-
+#ifdef PRECOMPUTE_MY2OUT
+                trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+#else
+                trans_pall_coco(pp,pp,MYCOORDS, BLCOORDS, geom.xxvec, &geom, &geomBL);
+#endif
                 //write the new v to pp
                 pp[VX] = v;
                 
@@ -5269,9 +5326,11 @@ correct_nssurface()
                 pp[RHO] = rho;
 
                 // transfrom back to code coordinates
-                trans_pall_coco(pp,pp,BLCOORDS, MYCOORDS,
-                    geomBL.xxvec, &geomBL, &geom);
-                
+#ifdef PRECOMPUTE_MY2OUT
+                trans_pall_coco_out2my(pp,pp,&geomBL,&geom,);
+#else		
+                trans_pall_coco(pp,pp,BLCOORDS, MYCOORDS,geomBL.xxvec, &geomBL, &geom);
+#endif                
                 // compute conserved quantities
                 p2u(pp,uu,&geom);
                 //save to memory

@@ -1210,7 +1210,11 @@ calc_relel_f_and_fmag_from_state(ldouble *pp, void *sss, ldouble *pp0, void *ggg
 
 #ifdef NORELELCOOLATBH
   ldouble xxBL[4];
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
   coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
   if(xxBL[1]<=rhorizonBL) fac=0;
 #endif     
 
@@ -1550,7 +1554,11 @@ calc_relel_G0_fluidframe_from_state(ldouble *pp, void *sss, void *ggg, ldouble r
 
 #ifdef NORELELCOOLATBH
   ldouble xxBL[4];
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
   coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
   if(xxBL[1]<=rhorizonBL) G0=0.;
 #endif     
 #endif
@@ -1950,7 +1958,7 @@ fprint_relel_avg_spectrum(ldouble t, int jx, int jy, int jz, int nfile, char* fo
 	
 	  //coordinate
 	  ldouble dx[3];
-	  get_cell_size_arb(ix,iy,iz,dx,OUTCOORDS);
+	  get_cell_size_arb(ix,iy,iz,dx,OUTCOORDS); // AA this may take a long time with JETCOORDS!
 
           ldouble dvol=dx[0]*dx[1]*dx[2]*geomBL.gdet;
 	  volume+=dvol;

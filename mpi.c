@@ -1760,8 +1760,13 @@ calc_avgs_throughout()
       for(iz=0;iz<NZ;iz++) // todo: does not work with multiple z tiles yet!
       {
         fill_geometry(ix,iy,iz,&geom);
+	
+#ifdef PRECOMPUTE_MY2OUT
+        get_xxout(ix, iy, iz, xxBL);
+#else
         coco_N(geom.xxvec,xxBL,MYCOORDS,BLCOORDS);
-        sigma+=get_u(p,RHO,ix,iy,iz)*geom.gdet;
+#endif
+	sigma+=get_u(p,RHO,ix,iy,iz)*geom.gdet;
         scaleth+=get_u(p,RHO,ix,iy,iz)*geom.gdet*(M_PI/2. - xxBL[2])*(M_PI/2. - xxBL[2]);
       }
     }

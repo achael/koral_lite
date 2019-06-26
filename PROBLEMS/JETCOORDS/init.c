@@ -87,8 +87,12 @@ if(rho<0.) //outside donut
     pp[NF]=1./2.70118/K_BOLTZ * pp[EE]/ATMTRADINIT;
 #endif
 
-    //transforming primitives from BL to MYCOORDS
-    trans_pall_coco(pp, pp, KERRCOORDS, MYCOORDS,geomBL.xxvec,&geomBL,&geom);
+    //transforming primitives from BL to MYCOORDS -- take advantage of precomputed MY <--> BL
+    #ifdef PRECOMPUTE_MY2OUT
+    trans_pall_coco_out2my(pp,pp,&geomBL,&geom);
+    #else      
+    trans_pall_coco(pp, pp, BLCOORDS, OUTCOORDS, geomBL.xxvec,&geomBL,&geom);
+    #endif
 
     //Set Magnetic Field from vector potential
 #ifdef MAGNFIELD 
@@ -97,8 +101,10 @@ if(rho<0.) //outside donut
     ldouble r_mag,th_mag;
     Acov[0]=Acov[1]=Acov[2]=0.;
 
-#ifdef INIT_MAGN_CORNERS    
+#ifdef INIT_MAGN_CORNERS
+    
     //ANDREW define at corners not cell centers
+    //ANDREW -- shouldn't this actually be edges? 
     //what about boundary corners? -- assume we are well inside grid so that A=0 out there? 
     ldouble xxvec_c[4],xxvecBL_c[4];    
     xxvec_c[0] = global_time;

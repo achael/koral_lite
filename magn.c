@@ -733,6 +733,8 @@ calc_Qthetaphi(int ix, int iy, int iz,ldouble *Qtheta,ldouble *Qphi)
       ldouble rho = get_uavg(pavg,RHO,ix,iy,iz);
       ldouble dxth,dxph;
       ldouble xx1[4],xx2[4];
+
+      // AA! Since this coco is on the boundary and not the cell center we can't use precompute
       xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
       xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
       coco_N(xx1,xx1,MYCOORDS,BLCOORDS);
@@ -781,8 +783,12 @@ calc_angle_brbphibsq(int ix, int iy, int iz, ldouble *brbphi, ldouble *bsq, ldou
       PLOOP(i)
 	pp[i]=get_u(p,i,ix,iy,iz);
       
-      //to BL     
+      //to BL
+#ifdef PRECOMPUTE_MY2OUT
+      trans_pmhd_coco_my2out(pp,pp,&geom,&geomBL);
+#else      
       trans_pmhd_coco(pp,pp,MYCOORDS,BLCOORDS,geom.xxvec,&geom,&geomBL);
+#endif
       
       //b^mu
       calc_bcon_prim(pp, bcon, &geomBL);
@@ -817,8 +823,12 @@ calc_angle_bpbphibsq(int ix, int iy, int iz, ldouble *bpbphi, ldouble *bsq, ldou
   PLOOP(i)
     pp[i]=get_u(p,i,ix,iy,iz);
 	      
-  //to BL     
+  //to BL
+#ifdef PRECOMPUTE_MY2OUT
+  trans_pmhd_coco_my2out(pp, pp, &geom, &geomBL);
+#else      
   trans_pmhd_coco(pp,pp,MYCOORDS,BLCOORDS,geom.xxvec,&geom,&geomBL);
+#endif
   
   //b^mu
   calc_bcon_prim(pp, bcon, &geomBL);
@@ -993,8 +1003,12 @@ mimic_dynamo(ldouble dtin)
       angle=-bbphi/bsq;
 
       //BL radius
+#ifdef PRECOMPUTE_MY2OUT
+      get_xxout(ix, iy, iz, xxBL);
+#else           
       coco_N(geom.xxvec,xxBL,MYCOORDS, BLCOORDS);
-
+#endif
+      
       //to avoid BH
       if(xxBL[1]<1.0001*rhorizonBL) continue;
 
@@ -1122,7 +1136,7 @@ mimic_dynamo(ldouble dtin)
       fill_geometry(ix,iy,iz,&geom);
 
       //BL radius
-      coco_N(geom.xxvec,xxBL,MYCOORDS, BLCOORDS);
+      //coco_N(geom.xxvec,xxBL,MYCOORDS, BLCOORDS);
 
       B[1]=get_u(pvecpot,1,ix,iy,iz);
       B[2]=get_u(pvecpot,2,ix,iy,iz);

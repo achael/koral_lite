@@ -2,6 +2,7 @@
 //general
 /************************************/
 #define BHDISK_PROBLEMTYPE
+//#define PRECOMPUTE_MY2OUT
 
 /************************************/
 //restart
@@ -189,8 +190,8 @@
 /************************************/
 //coordinates
 /************************************/
-//#define myJETCOORDS
-#define myMKS2COORDS
+#define myJETCOORDS
+//#define myMKS2COORDS
 #define METRICAXISYMMETRIC
 #define RMIN 1.
 #define RMAX 1.e5
@@ -232,7 +233,7 @@
 #define ALPHA_1 1
 #define ALPHA_2 0.375
 
-//#define CYLINDRIFY
+#define CYLINDRIFY
 #define RCYL 20
 #define NCYL 1
 #endif
@@ -251,13 +252,13 @@
 /************************************/
 //output
 /************************************/
-#define DTAVG 1 //how frequently to compute quantities in avg
+#define DTAVG .1 //how frequently to compute quantities in avg
 #define DTOUT1 10 //res
 #define DTOUT2 100 //avg
 #define DTOUT3 100 //box,var
 
 //#define DUMPS_READ_HDF5
-#define DUMPS_WRITE_HDF5
+//#define DUMPS_WRITE_HDF5
 
 #define OUTCOORDS BLCOORDS
 #define OUTVEL VEL4

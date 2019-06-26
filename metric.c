@@ -82,7 +82,21 @@ calc_metric()
 	  for(j=0;j<4;j++)
 	    for(k=0;k<4;k++)
 	      set_gKr(i,j,k,ix,iy,iz,Kr[i][j][k]);
-	      	      
+
+#ifdef PRECOMPUTE_MY2OUT// Jacobian matrices for MYCOORDS -> OUTCOORDS
+        ldouble dxdxloc[4][4], xx2[4];
+	calc_dxdx_arb(xx, dxdxloc, MYCOORDS, OUTCOORDS);
+	for(i=0;i<4;i++)
+	  for(j=0;j<4;j++)
+	    set_dxdx(dxdx_my2out,i,j,ix,iy,iz,dxdxloc[i][j]);
+
+	coco_N(xx,xx2,MYCOORDS,OUTCOORDS);
+	calc_dxdx_arb(xx2, dxdxloc, OUTCOORDS, MYCOORDS);
+	for(i=0;i<4;i++)
+	  for(j=0;j<4;j++)
+	    set_dxdx(dxdx_out2my,i,j,ix,iy,iz,dxdxloc[i][j]);	
+#endif
+	
 	if(doingpostproc==0) //metric at faces needed only for time evolution
 	  {
 	    //x-faces
@@ -1900,7 +1914,7 @@ fill_geometry(int ix,int iy,int iz,void *geom)
 }
 
 //**********************************************************************
-//fills geometry structure for cell ix,iy,iz in arbitrary metric
+//fills geometry structure for cell center ix,iy,iz in arbitrary metric
 //**********************************************************************
 
 int
@@ -1912,11 +1926,45 @@ fill_geometry_arb(int ix,int iy,int iz,void *geom,int COORDS)
   ldouble xxvec[4],xxvecC[4];
 
   get_xx(ix,iy,iz,xxvec);
-  coco_N(xxvec,xxvecC,MYCOORDS,COORDS);
 
+  //AA TODO check!
+#ifdef PRECOMPUTE_MY2OUT 
+  if(COORDS == OUTCOORDS)
+  {
+    get_xxout(ix, iy, iz, xxvecC); // AA! Warning! the time coordinate will be nonsense
+
+    // use precomputed jacobin if COORDS == OUTCOORDS
+    // this is unnecessary, because OUTCOORDS should have a pretty simple metric
+    /*
+    int i,j;
+    ldouble ggmy[4][5], GGmy[4][5];
+    ldouble Gb[4][4], G[4][4], g[4][4];
+    pick_g(ix,iy,iz,ggmy); 
+    pick_G(ix,iy,iz,GGmy); // inverse metric in code coordinates
+
+    DLOOP(i,j) Gb[i][j]=GGmy[i][j]; //contravarient
+    DLOOP(i,j) dxdx[i][j] = get_dxdx(dxdx_my2out,i,j,ix,iy,iz); // jacobian MYCOORDS->OUTCOORDS
+    multiply22(Gb,G,dxdx); // transformed contravarient metric
+    inverse_44matrix(G,g); // covarient metric
+
+    DLOOP(i,j) ggg->gg=g[i][j];
+    DLOOP(i,j) ggg->GG=G[i][j];
+    */
+    calc_g_arb(xxvecC,ggg->gg,COORDS);
+    calc_G_arb(xxvecC,ggg->GG,COORDS);
+  }
+  else
+  {
+    coco_N(xxvec,xxvecC,MYCOORDS,COORDS);
+    calc_g_arb(xxvecC,ggg->gg,COORDS);
+    calc_G_arb(xxvecC,ggg->GG,COORDS);
+  }
+#else  
+  coco_N(xxvec,xxvecC,MYCOORDS,COORDS);
   calc_g_arb(xxvecC,ggg->gg,COORDS);
   calc_G_arb(xxvecC,ggg->GG,COORDS);
-
+#endif
+  
   //ANDREW: do we need tetrades and ZAMOS any more? 
   //calc_tetrades(ggg->gg,ggg->tup,ggg->tlo,COORDS);
   //calc_ZAMOes(ggg->gg,ggg->eup,ggg->elo,COORDS);
@@ -3229,6 +3277,188 @@ coco_MINK2SPH(ldouble *xMINK, ldouble *xSPH)
 //calculates transformation matrices dxmu/dxnu
 //**********************************************************************
 
+// TODO -- verify results and integrate with trans2_coco? 
+int
+calc_dxdx_arb(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
+{
+  ldouble dxdx1[4][4],dxdx2[4][4];
+  ldouble xx2[4];
+  if(CO1==CO2)
+    {
+      int i,j;
+      for(i=0;i<4;i++)
+	for(j=0;j<4;j++)
+	  dxdx[i][j] = delta(i,j);
+    }
+  else if(((CO1==SCHWCOORDS || CO1==KERRCOORDS) && CO2==SPHCOORDS) ||
+	  ((CO2==SCHWCOORDS || CO2==KERRCOORDS) && CO1==SPHCOORDS))
+    {
+      int i,j;
+      for(i=0;i<4;i++)
+	for(j=0;j<4;j++)
+	  dxdx[i][j] = delta(i,j);
+    }
+   else if(CO1==KSCOORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS))
+    {
+      dxdx_KS2BL(xx,dxdx);
+    }
+  else if((CO1==SCHWCOORDS || CO1==KERRCOORDS) && CO2==KSCOORDS)
+    {
+      dxdx_BL2KS(xx,dxdx);
+    }
+  else if(CO1==MKS1COORDS && CO2==KSCOORDS)
+    {
+      dxdx_MKS12KS(xx,dxdx);
+    }
+  else if(CO1==MKS2COORDS && CO2==KSCOORDS)
+    {
+      dxdx_MKS22KS(xx,dxdx);
+    }
+  else if(CO1==MKS3COORDS && CO2==KSCOORDS)
+    {
+      dxdx_MKS32KS(xx,dxdx);
+    }
+  else if(CO1==JETCOORDS && CO2==KSCOORDS)
+    {
+      dxdx_JET2KS(xx,dxdx);
+    }
+  else if(CO1==TKS3COORDS && CO2==KSCOORDS)
+    {
+      dxdx_TKS32KS(xx,dxdx);
+    }
+  else if(CO1==KSCOORDS && CO2==MKS1COORDS)
+    {
+      dxdx_KS2MKS1(xx,dxdx);
+    }
+  else if(CO1==KSCOORDS && CO2==MKS2COORDS)
+    {
+      dxdx_KS2MKS2(xx,dxdx);
+    }
+  else if(CO1==KSCOORDS && CO2==MKS3COORDS)
+    {
+      dxdx_KS2MKS3(xx,dxdx);
+    }
+  else if(CO1==KSCOORDS && CO2==JETCOORDS)
+    {
+      dxdx_KS2JET(xx,dxdx);
+    }
+  else if(CO1==KSCOORDS && CO2==TKS3COORDS)
+    {
+      dxdx_KS2TKS3(xx,dxdx);
+    }
+  else if(CO1==MCYL1COORDS && CO2==CYLCOORDS)
+    {
+      dxdx_MCYL12CYL(xx,dxdx);
+    }
+  else if(CO1==CYLCOORDS && CO2==MCYL1COORDS)
+    {
+      dxdx_CYL2MCYL1(xx,dxdx);
+    }
+  else if(CO1==MSPH1COORDS && (CO2==SPHCOORDS || CO2==SCHWCOORDS || CO2==KERRCOORDS))
+    {
+      dxdx_MSPH12SPH(xx,dxdx);
+    }
+  else if((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==MSPH1COORDS)
+    {
+      dxdx_SPH2MSPH1(xx,dxdx);
+    }
+  else if(CO1==MKER1COORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      dxdx_MKER12KER(xx,dxdx);
+    }
+  else if((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==MKER1COORDS)
+    {
+      dxdx_KER2MKER1(xx,dxdx);
+    }
+  else if (CO1==MKS1COORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      dxdx_MKS12KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2BL(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);
+    }
+  else if (CO1==MKS2COORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      dxdx_MKS22KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2BL(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }
+  else if (CO1==MKS3COORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      dxdx_MKS32KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2BL(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }
+  else if (CO1==JETCOORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      dxdx_JET2KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2BL(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }
+  else if (CO1==TKS3COORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS || CO2==SPHCOORDS))
+    {
+      dxdx_TKS32KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2BL(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }
+  else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==MKS1COORDS)
+    {
+      dxdx_BL2KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2MKS1(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }
+  else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==MKS2COORDS)
+    {
+      dxdx_BL2KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2MKS2(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);
+    }
+  else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==MKS3COORDS)
+    {
+      dxdx_BL2KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2MKS3(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }
+  else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==JETCOORDS)
+    {
+      dxdx_BL2KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2JET(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }  
+  else if ((CO1==SCHWCOORDS || CO1==KERRCOORDS || CO1==SPHCOORDS) && CO2==TKS3COORDS)
+    {
+      dxdx_BL2KS(xx,dxdx1);
+      coco_N(xx,xx2,CO1,KSCOORDS);
+      dxdx_KS2TKS3(xx2,dxdx2);
+      multiply_44matrices(dxdx2, dxdx1, dxdx);      
+    }
+  else if ((CO1==BLCOORDS || CO1==SPHCOORDS) && CO2==CYLCOORDS)
+    {
+      dxdx_SPH2CYL(xx,dxdx);
+    }
+  else if ((CO2==BLCOORDS || CO2==SPHCOORDS) && CO1==CYLCOORDS)
+    {
+      dxdx_CYL2SPH(xx,dxdx);
+    }
+
+  else
+    {
+      printf("transformation not implemented in trans2_coco(): %d -> %d\n",CO1,CO2);
+      getch();
+    }
+
+  return 0;
+}
+
+
 //for BL -> KS
 int
 dxdx_BL2KS(ldouble *xx, ldouble dxdx[][4])
@@ -3861,7 +4091,7 @@ ldouble dxdxF(ldouble x, void* params)
 }
 
 int
-dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
+calc_dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
 {
 
   int i,j,k;
@@ -3908,13 +4138,13 @@ dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
 
 int dxdx_JET2KS(ldouble *xx, ldouble dxdx[][4])
 {
-  return dxdx_arb_num(xx, dxdx, JETCOORDS, KSCOORDS); 
+  return calc_dxdx_arb_num(xx, dxdx, JETCOORDS, KSCOORDS); 
 }
 
 int dxdx_KS2JET(ldouble *xx, ldouble dxdx[][4])
 {
   ldouble dxdxinv[4][4], xxKS[4];
-  return dxdx_arb_num(xx, dxdxinv, JETCOORDS, KSCOORDS);
+  return calc_dxdx_arb_num(xx, dxdxinv, JETCOORDS, KSCOORDS);
 
   // calculate jet2ks jacobian, then invert
   //coco_N(xx,xxKS,KSCOORDS,JETCOORDS);
@@ -4272,7 +4502,9 @@ calc_gttpert_arb(double *xx, int COORDS)
   gttpert = (gpert[q][q] * dxdxp[q][q] * dxdxp[q][q]) + ftemp1;
   // now add 15 other terms
   ldouble ftemp2 = 0.;
-  for(l=0;l<NDIM;l++) for(m=0;m<NDIM;m++){
+  for(l=0;l<4;l++)
+    for(m=0;m<4;m++)
+    {
       if((l!=q)&&(m!=q)) ftemp2+= gbase[l][m] * dxdxp[l][q] * dxdxp[m][q];
     }
   // add other 15 terms to answer for total of 16 terms

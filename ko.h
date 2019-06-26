@@ -2,8 +2,6 @@
  \brief constants, variables, and function definitions
 */
 
-#define NDIM 4
-
 //small and big numbers
 #define SMALL 1.e-80 
 #define BIG (1./SMALL) 
@@ -325,7 +323,7 @@ ldouble xx_relel_inj;
 
 ldouble **msgbufs;
 ldouble *scent, *savg;
-ldouble *u,*x,*ucent,*xb,*du,*ut1,*ut2,*ut3,*ut4,*ut0,*u_bak_fixup,*p_bak_fixup,
+ldouble *u,*x,*ucent,*xb,*xout, *du,*ut1,*ut2,*ut3,*ut4,*ut0,*u_bak_fixup,*p_bak_fixup,
   *u_step1,*u_step2,*gammagas,
   *vischeating,*vischeatingnegebalance,*vischeatingnegibalance,*vischeatingtimesdeltae,
   *u_step3,*u_step4,*ahdx,*ahdy,*ahdz,
@@ -337,6 +335,7 @@ ldouble *u,*x,*ucent,*xb,*du,*ut1,*ut2,*ut3,*ut4,*ut0,*u_bak_fixup,*p_bak_fixup,
   *p,*pinit,*pproblem1,*pproblem2,*emf,*ptemp1,*pvecpot,*ppostimplicit,
   *ppreexplicit,*upreexplicit,
   *ptm1,*pt0,*px,*py,*pz,*s,*pavg,
+  *dxdx_my2out,*dxdx_out2my,
   *g,*gbx,*gby,*gbz,
   *G,*Gbx,*Gby,*Gbz,
   *a_array, *ax_array, *ay_array, *az_array,
@@ -386,15 +385,15 @@ int **loop_0,**loop_02,**loop_1,**loop_2,**loop_3,**loop_4,**loop_5,**loop_6;
 /* loop over all primitives */
 #define PLOOP(j) for(j=0;j<NV;j++)
 /* loop over all Dimensions; second rank loop */
-#define DLOOP(j,k) for(j=0;j<NDIM;j++)for(k=0;k<NDIM;k++)
+#define DLOOP(j,k) for(j=0;j<4;j++)for(k=0;k<4;k++)
 /* loop over all Dimensions; second rank loop */
-#define DLOOPB(i,j,k) for(i=0;i<NDIM;i++)for(j=0;j<NDIM;j++)for(k=0;k<NDIM;k++)
+#define DLOOPB(i,j,k) for(i=0;i<4;i++)for(j=0;j<4;j++)for(k=0;k<4;k++)
 /* loop over all Dimensions; first rank loop */
-#define DLOOPA(j) for(j=0;j<NDIM;j++)
+#define DLOOPA(j) for(j=0;j<4;j++)
 /* loop over all Space dimensions; second rank loop */
-#define SLOOP(j,k) for(j=1;j<NDIM;j++)for(k=1;k<NDIM;k++)
+#define SLOOP(j,k) for(j=1;j<4;j++)for(k=1;k<4;k++)
 /* loop over all Space dimensions; first rank loop */
-#define SLOOPA(j) for(j=1;j<NDIM;j++)
+#define SLOOPA(j) for(j=1;j<4;j++)
 
 /*****  structures   ******/
 
@@ -479,6 +478,15 @@ struct OpTable {
 					               (iY(iy)+(NGCY))*(SX)*NFLAGS + \
 						       (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val
 
+// outcoords
+//note as in get_x idim is spatial (0=x, 1=y, 2=z)
+#define get_xout(idim,ix,iy,iz) xout[idim + (iX(ix)+(NGCX))*3 + \
+				            (iY(iy)+(NGCY))*(SX)*3 + \
+					    (iZ(iz)+(NGCZ))*(SY)*(SX)*3]
+#define set_xout(idim,ix,iy,iz,val) xout[idim + (iX(ix)+(NGCX))*3 +	\
+				                (iY(iy)+(NGCY))*(SX)*3 + \
+					        (iZ(iz)+(NGCZ))*(SY)*(SX)*3]=val
+
 //primitive and flux arrays
 #define get_u(uarr,iv,ix,iy,iz) uarr[iv + (iX(ix)+(NGCX))*NV + \
 				          (iY(iy)+(NGCY))*(SX)*NV + \
@@ -539,8 +547,18 @@ struct OpTable {
 							        (iY(iy)+(NGCY))*(SX)*NV + \
 							        (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] : \
 					  NULL)))
+//saved jacobians
+
+#define get_dxdx(dxdxarr,i,j,ix,iy,iz) dxdxarr[i*4+j + (iX(ix)+(NGCX))*16 + \
+				                   (iY(iy)+(NGCY))*(SX)*16 + \
+					           (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16]
+
+#define set_dxdx(dxdxarr,i,j,ix,iy,iz,val) dxdxarr[i*4+j + (iX(ix)+(NGCX))*16 + \
+				                       (iY(iy)+(NGCY))*(SX)*16 + \
+					               (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16] = val
 
 //metric specific
+
 #define get_g(uarr,i,j,ix,iy,iz) uarr[i*5+j + (iX(ix)+(NGCX))*gSIZE + \
 				              (iY(iy)+(NGCY))*(SX)*gSIZE + \
 					      (iZMET(iz)+(NGCZMET))*(SY)*(SX)*gSIZE]
@@ -646,6 +664,7 @@ int free_arrays();
 void init_pointers();
 int fill_arrays_at_init();
 int inverse_matrix(ldouble *a, ldouble *ia, int N);
+int multiply_44matrices(ldouble T1[][4],ldouble T2[][4],ldouble Tout[][4]);
 int inverse_44matrix(ldouble a[][4], ldouble ia[][4]);
 ldouble determinant_44matrix(ldouble a[][4]);
 ldouble step_function(ldouble x,ldouble x9);
@@ -794,8 +813,9 @@ int dxdx_MKER12KER(ldouble *xx, ldouble dxdx[][4]);
 int dxdx_JET2KS(ldouble *xx, ldouble dxdx[][4]);
 int dxdx_KS2JET(ldouble *xx, ldouble dxdx[][4]);
 ldouble dxdxF(ldouble x, void* params);
-int dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2);
-  
+int calc_dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2);
+int calc_dxdx_arb(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2);
+
 int calc_g_arb_num(ldouble *xx, ldouble gout[][5],int COORDS);
 int calc_G_arb_num(ldouble *xx, ldouble Gout[][5],int COORDS);
 ldouble fg (double x, void * params);
@@ -892,6 +912,22 @@ int indices_2221(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5]);
 int indices_12(ldouble A1[4],ldouble A2[4],ldouble GG[][5]);
 int indices_21(ldouble A1[4],ldouble A2[4],ldouble gg[][5]);
 
+int trans_pall_coco_my2out(ldouble *pp1, ldouble *pp2, void* ggg1, void* ggg2) ;
+int trans_pall_coco_out2my(ldouble *pp1, ldouble *pp2, void* ggg1, void* ggg2) ;
+
+int trans_pmhd_coco_my2out(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2);
+int trans_prad_coco_my2out(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2);
+int trans_pmhd_coco_out2my(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2);
+int trans_prad_coco_out2my(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2);
+int trans_pmhd_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2, int which);
+int trans_prad_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2, int which);
+
+int trans2_coco_my2out(ldouble *u1, ldouble *u2, int ix, int iy, int iz);
+int trans22_coco_my2out(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz);
+int trans2_coco_out2my(ldouble *u1, ldouble *u2, int ix, int iy, int iz);
+int trans22_coco_out2my(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz);
+int trans2_coco_precompute(ldouble *u1, ldouble *u2, int ix, int iy, int iz, int which);
+int trans22_coco_precompute(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz, int which);
 
 ///////////////////////////////////////////////////////////////
 // relele.c ///////////////////////////////////////////////////
@@ -1019,11 +1055,14 @@ int op_implicit(ldouble t, ldouble dtin);
 ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz);
 
 int set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac);
+int set_grid_outcoords();
+
 int alloc_loops();
 int print_grid(ldouble min_dx, ldouble min_dy, ldouble min_dz);
 
 ldouble get_size_x(int ic, int idim);
 int get_xx(int ix,int iy,int iz,ldouble *xx);
+int get_xxout(int ix,int iy,int iz,ldouble *xx);
 int get_xx_arb(int ix,int iy,int iz,ldouble *xx,int COORDSOUT);
 int set_x(int ic, int idim,ldouble val);
 int set_xb(int ic, int idim,ldouble val);

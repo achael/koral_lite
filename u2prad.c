@@ -189,7 +189,7 @@ static int get_m1closure_gammarel2_cold(int verbose,
 
   FTYPE utsq=gammarel2/(alpha*alpha);
 
-  FTYPE Avcovorig[NDIM],Avconorig[NDIM];
+  FTYPE Avcovorig[4],Avconorig[4];
   DLOOPA(jj) Avcovorig[jj]=Avcov[jj];
   DLOOPA(jj) Avconorig[jj]=Avcon[jj];
 
@@ -647,7 +647,13 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
   //ANDREW: Trad limiter is stronger near BH
   #ifdef MAXDIFFTRADSNEARBH
   ldouble xxBL[4];
+  
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
   coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+  
   ldouble fac=step_function(xxBL[1]-2.5*rhorizonBL,.5*rhorizonBL);
   maxfac = MAXDIFFTRADSNEARBH + fac*(MAXDIFFTRADS-MAXDIFFTRADSNEARBH);
   #endif

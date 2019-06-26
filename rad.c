@@ -2732,7 +2732,13 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
   ldouble fac=1.;
 #ifdef DAMPCOMPTONIZATIONATBH
   ldouble xxBL[4];
+
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
   coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+
   fac=step_function(xxBL[1]-1.2*rhorizonBL,.1*rhorizonBL);
   if(xxBL[1]<rhorizonBL) fac=0.;
 #endif
@@ -3772,7 +3778,12 @@ calc_rad_wavespeeds(ldouble *pp,void *ggg,ldouble tautot[3],ldouble *aval,int ve
       rv2tau=((four_third*four_third)/(tautot[dim]*tautot[dim]))*MULTIPLYRADWAVESPEEDCONSTANT*MULTIPLYRADWAVESPEEDCONSTANT;
 #elif defined(DAMPRADWAVESPEEDLIMITERINSIDE)
       ldouble xxBL[4];
+      #ifdef PRECOMPUTE_MY2OUT
+      get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+      #else
       coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+      #endif
+      
       ldouble radius=xxBL[1];
       ldouble damp=step_function(radius-DAMPRADWAVESPEEDLIMITERRADIUS,DAMPRADWAVESPEEDLIMITERFRAC*DAMPRADWAVESPEEDLIMITERRADIUS);
       rv2tau=(four_third*four_third)/(damp*tautot[dim]*tautot[dim]);
@@ -4633,22 +4644,32 @@ calc_rad_visccoeff(ldouble *pp,void *ggg,ldouble *nuret,ldouble *mfpret,ldouble 
 
 #elif defined(RADVISCMFPCYL)
 
-  ldouble xxBL[4]; 
-  coco_N(geom->xxvec,xxBL,MYCOORDS, BLCOORDS);
+  ldouble xxBL[4];
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
+  coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+  
   ldouble mfplim=xxBL[1]*sin(xxBL[2]); //Rcyl = Rsph * sin(th)
   if(mfp>mfplim || chi<SMALL) mfp=mfplim; //Rcyl = Rsph
   if(mfp<0. || !isfinite(mfp)) mfp=0.;
  
 #elif defined(RADVISCMFPSPH)
 
-  ldouble xxBL[4];
   #ifdef RADVISCMFPSPHRMIN
   ldouble rmin=RADVISCMFPSPHRMIN;
   #else
   ldouble rmin=1.2*rhorizonBL;
   #endif
-  
-  coco_N(geom->xxvec,xxBL,MYCOORDS, BLCOORDS);
+
+  ldouble xxBL[4];  
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
+  coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+
   ldouble mfplim=xxBL[1];
   if(mfp>mfplim || chi<SMALL) mfp=mfplim; //Rcyl = Rsph
   if(mfp<0. || !isfinite(mfp)) mfp=0.;
@@ -4662,9 +4683,15 @@ calc_rad_visccoeff(ldouble *pp,void *ggg,ldouble *nuret,ldouble *mfpret,ldouble 
 
 #elif defined(RADVISCMFPNOLIMIT)
 
-  ldouble xxBL[4];
   ldouble rhor=rhorizonBL;
-  coco_N(geom->xxvec,xxBL,MYCOORDS, BLCOORDS);
+
+  ldouble xxBL[4];  
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom->ix, geom->iy, geom->iz, xxBL);
+  #else
+  coco_N(geom->xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+
   ldouble mfplim=100.*xxBL[1];
   if(mfp>mfplim || chi<SMALL) mfp=mfplim; //Rcyl = Rsph
   if(mfp<0. || !isfinite(mfp)) mfp=0.;
@@ -4929,32 +4956,56 @@ estimate_Bgrowth_battery(int ix,int iy,int iz,ldouble dBdt[4])
     {
 
       PLOOP(iv) pp[iv]=get_u(p,iv,ix-1,iy,iz);
-      trans_pall_coco(pp,pp,MYCOORDS,BLCOORDS,geomxl.xxvec,&geomxl,&geomBLxl);
+      #ifdef PRECOMPUTE_MY2OUT
+      trans_pall_coco_my2out(pp,pp,&geomxl,&geomBLxl);
+      #else      
+      trans_pall_coco(pp, pp, MYCOORDS,BLCOORDS, geomxl.xxvec,&geomxl,&geomBLxl);
+      #endif
       fill_struct_of_state(pp,&geomBLxl,&state);
       calc_batteryflux(pp,&geomBLxl,fxl,0,state.ucov);
   
       PLOOP(iv) pp[iv]=get_u(p,iv,ix+1,iy,iz);
-      trans_pall_coco(pp,pp,MYCOORDS,BLCOORDS,geomxr.xxvec,&geomxr,&geomBLxr);
+      #ifdef PRECOMPUTE_MY2OUT
+      trans_pall_coco_my2out(pp,pp,&geomxr,&geomBLxr);
+      #else      
+      trans_pall_coco(pp, pp, MYCOORDS,BLCOORDS, geomxr.xxvec,&geomxr,&geomBLxr);
+      #endif
       fill_struct_of_state(pp,&geomBLxr,&state);
       calc_batteryflux(pp,&geomBLxr,fxr,0,state.ucov);
   
       PLOOP(iv) pp[iv]=get_u(p,iv,ix,iy-1,iz);
-      trans_pall_coco(pp,pp,MYCOORDS,BLCOORDS,geomyl.xxvec,&geomyl,&geomBLyl);
+      #ifdef PRECOMPUTE_MY2OUT
+      trans_pall_coco_my2out(pp,pp,&geomyl,&geomBLyl);
+      #else      
+      trans_pall_coco(pp, pp, MYCOORDS,BLCOORDS, geomyl.xxvec,&geomyl,&geomBLyl);
+      #endif
       fill_struct_of_state(pp,&geomBLyl,&state);
       calc_batteryflux(pp,&geomBLyl,fyl,1,state.ucov);
   
       PLOOP(iv) pp[iv]=get_u(p,iv,ix,iy+1,iz);
-      trans_pall_coco(pp,pp,MYCOORDS,BLCOORDS,geomyr.xxvec,&geomyr,&geomBLyr);
+      #ifdef PRECOMPUTE_MY2OUT
+      trans_pall_coco_my2out(pp,pp,&geomyr,&geomBLyr);
+      #else      
+      trans_pall_coco(pp, pp, MYCOORDS,BLCOORDS, geomyr.xxvec,&geomyr,&geomBLyr);
+      #endif
       fill_struct_of_state(pp,&geomBLyr,&state);
       calc_batteryflux(pp,&geomBLyr,fyr,1,state.ucov);
   
       PLOOP(iv) pp[iv]=get_u(p,iv,ix,iy,iz-1);
-      trans_pall_coco(pp,pp,MYCOORDS,BLCOORDS,geomzl.xxvec,&geomzl,&geomBLzl);
+      #ifdef PRECOMPUTE_MY2OUT
+      trans_pall_coco_my2out(pp,pp,&geomzl,&geomBLzl);
+      #else      
+      trans_pall_coco(pp, pp, MYCOORDS,BLCOORDS, geomzl.xxvec,&geomzl,&geomBLzl);
+      #endif
       fill_struct_of_state(pp,&geomBLzl,&state);
       calc_batteryflux(pp,&geomBLzl,fzl,2,state.ucov);
   
       PLOOP(iv) pp[iv]=get_u(p,iv,ix,iy,iz+1);
-      trans_pall_coco(pp,pp,MYCOORDS,BLCOORDS,geomzr.xxvec,&geomzr,&geomBLzr);
+      #ifdef PRECOMPUTE_MY2OUT
+      trans_pall_coco_my2out(pp,pp,&geomzr,&geomBLzr);
+      #else      
+      trans_pall_coco(pp, pp, MYCOORDS,BLCOORDS, geomzr.xxvec,&geomzr,&geomBLzr);
+      #endif
       fill_struct_of_state(pp,&geomBLzr,&state);
       calc_batteryflux(pp,&geomBLzr,fzr,2,state.ucov);
     
@@ -5087,8 +5138,16 @@ estimate_gas_radiation_coupling(ldouble *pp, void *ggg)
   //coordinate system to compute the four-velocities in
   int coords=BLCOORDS;
   if(MYCOORDS==MINKCOORDS)
+  {
+#ifdef PRECOMPUTE_MY2OUT
+    if(OUTCOORDS!=MINKCOORDS) {
+      printf("in estimate_gas_radiation_coupling with MYCOORDS==MINKCOORDS\n");
+      printf("must have OUTCOORDS==MINKCOORDS to use PRECOMPUTE_MY2OUT\n");
+      exit(-1);
+    }
+#endif
     coords=MINKCOORDS;
-
+  }
   struct geometry *geom
     = (struct geometry *) ggg;
   struct geometry geomBL;
@@ -5101,8 +5160,13 @@ estimate_gas_radiation_coupling(ldouble *pp, void *ggg)
   ldouble utcon[4]={0,pp[VX],pp[VY],pp[VZ]};
   ldouble ucon[4], uconbl[4];
   conv_vels(utcon,ucon,VELPRIM,VEL4,geom->gg,geom->GG);
-  trans2_coco(geom->xxvec,ucon,uconbl,geom->coords,coords);
 
+  #ifdef PRECOMPUTE_MY2OUT
+  trans2_coco_my2out(ucon,uconbl,geom->ix, geom->iy, geom->iz);
+  #else
+  trans2_coco(geom->xxvec,ucon,uconbl,geom->coords,coords);
+  #endif
+  
   //**********************************************************************
   //***** compute radiation rest frame four velocity *******************
   //**********************************************************************
@@ -5110,8 +5174,13 @@ estimate_gas_radiation_coupling(ldouble *pp, void *ggg)
   ldouble urftcon[4]={0,pp[FX],pp[FY],pp[FZ]};
   ldouble urfcon[4], urfconbl[4];
   conv_vels(urftcon,urfcon,VELPRIMRAD,VEL4,geom->gg,geom->GG);
+  
+  #ifdef PRECOMPUTE_MY2OUT
+  trans2_coco_my2out(urfcon,urfconbl,geom->ix, geom->iy, geom->iz);
+  #else
   trans2_coco(geom->xxvec,urfcon,urfconbl,geom->coords,coords);
-
+  #endif
+  
   //**********************************************************************
   //***** making the velocities proper and ortonormal **************
   //**********************************************************************

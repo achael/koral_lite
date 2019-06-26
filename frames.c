@@ -957,7 +957,7 @@ coco_3vector(ldouble A1[3],ldouble A2[3],int CO1,int CO2,void* ggg)
 /*****************************************************************/
 //u^i transfromation between coordinates
 /*****************************************************************/
-
+		   
 int
 trans2_coco(ldouble *xx,ldouble *u1,ldouble *u2,int CO1, int CO2)
 {
@@ -1564,3 +1564,292 @@ indices_21(ldouble A1[4],ldouble A2[4],ldouble gg[][5])
   return 0;
 }
 
+/*****************************************************************/
+// precomputed MYCOORDS -> OUTCOORDS transformation
+// ONLY WORKS at the cell center
+// which = 0 : MYCOORDS -> OUTCOORDS
+// which = 1 : OUTCOORDS -> MYCOORDS
+/*****************************************************************/
+int
+trans_pall_coco_my2out(ldouble *pp1, ldouble *pp2, void* ggg1, void* ggg2) 
+{
+  trans_pmhd_coco_my2out(pp1, pp2, ggg1,ggg2);
+#ifdef RADIATION
+  trans_prad_coco_my2out(pp1, pp2, ggg1,ggg2);
+#endif
+  return 0;
+}
+
+int
+trans_pall_coco_out2my(ldouble *pp1, ldouble *pp2, void* ggg1, void* ggg2) 
+{
+  trans_pmhd_coco_out2my(pp1, pp2, ggg1,ggg2);
+#ifdef RADIATION
+  trans_prad_coco_out2my(pp1, pp2, ggg1,ggg2);
+#endif
+  return 0;
+}
+
+int
+trans_pmhd_coco_my2out(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2)
+{
+  int out = trans_pmhd_coco_precompute(ppin, ppout, ggg1, ggg2, 0);
+  return out;
+}
+
+int
+trans_pmhd_coco_out2my(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2)
+{
+  int out = trans_pmhd_coco_precompute(ppin, ppout, ggg1, ggg2, 1);
+  return out;
+}
+
+int
+trans_pmhd_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2, int which)
+{
+  struct geometry *geom1
+  = (struct geometry *) ggg1;
+  struct geometry *geom2
+  = (struct geometry *) ggg2;
+  
+  int i;
+  ldouble pp1[NV],pp2[NV];
+  for(i=0;i<NV;i++)
+  {
+    ppout[i]=ppin[i];
+    pp1[i]=ppin[i];
+    pp2[i]=ppout[i];
+  }
+  
+  if(OUTCOORDS==MYCOORDS)
+  {    
+    for (i = 0; i < 5; i++)
+    {
+      pp2[i] = pp1[i];
+    }
+  }
+  else
+  {
+    pp2[0]=pp1[0];
+    pp2[1]=pp1[1];
+
+    // four velocity ucon
+    ldouble ucon[4], ucov[4];    
+    calc_ucon_ucov_from_prims(pp1, geom1, ucon, ucov);
+    
+#ifdef MAGNFIELD
+    ldouble bcon[4],Bcon[4];
+    
+    //magnetic field 4-vector bcon
+    calc_bcon_4vel(pp1, ucon, ucov, bcon);
+#endif
+    
+    //convert ucon (and bcon) to OUTCOORDS using precomputed matrices
+    trans2_coco_precompute(ucon, ucon, geom1->ix, geom1->iy, geom1->iz, which);
+        
+#ifdef MAGNFIELD
+    trans2_coco_precompute(bcon, bcon, geom1->ix, geom1->iy, geom1->iz, which);
+#endif
+    
+    //to VELPRIM
+    conv_vels_ut(ucon,ucon,VEL4,VELPRIM, geom2->gg, geom2->GG);
+    
+    pp2[2]=ucon[1];
+    pp2[3]=ucon[2];
+    pp2[4]=ucon[3];
+    
+#ifdef MAGNFIELD
+
+    // back to primitive B^i
+    calc_Bcon_prim(pp2,bcon,Bcon,geom2);
+        
+    for (i = 0; i < 3; i++)
+    {
+      pp2[B1+i] = Bcon[1+i];
+    }
+#endif
+  }
+  
+  for(i=0;i<NVMHD;i++)
+  {
+    ppout[i]=pp2[i];
+  }
+  
+  return 0;
+}
+
+int
+trans_prad_coco_my2out(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2)
+{
+  int out = trans_prad_coco_precompute(ppin, ppout, ggg1, ggg2, 0);
+  return out;
+}
+
+int
+trans_prad_coco_out2my(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2)
+{
+  int out = trans_prad_coco_precompute(ppin, ppout, ggg1, ggg2, 1);
+  return out;
+}
+
+int
+trans_prad_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1, void* ggg2, int which)
+{
+  
+  struct geometry *geom1
+    = (struct geometry *) ggg1;
+  struct geometry *geom2
+    = (struct geometry *) ggg2;
+
+  int i;
+  
+  ldouble pp1[NV],pp2[NV];
+  for(i=0;i<NV;i++) 
+    {
+      ppout[i]=ppin[i];
+      pp1[i]=ppin[i];
+      pp2[i]=ppout[i];
+    }      
+#ifdef RADIATION 
+  if(OUTCOORDS==MYCOORDS)
+    {
+      for(i=0;i<4;i++)
+	pp2[EE0+i]=pp1[EE0+i];
+     }
+  else
+    {
+      //Erf unchanged
+      pp2[EE0]=pp1[EE0];
+
+      //velocity in CO1
+      ldouble ucon[4];
+      ucon[0]=0;
+      ucon[1]=pp1[FX0];
+      ucon[2]=pp1[FY0];
+      ucon[3]=pp1[FZ0];
+
+      conv_vels(ucon,ucon,VELPRIMRAD,VEL4,geom1->gg,geom1->GG);
+      
+      //converting to CO2
+      trans2_coco_precompute(ucon, ucon, geom1->ix, geom1->iy, geom1->iz, which);
+
+      //to VELPRIM
+      conv_vels_ut(ucon,ucon,VEL4,VELPRIMRAD,geom2->gg,geom2->GG);
+
+      pp2[FX0]=ucon[1]; 
+      pp2[FY0]=ucon[2];
+      pp2[FZ0]=ucon[3];
+
+    }
+#endif //RADIATION
+  for(i=NVMHD;i<NV;i++)     
+    {
+      ppout[i]=pp2[i];
+    }      
+ 
+  return 0;
+}
+
+int
+trans2_coco_my2out(ldouble *u1, ldouble *u2, int ix, int iy, int iz)
+{
+  int out = trans2_coco_precompute(u1, u2, ix, iy, iz, 0);
+  return out;
+
+}
+
+int
+trans2_coco_out2my(ldouble *u1, ldouble *u2, int ix, int iy, int iz)
+{
+  int out = trans2_coco_precompute(u1, u2, ix, iy, iz, 1);
+  return out;
+
+}
+
+int
+trans2_coco_precompute(ldouble *u1, ldouble *u2, int ix, int iy, int iz, int which)
+{
+  ldouble dxdx[4][4];
+  int i,j;
+
+  if(OUTCOORDS==MYCOORDS)
+  {
+    for(i=0;i<4;i++)
+      u2[i] = u1[i];
+  }
+  else
+  {
+    for(i=0;i<4;i++)
+      for(j=0;j<4;j++)
+      {
+	if(which==0)
+	{
+          dxdx[i][j] = get_dxdx(dxdx_my2out,i,j,ix,iy,iz);
+        }
+	else if(which==1)
+	{
+          dxdx[i][j] = get_dxdx(dxdx_out2my,i,j,ix,iy,iz);
+        }
+	else
+	{
+          printf("In trans2_coco_precompute, which flag must be 0 or 1!\n");
+	  getch();
+	}
+      }
+    multiply2(u1,u2,dxdx);
+  }
+  
+  return 0;
+}
+
+int
+trans22_coco_my2out(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz)
+{
+  int out = trans22_coco_precompute(T1, T2, ix, iy, iz, 0);
+  return out;
+}
+
+int
+trans22_coco_out2my(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz)
+{
+  int out = trans22_coco_precompute(T1, T2, ix, iy, iz, 1);
+  return out;
+}
+
+int
+trans22_coco_precompute(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz, int which)
+{
+  ldouble dxdx[4][4];
+  int i,j;
+
+  if(OUTCOORDS==MYCOORDS)
+  {
+    for(i=0;i<4;i++)
+      for(j=0;j<4;j++)
+        T2[i][j] = T1[i][j];
+  }
+  else
+  {
+    for(i=0;i<4;i++)
+      for(j=0;j<4;j++)
+      {
+	if(which==0)
+	{
+          dxdx[i][j] = get_dxdx(dxdx_my2out,i,j,ix,iy,iz);
+        }
+	else if(which==1)
+	{
+          dxdx[i][j] = get_dxdx(dxdx_out2my,i,j,ix,iy,iz);
+        }
+	else
+	{
+          printf("In trans22_coco_precompute, which flag must be 0 or 1!\n");
+	  getch();
+	}
+      }
+    
+    multiply22(T1,T2,dxdx);
+  }
+  
+  return 0;
+}
