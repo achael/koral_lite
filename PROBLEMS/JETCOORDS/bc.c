@@ -60,7 +60,6 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
     trans_pmhd_coco(pp, pp, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
     #endif
 
-    
     struct geometry geombdBL;
     fill_geometry_arb(iix,iiy,iiz,&geombdBL,BLCOORDS);
     ldouble rghost = geomBL.xx;
@@ -130,8 +129,7 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
 	 trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
          #endif
         }
-	conv_vels_ut(ucon, ucon, VEL4, VELPRIM, geom.gg, geom.GG); // AA -- we know ut after coco
-	//conv_vels(ucon, ucon, VEL4, VELPRIM, geom.gg, geom.GG);
+	conv_vels(ucon, ucon, VEL4, VELPRIM, geom.gg, geom.GG); // AA -- we need to recompute ut
 	
 	pp[VX]=ucon[1];
 	pp[VY]=ucon[2];
@@ -159,8 +157,7 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
         #else      
 	trans2_coco(geomBL.xxvec,urfcon,urfcon,BLCOORDS,MYCOORDS);
         #endif
-	conv_vels_ut(urfcon,urfcon,VEL4,VELPRIMRAD,geom.gg,geom.GG); // AA -- we know ut after coco
-	//conv_vels(urfcon,urfcon,VEL4,VELPRIMRAD,geom.gg,geom.GG);
+	conv_vels(urfcon,urfcon,VEL4,VELPRIMRAD,geom.gg,geom.GG); // AA -- we need to recompute ut
 	
 	pp[FX0]=urfcon[1];
 	pp[FY0]=urfcon[2];

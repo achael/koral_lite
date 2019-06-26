@@ -33,9 +33,15 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
       }
     
     //!! begin rescale
+
+    // AA -- example of how to use precomputed my2out and out2my for faster coco
     //first transform to BL
+    #ifdef PRECOMPUTE_MY2OUT
+    trans_pmhd_coco_my2out(pp,pp,&geom,&geomBL);
+    #else      
     trans_pmhd_coco(pp, pp, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
-    
+    #endif
+
     struct geometry geombdBL;
     fill_geometry_arb(iix,iiy,iiz,&geombdBL,BLCOORDS);
     ldouble rghost = geomBL.xx;
@@ -61,13 +67,27 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
     pp[FZ0] *=scale1;
     #endif
     //transform back after rescaling
-    trans_pmhd_coco(pp, pp,BLCOORDS, MYCOORDS, geomBL.xxvec,&geomBL, &geom);
+
+    #ifdef PRECOMPUTE_MY2OUT
+    trans_pmhd_coco_out2my(pp,pp,&geomBL,&geom);
+    #else      
+    trans_pmhd_coco(pp, pp, BLCOORDS,MYCOORDS, geomBL.xxvec,&geomBL,&geom);
+    #endif
+
     //!! end rescale
 
     //checking for the gas inflow
     ldouble ucon[4]={0.,pp[VX],pp[VY],pp[VZ]};    
     conv_vels(ucon,ucon,VELPRIM,VEL4,geom.gg,geom.GG);
-    if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
+    if(MYCOORDS!=CYLCOORDS)
+      {
+      #ifdef PRECOMPUTE_MY2OUT
+      trans2_coco_my2out(ucon, ucon, geom.ix, geom.iy, geom.iz);
+      #else      
+      trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
+      #endif
+      }
+
     if(ucon[1]<0.) //inflow, resseting to atmosphere
       {
 	//atmosphere in rho,uint and velocities and zero magn. field
@@ -80,12 +100,19 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
 	//!! end reset to floor
 
 	ucon[1]=0.;
-	/**
+	/*
 	#ifdef MAGNFIELD
 	pp[B2]=pp[B3]=0.;
 	#endif
-	**/
-	if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+	*/
+	if(MYCOORDS!=CYLCOORDS)
+	{
+         #ifdef PRECOMPUTE_MY2OUT
+	 trans2_coco_out2my(ucon, ucon, geomBL.ix, geomBL.iy, geomBL.iz);
+         #else      
+	 trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+         #endif
+        }
 	conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
 	pp[VX]=ucon[1];
 	pp[VY]=ucon[2];
@@ -95,7 +122,14 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
 #ifdef RADIATION
     ldouble urfcon[4]={0.,pp[FX0],pp[FY0],pp[FZ0]};    
     conv_vels(urfcon,urfcon,VELPRIMRAD,VEL4,geom.gg,geom.GG);
-    if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,urfcon,urfcon,MYCOORDS,BLCOORDS);
+    if(MYCOORDS!=CYLCOORDS)
+      {
+       #ifdef PRECOMPUTE_MY2OUT
+       trans2_coco_my2out(urfcon, urfcon, geom.ix, geom.iy, geom.iz);
+       #else      
+       trans2_coco(geom.xxvec,urfcon,urfcon,MYCOORDS,BLCOORDS);
+       #endif
+      }
     if(urfcon[1]<0.) //inflow, resseting to atmosphere
       {
 	//!! begin reset to floor
@@ -105,7 +139,14 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
 	//atmosphere in radiation
 	//set_radatmosphere(pp,xxvec,gg,GG,0);
 	urfcon[1]=0.;
-	if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,urfcon,urfcon,BLCOORDS,MYCOORDS);
+	if(MYCOORDS!=CYLCOORDS)
+	  {
+             #ifdef PRECOMPUTE_MY2OUT
+             trans2_coco_out2my(urfcon, urfcon, geomBL.ix, geomBL.iy, geomBL.iz);
+             #else      
+	     trans2_coco(geomBL.xxvec,urfcon,urfcon,BLCOORDS,MYCOORDS);
+             #endif
+	  }
 	conv_vels(urfcon,urfcon,VEL4,VELPRIMRAD,geom.gg,geom.GG);
 	pp[FX0]=urfcon[1];
 	pp[FY0]=urfcon[2];
@@ -213,7 +254,8 @@ if(BCtype==YBCLO) //upper spin axis
 	//checking for the gas inflow
 	ldouble ucon[4]={0.,pp[VX],pp[VY],pp[VZ]};    
 	conv_vels(ucon,ucon,VELPRIM,VEL4,geom.gg,geom.GG);
-	if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
+	//if(MYCOORDS!=CYLCOORDS)
+	//  trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
 	if(ucon[2]>0.) //inflow, resseting to atmosphere
 	  {
 	    //atmosphere in rho,uint and velocities and zero magn. field
@@ -222,7 +264,7 @@ if(BCtype==YBCLO) //upper spin axis
 #ifdef MAGNFIELD
 	    pp[B1]=pp[B3]=0.;
 #endif
-	    if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+	    //if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
 	    conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
 	    pp[VX]=ucon[1];
 	    pp[VY]=ucon[2];
@@ -232,13 +274,13 @@ if(BCtype==YBCLO) //upper spin axis
 #ifdef RADIATION
 	ldouble urfcon[4]={0.,pp[FX0],pp[FY0],pp[FZ0]};    
 	conv_vels(urfcon,urfcon,VELPRIMRAD,VEL4,geom.gg,geom.GG);
-	if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,urfcon,urfcon,MYCOORDS,BLCOORDS);
+	//if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,urfcon,urfcon,MYCOORDS,BLCOORDS);
 	if(urfcon[2]>0.) //inflow, resseting to atmosphere
 	  {
 	    //atmosphere in radiation
 	    //set_radatmosphere(pp,xxvec,gg,GG,0);
 	    urfcon[2]=0.;
-	    if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,urfcon,urfcon,BLCOORDS,MYCOORDS);
+	    //if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,urfcon,urfcon,BLCOORDS,MYCOORDS);
 	    conv_vels(urfcon,urfcon,VEL4,VELPRIMRAD,geom.gg,geom.GG);
 	    pp[FX0]=urfcon[1];
 	    pp[FY0]=urfcon[2];
@@ -288,13 +330,13 @@ if(BCtype==YBCHI) //lower spin axis
 	//checking for the gas inflow
 	ldouble ucon[4]={0.,pp[VX],pp[VY],pp[VZ]};    
 	conv_vels(ucon,ucon,VELPRIM,VEL4,geom.gg,geom.GG);
-	if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
+	//if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
 	if(ucon[2]<0.) //inflow, resseting to atmosphere
 	  {
 	    //atmosphere in rho,uint and velocities and zero magn. field
 	    //set_hdatmosphere(pp,xxvec,gg,GG,4);
 	    ucon[2]=0.;
-	    if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+	    //if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
 	    conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
 	    pp[VX]=ucon[1];
 	    pp[VY]=ucon[2];
@@ -307,14 +349,14 @@ if(BCtype==YBCHI) //lower spin axis
 #ifdef RADIATION
 	ldouble urfcon[4]={0.,pp[FX0],pp[FY0],pp[FZ0]};    
 	conv_vels(urfcon,urfcon,VELPRIMRAD,VEL4,geom.gg,geom.GG);
-	if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,urfcon,urfcon,MYCOORDS,BLCOORDS);
+	//if(MYCOORDS!=CYLCOORDS) trans2_coco(geom.xxvec,urfcon,urfcon,MYCOORDS,BLCOORDS);
 	if(urfcon[2]<0.) //inflow, resseting to atmosphere
 	  {
 	    //atmosphere in radiation
 	    //set_radatmosphere(pp,xxvec,gg,GG,0);
 	    urfcon[2]=0.;
 
-	    if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,urfcon,urfcon,BLCOORDS,MYCOORDS);
+	    //if(MYCOORDS!=CYLCOORDS) trans2_coco(geomBL.xxvec,urfcon,urfcon,BLCOORDS,MYCOORDS);
 	    conv_vels(urfcon,urfcon,VEL4,VELPRIMRAD,geom.gg,geom.GG);
 	    pp[FX0]=urfcon[1];
 	    pp[FY0]=urfcon[2];

@@ -190,8 +190,9 @@
 /************************************/
 //coordinates
 /************************************/
-#define myJETCOORDS
+//#define myJETCOORDS
 //#define myMKS2COORDS
+#define myMKS3COORDS
 #define METRICAXISYMMETRIC
 #define RMIN 1.
 #define RMAX 1.e5
@@ -203,6 +204,21 @@
 #define MAXX (log(RMAX-MKSR0))
 #define MINY (0.001)
 #define MAXY (1.-0.001)
+
+#define MKSR0 -1.35
+#define MKSH0 0.7
+#define MKSMY1 0.002
+#define MKSMY2 0.02
+#define MKSMP0 1.3
+#endif
+
+#ifdef myMKS3COORDS //modified Kerr-Shild further from axis
+#define METRICNUMERIC
+#define MYCOORDS MKS3COORDS
+#define MINX (log(RMIN-MKSR0))
+#define MAXX (log(RMAX-MKSR0))
+#define MINY 0.
+#define MAXY 1.
 
 #define MKSR0 -1.35
 #define MKSH0 0.7
