@@ -160,9 +160,9 @@
 #define TNY 8 // 96
 #define TNZ 8 // 96
 //number of tiles
-#define NTX 2
-#define NTY 2
-#define NTZ 2
+#define NTX 1
+#define NTY 1
+#define NTZ 1
 
 /************************************/
 //boundary conditions 
@@ -184,7 +184,7 @@
 #define ALLSTEPSOUTPUT 0
 #define OUTPUTINZAMO
 #define NSTEPSTOP 1.e12
-#define NOUTSTOP 4 // 1000
+#define NOUTSTOP 10 // 1000
 
 #define FOLDER_HDF5 "./hdf5"
 //#define COORDOUTPUT_HDF5

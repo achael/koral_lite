@@ -9,12 +9,12 @@ else
 //CFLAGS=-O2 -Wno-unused-result -fopenmp
 //-fsanitize=address -g -fno-omit-frame-pointer -Wunused-function 
 
-CC=clang
-CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp=libiomp5 -g 
--fsanitize=address -fno-omit-frame-pointer
+//CC=clang
+//CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp=libiomp5 -g 
+//-fsanitize=address -fno-omit-frame-pointer
 
-//CC=h5cc
-//CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp 
+CC=h5cc
+CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp 
 
 endif
 

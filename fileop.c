@@ -844,11 +844,12 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
         izz[ix][iy][iz] = giz;
       }
 
-  /*
   // Save indices in HDF5 file. Is this needed? If not, get rid of ixx, iyy, izz arrays
     
   dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
-    
+  
+
+  /*  
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/GIX", H5T_STD_I32BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    ixx);
@@ -883,11 +884,11 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
 	  primitive[ix][iy][iz] = get_u(p, iv, ix, iy, iz);
 	}
     
-  // Then find the primitive name and save in the hdf5 file
+   // Then find the primitive name and save in the hdf5 file
 
     get_prim_name(prim_name, iv);
     printf("  prim_name: %s\n", prim_name);
-
+    //
     dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT, &(primitive[0][0][0]));
     status = H5Dclose(dumps_dataset_array);

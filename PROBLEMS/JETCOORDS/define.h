@@ -2,7 +2,7 @@
 //general
 /************************************/
 #define BHDISK_PROBLEMTYPE
-//#define PRECOMPUTE_MY2OUT
+#define PRECOMPUTE_MY2OUT
 
 /************************************/
 //restart
@@ -44,7 +44,7 @@
 /************************************/
 //radiation choices
 /************************************/
-#define RADIATION
+//#define RADIATION
 //#define SKIPRADSOURCE    //advective only
 //#define SKIPRADEVOLUTION //keeps initial values
 
@@ -143,7 +143,7 @@
 /************************************/
 #define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .5
+#define TSTEPLIM .8
 #define FLUXMETHOD LAXF_FLUX
 
 #define FLUXLIMITER 0
@@ -178,8 +178,8 @@
 //resolution
 /************************************/
 //total resolution
-#define TNX 64//320//288 //256 //16*16 //128 <->256
-#define TNY 64//256//224 //320 //14*9 //92 <->256
+#define TNX 128//320//288 //256 //16*16 //128 <->256
+#define TNY 128//256//224 //320 //14*9 //92 <->256
 #define TNZ 1//128//96
 
 //number of tiles
