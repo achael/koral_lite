@@ -160,7 +160,7 @@
 #define TNY 8 // 96
 #define TNZ 8 // 96
 //number of tiles
-#define NTX 1
+#define NTX 2
 #define NTY 1
 #define NTZ 1
 

@@ -29,7 +29,7 @@ int set_relel_gammas()
   logbinspace_inv = 1./logbinspace;
   binspace = pow(10., log10binspace);
   binspace_inv = 1./binspace;
-  printf("nonthermal bin spacing: %e %e \n",logbinspace,binspace); 
+  if(PROCID==0) printf("nonthermal bin spacing: %e %e \n",logbinspace,binspace); 
 
   relel_gammas_e[0] = RELGAMMAMIN;
   relel_log_gammas_e[0] = log(RELGAMMAMIN);
@@ -42,7 +42,7 @@ int set_relel_gammas()
   logbinspace_inv = 1./logbinspace;
   binspace = pow(10., log10binspace);
   binspace_inv = 1./binspace;
-  printf("nonthermal bin spacing: %e %e \n",logbinspace,binspace); 
+  if(PROCID==0) printf("nonthermal bin spacing: %e %e \n",logbinspace,binspace); 
 
   relel_gammas_e[0] = RELGAMMAMIN;
   relel_log_gammas_e[0] = log(RELGAMMAMIN);
@@ -77,7 +77,10 @@ int set_relel_gammas()
   ldouble injmin = RELEL_INJ_MIN;
 
   //normalization
-  if(p_index < 0) printf("WARNING: RELEL_HEAT_INDEX < 0 corresponds to positive power law!"); 
+  if(p_index < 0)
+    if(PROCID==0)
+      printf("WARNING: RELEL_HEAT_INDEX < 0 corresponds to positive power law!"); 
+
   if(p_index!=2 && p_index!=1)
   {
     xx_relel_inj = (pow(injmax, 2.-p_index) - pow(injmin, 2.-p_index))/(2.-p_index) - (pow(injmax, 1.-p_index) - pow(injmin, 1.-p_index))/(1.-p_index);
@@ -232,7 +235,40 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
   gamma_min=RELEL_INJ_MIN;
 #else
 
-#ifdef CALC_GAMMAMIN_FAST
+#if defined CALC_GAMMAMIN_FIT
+  // fitting function to exact solution, works will all p>1
+  // see mathematica notebook plaw_tail_full_simple.nb
+ 
+  ldouble p0 = 2.2;
+  ldouble y0 = 5.1;
+  ldouble y1 = 2.01;
+  ldouble al = 2.4;
+  ldouble be = 0.6;
+  ldouble de = 0.04;
+  ldouble eta= delta_nth/(1.-delta_nth);
+  ldouble gamma_pk = 2*theta;
+
+  ldouble y;
+  if(p_index < 1)
+    my_err("in calc_gammainj_min, injection power law index must be >= 1!");
+  else if(p_index < p0)
+    y = y0 * pow(gammamax, de*(p0-p_index));
+  else
+  {
+    ldouble pmax = al*pow(eta,-be);
+    if(p_index<pmax)
+    {
+      ldouble aa = y1/y0;
+      ldouble bb = (p0 - p_index) / (p0 - pmax);
+      y = y0 * pow(aa, bb);
+    }
+    else
+      y = y1;
+  }
+
+  gamma_min = y * gamma_pk;
+
+#elif defined(CALC_GAMMAMIN_FAST) // assumes p > 2
   if(p_index <= 2.) my_err("in calc_gammainj_min, injection power law index must be > 2!");
 
   #if defined(RELEL_HEAT_FIX_FRAC) && defined(RELEL_HEAT_FIX_INDEX)
@@ -246,12 +282,8 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
   
   gamma_min = ratio*theta;
 
-  //Floor on gammamin
-  if(gamma_min < RELEL_INJ_MIN)
-    gamma_min = RELEL_INJ_MIN;
-
 #else 
-  // New method -- iterative
+  // iterative -- assumes p > 2
   ldouble ep=1.e-8;
   if(fabs(p_index-2.0) < ep)
     p_index = 2.0 + ep;
@@ -297,17 +329,16 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
     gamma_min = gmin_guess;
   else
     gamma_min = gamma_pk;
-
+  
+#endif //CALC_GAMMAMIN_FIT
+#endif //RELEL_HEAT_FIX_LIMITS
+#endif //RELELECTRONS
+  
   //Floor & ceiling on gammamin
   if(gamma_min < RELEL_INJ_MIN)
     gamma_min = RELEL_INJ_MIN;
   if(gamma_min > RELEL_INJ_MAX)
     gamma_min = RELEL_INJ_MAX;
-  
-  
-#endif //CALC_GAMMAMIN_FAST
-#endif //RELEL_HEAT_FIX_LIMITS
-#endif //RELELECTRONS
 
   return gamma_min;
 }
@@ -413,18 +444,25 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
   
   if(!isfinite(delta))
     {
-      printf("problem with David delta fit: %d %d f : %e %e %e %e %e\n",geom->ix,geom->iy,delta,beta,sigma,Te,Ti);
+      printf("problem with David delta fit: %d %d %d : %e %e %e %e %e\n",geom->ix,geom->iy,geom->iz,delta,beta,sigma,Te,Ti);
       delta = 0;
       //print_primitives(pp);
     }
   if(delta>1)
     delta=1.;
+  if(delta<1)
+  {
+    delta=0.;
+    pindex=10.;
+  } 
   if(!isfinite(pindex));
    {
-    printf("problem with David pindex fit: %d %d f : %e %e %e %e %e\n",geom->ix,geom->iy,delta,beta,sigma,Te,Ti);
+     printf("problem with David pindex fit: %d %d %d : %e %e %e %e %e\n",geom->ix,geom->iy,geom->iz, delta,beta,sigma,Te,Ti);
     pindex = 10.;
     delta=0.;
    }
+   if(pindex<1.01)
+     pindex=1.01;
 #endif
 #endif
 

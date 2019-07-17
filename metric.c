@@ -83,7 +83,7 @@ calc_metric()
 	    for(k=0;k<4;k++)
 	      set_gKr(i,j,k,ix,iy,iz,Kr[i][j][k]);
 
-#ifdef PRECOMPUTE_MY2OUT// Jacobian matrices for MYCOORDS -> OUTCOORDS
+#ifdef PRECOMPUTE_MY2OUT// Jacobian matrices for MYCOORDS <-> OUTCOORDS
         ldouble dxdxloc[4][4], xx2[4];
 	calc_dxdx_arb(xx, dxdxloc, MYCOORDS, OUTCOORDS);
 	for(i=0;i<4;i++)
@@ -4114,6 +4114,7 @@ calc_dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
     DLOOPA(i)
     {dxdx[i][j] = (xoutH[i]-xoutL[i])/(xinH[j]-xinL[j]);}
   }
+  
   #else
   double result, abserr;
   struct dxdx_params params;
@@ -4132,6 +4133,7 @@ calc_dxdx_arb_num(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
       gsl_deriv_central(&F, xx[j], delta, &result, &abserr);
       dxdx[i][j]=result;
   }
+
   #endif
   return 0;
 }
