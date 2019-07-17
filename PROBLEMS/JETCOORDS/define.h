@@ -258,7 +258,7 @@
 #define MINZ (-PHIWEDGE/2.)
 #define MAXZ (PHIWEDGE/2.)
 
-#define COPY_XBC     //simpler outflowing boundary conditions
+//#define COPY_XBC     //simpler outflowing boundary conditions
 //#define COPY_YBC
 #define SPECIFIC_BC
 #define PERIODIC_ZBC

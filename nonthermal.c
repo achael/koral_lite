@@ -228,7 +228,7 @@ ldouble calc_relel_p(ldouble *pp)
 //it is exact when gamma_inj_max ->infinity and theta>1 
 ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble p_index, ldouble gammamax)
 {
-  ldouble ratio, gamma_min;
+  ldouble ratio, gamma_min=0;
 
 #ifdef RELELECTRONS
 #ifdef RELEL_HEAT_FIX_LIMITS
@@ -332,13 +332,14 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
   
 #endif //CALC_GAMMAMIN_FIT
 #endif //RELEL_HEAT_FIX_LIMITS
-#endif //RELELECTRONS
-  
-  //Floor & ceiling on gammamin
+    //Floor & ceiling on gammamin
   if(gamma_min < RELEL_INJ_MIN)
     gamma_min = RELEL_INJ_MIN;
   if(gamma_min > RELEL_INJ_MAX)
     gamma_min = RELEL_INJ_MAX;
+
+#endif //RELELECTRONS
+  
 
   return gamma_min;
 }
