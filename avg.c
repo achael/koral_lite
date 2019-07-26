@@ -452,7 +452,8 @@ main(int argc, char **argv)
   //Prefix and Suffix for output files
   char prefix[40];
   char suffix[10];
-  
+  sprintf(suffix,"");
+
   //if(ifavg)
     //sprintf(suffix,"");
   if(ifavg==0)

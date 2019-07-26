@@ -242,7 +242,8 @@ main(int argc, char **argv)
     //suffix and prefix for saved files depending on phiavg
     char prefix[40];
     char suffix[10];
-    
+    sprintf(suffix,"");
+
     //sprintf(suffix,"");
     if(ifphiavg==1)
       sprintf(suffix,"%sphiavg",suffix);

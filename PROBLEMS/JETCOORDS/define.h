@@ -2,7 +2,7 @@
 //general
 /************************************/
 #define BHDISK_PROBLEMTYPE
-#define PRECOMPUTE_MY2OUT
+//#define PRECOMPUTE_MY2OUT
 
 /************************************/
 //restart
@@ -21,7 +21,7 @@
 /************************************/
 //magnetic choices
 /************************************/
-#define MAGNFIELD
+//#define MAGNFIELD
 #define GDETIN 1 //must be 1 for MAGNFIELD
 #define VECPOTGIVEN
 #define INIT_MAGN_CORNERS    
@@ -234,8 +234,8 @@
 #define DERIVS_NOGSL // use a faster numeric derivative for coordinate transformations
 #define MINX 0
 #define MAXX 1.
-#define MINY -(1.-1.e-8) //10^-8 away from the poles seems to be the last safe point
-#define MAXY 1.-1.e-8    //TODO -- can we fix this!??!?!?
+#define MINY -(1.-1.e-6) //10^-8 away from the poles seems to be the last safe point
+#define MAXY 1.-1.e-6   //TODO -- can we fix this!??!?!?
 
 #define MKSR0 -1.35
 #define HYPRBRK 5000
