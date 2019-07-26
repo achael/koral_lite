@@ -442,28 +442,29 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
   //delta = 1./((1+115.994*beta)*(1+0.2838673/sqrt(sigma)));
   //ldouble rtsigi = 1./sqrt(sigma);
   //pindex = 1. + 2*(1+3.65*rtsigi)/(1+pow(betanorm,0.422)) + 0.435*rtsigi;
-  
+
+
+  //ANDREW TODO CHECK FLOORS                                                                                                                                                                  
   if(!isfinite(delta))
     {
-      printf("problem with David delta fit: %d %d %d : %e %e %e %e %e\n",geom->ix,geom->iy,geom->iz,delta,beta,sigma,Te,Ti);
+      //printf("problem with David delta fit: %d %d %d : %e %e %e %e %e\n",geom->ix,geom->iy,geom->iz,delta,beta,sigma,Te,Ti);                                                                    
       delta = 0;
-      //print_primitives(pp);
+      //print_primitives(pp);                                                                                                                                                                     
     }
   if(delta>1)
     delta=1.;
-  if(delta<1)
-  {
+  if(delta<0)
     delta=0.;
-    pindex=10.;
-  } 
   if(!isfinite(pindex));
    {
-     printf("problem with David pindex fit: %d %d %d : %e %e %e %e %e\n",geom->ix,geom->iy,geom->iz, delta,beta,sigma,Te,Ti);
-    pindex = 10.;
-    delta=0.;
+     //printf("problem with David pindex fit: %d %d %d : %e %e %e %e %e\n",geom->ix,geom->iy,geom->iz, delta,beta,sigma,Te,Ti);                                                                   
+     pindex = 10.;
+     delta=0.;
    }
-   if(pindex<1.01)
-     pindex=1.01;
+  if(pindex>10)
+    pindex=10;
+  if(pindex<1.01)
+    pindex=1.01;
 #endif
 #endif
 
