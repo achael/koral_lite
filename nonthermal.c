@@ -408,7 +408,7 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
 
   #ifdef MAGNFIELD
   beta = 2.*pion/bsq;
-  sigma = bsq/enth_tot;
+  sigma = bsq/rho;//enth_tot;
   betamax = 0.25/sigma;
 
   //ANDREW TODO LIMITS??
@@ -423,9 +423,6 @@ int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldoub
   #endif
 
   //Andrew's fit to David's fit to simulation numbers
-
-  
-
   //TODO find a better fit!!
   
   ldouble ap = 1.8 + 0.7/sqrt(sigma);

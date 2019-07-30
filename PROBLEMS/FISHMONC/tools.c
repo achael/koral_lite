@@ -29,7 +29,7 @@ int init_dsandvels_fishbone_moncrief(FTYPE r, FTYPE th, FTYPE a, FTYPE *rhoout, 
   ldouble hlog0 = 0.5*log((1. + sqrt(1. + 4.*ell*ell*Sigma0*Sigma0*Delta0/(A0*A0)))/(Sigma0*Delta0/A0)) - 0.5*sqrt(1 + 4.*ell*ell*Sigma0*Sigma0*Delta0/(A0*A0)) - 2.*a*rmax*ell/A0 - 0.5*log((1. + sqrt(1. + 4.*ell*ell*rin*rin*(rin*rin - 2.*rin + a*a)*pow((rin*rin*rin + rin*a*a + 2.*a*a),-2)))/(rin*(rin*rin - 2.*rin + a*a)/(rin*rin*rin + rin*a*a + 2.*a*a))) + 0.5*sqrt(1. + 4.*ell*ell*rin*rin*(rin*rin - 2.*rin + a*a)/pow((rin*rin*rin + rin*a*a + 2.*a*a),2)) + ell*2.*a/(rin*rin*rin + rin*a*a + 2.*a*a);
   ldouble h0 = exp(hlog0);
   
-  int n = 1. / (GAMMA - 1.);
+  ldouble n = 1. / (GAMMA - 1.);
   ldouble rho, uu, p0, p;
   if (h >= 1. && r >= rin)  // the point is inside the torus
   {
