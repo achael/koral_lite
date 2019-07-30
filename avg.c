@@ -454,8 +454,8 @@ main(int argc, char **argv)
   char suffix[10];
   sprintf(suffix,"");
 
-  //if(ifavg)
-    //sprintf(suffix,"");
+  if(ifavg)
+    sprintf(suffix,"");
   if(ifavg==0)
     sprintf(suffix,"res");
   if(ifphiavg)
