@@ -864,7 +864,7 @@ int trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxv
 int trans_prad_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, void* ggg1, void* ggg2);
 
 //deprecated
-//int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg);
+int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg);
 //int prad_lab2ff(ldouble *pp1, ldouble *pp2, void *ggg);
 //int prad_on2lab(ldouble *pp1, ldouble *pp2, void* ggg);
 //int prad_lab2on(ldouble *pp1, ldouble *pp2, void *ggg);
@@ -889,6 +889,7 @@ int calc_Lorentz_ff2lab(ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble L[][
 
 int boost22_lab2ff(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5]);
 int boost22_ff2lab(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5]);
+int boost22_ff2lab_with_alpha(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5], ldouble alpha);
 int boost22_rf2lab(ldouble T1[][4],ldouble T2[][4],ldouble *pp0,ldouble gg[][5],ldouble GG[][5]);
 int boost22_lab2rf(ldouble T1[][4],ldouble T2[][4],ldouble *pp0,ldouble gg[][5],ldouble GG[][5]);
 int boost2_lab2ff(ldouble A1[4],ldouble A2[4],ldouble *pp,ldouble gg[][5],ldouble GG[][5]);

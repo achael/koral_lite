@@ -1853,3 +1853,178 @@ trans22_coco_precompute(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz
   
   return 0;
 }
+
+
+/*********************************************************************************************************************/
+/****** radiative ff primitives (\ehat,\hat urf^i) -> primitives in lab frame  ***************************************/
+/****** has changed! previously took (Ehat, F^i), no longer! that was not consistent and did not tranform well *******/
+/*********************************************************************************************************************/
+
+int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg)
+{
+  struct geometry *geom
+    = (struct geometry *) ggg;
+  int i,j;
+
+  //print_primitives(pp1);
+
+  ldouble (*gg)[5],(*GG)[5],gdetu;
+  gg=geom->gg;
+  GG=geom->GG;
+  ldouble tlo[4][4];
+  //calc_tetrades(geom->gg,tup,tlo,MYCOORDS);
+  //approximate:
+  DLOOP(i,j) tlo[i][j]=0.;
+  DLOOPA(i) tlo[i][i]=1./sqrt((gg[i][i]));
+  tlo[0][0]=1.;
+
+  gdetu=geom->gdet;
+#if (GDETIN==0) //gdet out of derivatives
+  gdetu=1.;
+#endif
+
+  ldouble Rij[4][4];
+
+  int verbose=0;
+  //calc_Rij_M1_ff(pp1,Rij);  
+  //trans22_on2cc(Rij,Rij,tlo);  
+  //boost22_ff2lab(Rij,Rij,pp1,gg,GG); 
+ 
+  calc_Rij(pp1,geom,Rij);  
+  boost22_ff2lab_with_alpha(Rij, Rij, pp1, gg, GG, geom->alpha);
+
+  //TEST
+  /*
+  if(geom->ix==60 && geom->iy==NY/2)
+    {
+      print_tensor(Rij); 
+      ldouble Rijlab[4][4];
+      boost22_lab2ff(Rij,Rijlab,pp1,gg,GG); 
+      print_tensor(Rijlab); 
+    }
+  */
+
+  indices_2221(Rij,Rij,gg);  
+
+  for(i=0;i<NVMHD;i++)
+    pp2[i]=pp1[i];
+
+  //temporarily store conserved in uu[]
+ 
+  ldouble uu[NV];
+
+  uu[EE0]=gdetu*Rij[0][0];
+  uu[FX0]=gdetu*Rij[0][1];
+  uu[FY0]=gdetu*Rij[0][2];
+  uu[FZ0]=gdetu*Rij[0][3];
+ 
+  #ifdef EVOLVEPHOTONNUMBER
+  ldouble nphff=pp1[NF0];
+  #endif 
+
+  //convert to real primitives
+  int corrected;
+  u2p_rad(uu,pp2,geom,&corrected);
+
+  //TEST
+  /*
+    if(geom->ix==60 && geom->iy==NY/2)
+     {
+     calc_Rij(pp2,geom,Rij); //calculates R^munu in OUTCOORDS
+     print_tensor(Rij);
+     getch();
+}
+  */
+  #ifdef EVOLVEPHOTONNUMBER
+  //velocities of the frames
+  ldouble ut[4];ut[1]=pp2[VX];ut[2]=pp2[VY];ut[3]=pp2[VZ];
+  ldouble uffcov[4],uffcon[4];
+  conv_vels_both(ut,uffcon,uffcov,VELPRIM,VEL4,gg,GG);
+  ldouble urfcov[4],urfcon[4];
+  ut[1]=pp2[FX0];ut[2]=pp2[FY0];ut[3]=pp2[FZ0];
+  conv_vels_both(ut,urfcon,urfcov,VELPRIMRAD,VEL4,gg,GG);
+
+  ldouble relgamma = urfcon[0]*uffcov[0] + urfcon[1]*uffcov[1] +urfcon[2]*uffcov[2] +urfcon[3]*uffcov[3]; 
+  ldouble nphrf = -nphff/relgamma;
+
+  pp2[NF0]=nphrf;
+  #endif
+
+  //print_primitives(pp2);getch();
+
+  return 0;
+} 
+
+
+/*****************************************************************/
+/*****************************************************************/
+/*****************************************************************/
+//T^ij Lorentz boost from fluid frame to lab
+
+int
+boost22_ff2lab_with_alpha(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5], ldouble alpha)
+{
+  int i,j,k,l;
+  ldouble Tt[4][4];
+  
+  int verbose=0;
+  
+  if(verbose>0) print_tensor(T1);
+  
+  //Lorentz transformation matrix
+  ldouble L[4][4];
+  calc_Lorentz_ff2lab(pp,gg,GG,L);
+  
+  //copying
+  for(i=0;i<4;i++)
+    {
+      for(j=0;j<4;j++)
+	{
+	  Tt[i][j]=T1[i][j];
+	}
+    }
+  
+  //correcting for ortonormality
+  //ldouble alpha=sqrt(-1./GG[0][0]);
+  for(i=0;i<4;i++)
+    {
+      T1[i][0]/=alpha;
+      T1[0][i]/=alpha;
+    }
+  
+  if(verbose>0) print_tensor(L);
+  
+  //boosting
+  for(i=0;i<4;i++)
+    {
+      for(j=0;j<4;j++)
+	{
+	  T2[i][j]=0.;
+	  for(k=0;k<4;k++)
+	    {
+	      for(l=0;l<4;l++)
+		{
+		  T2[i][j]+=L[i][k]*L[j][l]*Tt[k][l];
+		}
+	    }
+	}
+    }
+  
+  /*
+   //dividing by lapse to express T2 in no-frame
+   ldouble alpha=sqrt(-1./GG[0][0]);
+   for(i=0;i<4;i++)
+   {
+   for(j=0;j<4;j++)
+   {
+     T2[i][j]=T2[i][j]/alpha;
+   }
+   }
+  */
+  
+  if(verbose>0) print_tensor(T2);
+  
+  if(verbose>0) getchar();
+  
+  return 0;
+}
