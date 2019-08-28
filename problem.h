@@ -145,7 +145,7 @@
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 138
+#define PROBLEM 67
 
 
 #if(PROBLEM==138)
@@ -198,7 +198,7 @@
 #endif
 
 #if(PROBLEM==134)
-#define PR_DEFINE "PROBLEMS/FISHMONC/define_testhdf5.h"
+#define PR_DEFINE "PROBLEMS/FISHMONC/define.h"
 #define PR_BC "PROBLEMS/FISHMONC/bc.c"
 #define PR_INIT "PROBLEMS/FISHMONC/init.c"
 //#define PR_KAPPA "PROBLEMS/FISHMONC/kappa.c"
