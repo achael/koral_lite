@@ -1243,7 +1243,7 @@ op_implicit(ldouble t, ldouble dtin)
 #ifdef RADIATION
 #ifndef SKIPRADSOURCE
 #ifdef IMPLICIT_LAB_RAD_SOURCE  // this is the default
-  
+
 #pragma omp parallel for private(ii) schedule (static)
   for(ii=0;ii<Nloop_0;ii++) //domain 
   {

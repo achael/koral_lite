@@ -389,7 +389,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
       if(fabs(ucon[1])<VXFLOOR)
       {
-	  ucon[1]=my_sign(ucon[1])*VXFLOOR;
+	ucon[1]=my_sign(ucon[1])*VXFLOOR;
       }
       
       #ifdef PRECOMPUTE_MY2OUT

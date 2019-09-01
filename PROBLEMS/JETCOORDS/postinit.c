@@ -1,9 +1,12 @@
-//scales magnetic pressure so MAXBETA = pmag/(pgas+prad)
+//scales magnetic pressure so MAXBETA = pmag/pgas
 int ix,iy,iz;
 
 #ifdef MAGNFIELD
 if(PROCID==0) {printf("Renormalizing magnetic field... ");fflush(stdout);}
 ldouble maxbeta=0.;
+ldouble maxpmag=0;
+ldouble maxptot=0.;
+
 #pragma omp parallel for private(ix,iy,iz) schedule (dynamic)
 for(iz=0;iz<NZ;iz++)
   {
@@ -32,16 +35,15 @@ for(iz=0;iz<NZ;iz++)
 	    ldouble pgas=GAMMAM1*pp[UU];
 	    ldouble ptot=pgas;
 
+	    /*
 #ifdef RADIATION
-
 		ldouble Rtt,Ehat,ucon[4],prad;
 		calc_ff_Rtt(pp,&Rtt,ucon,&geom);
 		Ehat=-Rtt; 
 		prad=Ehat/3.;
 		ptot+=prad;
-		
 #endif
-
+	    */
 #ifdef BETANORMFULL
 		//normalizing wrt everywhere
 #pragma omp critical
@@ -50,19 +52,46 @@ for(iz=0;iz<NZ;iz++)
 		    maxbeta=pmag/ptot;
 		    //printf("%d %d > %e %e %e\n",ix,iy,pmag,ptot,maxbeta);
 		  }
+		if(pmag>maxpmag) 
+		  {
+		    maxpmag=pmag;
+		    //printf("%d %d > %e %e %e\n",ix,iy,pmag,ptot,maxbeta);
+		  }
+		if(ptot>maxptot) 
+		  {
+		    maxptot=ptot;
+		    //printf("%d %d > %e %e %e\n",ix,iy,pmag,ptot,maxbeta);
+		  }
 		    
 #else //normalizing wrt to the equatorial plane
 		if(geom.iy==NY/2)
 		  {
 #pragma omp critical
-		    if(pmag/ptot>maxbeta) 
+		    if(pmag/ptot>maxbeta)
+		    {
 		      maxbeta=pmag/ptot;
+		      //printf("%d %d > %e %e %e\n",ix,iy,pmag,ptot,maxbeta);
+                    }
+		    if(pmag>maxpmag) 
+		    {
+		      maxpmag=pmag;
+		      //printf("%d %d > %e %e %e\n",ix,iy,pmag,ptot,maxbeta);
+		    }
+		    if(ptot>maxptot) 
+		    {
+		      maxptot=ptot;
+		      //printf("%d %d > %e %e %e\n",ix,iy,pmag,ptot,maxbeta);
+		    }
+
 		  }
 #endif
 	  }
       }
   }
 
+//?? This is how it's defined for the MAD code comparison
+maxbeta=maxpmag/maxptot;
+  
 //choosing maximal maxbeta from the whole domain
 #ifdef MPI
   MPI_Barrier(MPI_COMM_WORLD);

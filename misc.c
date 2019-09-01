@@ -94,6 +94,7 @@ void initialize_constants()
   hypx1brk= log(HYPRBRK-MKSR0);
   hypx1out= hyperexp_x1max(RMAX, HYPRBRK, MKSR0);
 
+  //printf("hyperx1in %e | hyperx2brk %e | hyperx1out %e\n",hypx1in,hypx1brk,hypx1out);
   #ifdef CYLINDRIFY
   set_cyl_params();
   #endif
@@ -304,10 +305,11 @@ am_i_sane()
   }
 
 #ifdef PRECOMPUTE_MY2OUT
+  if (PROCID==0){
   printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   printf("\nWarning -- using precomputed MYCOORDS --> OUTCOORDS for floors, averages, and boundary conditions\n");
   printf("Check your bcs.c!!\n");
-  
+  }
 #ifdef BHDISK_PROBLEMTYPE
   if(!((OUTCOORDS == BLCOORDS) || (OUTCOORDS == KSCOORDS))) {
     printf("For BHDISK_PROBLEMTYPE PRECOMPUTE_MY2OUT currently only works with OUTCOORDS=BLCOORDS!\n");

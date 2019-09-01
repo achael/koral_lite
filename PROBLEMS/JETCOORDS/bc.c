@@ -4,8 +4,10 @@
 
 /**********************/
 //geometries
-ldouble gdet_src,gdet_bc,Fx,Fy,Fz,ppback[NV];
+ldouble gdet_src,gdet_bc,Fx,Fy,Fz,ppback[NV],ppback2[NV],pp1[NV],pp2[NV];
 int iix,iiy,iiz,iv;  	  
+
+int iiytest=32;
 
 struct geometry geom;
 fill_geometry(ix,iy,iz,&geom);
@@ -48,6 +50,7 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
     for(iv=0;iv<NV;iv++)
       {
 	pp[iv]=get_u(p,iv,iix,iiy,iiz);
+	ppback[iv]=pp[iv];
       }
 
     //!! begin rescale
@@ -55,11 +58,28 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
     // AA -- example of how to use precomputed my2out and out2my for faster coco
     //first transform to BL
     #ifdef PRECOMPUTE_MY2OUT
-    trans_pmhd_coco_my2out(pp,pp,&geom,&geomBL);
+    trans_pmhd_coco_my2out(pp,pp, &geom, &geomBL);
     #else      
     trans_pmhd_coco(pp, pp, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
     #endif
 
+    /*
+    if(iiy==iiytest)
+    {
+
+      printf("%d %d %d\n",iiy,geom.iy,geomBL.iy);
+      printf("\n");
+      trans_pmhd_coco_my2out(ppback, pp1, &geom, &geomBL);
+      trans_pmhd_coco(ppback, pp2, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
+
+      for(iv=0;iv<NV;iv++) printf("%d %e | %e %e %e\n",iv, ppback[iv],pp1[iv],pp2[iv],pp[iv]);
+      printf("\n");
+
+      for(iv=0;iv<NV;iv++) ppback[iv]=pp[iv];
+      //exit(-1);
+    }
+    */
+    
     struct geometry geombdBL;
     fill_geometry_arb(iix,iiy,iiz,&geombdBL,BLCOORDS);
     ldouble rghost = geomBL.xx;
@@ -86,26 +106,42 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
     #endif
     //transform back after rescaling
 
+
+    /*
+    if(iiy==iiytest)
+    {
+      for(iv=0;iv<NV;iv++) ppback2[iv]=pp[iv];
+      
+      trans_pmhd_coco_out2my(ppback, pp1, &geomBL, &geom);
+      trans_pmhd_coco(ppback, pp2, BLCOORDS,MYCOORDS, geomBL.xxvec,&geomBL,&geom);
+
+      printf("scale1: %e scale2: %e\n",scale1,scale2); 
+      for(iv=0;iv<NV;iv++) printf("%d %e %e | %e %e\n",iv, ppback[iv],ppback2[iv],pp1[iv],pp2[iv]);
+      printf("\n");
+      exit(-1);
+    }
+    */
+    
     #ifdef PRECOMPUTE_MY2OUT
     trans_pmhd_coco_out2my(pp,pp,&geomBL,&geom);
     #else      
     trans_pmhd_coco(pp, pp, BLCOORDS,MYCOORDS, geomBL.xxvec,&geomBL,&geom);
     #endif
-    
+
     //!! end rescale
 
-//checking for the gas inflow
+    //checking for the gas inflow
     ldouble ucon[4]={0.,pp[VX],pp[VY],pp[VZ]}; 
     conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
     if(MYCOORDS!=CYLCOORDS)
-      {
+    {
       #ifdef PRECOMPUTE_MY2OUT
       trans2_coco_my2out(ucon, ucon, geom.ix, geom.iy, geom.iz);
       #else      
       trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
       #endif
-      }
-    if(ucon[1]<0.) //inflow, resseting to atmosphere
+    }
+    if(ucon[1]<0.) //inflow, resetting to atmosphere
       {
 	//atmosphere in rho,uint and velocities and zero magn. field
 	//set_hdatmosphere(pp,xxvec,gg,GG,4);

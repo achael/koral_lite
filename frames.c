@@ -33,7 +33,7 @@ trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
   struct geometry *geom2
   = (struct geometry *) ggg2;
   
-  int i;
+  int i,iv;
   ldouble pp1[NV],pp2[NV];
   for(i=0;i<NV;i++)
   {
@@ -55,15 +55,19 @@ trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
     pp2[1]=pp1[1];
     
     //bcon in CO1
-    ldouble ucon[4], ucov[4];    
+    ldouble ucon[4], ucov[4],uconback[4];    
     calc_ucon_ucov_from_prims(pp1, geom1, ucon, ucov);
     
+
 #ifdef MAGNFIELD
     ldouble bcon[4],Bcon[4];
     
     //magnetic field 4-vector
     calc_bcon_4vel(pp1, ucon, ucov, bcon);
 #endif
+
+    for(iv=0;iv<4;iv++)
+      uconback[iv]=ucon[iv];
     
     //convert ucon (and bcon) to CO2
     trans2_coco(xxvec,ucon,ucon,CO1,CO2);
@@ -71,6 +75,7 @@ trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
 #ifdef MAGNFIELD
     trans2_coco(xxvec,bcon,bcon,CO1,CO2);
 #endif
+
     
     //to VELPRIM
     conv_vels_ut(ucon,ucon,VEL4,VELPRIM,geom2->gg,geom2->GG);
@@ -142,8 +147,10 @@ trans_prad_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
       ucon[3]=pp1[FZ0];
 
       conv_vels(ucon,ucon,VELPRIMRAD,VEL4,geom1->gg,geom1->GG);
+
       //converting to CO2
       trans2_coco(xxvec,ucon,ucon,CO1,CO2);
+
       //to VELPRIM
       conv_vels_ut(ucon,ucon,VEL4,VELPRIMRAD,geom2->gg,geom2->GG);
 
@@ -978,7 +985,7 @@ trans2_coco(ldouble *xx,ldouble *u1,ldouble *u2,int CO1, int CO2)
       u2[2]=u1[2];
       u2[3]=u1[3];
     }
-   else if(CO1==KSCOORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS))
+  else if(CO1==KSCOORDS && (CO2==SCHWCOORDS || CO2==KERRCOORDS))
     {
       dxdx_KS2BL(xx,dxdx);
       multiply2(u1,u2,dxdx);
@@ -1612,7 +1619,7 @@ trans_pmhd_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2,
   struct geometry *geom2
   = (struct geometry *) ggg2;
   
-  int i;
+  int i,iv;
   ldouble pp1[NV],pp2[NV];
   for(i=0;i<NV;i++)
   {
@@ -1634,8 +1641,9 @@ trans_pmhd_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2,
     pp2[1]=pp1[1];
 
     // four velocity ucon
-    ldouble ucon[4], ucov[4];    
+    ldouble ucon[4], ucov[4],uconback[4];    
     calc_ucon_ucov_from_prims(pp1, geom1, ucon, ucov);
+
     
 #ifdef MAGNFIELD
     ldouble bcon[4],Bcon[4];
@@ -1643,6 +1651,9 @@ trans_pmhd_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2,
     //magnetic field 4-vector bcon
     calc_bcon_4vel(pp1, ucon, ucov, bcon);
 #endif
+
+    for(iv=0;iv<4;iv++)
+      uconback[iv]=ucon[iv];
     
     //convert ucon (and bcon) to OUTCOORDS using precomputed matrices
     trans2_coco_precompute(ucon, ucon, geom1->ix, geom1->iy, geom1->iz, which);
@@ -1652,7 +1663,7 @@ trans_pmhd_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2,
 #endif
     
     //to VELPRIM
-    conv_vels_ut(ucon,ucon,VEL4,VELPRIM, geom2->gg, geom2->GG);
+    conv_vels_ut(ucon, ucon,VEL4,VELPRIM, geom2->gg, geom2->GG);
     
     pp2[2]=ucon[1];
     pp2[3]=ucon[2];
@@ -1785,7 +1796,8 @@ trans2_coco_precompute(ldouble *u1, ldouble *u2, int ix, int iy, int iz, int whi
 	if(which==0)
 	{
           dxdx[i][j] = get_dxdx(dxdx_my2out,i,j,ix,iy,iz);
-        }
+
+	}
 	else if(which==1)
 	{
           dxdx[i][j] = get_dxdx(dxdx_out2my,i,j,ix,iy,iz);

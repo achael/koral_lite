@@ -847,13 +847,17 @@ ldouble hyperexp_x1max(ldouble rmax, ldouble rbrk, ldouble r0);
 
 ldouble to1stquad(ldouble  x2);
 ldouble calc_theta0(ldouble rcyl, ldouble x2cyl);
-//ldouble sinth0(ldouble r, ldouble x2, void* params);
-//ldouble sinth1(ldouble r, ldouble x2, void* params);
-//ldouble sinth2(ldouble r, ldouble x2, void* params);
+
+ldouble sinth0(ldouble r, ldouble x2, void* params);
+ldouble sinth1(ldouble r, ldouble x2, void* params);
+ldouble sinth2(ldouble r, ldouble x2, void* params);
 
 int set_cyl_params();
-ldouble sinth2(ldouble r, ldouble theta, ldouble theta2); 
-ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params);
+//ldouble sinth2(ldouble r, ldouble theta, ldouble theta2); 
+ldouble sinth2(ldouble r, ldouble x2, void* params); 
+
+//ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params);
+ldouble f2func(ldouble r, ldouble x2, void* params);
 ldouble cylindrify(ldouble r, ldouble x2, void* params);
 ///////////////////////////////////////////////////////////////
 // frames.c ///////////////////////////////////////////////////

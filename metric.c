@@ -4145,13 +4145,8 @@ int dxdx_JET2KS(ldouble *xx, ldouble dxdx[][4])
 
 int dxdx_KS2JET(ldouble *xx, ldouble dxdx[][4])
 {
-  ldouble dxdxinv[4][4], xxKS[4];
-  return calc_dxdx_arb_num(xx, dxdxinv, JETCOORDS, KSCOORDS);
 
-  // calculate jet2ks jacobian, then invert
-  //coco_N(xx,xxKS,KSCOORDS,JETCOORDS);
-  //dxdx_arb_num(xxKS, dxdxinv, JETCOORDS, KSCOORDS);
-  //return inverse_44matrix(dxdxinv,dxdx);
+  return calc_dxdx_arb_num(xx, dxdx, KSCOORDS, JETCOORDS);
   
 }  
 
@@ -4530,8 +4525,8 @@ ldouble psi_smooth(ldouble x)
     return x;
   else
   {
-    xout = (-35*cos(0.5*Pi*x) - (5./6.)*cos(1.5*Pi*x) + 0.1*cos(2.5*Pi*x))/(32*Pi);
-    xout += 0.5*(x+1);
+    xout = (-35.*cos(0.5*Pi*x) - (5./6.)*cos(1.5*Pi*x) + 0.1*cos(2.5*Pi*x))/(32.*Pi);
+    xout += 0.5*(x+1.);
     return xout;
   }
 }
@@ -4546,7 +4541,7 @@ ldouble theta_smooth(ldouble x)
     return 1.;
   else
   {
-    xout=0.5 + (70*sin(0.5*Pi*x) + 5*sin(1.5*Pi*x) - sin(2.5*Pi*x))/128.;
+    xout=0.5 + (70.*sin(0.5*Pi*x) + 5*sin(1.5*Pi*x) - sin(2.5*Pi*x))/128.;
     return xout;
   }
 }
@@ -4784,7 +4779,8 @@ int set_cyl_params()
    tpar.rdecoll_disk = RDECOLL_DISK;
    tpar.alpha_1 = ALPHA_1;
    tpar.alpha_2 = ALPHA_2;
-   #else //defaults
+
+#else //defaults
    tpar.r0=0.;
    tpar.rbrk=500;
    tpar.fdisk=0.3;
@@ -4802,19 +4798,32 @@ int set_cyl_params()
    sinthetaCYL = sin(thetaCYL);
    thetaAX = theta_diskjet(RCYL, MAXY, &tpar);
    sinthetaAX = sin(thetaAX);
+
+   /*
+   printf("RCYL %e rmidcyl %e x2cyl %e \n",RCYL,rmidcyl,x2cyl);
+   printf("THETACYL: %e THETAAX %e\n",thetaCYL,thetaAX);
+
    
+   ldouble rtest=3.3;
+   ldouble x2test=0.33;
+   printf("sinth0 %.14e\n",sinth0(rtest,x2test,&tpar));
+   printf("sinth1 %.14e\n",sinth1(rtest,x2test,&tpar));
+   printf("sinth2 %.14e\n",sinth2(rtest,x2test,&tpar));
+   printf("f2 %.14e\n",sinth2(rtest,x2test,&tpar));
+   printf("thcyl %.14e\n",cylindrify(rtest,x2test,&tpar));
+   */
    return 0;
 }
 
-/*
+
 ldouble sinth0(ldouble r, ldouble x2, void* params)
 {
   struct jetcoords_params *par = (struct jetcoords_params *) params;
   
   //theta0: at (rcyl, x2cyl)
-  ldouble theta0 = theta_diskjet(par->rcyl, par->x2cyl, p);
+  //ldouble theta0 = theta_diskjet(par->rcyl, par->x2cyl, p);
 
-  return (par->rcyl/r) * sin(theta0);
+  return (RCYL/r) * sin(thetaCYL);
 }
 
 ldouble sinth1(ldouble r, ldouble x2, void* params)
@@ -4822,37 +4831,38 @@ ldouble sinth1(ldouble r, ldouble x2, void* params)
   struct jetcoords_params *par = (struct jetcoords_params *) params;
 
   //theta1: at (rcyl, x2)
-  ldouble theta1 = theta_diskjet(par->rcyl, x2, par);
+  ldouble theta1 = theta_diskjet(RCYL, x2, par);
 
-  return (par->rcyl/r)*sin(theta1);
+  return RCYL*sin(theta1)/r;
 }
-*/
 
-//ldouble sinth2(ldouble r, ldouble x2, void* params)
-ldouble sinth2(ldouble r, ldouble theta, ldouble theta2)
+
+ldouble sinth2(ldouble r, ldouble x2, void* params)
+//ldouble sinth2(ldouble r, ldouble theta, ldouble theta2)
 {
-  //struct jetcoords_params *par = (struct jetcoords_params *) params;
-  //ldouble rcyl=par->rcyl;
+  struct jetcoords_params *par = (struct jetcoords_params *) params;
+  ldouble rcyl=RCYL;
   
   //theta: at (r, x2)
-  //ldouble theta = theta_diskjet(r, x2, par);
+  ldouble theta = theta_diskjet(r, x2, par);
 
   //theta1: at (rcyl, x2)
   //ldouble theta1 = theta_diskjet(par->rcyl, x2, par);
   
   //theta2: at (r, x2cyl)
-  //ldouble theta2 = theta_diskjet(r, par->x2cyl, par);
+  ldouble theta2 = theta_diskjet(r, x2cyl, par);
 
   //thetamid: at (r, 0): (pi/2 for jetcoords)
   ldouble thetamid = 0.5*Pi;
   
-  //ldouble thetaA = asin(sinth0(r,x2,par));
-  ldouble thetaA = asin((RCYL/r)*sinthetaCYL);
+  ldouble thetaA = asin(sinth0(r,x2,par));
+  //ldouble thetaA = asin((RCYL/r)*sinthetaCYL);
   ldouble thetaB = thetaA + (theta-theta2)*(thetamid-thetaA)/(thetamid-theta2);
   return sin(thetaB);
 }
 
-ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params)
+//ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params)
+ldouble f2func(ldouble r, ldouble x2, void* params)
 {
   struct jetcoords_params *par = (struct jetcoords_params *) params;
 
@@ -4862,19 +4872,25 @@ ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params)
   //ldouble theta = theta_diskjet(r, x2, par);
 
   //theta0: at (r, MAXY)
-  ldouble theta0 = theta_diskjet(r, MAXY, par);
+  //ldouble theta0 = theta_diskjet(r, MAXY, par);
   
   //theta1: at (rcyl, x2)
-  ldouble theta1 = theta_diskjet(RCYL, x2, par);
+  //ldouble theta1 = theta_diskjet(RCYL, x2, par);
 
   //theta2: at (r, x2cyl)
-  ldouble theta2 = theta_diskjet(r, x2cyl, par);
+  //ldouble theta2 = theta_diskjet(r, x2cyl, par);
   
-  ldouble s1in = (RCYL/r)*sin(theta1); // sinth1(r, x2, par);
-  ldouble s2in = sinth2(r, theta, theta2); //sinth2(r, x2, par);
+  //ldouble s1in = (RCYL/r)*sin(theta1);     //sinth1(r, x2, par);
+  //ldouble s2in = sinth2(r, theta, theta2); //sinth2(r, x2, par);
+  //ldouble s1ax = (RCYL/r)*sinthetaAX; //sinth1(r, MAXY, par); 
+  //ldouble s2ax = sinth2(r, theta0, thetaAX); //sinth2(r, MAXY, par);
+  //ldouble df = fabs(s2ax - s1ax) + 1.e-16; //is this offset ok?
 
-  ldouble s1ax = (RCYL/r)*sinthetaAX; //sinth1(r, MAXY, par); 
-  ldouble s2ax = sinth2(r, theta0, thetaAX); //sinth2(r, MAXY, par);
+  ldouble s1in = sinth1(r, x2, par);
+  ldouble s2in = sinth2(r, x2, par);
+  
+  ldouble s1ax = sinth1(r, MAXY, par); 
+  ldouble s2ax = sinth2(r, MAXY, par);
   ldouble df = fabs(s2ax - s1ax) + 1.e-16; //is this offset ok?
 
   //printf("F2FUNC\n");
@@ -4907,24 +4923,27 @@ ldouble cylindrify(ldouble r, ldouble x2, void* params)
   struct jetcoords_params *par = (struct jetcoords_params *) params;
 
   ldouble thin = theta_diskjet(r, x2, par);  
-  ldouble thmir = thin;
+  
   
   ldouble x2mir = to1stquad(x2);
+  ldouble thmir = theta_diskjet(r, x2mir, par);
 
-  if(x2mir!=x2)
-    thmir = Pi - thin;
-    //ldouble thmir = theta_diskjet(r, x2mir, par);
+  //ldouble thmir = thin;
+  //if(x2mir!=x2)
+  //  thmir = Pi - thin;
   
   ldouble f1 = sin(thmir);
-  ldouble f2 = f2func(r, x2mir, thmir,  par);
+  ldouble f2 = f2func(r, x2mir, par);
+  //ldouble f2 = f2func(r, x2mir, thmir, par);
 
   ldouble thmid = theta_diskjet(rmidcyl, x2mir, par);
   ldouble f1mid = sin(thmid);
-  ldouble f2mid = f2func(rmidcyl, x2mir, thmid, par);
+  ldouble f2mid = f2func(rmidcyl, x2mir, par);  
+  //ldouble f2mid = f2func(rmidcyl, x2mir, thmid, par);
   
-  ldouble df = fabs(f2mid - f1mid);
+  ldouble df = f2mid - f1mid;
 
-  ldouble thout = asin(maxx(r*f1, r*f2, r*df + 1.e-16)/r);
+  ldouble thout = asin(maxx(r*f1, r*f2, r*fabs(df) + 1.e-16)/r);
   if(x2!=x2mir)
     thout = thin + thmir - thout;
 

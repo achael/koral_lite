@@ -2637,6 +2637,9 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	       rho*=utcon[0];
 #endif
 
+	       //!! replaced temp with pgas
+	       //fprintf(fout1,"%.5e %.5e ",rho,pgas); //(7-8) , (10-11) for grtrans 
+
 	       fprintf(fout1,"%.5e %.5e ",rho,temp); //(7-8) , (10-11) for grtrans 
 	       fprintf(fout1,"%.5e %.5e %.5e %.5e ",utcon[0],utcon[1],utcon[2],utcon[3]); //(9-12) , (12-15) for grtrans
 #ifndef GRTRANSSIMOUTPUT_2

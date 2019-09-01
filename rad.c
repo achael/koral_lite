@@ -400,7 +400,13 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   Ti00 = state00.Ti;
   Trad00BB = state00.TradBB;
   Trad00=Trad00BB;
-  
+
+  /*
+   if(ix==11 && iy==18 &&iz==0)
+    {   
+      verbose=1;
+    }
+  */
   // dump a problematic case to file 
   if(verbose) 
   {
@@ -473,6 +479,8 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   struct opacities opac;
   ldouble kappa,kappaes,chi,xi1,xi2;
   ldouble ucon[4];
+      ldouble Gi00[4],Gihat00[4];
+
   if(verbose) 
   {
       kappa=calc_kappa(pp0,geom,&opac);
@@ -519,7 +527,6 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       gamma2=1.+qsq;
       printf("Lorentz gamma rad: %e\n\n",sqrt(gamma2));
 
-      ldouble Gi00[4],Gihat00[4];
       calc_Gi(pp0, geom,Gi00, 0.0, 1, 0); 
       indices_21(Gi00,Gi00,geom->gg);
 
@@ -642,6 +649,8 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       print_primitives(pp0);
       printf("Metric gg:\n");
       print_metric(gg);
+      printf("gdet:\n");
+      printf("%e\n",geom->gdet);
       printf("\n===\n Trying imp lab 4d prim with dt : %e \n",dt);
   }
 
@@ -734,8 +743,8 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 	  ldouble Trad0=state0.Trad;
 	  printf("T: %e Te: %e ", Tgas0,Te0);
 	  printf("Trad: %e ", Trad0);
-	  printf("Gi^t %e ", state0.Gi[0]);
-	  printf("Gic^t %e \n\n", state0.Gic[0]);
+	  printf("Gi^t %e ", Gi00[0]);//state0.Gi[0]);
+      printf("Gic^t %e \n\n", Gihat00[0]);//state0.Gic[0]);
 	  if(ret<0) printf("f_lab_4dprim ret: %d\n",ret);
       }
 
