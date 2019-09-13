@@ -2469,7 +2469,7 @@ heat_electronions_with_state(ldouble dtin)
 	  //Apply floors
 	  //electrons
 	  if((ue+due) < UEUINTMINRATIO*uint) 
-	  {  x
+	  {  
 	      due=UEUINTMINRATIO*uint - ue;
 	  }  
 	  //ions
