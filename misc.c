@@ -309,7 +309,6 @@ am_i_sane()
   printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   printf("\nWarning -- using precomputed MYCOORDS --> OUTCOORDS for floors, averages, and boundary conditions\n");
   printf("Check your bcs.c!!\n");
-  }
 #ifdef BHDISK_PROBLEMTYPE
   if(!((OUTCOORDS == BLCOORDS) || (OUTCOORDS == KSCOORDS))) {
     printf("For BHDISK_PROBLEMTYPE PRECOMPUTE_MY2OUT currently only works with OUTCOORDS=BLCOORDS!\n");
@@ -318,7 +317,7 @@ am_i_sane()
   }
 #endif
  printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
-
+}
 #endif
   
 #ifdef PWPOTENTIAL

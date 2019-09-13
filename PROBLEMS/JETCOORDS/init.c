@@ -256,8 +256,8 @@ ldouble rhogas=pp[RHO];
 ldouble Tgas=calc_PEQ_Tfromurho(pp[UU],pp[RHO],ix,iy,iz);
 
 //slightly colder electrons initially
-ldouble ue=1./100.*pp[UU];
-ldouble ui=(1.-1./100.)*pp[UU];
+ldouble ue=1./20.*pp[UU];
+ldouble ui=(1.-1./20.)*pp[UU];
 ldouble Te,Ti;
 pp[ENTRE]=calc_Sefromrhou(calc_thermal_ne(pp)*MU_E*M_PROTON,ue,ELECTRONS);
 pp[ENTRI]=calc_Sefromrhou(rhogas,ui,IONS);
@@ -294,3 +294,29 @@ for(iv=0;iv<NV;iv++)
 //entropy
 update_entropy_cell(ix,iy,iz,0);
 set_cflag(0,ix,iy,iz,0);
+
+/*
+if (ix==3 && iy==12)
+  {
+
+    printf("Gas: %e  %e %e\n",pp[UU+1],pp[UU+2],pp[UU+3]);
+    printf("Rad: %e  %e %e\n",pp[EE0+1],pp[EE0+2],pp[EE0+3]);
+
+      ldouble qsq=0.;
+      int ii,jj;
+      for(ii=1;ii<4;ii++)
+	for(jj=1;jj<4;jj++)
+	  qsq+=pp[UU+ii]*pp[UU+jj]*geom.gg[ii][jj];
+      ldouble gamma2=1.+qsq;
+      printf("Lorentz gamma gas: %e\n\n",sqrt(gamma2));
+
+      qsq=0.;
+      for(ii=1;ii<4;ii++)
+	for(jj=1;jj<4;jj++)
+	  qsq+=pp[EE0+ii]*pp[EE0+jj]*geom.gg[ii][jj];
+      gamma2=1.+qsq;
+      printf("Lorentz gamma rad: %e\n\n",sqrt(gamma2));
+
+      exit(-1);
+  }
+*/

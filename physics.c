@@ -1744,8 +1744,8 @@ update_entropy_cell(int ix,int iy,int iz,int u2pflag)
 ldouble
 entri_from_entre_energy_cons(ldouble *pp, int ix, int iy, int iz)
 {
- ldouble ue, ui, uur, rhoeth, neth, nith, entri;
- nith = one_over_mui_mp * pp[RHO];
+ ldouble ue, ui, uur, rhoeth, neth, entri;
+ //ldouble nith = one_over_mui_mp * pp[RHO];
 
  #ifdef RELELECTRONS
  uur = calc_relel_uint(pp);
@@ -2181,6 +2181,7 @@ heat_electronions_with_state(ldouble dtin)
   int ii;
 
 #ifdef EVOLVEELECTRONS
+  
   #pragma omp parallel for schedule (static)
   for(ii=0;ii<Nloop_0;ii++) //domain 
     {
@@ -2216,22 +2217,31 @@ heat_electronions_with_state(ldouble dtin)
 	uu0[iv]=get_u(u, iv, ix, iy, iz);
       }
 
-      int itergamma=0;
+      int itergamma=0;  
       const int maxitergamma=1;
       struct struct_of_state state;
       
       //iterations of (inversion + heating) with updated gammagas
       for(itergamma=0; itergamma<maxitergamma; itergamma++)
       {
-	   
-	  //invert locally
-	  //ANDREW -- do we really need this step? 
+	
+	  //invert locally, in case gammagas has changed
+	  //ANDREW -- u2p with no fixups causes crashes with cylindrified coordinates!!!	
 	  int corrected[3]={0,0,0}, fixups[2]={0,0};
-	  u2p(uu0,pp,&geom,corrected,fixups,0);
-	  fill_struct_of_state(pp, &geom, &state);
-	  dtau = dt/(state.ucon[0]);
+	  if(itergamma>0)
+	    u2p(uu0,pp,&geom,corrected,fixups,0);
+
+	  //ANDREW -- skip heating operator if u2p failed
+	  if(fixups[0]>0 || fixups[1]>0)
+	  {
+            PLOOP(iv) pp[iv] = pp0[iv];
+	    break;
+	  }
+	  
 
 #ifdef HEATELECTRONS
+          fill_struct_of_state(pp, &geom, &state);
+	  dtau = dt/(state.ucon[0]);
 
 	  if(!isfinite(pp[ENTRE]))
 	  {
@@ -2249,9 +2259,8 @@ heat_electronions_with_state(ldouble dtin)
 	  
 	  ldouble gamma=state.gamma;
 	  ldouble gammam1=gamma-1.;
-
 	  ldouble ptot=state.pgas;
-      
+
 	  /**************/
 	  //electrons
 	  /**************/
@@ -2283,6 +2292,7 @@ heat_electronions_with_state(ldouble dtin)
 	  /**************/
 	  ldouble ptotentr = pe+pi+ptotrelel;
 	  ldouble utotentr = ue+ui+utotrelel;
+
 	  /***********************/
           //calculate dissipation
 	  /***********************/
@@ -2459,7 +2469,7 @@ heat_electronions_with_state(ldouble dtin)
 	  //Apply floors
 	  //electrons
 	  if((ue+due) < UEUINTMINRATIO*uint) 
-	  {  
+	  {  x
 	      due=UEUINTMINRATIO*uint - ue;
 	  }  
 	  //ions
@@ -2488,15 +2498,15 @@ heat_electronions_with_state(ldouble dtin)
           pp[ENTRI] = Sinew;
 
 #endif //HEATELECTRONS
-	 
-	  
+
 	  //updates the gamma of the gas
+	  //ANDREW -- currently not important since maxitergamma=1
 	  ldouble gammanew=calc_gammagas(pp, ix, iy, iz);
 	  set_u_scalar(gammagas, ix, iy, iz, gammanew);
-
-	} //rerun the inversion and heating application with the new gammagas
+	  
+      } //rerun the inversion and heating application with the new gammagas
       
-      //ultimate saving to memory
+      //Save final pp to memory
       PLOOP(iv)
 	set_u(p,iv,ix,iy,iz,pp[iv]);
 

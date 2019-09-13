@@ -46,7 +46,7 @@ calc_metric()
         for(iz=-NGCZMET;iz<NZ+NGCZMET;iz++)
           {
 
-	    //printf("%d %d %d \n", ix,iy,iz);
+	//printf("%d %d %d \n", ix,iy,iz);
 #ifdef METRICAXISYMMETRIC
 	if(iz!=0) continue;
 #endif
@@ -62,6 +62,20 @@ calc_metric()
 	xx[3]=get_x(iz,2);
 
 	calc_g(xx,gloc);
+
+	/*
+	if((ix==-2 && iy==0))
+	  {
+	    ldouble xxtmp[4];
+	    coco_N(xx,xxtmp,MYCOORDS,OUTCOORDS);
+	    printf("\n");
+            printf("%d %d %d\n",ix,iy,iz);
+	    print_4vector(xx);
+	    print_4vector(xxtmp);
+            print_metric(gloc);
+	  }
+	*/
+	
 	for(i=0;i<4;i++)
 	  for(j=0;j<4;j++)
 	    set_g(g,i,j,ix,iy,iz,gloc[i][j]);
@@ -4799,19 +4813,25 @@ int set_cyl_params()
    thetaAX = theta_diskjet(RCYL, MAXY, &tpar);
    sinthetaAX = sin(thetaAX);
 
-   /*
+
+
+   //test
    printf("RCYL %e rmidcyl %e x2cyl %e \n",RCYL,rmidcyl,x2cyl);
    printf("THETACYL: %e THETAAX %e\n",thetaCYL,thetaAX);
-
    
-   ldouble rtest=3.3;
-   ldouble x2test=0.33;
+   ldouble x1test=calc_xb(-NG,0); // inner boundary of ghost cell
+   ldouble x1s = hypx1in + x1test*(hypx1out - hypx1in);
+   ldouble rtest = exp(x1s) + MKSR0;  
+   ldouble x2test=calc_xb(0,1);
+   
+   printf("x1, x2, r | %e %e %e\n",x1test,x2test,rtest);
    printf("sinth0 %.14e\n",sinth0(rtest,x2test,&tpar));
    printf("sinth1 %.14e\n",sinth1(rtest,x2test,&tpar));
    printf("sinth2 %.14e\n",sinth2(rtest,x2test,&tpar));
    printf("f2 %.14e\n",sinth2(rtest,x2test,&tpar));
    printf("thcyl %.14e\n",cylindrify(rtest,x2test,&tpar));
-   */
+   if(sinth0(rtest,x2test,&tpar)>1)
+     {printf("nan in cylindrify for r=%e, x2test=%e!\n",rtest,x2test); exit(-1);}
    return 0;
 }
 
@@ -4823,7 +4843,8 @@ ldouble sinth0(ldouble r, ldouble x2, void* params)
   //theta0: at (rcyl, x2cyl)
   //ldouble theta0 = theta_diskjet(par->rcyl, par->x2cyl, p);
 
-  return (RCYL/r) * sin(thetaCYL);
+  ldouble sinth0 = RCYL* sin(thetaCYL)/r;
+  return sinth0;
 }
 
 ldouble sinth1(ldouble r, ldouble x2, void* params)
@@ -4832,8 +4853,8 @@ ldouble sinth1(ldouble r, ldouble x2, void* params)
 
   //theta1: at (rcyl, x2)
   ldouble theta1 = theta_diskjet(RCYL, x2, par);
-
-  return RCYL*sin(theta1)/r;
+  ldouble sinth1 =  RCYL*sin(theta1)/r;
+  return sinth1;
 }
 
 
@@ -4857,8 +4878,9 @@ ldouble sinth2(ldouble r, ldouble x2, void* params)
   
   ldouble thetaA = asin(sinth0(r,x2,par));
   //ldouble thetaA = asin((RCYL/r)*sinthetaCYL);
-  ldouble thetaB = thetaA + (theta-theta2)*(thetamid-thetaA)/(thetamid-theta2);
-  return sin(thetaB);
+  ldouble thetaB = (theta-theta2)*(thetamid-thetaA)/(thetamid-theta2);
+  ldouble sinth2 = sin(thetaA + thetaB);
+  return sinth2;
 }
 
 //ldouble f2func(ldouble r, ldouble x2, ldouble theta, void* params)

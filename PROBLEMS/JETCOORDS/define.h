@@ -26,7 +26,7 @@
 /************************************/
 //magnetic choices
 /************************************/
-#define MAGNFIELD
+//#define MAGNFIELD
 #define GDETIN 1    //must be 1 for MAGNFIELD
 #define VECPOTGIVEN
 #define INIT_MAGN_CORNERS //initialize magnetic field on corners/edges (which?)
@@ -61,16 +61,16 @@
 //#define RADIMP_START_WITH_BISECT
 //#define BALANCEENTROPYWITHRADIATION
 
-#define ALLOWRADCEILINGINIMPLICIT
-#define EVOLVEPHOTONNUMBER
-#define OPDAMPINIMPLICIT 1
+//#define ALLOWRADCEILINGINIMPLICIT
+//#define EVOLVEPHOTONNUMBER
+#define OPDAMPINIMPLICIT 0
 #define SCALE_JACOBIAN
 #endif
 
 
 //opacities
-//#define SCATTERING
-//#define BREMSSTRAHLUNG
+#define SCATTERING
+#define BREMSSTRAHLUNG
 //#define KLEINNISHINA
 #define SYNCHROTRON
 #define NO_SYNCHROTRON_BRIDGE_FUNCTIONS
@@ -78,7 +78,7 @@
 #define MAXDIFFTRADSNEARBH 1.e2
 
 //implicit convergence
-#define RADIMPCONV 1.e-8
+#define RADIMPCONV 1.e-14
 #define RADIMPCONVREL 1.e-6
 #define RADIMPCONVRELERR (1.e-4)  
 #define RADIMPCONVRELENTR 1.e-6
@@ -90,8 +90,9 @@
 #define RADIMPLICITMAXNPHCHANGE 100.
 #define RADIMPLICITMAXENCHANGEDOWN 100.
 #define RADIMPLICITMAXENCHANGEUP 10.
-#define RADIMPLICITMAXTECHANGE 5.
-#define MAXRADIMPDAMPING 1.e-6
+#define RADIMPLICITMAXTECHANGE 2.
+#define IMPLICITMAXTGASCHANGE 2.
+#define MAXRADIMPDAMPING 1.e-7
 
 //Radiation Viscosity choices
 #ifdef RADIATION
@@ -104,6 +105,18 @@
 #define RADVISCMAXVELDAMP
 #define ALPHARADVISC 0.1
 #define MAXRADVISCVEL 0.1
+
+//#define SKIPHDEVOLUTION
+//#define SKIPRADEVOLUTION
+//#define SKIPEVOLUTION
+//#define SKIPRADSOURCE
+//#define SKIPCOULOMBCOUPLING
+//#define RADIMPSTOPWHENFAIL
+#define DAMPCOMPTONIZATIONATBH
+//#define NO_COMPTONIZATION
+//#define SKIPFANCYOPACITIES
+//#define ENFORCEENTROPY
+//#define GASRADCOUPLEDWAVESPEEDS
 
 #endif
 
@@ -118,26 +131,26 @@
 #define RELELENTROPY
 
 //heating
-#define HEATELECTRONS
+//#define HEATELECTRONS
 //#define HEATELECTRONS_HOWES
 //#define HEATELECTRONS_ROWAN
 //#define HEATELECTRONS_ROWAN2
-#define HEATELECTRONS_ROWAN3
+//#define HEATELECTRONS_ROWAN3
 
-#define NOHEATATBH
+//#define NOHEATATBH
 
 //#define HEATELECTRONSATENDRK2
 //#define DISSIPATIONFROMGASONLY
-//#define FORCEGAMMAGASFIXED
+#define FORCEGAMMAGASFIXED
 
 //entropy mixing
-#define MIXENTROPIESPROPERLY
-#define UPWINDENTROPYMIXING
-#define DONOTLIMITENTRINMIXING
+//#define MIXENTROPIESPROPERLY
+//#define UPWINDENTROPYMIXING
+//#define DONOTLIMITENTRINMIXING
 
 //silo output
-#define PRINTVISCHEATINGTOSILO
-#define PRINTCOULOMBTOSILO
+//#define PRINTVISCHEATINGTOSILO
+//#define PRINTCOULOMBTOSILO
 
 //floors
 #define UEUINTMINRATIO 1.e-3
@@ -146,8 +159,8 @@
 #define TEMPIMINIMAL 1.e2
 #define TEMPEMINIMALFRACTION 1.e-6
 #define TEMPIMINIMALFRACTION 1.e-6
-#define TEMPEMAXIMALFRACTION 1.e3
-#define TEMPIMAXIMALFRACTION 1.e3
+#define TEMPEMAXIMALFRACTION 1.e2
+#define TEMPIMAXIMALFRACTION 1.e2
 #endif
 
 /************************************/
@@ -155,11 +168,11 @@
 /************************************/
 #define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .75
+#define TSTEPLIM .8
 #define FLUXMETHOD LAXF_FLUX
 
 #define FLUXLIMITER 0
-#define MINMOD_THETA 1.9
+#define MINMOD_THETA 1.75//1.9
 #define SHUFFLELOOPS 0
 
 #define DOFIXUPS 1
@@ -171,7 +184,7 @@
 //rmhd floors
 /************************************/
 #define CORRECT_POLARAXIS
-#define NCCORRECTPOLAR 3
+#define NCCORRECTPOLAR 2
 #define UURHORATIOMIN 1.e-8
 #define UURHORATIOMAX 1.e2
 #define EERHORATIOMIN 1.e-20
@@ -181,17 +194,17 @@
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 1.e5
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 100.
-#define GAMMAMAXRAD 20.
-#define GAMMAMAXHD 20.
+#define B2RHORATIOMAX 25.
+#define GAMMAMAXRAD 25.
+#define GAMMAMAXHD 25.
 #define RHOFLOOR 1.e-50
 
 /************************************/
 //resolution
 /************************************/
 //total resolution
-#define TNX 32//128//312 
-#define TNY 32//128//200 
+#define TNX 64//32//128//312 
+#define TNY 64//32//128//200 
 #define TNZ 1//192
 
 //number of tiles
@@ -207,8 +220,10 @@
 //#define myMKS3COORDS
 
 #define METRICAXISYMMETRIC
-#define RMIN 1.05
-#define RMAX 1.e5
+
+#define RH 1.348
+#define RMIN 0.8*RH
+#define RMAX 500.//1.e5
 
 #ifdef myMKS2COORDS //modified Kerr-Shild
 #define METRICNUMERIC
@@ -249,24 +264,33 @@
 
 #define MINX 0
 #define MAXX 1.
-#define MINY -(1.-1.e-3) //10^-8 away from the poles seems to be the last safe point
-#define MAXY 1.-1.e-3  
+#define MINY -(1.-1.e-6) //10^-8 away from the poles seems to be the last safe point
+#define MAXY 1.-1.e-6  
 
-#define MKSR0 -1.35
+#define MKSR0 0 //-1.35 // Should probably be 0 for jetcoords! (issue with ix=-2 metric)
 #define HYPRBRK 5000
 #define FJET 0.3
 #define FDISK 0.4
-#define RUNI RMIN
+
+//#define RUNI RMIN
+//#define RCOLL_JET 1000
+//#define RDECOLL_JET 2*RMIN//2*RMIN
+//#define RCOLL_DISK 20*RMIN//5*RMIN
+//#define RDECOLL_DISK 2*RMIN//2*RMIN
+
+
+#define RUNI RH
 #define RCOLL_JET 1000
-#define RDECOLL_JET 2*RMIN//2*RMIN
-#define RCOLL_DISK 20*RMIN//5*RMIN
-#define RDECOLL_DISK 2*RMIN//2*RMIN
+#define RDECOLL_JET 2*RH//2*RMIN
+#define RCOLL_DISK 20*RH//5*RMIN
+#define RDECOLL_DISK 2*RH//2*RMIN
+
 #define ALPHA_1 1
 #define ALPHA_2 0.375
 
-//#define CYLINDRIFY
-#define RCYL 20.//10
-#define NCYL 1.//0.5
+#define CYLINDRIFY
+#define RCYL 10.//4.//10.//10
+#define NCYL 1.//0.5//1.
 #endif
 
 #define PHIWEDGE (2*M_PI)
@@ -303,7 +327,7 @@
 #define FM_rho0 rhoCGS2GU(1.e-18) //1 //density normalization
 
 // atmosphere
-#define RHOATMMIN  1.e-4*FM_rho0 //rhoCGS2GU(1.e-30)
+#define RHOATMMIN  1.e-6*FM_rho0 //rhoCGS2GU(1.e-30)
 #define UINTATMMIN  (calc_PEQ_ufromTrho(1.e9,RHOATMMIN,0,0,0)) //1.e-6
 #define ATMTRADINIT 1. 
 #define ERADATMMIN  calc_LTE_EfromT(ATMTRADINIT) 
@@ -346,7 +370,7 @@
 
 //stopping condition
 
-#define NOUTSTOP 500
+#define NOUTSTOP 50//500
 
 //#define DUMPS_READ_HDF5
 //#define DUMPS_WRITE_HDF5

@@ -104,6 +104,7 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
 #endif
   
   //update conserved to be consistent with primitives.
+
   //Ramesh: It seems we need to do this only if floors were activated, but we leave it as is for now...
   //ANDREW: is it even using this new uu anywhere? 
   //if(!is_cell_corrected_polaraxis(ix,iy,iz))
@@ -622,7 +623,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 #ifndef FIXEDGAMMASPECIES
       gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
 #endif
-#endif 
+#endif
+      
       pnew=(ui)*(gamma-1.);
       Tinew=pnew/K_BOLTZ/n;
       Sinew=calc_SefromrhoT(pp[RHO],Tinew,IONS);
@@ -1046,7 +1048,9 @@ u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   #endif
 
   int (*solver)(ldouble*,ldouble*,void*,int,int);
-  
+  struct geometry *geom
+    = (struct geometry *) ggg;
+
 #if (U2P_SOLVER==U2P_SOLVER_WPPLUS5D)
   solver = & u2p_solver_Wpplus5d;
 #endif
@@ -2544,13 +2548,17 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   utcon[1]=gamma/(W+Bsq)*(Qtcon[1]+QdotB*Bcon[1]/W);
   utcon[2]=gamma/(W+Bsq)*(Qtcon[2]+QdotB*Bcon[2]/W);
   utcon[3]=gamma/(W+Bsq)*(Qtcon[3]+QdotB*Bcon[3]/W);
-  
+
+  if(verbose>1)
+    printf("end2: %e %e %e %e %e %e\n",W,D,pgamma,gamma2,rho,uint);
+
+      
   if(!isfinite(utcon[1]))
   {
     return -120;
   }
   
-  if(uint<0. || gamma2<0. ||isnan(W) || !isfinite(W))
+  if(uint<0. || gamma2<0. || isnan(W) || !isfinite(W))
   {
     if(verbose>0) printf("neg u in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);//getchar();
     return -104;

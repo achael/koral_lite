@@ -642,7 +642,6 @@ op_explicit(ldouble t, ldouble dtin)
 #ifndef SKIPEVOLUTION
 
   //**********************************************************************
-  
   // Next interpolate to the cell walls and calculate left and right-biased fluxes
 #pragma omp parallel for private(ii,ix,iy,iz,iv)  schedule (static)
   for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
@@ -674,6 +673,8 @@ op_explicit(ldouble t, ldouble dtin)
       ldouble minmod_theta=MINMOD_THETA;
       int reconstrpar;
       int i,dol,dor;
+
+
 
       //**********************************************************************
       // x 'sweep'
@@ -1152,8 +1153,8 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************  
   // Compute postexplicit primitives and count entropy inversions
   calc_u2p(1,1);
-
   //**********************************************************************
+	    
   // Entropy Mixing
   
 #ifdef MIXENTROPIESPROPERLY
@@ -1183,6 +1184,7 @@ op_intermediate(ldouble t, ldouble dt)
   
   // Apply viscous heating to thermal & nonthermal electrons and ions  
 #ifndef HEATELECTRONSATENDRK2   //here? or separate after RK2
+
   heat_electronions_with_state(dt); 
 #endif
 #endif
@@ -1231,6 +1233,7 @@ op_implicit(ldouble t, ldouble dtin)
 {
 
   int ii;
+
 
   // counter for the average number of iterations in the implicit solver
   for(ii=0;ii<NGLOBALINTSLOT;ii++)

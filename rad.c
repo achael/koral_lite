@@ -16,7 +16,7 @@
 int
 implicit_lab_rad_source_term(int ix,int iy, int iz,ldouble dt)
 {
-  int iv;
+
   int ret;
   int verbose=1; //set to 2 to print out the whole failed iterations
 
@@ -28,9 +28,11 @@ implicit_lab_rad_source_term(int ix,int iy, int iz,ldouble dt)
 
   int vb2=0;//set to 2 to print out the whole failed iterations
   //if(ix==0 && iy==0) vb2=1;
+
+
   //attempt to solve the implicit
   ret = solve_implicit_lab(ix,iy,iz,dt,vb2);
-    
+
   if(ret<0) //numerical implicit in 4D did not work
   {
       set_cflag(RADIMPFIXUPFLAG,ix,iy,iz,-1);
@@ -402,10 +404,10 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   Trad00=Trad00BB;
 
   /*
-   if(ix==11 && iy==18 &&iz==0)
-    {   
+  if(ix==0 && iy==3 && iz==0)
+  {   
       verbose=1;
-    }
+  }
   */
   // dump a problematic case to file 
   if(verbose) 
@@ -438,6 +440,8 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       //fprintf(out,"%.20e ",geom->gttpert);
       for (i1=0;i1<4;i1++)
 	fprintf(out,"%.20e ",geom->xxvec[i1]);
+
+      
       fprintf(out,"\n");
       fclose(out);
       printf("dumped problematic case to imp.problem.dat: NV = %d\n", NV);
@@ -481,6 +485,8 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   ldouble ucon[4];
       ldouble Gi00[4],Gihat00[4];
 
+
+  
   if(verbose) 
   {
       kappa=calc_kappa(pp0,geom,&opac);
@@ -506,27 +512,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       ldouble Rtt;
       calc_ff_Rtt(pp0,&Rtt,ucon,geom);
       printf("Ehat: %e\n\n",-Rtt);
-
-      ldouble qsq=0.;
-      int i,j;
-      for(i=1;i<4;i++)
-	for(j=1;j<4;j++)
-	  qsq+=pp0[UU+i]*pp0[UU+j]*geom->gg[i][j];
-      ldouble gamma2=1.+qsq;
-      printf("Lorentz gamma gas: %e\n\n",sqrt(gamma2));
-
-      ldouble ucon[4], ucov[4], bcon[4], bcov[4], bsq;
-      calc_ucon_ucov_from_prims(pp0, geom, ucon, ucov);
-      calc_bcon_bcov_bsq_from_4vel(pp0, ucon, ucov, geom, bcon, bcov, &bsq);
-      printf("bsq: %e\n\n",bsq);
-
-      qsq=0.;
-      for(i=1;i<4;i++)
-	for(j=1;j<4;j++)
-	  qsq+=pp0[EE0+i]*pp0[EE0+j]*geom->gg[i][j];
-      gamma2=1.+qsq;
-      printf("Lorentz gamma rad: %e\n\n",sqrt(gamma2));
-
+      
       calc_Gi(pp0, geom,Gi00, 0.0, 1, 0); 
       indices_21(Gi00,Gi00,geom->gg);
 
@@ -561,7 +547,6 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       printf("ue: %e ui: %e (%e)\n",ue,ui,(ue+ui)/pp0[UU]);
       #endif
   }
-    
   //make the choice of which primitives to evolve
   int whichprim,whicheq,do_mom_over,ifncompt,ifentre,ifrelel;
   if(params[5]==0)
@@ -647,10 +632,24 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       print_conserved(uu0); 
       printf("Primitives:\n");
       print_primitives(pp0);
+      printf("coordinates:\n");
+      print_4vector(geom->xxvec);
+      printf("outcoordinates:\n");
+      ldouble xxtmp[4];
+      coco_N(geom->xxvec,xxtmp,MYCOORDS,OUTCOORDS);
+      print_4vector(xxtmp);
       printf("Metric gg:\n");
       print_metric(gg);
+      printf("Metric GG:\n");
+      print_metric(GG);
       printf("gdet:\n");
       printf("%e\n",geom->gdet);
+      printf("alpha:\n");
+      printf("%e\n",geom->alpha);
+      printf("gttpert:\n");
+      printf("%e\n",geom->gttpert);
+
+      
       printf("\n===\n Trying imp lab 4d prim with dt : %e \n",dt);
   }
 
@@ -736,7 +735,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       {
           int ret=f_implicit_lab_4dprim_with_state(uu0, pp, &state, uu0, pp0, &state0, dt, geom, f1, params, &err);
 	  print_state_implicit_lab_4dprim(iter-1,xxx,f1,err,N); 
-	  printf("\n kappaCGS: %e ", kappaGU2CGS( calc_kappa(pp,geom,&opac)/pp[RHO]) );
+	  printf("\n kappaCGS: %e ", kappaGU2CGS(calc_kappa(pp,geom,&opac)/pp[RHO]) );
 	  printf("rhoCGS: %e ", rhoGU2CGS(pp[RHO]));
 	  ldouble Ti0,Te0;
           ldouble Tgas0=state0.Tgas;
@@ -744,7 +743,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 	  printf("T: %e Te: %e ", Tgas0,Te0);
 	  printf("Trad: %e ", Trad0);
 	  printf("Gi^t %e ", Gi00[0]);//state0.Gi[0]);
-      printf("Gic^t %e \n\n", Gihat00[0]);//state0.Gic[0]);
+          printf("Gic^t %e \n\n", Gihat00[0]);//state0.Gic[0]);
 	  if(ret<0) printf("f_lab_4dprim ret: %d\n",ret);
       }
 
@@ -1046,7 +1045,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 	  if(okcheck==1 && (Tgasnew>Tgasold*IMPLICITMAXTGASCHANGE || Tgasnew<Tgasold/IMPLICITMAXTGASCHANGE)) 
 	  {
 	    okcheck=0;
-	    if(verbose==2) printf("change in gas temperature too large\n");
+	    if(verbose==2) printf("change in gas temperature too large %e %e \n",Tgasold,Tgasnew);
 	  }		
           
 	  if(ifncompt)
@@ -1102,6 +1101,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 	    //ANDREW - why does using nethold here crash???
             ldouble Tenew = calc_TfromSerho(xxx[ientre],rhoethnew,ELECTRONS,geom->ix,geom->iy,geom->iz);
 	    ldouble Teold = calc_TfromSerho(ppp[ENTRE],rhoethnew,ELECTRONS,geom->ix,geom->iy,geom->iz);
+
 
 	    if(okcheck==1 && (Tenew>Teold*RADIMPLICITMAXTECHANGE || Tenew<Teold/RADIMPLICITMAXTECHANGE || isnan(Teold/Tenew) || isnan(Tenew/Teold)))
 	    {
@@ -1632,7 +1632,6 @@ f_implicit_lab_4dprim_with_state(ldouble *uu, ldouble *pp, void *sss,
     ldouble mu=0.0;
     
 #ifdef RELELECTRONS
-    
     CC_relel= calc_relel_CoulombCoupling_from_state(pp, state); //Coulomb coupling between thermal and nonthermal
     cool_relel_dn = calc_relel_cool_dn_from_state(pp, state); //Cooling dn into the thermal
     cool_relel_dq = calc_relel_cool_dq_from_state(pp, state); //Cooling dq into the thermal (positive)
@@ -1647,7 +1646,10 @@ f_implicit_lab_4dprim_with_state(ldouble *uu, ldouble *pp, void *sss,
     //is this equation without relel consistent with equation in terms of entropy per particle? 
     ldouble Qe = CC + EA + CC_relel + cool_relel_dq - mu*cool_relel_dn;
     f[ientre]=Te*(pp[ENTRE] - pp0[ENTRE]) - dtau * Qe;
-    if(fabs(f[ientre])>SMALL) err[ientre]=fabs(f[ientre])/(fabs(pp[ENTRE]*Te)+fabs(pp0[ENTRE]*Te)+fabs(dtau*Qe)); else err[ientre]=0.;
+    if(fabs(f[ientre])>SMALL)
+      err[ientre]=fabs(f[ientre])/(fabs(pp[ENTRE]*Te)+fabs(pp0[ENTRE]*Te)+fabs(dtau*Qe));
+    else
+      err[ientre]=0.;
   }
   
   // relativistic electron error function -- in fluid frame
@@ -2724,10 +2726,11 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
       Ru += Rij[i][j] * ucov[j];
     Gith_lab[i] = -(kappaRadRoss + kappaes)*Ru - ((kappaRadRoss + kappaes - kappaRadAbs) * Ruu + kappaGasAbs * fourpi * B) * ucon[i];
   }
+
   
   // Boost to fluid frame
   boost2_lab2ff_4vel(Gith_lab, Gith_ff, pp, gg, GG, ucon, ucov);
-  
+
   //rewrite the time component directly
   Gith_ff[0] = -kappaGasAbs * fourpi * B + kappaRadAbs * Ehatrad;
   
@@ -2739,6 +2742,7 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
   calc_Compt_Gi_with_state(pp, state, ggg, Gic_ff, ucon_ff);
   
   ldouble fac=1.;
+
 #ifdef DAMPCOMPTONIZATIONATBH
   ldouble xxBL[4];
 
@@ -2757,6 +2761,7 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
     Gith_lab[i] += fac * Gic_lab[i];
     Gith_ff[i] += fac * Gic_ff[i];
   }
+  
 #endif //COMPTONIZATION
   
   // Set total Gi equal to thermal
@@ -4281,13 +4286,21 @@ calc_shear_lab(ldouble *pp0, void* ggg,ldouble S[][4],ldouble *div, int hdorrad,
 
 	 if(isnan(du[i][idim]) && !doingavg) {
 	   printf("nan in shear_lab : %d %d %d %d\n",ix,iy,iz,idim);
+
+
 	   print_4vector(ucovm1);
 	   print_4vector(ucov);
 	   print_4vector(ucovp1);
-	   print_4vector(xxvecm1);
+	   printf("\n");
+           print_4vector(xxvecm1);
 	   print_4vector(xxvec);	   
 	   print_4vector(xxvecp1);
-	   //getchar();
+	   printf("\n");
+	   print_metric(ggm1);
+	   print_metric(gg);
+	   print_metric(ggp1);
+           getchar();
+
 	 }	 	 
        }       
     }

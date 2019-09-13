@@ -143,6 +143,7 @@ solve_the_problem(ldouble tstart, char* folder)
 
 	    ldouble gamma=1.-1./sqrt(2.);
 	    ldouble dtcell;
+
 	    save_timesteps(); 
 
             // Calculate and set consistent gamma over domain + ghost cells + corners
@@ -158,7 +159,7 @@ solve_the_problem(ldouble tstart, char* folder)
             copy_u(1.,p,ptm1);
         
             // Implicit evolution of radiation terms 
-	    op_implicit (t, dt*gamma); //U(0) in *ut0;  U(1) in *u
+	    op_implicit(t, dt*gamma); //U(0) in *ut0;  U(1) in *u
         
 	    global_impdt=dt*gamma;
 
@@ -177,8 +178,11 @@ solve_the_problem(ldouble tstart, char* folder)
 	      PLOOP(iv) set_u(drt1,iv,ix,iy,iz,(1./(dtcell*gamma))*get_u(u,iv,ix,iy,iz)+(-1./(dtcell*gamma))*get_u(ut0,iv,ix,iy,iz)); 
 	    } 
 
+
+
 	    /******* 1st explicit **********/
-            // Set ut1 = u over domain + ghost cells
+
+	    // Set ut1 = u over domain + ghost cells
 	    copyi_u(1.,u,ut1);
 
 	    // ANDREW is this excessive? should be consistent after implicit? 
@@ -189,7 +193,7 @@ solve_the_problem(ldouble tstart, char* folder)
         
             // Special treatment near axis (or inner surface)
 	    do_correct();
-
+	    
 	    // Exchange MPI data for boundaries
 	    mpi_exchangedata();
         
@@ -198,13 +202,14 @@ solve_the_problem(ldouble tstart, char* folder)
 	    
             // Explicit evolution (advection plus source terms) from t to t+dt
 	    op_explicit (t, dt);  //U(1) in *ut1;
-        
+
+	    
             // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
         
             // Intermediate step between explicit and implicit for relativistic electrons
 	    op_intermediate (t,dt);
-        
+	    
 	    global_expdt=dt;
  
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
@@ -253,7 +258,7 @@ solve_the_problem(ldouble tstart, char* folder)
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
 	    count_entropy(&nentr[2],&nentr2[2]);
-        
+	    
             // Implicit evolution of radiation terms
 	    op_implicit (t,gamma*dt); //U(2) in *u
 
@@ -302,7 +307,7 @@ solve_the_problem(ldouble tstart, char* folder)
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
             count_entropy(&nentr[4],&nentr2[4]);
-        
+
             // Special treatment near axis (or inner surface)
 	    do_correct();
 
@@ -317,7 +322,7 @@ solve_the_problem(ldouble tstart, char* folder)
 
             // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
-        
+	    
             // Intermediate step between explicit and implicit for relativistic electrons
 	    op_intermediate (t,dt);
         

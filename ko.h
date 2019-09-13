@@ -722,9 +722,14 @@ int mpi_isitBC(int BCtype);
 void mpi_synchtiming(ldouble *time);
 void mpi_myinit(int argc, char *argv[]);
 void mpi_myfinalize();
+//void mpi_tileorigin(long long ti, long long tj, long long tk, long long* toi, long long* toj, long long* tok);
+//void mpi_global2localidx(long long gix, long long giy, long long giz, long long *lix, long long *liy, long long *liz);
+//void mpi_local2globalidx(long long lix, long long liy, long long liz, long long *gix, long long *giy, long long *giz);
+
 void mpi_tileorigin(int ti, int tj, int tk, int* toi, int* toj, int* tok);
 void mpi_global2localidx(int gix,int giy, int giz, int *lix, int *liy, int *liz);
 void mpi_local2globalidx(int lix,int liy, int liz, int *gix, int *giy, int *giz);
+
 void mpi_procid2tile(int procid, int* tilei, int* tilej, int* tilek);
 int mpi_tile2procid(int tilei, int tilej, int tilek);
 int omp_myinit();
