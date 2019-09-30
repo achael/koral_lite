@@ -13,8 +13,8 @@
 /************************************/
 //blackhole
 /************************************/
-#define MASS 6.2e9
-#define BHSPIN 0.9375
+#define MASS 10.//6.2e9
+#define BHSPIN 0.//0.9375
 
 /************************************/
 //U2P-related choices
@@ -203,8 +203,8 @@
 //resolution
 /************************************/
 //total resolution
-#define TNX 64//32//128//312 
-#define TNY 64//32//128//200 
+#define TNX 256//32//128//312 
+#define TNY 192//32//128//200 
 #define TNZ 1//192
 
 //number of tiles
@@ -221,9 +221,9 @@
 
 #define METRICAXISYMMETRIC
 
-#define RH 1.348
-#define RMIN 0.8*RH
-#define RMAX 500.//1.e5
+#define RH 2.//1.348
+#define RMIN 1.75
+#define RMAX 10000.//1.e5
 
 #ifdef myMKS2COORDS //modified Kerr-Shild
 #define METRICNUMERIC
@@ -264,12 +264,13 @@
 
 #define MINX 0
 #define MAXX 1.
-#define MINY -(1.-1.e-6) //10^-8 away from the poles seems to be the last safe point
-#define MAXY 1.-1.e-6  
+#define Y_OFFSET 0.009
+#define MINY -(1.-Y_OFFSET) //10^-8 away from the poles seems to be the last safe point
+#define MAXY 1. - Y_OFFSET  
 
 #define MKSR0 0 //-1.35 // Should probably be 0 for jetcoords! (issue with ix=-2 metric)
-#define HYPRBRK 5000
-#define FJET 0.3
+#define HYPRBRK 1000
+#define FJET 0.25
 #define FDISK 0.4
 
 //#define RUNI RMIN
@@ -279,17 +280,17 @@
 //#define RDECOLL_DISK 2*RMIN//2*RMIN
 
 
-#define RUNI RH
+#define RUNI RMIN
 #define RCOLL_JET 1000
-#define RDECOLL_JET 2*RH//2*RMIN
-#define RCOLL_DISK 20*RH//5*RMIN
-#define RDECOLL_DISK 2*RH//2*RMIN
+#define RDECOLL_JET 2*RMIN
+#define RCOLL_DISK 5*RMIN
+#define RDECOLL_DISK 2*RMIN
 
 #define ALPHA_1 1
 #define ALPHA_2 0.375
 
 #define CYLINDRIFY
-#define RCYL 10.//4.//10.//10
+#define RCYL 20.//4.//10.//10
 #define NCYL 1.//0.5//1.
 #endif
 
@@ -370,7 +371,7 @@
 
 //stopping condition
 
-#define NOUTSTOP 50//500
+#define NOUTSTOP 1.//500
 
 //#define DUMPS_READ_HDF5
 //#define DUMPS_WRITE_HDF5
