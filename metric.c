@@ -4813,7 +4813,7 @@ int set_cyl_params()
    thetaAX = theta_diskjet(RCYL, MAXY, &tpar);
    sinthetaAX = sin(thetaAX);
 
-   /*
+   
    //test
    printf("RCYL %e rmidcyl %e x2cyl %e \n",RCYL,rmidcyl,x2cyl);
    printf("THETACYL: %e THETAAX %e\n",thetaCYL,thetaAX);
@@ -4831,7 +4831,7 @@ int set_cyl_params()
    printf("thcyl %.14e\n",cylindrify(rtest,x2test,&tpar));
    if(sinth0(rtest,x2test,&tpar)>1)
      {printf("nan in cylindrify for r=%e, x2test=%e!\n",rtest,x2test); exit(-1);}
-   */ 
+    
   return 0;
 }
 

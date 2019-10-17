@@ -228,7 +228,7 @@ ldouble calc_relel_p(ldouble *pp)
 //it is exact when gamma_inj_max ->infinity and theta>1 
 ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble p_index, ldouble gammamax)
 {
-  ldouble ratio, gamma_min=0;
+  ldouble ratio=1., gamma_min=0;
 
 #ifdef RELELECTRONS
 #ifdef RELEL_HEAT_FIX_LIMITS
@@ -274,6 +274,7 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
   #if defined(RELEL_HEAT_FIX_FRAC) && defined(RELEL_HEAT_FIX_INDEX)
   ratio = gamma_inj_fixed_ratio;
   #else
+  
   ldouble eta= delta_nth/(1.-delta_nth);
   ldouble lhs = 6.*(p_index-2.)*eta;
   ldouble a = 0.25 * pow(lhs, 0.25);
@@ -332,7 +333,8 @@ ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble 
   
 #endif //CALC_GAMMAMIN_FIT
 #endif //RELEL_HEAT_FIX_LIMITS
-    //Floor & ceiling on gammamin
+  
+  //Floor & ceiling on gammamin
   if(gamma_min < RELEL_INJ_MIN)
     gamma_min = RELEL_INJ_MIN;
   if(gamma_min > RELEL_INJ_MAX)
@@ -803,7 +805,6 @@ relel_adiab(ldouble dt)
 #endif
 #endif
       */
-      
       
       //Determine final heating rate and total energy change
       for (ie=0; ie<NRELBIN; ie++)
@@ -1577,7 +1578,7 @@ calc_relel_G0_fluidframe_from_state(ldouble *pp, void *sss, void *ggg, ldouble r
     //ldouble mu = chemical_potential_short(theta, neth); //usually negative
     //ldouble cool_relel_dn=calc_relel_cool_dn_from_state(pp, state, geom); //Cooling dn into the thermal (positive)
 
-    ldouble Qe = CC_relel + cool_relel_dq;// - mu*cool_relel_dn; //ANDREW should the chemical potential term be here? 
+    ldouble Qe = CC_relel + cool_relel_dq; // - mu*cool_relel_dn; //ANDREW should the chemical potential term be here? 
 
     G0 = relel_dudtau + Qe; //Qe should be positive, so should decrease the abs value of the negative relel_dudtau
   }

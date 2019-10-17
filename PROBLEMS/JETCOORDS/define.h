@@ -9,12 +9,13 @@
 //#define NORESTART
 #define RESTARTGENERALINDICES
 #define RESTARTNUM -1
+#define PERTURBUINT 0.02
 
 /************************************/
 //blackhole
 /************************************/
-#define MASS 10.//6.2e9
-#define BHSPIN 0.//0.9375
+#define MASS 6.5e9
+#define BHSPIN 0.9375
 
 /************************************/
 //U2P-related choices
@@ -26,7 +27,7 @@
 /************************************/
 //magnetic choices
 /************************************/
-//#define MAGNFIELD
+#define MAGNFIELD
 #define GDETIN 1    //must be 1 for MAGNFIELD
 #define VECPOTGIVEN
 #define INIT_MAGN_CORNERS //initialize magnetic field on corners/edges (which?)
@@ -49,7 +50,7 @@
 /************************************/
 //radiation choices
 /************************************/
-#define RADIATION
+//#define RADIATION
 
 //#define SKIPRADSOURCE    //advective only
 //#define SKIPRADEVOLUTION //keeps initial values in place
@@ -123,7 +124,7 @@
 /************************************/
 //electron choices
 /************************************/
-#define EVOLVEELECTRONS
+//#define EVOLVEELECTRONS
 
 #ifdef EVOLVEELECTRONS
 #define CONSISTENTGAMMA
@@ -168,7 +169,7 @@
 /************************************/
 #define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .8
+#define TSTEPLIM .75
 #define FLUXMETHOD LAXF_FLUX
 
 #define FLUXLIMITER 0
@@ -192,20 +193,20 @@
 #define EEUURATIOMIN 1.e-20
 #define EEUURATIOMAX 1.e20
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX 1.e5
+#define B2UURATIOMAX 1.e3
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 25.
+#define B2RHORATIOMAX 100.
 #define GAMMAMAXRAD 25.
 #define GAMMAMAXHD 25.
-#define RHOFLOOR 1.e-50
+#define RHOFLOOR 1.e-30
 
 /************************************/
 //resolution
 /************************************/
 //total resolution
-#define TNX 256//32//128//312 
-#define TNY 192//32//128//200 
-#define TNZ 1//192
+#define TNX 192//256//32//128//312 
+#define TNY 96//192//32//128//200 
+#define TNZ 1//96//192
 
 //number of tiles
 #define NTX 8
@@ -215,15 +216,15 @@
 /************************************/
 //coordinates
 /************************************/
-#define myJETCOORDS
-//#define myMKS2COORDS
+//#define myJETCOORDS
+#define myMKS2COORDS
 //#define myMKS3COORDS
 
 #define METRICAXISYMMETRIC
 
-#define RH 2.//1.348
-#define RMIN 1.75
-#define RMAX 10000.//1.e5
+#define RH 1.3479
+#define RMIN 1.18
+#define RMAX 3334.//1.e5
 
 #ifdef myMKS2COORDS //modified Kerr-Shild
 #define METRICNUMERIC
@@ -279,7 +280,6 @@
 //#define RCOLL_DISK 20*RMIN//5*RMIN
 //#define RDECOLL_DISK 2*RMIN//2*RMIN
 
-
 #define RUNI RMIN
 #define RCOLL_JET 1000
 #define RDECOLL_JET 2*RMIN
@@ -304,7 +304,7 @@
 
 #define SPECIFIC_BC
 #define PERIODIC_ZBC
-#define COPY_XBC     //simpler outflowing boundary conditions in  radius
+//#define COPY_XBC     //simpler outflowing boundary conditions in  radius
 
 /************************************/
 //common physics 
@@ -325,11 +325,12 @@
 // Fishbone-Moncrief
 #define FM_rin 20.
 #define FM_rmax 41.
-#define FM_rho0 rhoCGS2GU(1.e-18) //1 //density normalization
+#define FM_rho0 1//rhoCGS2GU(1.e-18) //density normalization
 
 // atmosphere
-#define RHOATMMIN  1.e-6*FM_rho0 //rhoCGS2GU(1.e-30)
-#define UINTATMMIN  (calc_PEQ_ufromTrho(1.e9,RHOATMMIN,0,0,0)) //1.e-6
+#define ATMTYPE 0
+#define RHOATMMIN  1.e-4*FM_rho0*pow(2.,-1.5) //rhoCGS2GU(1.e-30)
+#define UINTATMMIN  1.e-6*pow(2.,-2.5)/(GAMMA-1.)/3. //(calc_PEQ_ufromTrho(1.e9,RHOATMMIN,0,0,0)) //1.e-6
 #define ATMTRADINIT 1. 
 #define ERADATMMIN  calc_LTE_EfromT(ATMTRADINIT) 
 
@@ -366,7 +367,7 @@
 /************************************/
 //#define DTAVG .1   //how frequently to compute quantities included in avg
 #define DTOUT1 1  //res
-#define DTOUT2 1000 //avg
+#define DTOUT2 100 //avg
 #define DTOUT3 1000 //box,var
 
 //stopping condition
@@ -376,22 +377,23 @@
 //#define DUMPS_READ_HDF5
 //#define DUMPS_WRITE_HDF5
 
-#define OUTCOORDS BLCOORDS
+#define OUTCOORDS KSCOORDS//BLCOORDS
 #define OUTVEL VEL4
 
-#define CGSOUTPUT
+
 
 #define COORDOUTPUT 1
 #define GRIDOUTPUT 1
-#define SILOOUTPUT 1
+#define SILOOUTPUT 0
 #define OUTOUTPUT 0
-#define SIMOUTPUT 0
+#define SIMOUTPUT 2
+#define CGSOUTPUT
 #define GRTRANSSIMOUTPUT_2
 
 #define RADOUTPUT 0
 #define RADOUTPUTWITHINDTHETA (M_PI/6.)
 
-#define SCAOUTPUT 0
+#define SCAOUTPUT 1
 #define AVGOUTPUT 1
 #define NORELELAVGS
 #define THOUTPUT 0

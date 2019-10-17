@@ -54,13 +54,13 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
   ldouble unth=0.;
 #ifdef RELELECTRONS
   nnth = calc_relel_ne(pp);
-  if(nnth/netot > MAX_RELEL_FRAC_N) nnth = MAX_RELEL_FRAC_N*netot; 
+  //if(nnth/netot > MAX_RELEL_FRAC_N) nnth = MAX_RELEL_FRAC_N*netot; 
  
   unth = calc_relel_uint(pp);
-  if (unth/uint > MAX_RELEL_FRAC_U) unth = MAX_RELEL_FRAC_U*uint;
+  //if (unth/uint > MAX_RELEL_FRAC_U) unth = MAX_RELEL_FRAC_U*uint;
 
   pnth = calc_relel_p(pp);
-  if (pnth/pgas > MAX_RELEL_FRAC_P) pnth = MAX_RELEL_FRAC_P*pgas;
+  //if (pnth/pgas > MAX_RELEL_FRAC_P) pnth = MAX_RELEL_FRAC_P*pgas;
 #endif
   state->nenth=nnth;
   state->uenth=unth;
@@ -356,8 +356,8 @@ ldouble calc_thermal_ne(ldouble *pp)
 #ifdef RELELECTRONS
   ne_relel=calc_relel_ne(pp);
   
-  if(ne_relel/ne_tot > MAX_RELEL_FRAC_N)
-    ne_relel = MAX_RELEL_FRAC_N*ne_tot; 
+  //if(ne_relel/ne_tot > MAX_RELEL_FRAC_N)
+  //  ne_relel = MAX_RELEL_FRAC_N*ne_tot; 
 #endif
 
   return ne_tot - ne_relel;
@@ -2012,7 +2012,6 @@ calc_gammaintfromTei(ldouble Te, ldouble Ti)
   return gamma;
 }
 
-
 //Eq A14 from Sadowski, Wielgus, Narayan, Abarca, McKinney 2016
 //used for the equation of state
 ldouble
@@ -2344,7 +2343,8 @@ heat_electronions_with_state(ldouble dtin)
 
           #ifdef RELEL_HEAT_FIX_FRAC 
           frel=RELEL_HEAT_FRAC; 
-          #endif  
+          #endif
+	  
 	  #ifdef RELEL_HEAT_FIX_INDEX
 	  p_index=RELEL_HEAT_INDEX;
 	  #endif

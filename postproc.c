@@ -1162,9 +1162,9 @@ int calc_thetaprofiles(ldouble profiles[][NY])
   scalars[7]: MAD parameter (dipole)
   scalars[8]: scale height at some radius
   scalars[9]: MAD parameter (quadrupole)
-  scalars[10]: luminosity proxy for problem 134
-  scalars[11]: Edot for problem 134
-  scalars[12]: Ldot for problem 134
+  scalars[10]: luminosity proxy for problem 134,138
+  scalars[11]: Edot for problem 134,138
+  scalars[12]: Ldot for problem 134,138
  
  */
 /*********************************************/
@@ -1279,7 +1279,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   calc_local_lum(ix,NCCORRECTPOLAR+1,0,&radlum,&totlum);
   scalars[11]=totlum;
   
-#if(PROBLEM==134)  // FISHMONC for EHT code comparison tests
+#if(PROBLEM==134 || PROBLEM==138)  // FISHMONC for EHT code comparison tests
   ldouble Edot;
   Edot = calc_Edot(rhorizonBL);
   scalars[11] = Edot - mdot;
@@ -1287,7 +1287,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   ldouble Ldot;
   Ldot = calc_Ldot(rhorizonBL);
   scalars[12] = Ldot;
-  
+
   ldouble luminosity_proxy, theta_min = M_PI / 3., theta_max = 2. * M_PI / 3.;
   luminosity_proxy = calc_lum_proxy(rhorizonBL, theta_min, theta_max);
   scalars[10] = luminosity_proxy;
@@ -2607,10 +2607,6 @@ calc_mdot(ldouble radius, int type)
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
 
-	//why is this needed? 
-	//get_xx(ix, iy, iz, xx);
-        //coco_N(xx, xxBL, MYCOORDS, OUTCOORDS);
-        
         rho = pp[0];
         ucon[1] = pp[2];
         ucon[2] = pp[3];
@@ -2795,7 +2791,7 @@ calc_Edot(ldouble radius)
           #endif
         }
       }
-      else
+      else //snapshot
       {
         for(iv = 0; iv < NVMHD; iv++)
           pp[iv] = get_u(p, iv, ix, iy, iz);
@@ -2815,10 +2811,6 @@ calc_Edot(ldouble radius)
         }
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
-
-	//do we need this? 
-	//get_xx(ix, iy, iz, xx);
-        //coco_N(xx, xxBL, MYCOORDS, OUTCOORDS);
         
         rho = pp[0];
         uu = pp[UU];
@@ -3005,7 +2997,7 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
   Psi = 0.;  // dipole flux
   Psiquad = 0.;  // quadrupole flux
 
-//  We have changed the following so that it can handle both NZ=1 and NZ>1
+  // We have changed the following so that it can handle both NZ=1 and NZ>1
   for (iz = 0; iz < NZ; iz++)
   {
     for(iy=0;iy<NY;iy++)
@@ -3020,9 +3012,9 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
       if(doingavg)  // working with averages
       {
         ldouble bcon[4] = {get_uavg(pavg, AVGBCON(0), ix, iy, iz),
-			       get_uavg(pavg, AVGBCON(1), ix, iy, iz),
-			       get_uavg(pavg, AVGBCON(2), ix, iy, iz),
-			       get_uavg(pavg, AVGBCON(3), ix, iy, iz)};
+			   get_uavg(pavg, AVGBCON(1), ix, iy, iz),
+			   get_uavg(pavg, AVGBCON(2), ix, iy, iz),
+			   get_uavg(pavg, AVGBCON(3), ix, iy, iz)};
         
         ldouble ucon[4], ucov[4], bcov[4];
         
@@ -3039,7 +3031,8 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
         //Normalize b^mu to be equal to B^2
         ldouble bsq = get_uavg(pavg, AVGBSQ, ix, iy, iz);
         ldouble alphanorm = bsq / dotB(bcon, bcov);
-        if(alphanorm < 0.) my_err("alpha.lt.0 in b0 norm !!\n");
+        if(alphanorm < 0.)
+	  my_err("alpha.lt.0 in b0 norm !!\n");
         for(i4 = 0; i4 < 4; i4++)
         {
           bcon[i4] *= sqrt(alphanorm);

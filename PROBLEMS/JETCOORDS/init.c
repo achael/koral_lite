@@ -30,7 +30,7 @@ uintorg=uint;
 if(rho<0.) //we are outside the donut, in the atmosphere
 {
     //atmosphere: atmtype=0. Need to define RHOATMMIN, UINTATMMIN defined at rout=2.
-    set_hdatmosphere(pp,geom.xxvec,geom.gg,geom.GG,0);  //density, temperature
+    set_hdatmosphere(pp,geom.xxvec,geom.gg,geom.GG,ATMTYPE);  //density, temperature
 #ifdef RADIATION
     set_radatmosphere(pp,geom.xxvec,geom.gg,geom.GG,0); //radiation
 #ifdef EVOLVEPHOTONNUMBER
@@ -41,7 +41,7 @@ if(rho<0.) //we are outside the donut, in the atmosphere
 else // we are inside the donut
 {
     //calculate hd atmosphere values as backup
-    set_hdatmosphere(ppback,geom.xxvec,geom.gg,geom.GG,0);
+    set_hdatmosphere(ppback,geom.xxvec,geom.gg,geom.GG,ATMTYPE);
 #ifdef RADIATION
     //the initial radiation remains as background
     set_radatmosphere(pp,geom.xxvec,geom.gg,geom.GG,0); 

@@ -778,6 +778,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     }
   }
 
+  /*
   //Not too much rel electron pressure
   ldouble pgamma=GAMMA;
   #ifdef CONSISTENTGAMMA
@@ -793,6 +794,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pp[NEREL(ie)] *= (MAX_RELEL_FRAC_P/relfracp);
     }
   } 
+  */
   
 #endif //RELELECTRONS
 #endif //EVOLVEELECTRONS
