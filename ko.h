@@ -1444,6 +1444,8 @@ int fprint_coordBL(char* folder,char* prefix);
 int fprint_simplefile(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix);
+int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix);
+int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix);
 
 int fprint_restartfile_mpi_hdf5(ldouble t, char* folder);
 int fprint_restartfile_serial_hdf5(ldouble t, char* folder);

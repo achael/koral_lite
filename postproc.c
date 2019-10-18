@@ -70,7 +70,12 @@
 //integrated T^r_phi (58)
 //rho-weighted Bernoulli without thermal component (59)  
 //average dissipation (60)
-
+//jet CM X (61) (see code comparison document)
+//jet CM Y (62)
+//jet Ixx (63)
+//jet Iyy (64)
+//jet Ixy (65)
+//jet Area (66)
 /*********************************************/
 
 int calc_radialprofiles(ldouble profiles[][NX])
@@ -85,8 +90,11 @@ int calc_radialprofiles(ldouble profiles[][NX])
   int ix;
   
   //define extra quantities for problem 134
-  ldouble normalize[NX], rho134[NX], pgas134[NX], bfield134[NX], uconphi134[NX], ptot134[NX], betainv134[NX];
-
+  ldouble normalize[NX], rho134[NX], pgas134[NX], bfield134[NX], uconphi134[NX], ptot134[NX], betainv134[NX],scaleheight134[NX],rholambda134[NX];
+  ldouble thetamin_134=M_PI/3.;
+  ldouble thetamax_134=2*M_PI/3.;
+  ldouble sigmagdet[NX];
+   
   //search for appropriate radial index
 #pragma omp parallel for private(ix)
   for(ix=0;ix<NX;ix++)
@@ -101,7 +109,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
     ldouble tautot,tautotloc,tauabs,tauabsloc;
     ldouble avgsums[NV+NAVGVARS][NX];
     ldouble Bangle1,Bangle2,brbphi;
-    ldouble Sigmagdet;
     ldouble diffflux[NV];
     ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV];
     ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
@@ -109,7 +116,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
     ldouble fd_ul[NV],fd_ur[NV],fd_ulm1[NV],fd_urm1[NV],fd_ulp1[NV],fd_urp1[NV];
     ldouble du[NV],dul[NV],dur[NV],aaa[24],ahd,arad,Jvec[3];
     ldouble Gi[4],Giff[4];
-    int injet;
     
     //vertically integrated/averaged profiles
     
@@ -118,8 +124,8 @@ int calc_radialprofiles(ldouble profiles[][NX])
     
     Jvec[0]=Jvec[1]=Jvec[2]=0.;
     
-    //keep track of extra quantities for problem 134
-    if (PROBLEM == 134)
+    //keep track of extra quantities for problem 134/139
+    if (PROBLEM == 134 || PROBLEM == 139)
     {
       normalize[ix] = 0.;
       rho134[ix] = 0.;
@@ -128,6 +134,8 @@ int calc_radialprofiles(ldouble profiles[][NX])
       uconphi134[ix] = 0.;
       ptot134[ix] = 0.;
       betainv134[ix] = 0.;
+      scaleheight134[ix]=0.;
+      rholambda134[ix]=0.;
     }
     
     //outside horizon?
@@ -136,7 +144,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
     if(geomBLtemp.xx<=1.1*rhorizonBL) continue; //to avoid working inside horizon
     
     Bangle1=Bangle2=0.;
-    Sigmagdet=0.;
+    sigmagdet[ix]=0.;
     ldouble jetsigma=0.;
     
     for(iv=0;iv<NAVGVARS;iv++)
@@ -458,7 +466,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
           boost2_lab2ff(Gi,Giff,pp,geomBL.gg,geomBL.GG);
 #endif
           
-          
           //estimating the diffusive flux
           //to conserved
           p2u(fd_pl,fd_ul,&geomBLl);
@@ -498,7 +505,8 @@ int calc_radialprofiles(ldouble profiles[][NX])
 #endif
         }  // end on the go from primitives
         
-        ldouble muBe,Be,Benoth;
+        ldouble muBe,Be,Benoth,betagamma2;
+	betagamma2=(-Trt/rhouconr)*(-Trt/rhouconr) - 1.;
         muBe=-(Trt+rhouconr)/rhouconr;
         Be=-(TttBe+rhoucont)/rhoucont;
         Benoth=-(TttBenoth+rhoucont)/rhoucont;
@@ -509,10 +517,13 @@ int calc_radialprofiles(ldouble profiles[][NX])
         
         
         int isjet;
-        if(muBe>0.05 && (xxBL[2]<M_PI/4. || xxBL[2]>3.*M_PI/4.))
-          isjet=1;
+	//old criterion based on Bernoulli
+        //if(muBe>0.05 && (xxBL[2]<M_PI/4. || xxBL[2]>3.*M_PI/4.))
+        //  isjet=1;
+	//new criterion based on beta*gamma
+	if(betagamma2>1.)
+	  isjet=1;
         else isjet=0;
-        
         
         ldouble pregas = GAMMAM1*uint;
         ldouble ptot = pregas;
@@ -602,7 +613,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
         //rest mass flux (3)
         profiles[1][ix]+=-rhouconr*dx[1]*dx[2]*geomBL.gdet;
         
-        
         //conserved flux (rhour) transformed to OUTCOORDS (may be imprecise) (37)
 	// AA -- we have set this to zero... unclear what it was supposed to do
         profiles[35][ix]+=-rhouconrcons*dx[1]*dx[2];
@@ -613,9 +623,17 @@ int calc_radialprofiles(ldouble profiles[][NX])
         //conserved flux for Trt (39) in MYCOORDS
         profiles[37][ix]+=-Fluxx[UU]*get_size_x(iy,1)*dx[2];
         
-        //temporary surface density to normalize what is above
-        Sigmagdet+=rho*dx[1]*dx[2]*geomBL.gdet;
-        
+        //temporary surface density to normalize scale height
+	sigmagdet[ix] +=rho*dx[1]*dx[2]*geomBL.gdet;
+
+	//scale height using code comparison paper defn;
+	scaleheight134[ix] += rho*fabs(0.5*M_PI - xxBL[2]) * dx[1]*dx[2]*geomBL.gdet;
+
+	//density-weighted MRI wavelength using code comparison paper defn
+	//ANDREW?? -- should it be bsq/2?
+	ldouble lambdaMRI = 2*M_PI * bcon[2] / sqrt(bsq + rho + uint + pregas) / Omega;
+	rholambda134[ix] += rho*lambdaMRI* dx[1]*dx[2]*geomBL.gdet; 
+	  
         //total mhd energy flux (14)
         profiles[12][ix]+=(-Trt)*dx[1]*dx[2]*geomBL.gdet;
         
@@ -678,11 +696,31 @@ int calc_radialprofiles(ldouble profiles[][NX])
         
         //integrated dissipation
         profiles[58][ix]+=vischeating*dxph[1];
-        
-        //total rad energy flux (17)
-#ifdef RADIATION
 
-        profiles[15][ix]+=(-Rrt)*dx[1]*dx[2]*geomBL.gdet;
+	//projected TOP jet CM and MOI tensor (according to code comparison paper)
+	//assumes flat space
+	if(xxBL[2]>0. && xxBL[2]<=thetamin_134)
+	{
+	  ldouble sigloc = bsq/rho;
+	  ldouble psiloc=0.;
+	  if(sigloc>1) psiloc=1.;
+	  else if(sigloc>0.1) psiloc=sigloc;
+	  
+	  ldouble xloc=xxBL[1]*sin(xxBL[2])*cos(xxBL[3]);
+	  ldouble yloc=xxBL[1]*sin(xxBL[2])*sin(xxBL[3]); 
+	  ldouble dA=psiloc*xxBL[1]*xxBL[1]*sin(xxBL[2])*cos(xxBL[2])*dx[1]*dx[2];
+	  
+	  profiles[59][ix] += xloc*dA;
+	  profiles[60][ix] += yloc*dA;
+	  profiles[61][ix] += xloc*xloc*dA;
+	  profiles[62][ix] += yloc*yloc*dA;
+	  profiles[63][ix] += xloc*yloc*dA;
+	  profiles[64][ix] += dA;
+
+	}
+#ifdef RADIATION
+        //total rad energy flux (17)
+	profiles[15][ix]+=(-Rrt)*dx[1]*dx[2]*geomBL.gdet;
         
         //conserved flux for Rrt in MYCOORDS (40)
         
@@ -792,9 +830,11 @@ int calc_radialprofiles(ldouble profiles[][NX])
             profiles[49][ix]+=rho*ucov[3]*dxph[1];
         }
         
-        // special quantities for problem 134
-        if (PROBLEM == 134)
-        {
+        // special quantities for problem 134//139
+        if (PROBLEM == 134 || PROBLEM == 139)
+	{
+	  if(xxBL[2]<thetamax_134 && xxBL[2]>thetamin_134)
+          {
           normalize[ix] += dx[1] * dx[2] * geomBL.gdet;
           rho134[ix] += rho * dx[1] * dx[2] * geomBL.gdet;
           ldouble pgass = uint * (GAMMA - 1.);
@@ -803,17 +843,15 @@ int calc_radialprofiles(ldouble profiles[][NX])
           uconphi134[ix] += utcon[3] * dx[1] * dx[2] * geomBL.gdet;
           ptot134[ix] += (pgass + (bsq/2.)) * dx[1] * dx[2] * geomBL.gdet;
           betainv134[ix] += (0.5 * bsq / pgass) * dx[1] * dx[2] * geomBL.gdet;
+          }
         }
-        
       }  // end for(iy=0;iy<NY;iy++)
     }  // end for(iz=0;iz<NZ;iz++)
-    
     
     //calculating angle between the total angular momentum vector at this radius and the axis
     ldouble angle = acos( (Jvec[2])/(sqrt(Jvec[0]*Jvec[0]+Jvec[1]*Jvec[1]+Jvec[2]*Jvec[2])));
     profiles[53][ix]=angle;
-    
-    
+        
     //normalizing by sigma
     ldouble sigmaout=profiles[0][ix]-profiles[21][ix];
     ldouble sigmain=profiles[21][ix];
@@ -875,8 +913,8 @@ int calc_radialprofiles(ldouble profiles[][NX])
     //location of the photosphere (13)
     profiles[11][ix]=calc_photloc(ix);
     
-    // special quantities for problem 134
-    if (PROBLEM == 134)
+    // special quantities for problem 134/139
+    if (PROBLEM == 134 || PROBLEM ==  139)
     {
       profiles[7][ix] = rho134[ix] / normalize[ix];
       profiles[8][ix] = pgas134[ix] / normalize[ix];
@@ -884,8 +922,19 @@ int calc_radialprofiles(ldouble profiles[][NX])
       profiles[13][ix] = uconphi134[ix] / normalize[ix];
       profiles[17][ix] = ptot134[ix] / normalize[ix];
       profiles[18][ix] = betainv134[ix] / normalize[ix];
-
+      profiles[29][ix] = scaleheight134[ix] / sigmagdet[ix];
+      profiles[27][ix] = rholambda134[ix] / sigmagdet[ix];
     }
+
+    // TOP jet profiles
+    ldouble Ajet = profiles[64][ix];
+    if (Ajet==0.) Ajet=1.;
+    
+    profiles[59][ix] /= Ajet;
+    profiles[60][ix] /= Ajet;
+    profiles[61][ix] -= (profiles[59][ix]*profiles[59][ix]*Ajet);
+    profiles[62][ix] -= (profiles[60][ix]*profiles[60][ix]*Ajet);
+    profiles[63][ix] -= (profiles[59][ix]*profiles[60][ix]*Ajet);
     
   }  // end for(ix=0;ix<NX;ix++)
 
@@ -1162,9 +1211,9 @@ int calc_thetaprofiles(ldouble profiles[][NY])
   scalars[7]: MAD parameter (dipole)
   scalars[8]: scale height at some radius
   scalars[9]: MAD parameter (quadrupole)
-  scalars[10]: luminosity proxy for problem 134,138
-  scalars[11]: Edot for problem 134,138
-  scalars[12]: Ldot for problem 134,138
+  scalars[10]: luminosity proxy for problem 134,139
+  scalars[11]: Edot for problem 134,139
+  scalars[12]: Ldot for problem 134,139
  
  */
 /*********************************************/
@@ -1279,7 +1328,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   calc_local_lum(ix,NCCORRECTPOLAR+1,0,&radlum,&totlum);
   scalars[11]=totlum;
   
-#if(PROBLEM==134 || PROBLEM==138)  // FISHMONC for EHT code comparison tests
+#if(PROBLEM==134 || PROBLEM==139)  // FISHMONC for EHT code comparison tests
   ldouble Edot;
   Edot = calc_Edot(rhorizonBL);
   scalars[11] = Edot - mdot;

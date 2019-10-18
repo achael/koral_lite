@@ -2135,6 +2135,13 @@ int fprint_simplefile(ldouble t, int nfile, char* folder,char* prefix)
   fprint_simplesph(t,nfile,folder,prefix);
 #endif
 
+#ifdef SIMOUTPUT_PHIAVG
+  fprint_simple_phiavg(t, nfile, folder, prefix);
+#endif
+
+#ifdef SIMOUTPUT_PHICORR
+  fprint_simple_phicorr(t, nfile, folder, prefix);
+#endif
   return 0;
 }
 
@@ -3016,7 +3023,409 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
    return 0;
  }
 
+                              
+/*********************************************/
+/* prints phi-averaged ASCII */
+/* only code-comparison quantities for now 
+/*********************************************/
+                              
+int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
+ {
+   char bufor[50];
+   sprintf(bufor,"%s/%s%04d_simphiavg.dat",folder,prefix,nfile);
+   fout1=fopen(bufor,"w");
+  
+   /***********************************/  
+   /** writing order is fixed  ********/  
+   /***********************************/  
+ 
+   int ix,iy,iz,iv;
+   int iix;
+   ldouble pp[NV],lorentz;
+   int nz=NZ;
+   struct geometry geom,geomBL;
 
+   int xmin=0;
+
+   //HEADER
+   int cgsout=0;
+   #ifdef CGSOUTPUT
+   cgsout=1;
+   #endif
+   fprintf(fout1,"t=%.5e M=%.5e a=%.5e MYCOORDS=%d OUTCOORDS=%d\n CGSOUT=%d\n",t,BHSPIN,MASS,MYCOORDS,OUTCOORDS,cgsout);
+   fprintf(fout1,"--------------------------------------------------------------------\n");
+   
+   // loop over all cells  
+   for(iix=xmin;iix<NX;iix++)
+   {
+     ix=iix;
+     for(iy=0;iy<NY;iy++)
+     {
+
+       ldouble rhoavg=0.;
+       ldouble uintavg=0.;
+       ldouble pgasavg=0.;
+       ldouble bsqavg=0.;
+       ldouble betaavg=0.;
+       ldouble sigmaavg=0.;
+       ldouble betainvavg=0.;
+       ldouble gdetavg=0.;
+       ldouble uconavg[4], Bavg[3];
+       uconavg[0]=0.; uconavg[1]=0.; uconavg[2]=0.;uconavg[3]=0.;
+       Bavg[0]=0.;Bavg[1]=0.;Bavg[2]=0.;
+
+       ldouble r,th,ph;
+       ldouble x1,x2,x3;
+       for(iz=0;iz<nz;iz++)
+       {
+           
+	      fill_geometry(ix,iy,iz,&geom);
+	      fill_geometry_arb(ix,iy,iz,&geomBL,OUTCOORDS);
+
+	      r=geomBL.xx; th=geomBL.yy; ph=geomBL.zz;
+	      x1=geom.xx; x2=geom.yy;x3=geom.zz;
+
+	      // fill in pp
+	      for(iv=0;iv<NV;iv++)
+	      {
+	        if(doingavg)
+	          pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
+	        else
+	          pp[iv]=get_u(p,iv,ix,iy,iz);
+	      }
+
+	      ldouble dxph[3],dx[3],xx1[4],xx2[4];
+	      int ij;
+	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
+	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dx[0]=fabs(xx2[1]-xx1[1]);
+	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
+	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dx[1]=fabs(xx2[2]-xx1[2]);
+	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
+	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dx[2]=fabs(xx2[3]-xx1[3]);
+
+	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
+	      dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
+	      dxph[2]=dx[2]*sqrt(geomBL.gg[3][3]);
+
+	      ldouble gdet=geom.gdet;
+	      ldouble volume=gdet*get_size_x(ix,0)*get_size_x(iy,1)*get_size_x(iz,2);
+	       
+              ldouble rho,uint,pgas,temp,bsq,bcon[4],bcov[4],Bprim[3];
+	      ldouble utcon[4],utcov[4],ucon[4],ucov[4],Tij[4][4],Tij22[4][4];
+	      ldouble Ti,Te;
+	      ldouble gamma=GAMMA; 
+	      int i,j;
+
+              #ifdef CONSISTENTGAMMA
+	      gamma=pick_gammagas(ix,iy,iz);
+              #endif
+	     
+	      if(doingavg)
+		 {
+                   #ifdef PRECOMPUTE_MY2OUT
+                   trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+                   #else      
+                   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+                   #endif
+		   
+		   rho=get_uavg(pavg,RHO,ix,iy,iz);
+		   uint=get_uavg(pavg,UU,ix,iy,iz);
+		   pgas=get_uavg(pavg,AVGPGAS,ix,iy,iz);
+		   temp=calc_PEQ_Tfromprho(pgas,rho,ix,iy,iz);
+
+		   utcon[0]=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
+		   utcon[1]=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
+		   utcon[2]=get_uavg(pavg,AVGRHOUCON(2),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
+		   utcon[3]=get_uavg(pavg,AVGRHOUCON(3),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
+
+		   lorentz = fabs(utcon[0])/sqrt(fabs(geomBL.GG[0][0]));
+
+                   //ANDREW NORMALIZE u^0 for grtrans
+                   fill_utinucon(utcon,geomBL.gg,geomBL.GG);
+		   indices_21(utcon,utcov,geomBL.gg); 
+
+		   /*
+                   int ii,jj;
+                   for(ii=0;ii<4;ii++)
+		     for(jj=0;jj<4;jj++)
+		       Tij[ii][jj]=get_uavg(pavg,AVGTIJ(ii,jj),ix,iy,iz);                 
+		   indices_2122(Tij,Tij22,geomBL.gg);  
+                   */
+
+                   pp[RHO]=rho;
+		   pp[UU]=uint;
+#ifdef MAGNFIELD
+		   bsq=get_uavg(pavg,AVGBSQ,ix,iy,iz);
+		   bcon[0]=get_uavg(pavg,AVGBCON(0),ix,iy,iz);
+		   bcon[1]=get_uavg(pavg,AVGBCON(1),ix,iy,iz);
+		   bcon[2]=get_uavg(pavg,AVGBCON(2),ix,iy,iz);
+		   bcon[3]=get_uavg(pavg,AVGBCON(3),ix,iy,iz);
+
+                  //ANDREW NORMALIZE b^0 to be orthogonal with u^\mu
+		  bcon[0]=-dot3nr(bcon,utcov)/utcov[0];
+		  indices_21(bcon,bcov,geomBL.gg);
+
+                  //ANDREW NORMALIZE b^mu to be equal to B^2
+		  ldouble alphanorm = bsq/dotB(bcon,bcov);
+		  if(alphanorm<0.) my_err("alpha.lt.0 in b0 norm !!\n");
+                  for(i=0;i<4;i++)
+		  {
+		   bcon[i]*=sqrt(alphanorm);
+		  }
+#endif
+	       }
+	       else //not doingavg; on the go from the primitives
+	       { 
+                   #ifdef PRECOMPUTE_MY2OUT
+                   trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+                   #else      
+                   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+                   #endif
+
+		   rho=pp[0];
+		   uint=pp[1];
+		   pgas=(gamma-1.)*uint;
+
+		   /*
+                   calc_Tij(pp,&geomBL,Tij22);
+		   indices_2221(Tij22,Tij,geomBL.gg);
+                   */
+		   
+                   calc_ucon_ucov_from_prims(pp, &geomBL, utcon, ucov);                   
+                   lorentz = fabs(utcon[0])/sqrt(fabs(geomBL.GG[0][0]));
+                   temp=calc_PEQ_Tfromurho(uint,rho,ix,iy,iz);
+                   //temp=calc_PEQ_Teifrompp(pp,&Te,&Ti,geomBL.ix,geomBL.iy,geomBL.iz);
+#ifdef MAGNFIELD
+                   calc_bcon_bcov_bsq_from_4vel(pp, utcon, ucov, &geomBL, bcon, bcov, &bsq);
+#endif
+	       }
+  	     
+	       ldouble betamag = -1;
+	       ldouble betamaginv = 0.;
+	       ldouble sigmamag = 0.;
+	       Bprim[0]=0.;Bprim[1]=0.;Bprim[2]=0.;
+#ifdef MAGNFIELD
+	       betamag = 2.*(pgas)/bsq;
+	       betamaginv = 1./betamag;
+	       sigmamag = bsq/rho;
+	       Bprim[0] = pp[B1];
+	       Bprim[1] = pp[B2];
+	       Bprim[2] = pp[B3];
+#endif
+	       //average
+	       gdetavg += gdet*dx[2];
+	       rhoavg += rho*gdet*dx[2];      
+	       uintavg += uint*gdet*dx[2];
+	       pgasavg += pgas*gdet*dx[2];
+	       uconavg[0] += utcon[0]*gdet*dx[2];
+	       uconavg[1] += utcon[1]*gdet*dx[2];      
+	       uconavg[2] += utcon[2]*gdet*dx[2];      
+	       uconavg[3] += utcon[3]*gdet*dx[2];      
+	       Bavg[0] += Bprim[0]*gdet*dx[2];
+	       Bavg[1] += Bprim[1]*gdet*dx[2];
+	       Bavg[2] += Bprim[2]*gdet*dx[2];
+	       bsqavg += bsq*gdet*dx[2];
+	       betaavg += betamag*gdet*dx[2];
+	       betainvavg += betamaginv*gdet*dx[2];      	       
+	       sigmaavg += sigmamag*gdet*dx[2];      
+	 
+       } // end loop over z
+
+       rhoavg /= gdetavg;
+       uintavg /= gdetavg;
+       pgasavg /= gdetavg;
+       bsqavg /= gdetavg;
+       betaavg /= gdetavg;
+       betainvavg /= gdetavg;
+       sigmaavg /= gdetavg;
+       uconavg[0] /= gdetavg;
+       uconavg[1] /= gdetavg;
+       uconavg[2] /= gdetavg;
+       uconavg[3] /= gdetavg;
+       Bavg[0] /= gdetavg;
+       Bavg[1] /= gdetavg;
+       Bavg[2] /= gdetavg;
+
+       //convert to cgs
+       #ifdef CGSOUTPUT
+       rhoavg = rhoGU2CGS(rhoavg);
+       uintavg = endenGU2CGS(uintavg);
+       pgasavg = endenGU2CGS(pgasavg);
+       #endif
+       
+       // print profile
+       fprintf(fout1,"%d %d ",ix,iy); //(1-2)
+       fprintf(fout1,"%.5e %.5e ",x1,x2); //(3-4)
+       fprintf(fout1,"%.5e %.5e ",r,th); //(5-6)
+       fprintf(fout1,"%.5e %.5e %.5e ",rhoavg,uintavg,pgasavg); //(7-9)
+       fprintf(fout1,"%.5e %.5e %.5e %.5e ",uconavg[0],uconavg[1],uconavg[2],uconavg[3]); //(7-9)
+       fprintf(fout1,"%.5e %.5e %.5e ",Bavg[0],Bavg[1],Bavg[2]); //(7-9)
+       fprintf(fout1,"%.5e %.5e %.5e %.5e ",bsqavg,betaavg,betainvavg,sigmaavg); //(7-9)
+       fprintf(fout1,"\n");
+
+     } // iy loop
+   } // ix loop
+
+   fflush(fout1);
+   fclose(fout1);
+
+   return 0;
+}
+
+/*********************************************/
+/* print radius and phi dependent correlation functions in rho and betainv ASCII */
+/* see code comparison paper
+/*********************************************/
+                              
+int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
+ {
+   char bufor[50];
+   sprintf(bufor,"%s/%s%04d_phicorr.dat",folder,prefix,nfile);
+   fout1=fopen(bufor,"w");
+  
+   /***********************************/  
+   /** writing order is fixed  ********/  
+   /***********************************/  
+ 
+   int ix,iy,iz,izz,iv;
+   ldouble pp[NV];
+   int nz=NZ;
+   struct geometry geom,geomBL;
+
+   int xmin=0;
+   
+   int iymin=NY/2 -1;
+   int iymax=NY/2;
+
+   // loop over all cells  
+   for(ix=xmin;ix<NX;ix++)
+   {
+
+     ldouble r,th,ph;
+     ldouble x1,x2,x3;
+
+     //loop over phi values for output print
+     for(izz=0;izz<nz;izz++)
+     {
+
+       ldouble rhocorr=0.;
+       ldouble betainvcorr=0.;
+       ldouble rhoavg=0.;
+       ldouble betainvavg=0.;
+       ldouble volavg=0.;
+       
+       for(iy=iymin;iy<(iymax+1);iy++)
+       {
+         ldouble rho,uint,pgas,bsq,betamaginv;
+         ldouble rhotmp[nz], betainvtmp[nz], dxtmp[nz];
+
+	 fill_geometry(ix,iy,izz,&geom);
+	 fill_geometry_arb(ix,iy,izz,&geomBL,OUTCOORDS);
+	 r=geomBL.xx; th=geomBL.yy; ph=geomBL.zz;
+	 x1=geom.xx; x2=geom.yy;x3=geom.zz;
+
+         // first loop and make a temporary array to store necessary data
+         for(iz=0;iz<nz;iz++)
+         {
+	 
+	      ldouble dx[3],xx1[4],xx2[4];
+	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
+	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dx[0]=fabs(xx2[1]-xx1[1]);
+	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
+	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dx[1]=fabs(xx2[2]-xx1[2]);
+	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
+	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dx[2]=fabs(xx2[3]-xx1[3]);
+
+	    if(doingavg)
+	    {
+	     rho=get_uavg(pavg,RHO,ix,iy,iz);
+	     pgas=get_uavg(pavg,AVGPGAS,ix,iy,iz);
+	     bsq=0.;
+	     #ifdef MAGNFIELD
+	     bsq=get_uavg(pavg,AVGBSQ,ix,iy,iz);
+	     #endif
+	    }
+            else
+	    {
+	     for(iv=0;iv<NV;iv++)
+	       pp[iv]=get_u(p,iv,ix,iy,iz);
+	     rho=pp[0];
+	     uint=pp[1];
+	     ldouble gamma=GAMMA; 
+             #ifdef CONSISTENTGAMMA
+	     gamma=pick_gammagas(ix,iy,iz);
+             #endif
+	     pgas=(gamma-1.)*uint;
+	     bsq=0.;
+	     ldouble utcon[4],utcov[4],bcon[4],bcov[4];
+	     #ifdef MAGNFIELD
+             calc_bcon_bcov_bsq_from_4vel(pp, utcon, utcov, &geomBL, bcon, bcov, &bsq);
+	     #endif
+	    }
+	    betamaginv = bsq/(2*pgas);
+	  
+	    //fill correlations temporary arrays
+	    betainvtmp[iz] = betamaginv;
+	    rhotmp[iz] = rho;
+	    dxtmp[iz] = dx[2]*dx[1];
+         } //end first loop filling temporary arrays
+
+	 //now integrate over z
+         for(iz=0;iz<nz;iz++)
+	 {
+	   int iz_loop = iz+izz;
+	   if(iz_loop>=NZ)
+	     iz_loop -= NZ;
+
+	   rhoavg += rhotmp[iz]*dxtmp[iz];
+	   betainvavg += betainvtmp[iz]*dxtmp[iz];
+	   volavg += dxtmp[iz];
+
+	   rhocorr += rhotmp[iz]*rhotmp[iz_loop]*dxtmp[iz];
+	   betainvcorr += betainvtmp[iz]*betainvtmp[iz_loop]*dxtmp[iz];
+	 } // end integrating loop over z
+       } // end integrating loop over y
+
+       rhoavg /= volavg;
+       betainvavg /= volavg;
+       rhocorr -= volavg*rhoavg*rhoavg;
+       betainvcorr -= volavg*betainvavg*betainvavg;
+       
+       // print profile
+       fprintf(fout1,"%d %d ",ix,iz); //(1-2)
+       fprintf(fout1,"%.5e %.5e ",r,ph); //(3-4)
+       fprintf(fout1,"%.5e %.5e ",rhoavg,betainvavg); //(5-6)
+       fprintf(fout1,"%.5e %.5e ",rhocorr,betainvcorr); //(7-8)
+       fprintf(fout1,"\n");
+
+       } //iz loop print
+   } // ix loop
+
+   fflush(fout1);
+   fclose(fout1);
+
+   return 0;
+}
+
+/////////////////////////////////////////////////       
 void get_prim_name
   (
    char* prim_name,

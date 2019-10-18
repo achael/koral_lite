@@ -223,7 +223,7 @@
 #define METRICAXISYMMETRIC
 
 #define RH 1.3479
-#define RMIN 1.18
+#define RMIN 1.1
 #define RMAX 3334.//1.e5
 
 #ifdef myMKS2COORDS //modified Kerr-Shild
@@ -234,7 +234,7 @@
 #define MINY (0.001)
 #define MAXY (1.-0.001)
 
-#define MKSR0 -1.35
+#define MKSR0 -1.1//35
 #define MKSH0 0.7
 #define MKSMY1 0.002
 #define MKSMY2 0.02
@@ -384,7 +384,7 @@
 
 #define COORDOUTPUT 1
 #define GRIDOUTPUT 1
-#define SILOOUTPUT 0
+#define SILOOUTPUT 1
 #define OUTOUTPUT 0
 #define SIMOUTPUT 2
 #define CGSOUTPUT

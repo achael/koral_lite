@@ -522,7 +522,7 @@
 
 //number of profiles
 #ifndef NRADPROFILES
-#define NRADPROFILES (62-1)
+#define NRADPROFILES (66-1)
 #endif
 
 #ifndef NTHPROFILES
