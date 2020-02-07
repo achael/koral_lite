@@ -14,8 +14,6 @@ static FTYPE compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FT
 static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
 static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
 static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
-static int f_u2p_solver_5d(ldouble *xxx, ldouble* uu0, ldouble* pp0, ldouble *f1, void *params, ldouble* err);
-static int f_u2p_solver_5d_gsl(const gsl_vector * x, void *params, gsl_vector * f);
 
 //**********************************************************************
 //calculates primitives in given cell basing on global array u[]
@@ -103,13 +101,6 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
   }
 #endif
   
-  //update conserved to be consistent with primitives.
-
-  //Ramesh: It seems we need to do this only if floors were activated, but we leave it as is for now...
-  //ANDREW: is it even using this new uu anywhere? 
-  //if(!is_cell_corrected_polaraxis(ix,iy,iz))
-  //  p2u(pp,uu,&geom);
-
   //set new primitives and conserved
   for(iv=0;iv<NV;iv++)
   { 
@@ -178,7 +169,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //************************************
   //magneto-hydro part
   //************************************
-  
   ldouble u0=pp[1];
   
   //************************************
@@ -371,41 +361,6 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
      
       ret=-1; 
   }
-
-  //**********************************************************************
-  //vx too small  
-#ifdef VXFLOOR
-  if(fabs(pp[VX])<1.e-10) 
-  { 
-      struct geometry geomBL;
-      fill_geometry_arb(geom->ix,geom->iy,geom->iz,&geomBL,BLCOORDS);
-      ldouble ucon[4]={0.,pp[VX],pp[VY],pp[VZ]};
-      conv_vels(ucon,ucon,VELPRIM,VEL4,geom->gg,geom->GG);
-
-      #ifdef PRECOMPUTE_MY2OUT
-      trans2_coco_my2out(ucon,ucon,geom->ix, geom->iy, geom->iz);
-      #else
-      trans2_coco(geom->xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
-      #endif
-
-      if(fabs(ucon[1])<VXFLOOR)
-      {
-	ucon[1]=my_sign(ucon[1])*VXFLOOR;
-      }
-      
-      #ifdef PRECOMPUTE_MY2OUT
-      trans2_coco_out2my(ucon,ucon,geomBL->ix, geomBL->iy, geomBL->iz);
-      #else
-      trans2_coco(geomBL->xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
-      #endif
-      
-      conv_vels(ucon,ucon,VEL4,VELPRIM,geom->gg,geom->GG);
-     
-      pp[VX]=ucon[1];
-       
-      ret=-1;
-  }
-#endif
 
   //**********************************************************************
   //rho too small, BH-disk like
@@ -1052,10 +1007,6 @@ u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   int (*solver)(ldouble*,ldouble*,void*,int,int);
   struct geometry *geom
     = (struct geometry *) ggg;
-
-#if (U2P_SOLVER==U2P_SOLVER_WPPLUS5D)
-  solver = & u2p_solver_Wpplus5d;
-#endif
   
 #if (U2P_SOLVER==U2P_SOLVER_WP)
   solver = & u2p_solver_Wp;
@@ -1068,7 +1019,6 @@ u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   return (*solver)(uu,pp,ggg,Etype,verbose);
 } 
  
-
 //**********************************************************************
 //non-relativistic, analytical, solver
 //**********************************************************************
@@ -1175,618 +1125,11 @@ u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 } //u2p_solver_nonrel
 
 
-//*********************************************************************
-//5D solver
-//only energy equation so far, no entropy equation
-//**********************************************************************
-
-struct f_u2p_solver_5d_params
-  {
-    double uu0[NVMHD];
-    struct geometry *geom;
-    int verbose;
-  };
-
-static int
-f_u2p_solver_5d(ldouble *xxx, ldouble* uu0, ldouble* pp0, ldouble *f1, void *params, ldouble* err)
-{
-  struct f_u2p_solver_5d_params *par
-    = (struct f_u2p_solver_5d_params *) params;
-
-  ldouble pp[NV];
-  ldouble uu[NV];
-
-  int i,j;
-
-  for (i=0;i<NV;i++)
-    pp[i]=pp0[i];
- 
-  for (i=0;i<5;i++)
-    {
-      pp[i]=xxx[i];
-    }
-
-  #ifdef MAGNFIELD
-  pp[B1]=uu0[B1]/par->geom->gdet;
-  pp[B2]=uu0[B2]/par->geom->gdet;
-  pp[B3]=uu0[B3]/par->geom->gdet;
-  #endif
-
-  p2u_mhd(pp,uu,par->geom);
-
-  f1[RHO]=(uu[RHO]-par->uu0[RHO]);///par->uu0[RHO];
-  f1[UU]=(uu[UU]-par->uu0[UU]);///par->uu0[UU];
-  f1[VX]=(uu[VX]-par->uu0[VX]);///my_max(fabs(par->uu0[VX]),1.e-12); //hardcoded!!!
-  f1[VY]=(uu[VY]-par->uu0[VY]);///my_max(fabs(par->uu0[VY]),1.e-12);
-  f1[VZ]=(uu[VZ]-par->uu0[VZ]);///my_max(fabs(par->uu0[VZ]),1.e-12);
-
-  *err=1; //so far relative converegence tested only
-
-if (par->verbose>1) 
-    {
-      //print_metric(par->geom->gg);
-      //print_primitives(pp);
-      //print_conserved(uu);
-      printf(">>>\n");
-      printf("%e %e %e %e %e\n",xxx[0],xxx[1],xxx[2],xxx[3],xxx[4]);
-      printf("%e %e %e %e %e\n",f1[0],f1[1],f1[2],f1[3],f1[4]);
-      printf("\n");
-      getch();
-    }
- 
-return 0;
-}
-
-//**********************************************************************
-//energy solver - manual (no gsl)
-//**********************************************************************
-
-int
-u2p_solver_5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
-{
-  int ret,i,j,iv,ib;
-  //prepare geometry
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  ldouble gdet, gdetu, gdetu_inv;
-  gdet=geom->gdet;gdetu=gdet;
-#if (GDETIN==0) //gdet out of derivatives
-  gdetu=1.;
-#endif
-  gdetu_inv = 1. / gdetu;
-
-  const gsl_multiroot_fsolver_type *T;
-  gsl_multiroot_fsolver *s;
-
-  int status,failed;
-  int iter = 0;
-  const int MAXITER=100;
-
-  int N = 5;
-
-  ldouble uu0[NV],pp0[NV],uu00[NV],pp00[NV],ppp[NV];
-  
- for(iv=0;iv<NV;iv++)
-    {
-      uu0[iv]=uu[iv]; //zero state for substepping
-      pp0[iv]=pp[iv]; 
-      uu00[iv]=uu0[iv]; 
-      pp00[iv]=pp0[iv];     
-    }
-
-
-  struct f_u2p_solver_5d_params params;
-  for(i=0;i<NVMHD;i++)
-      params.uu0[i]=uu[i];
-  params.geom=ggg;
-  params.verbose=verbose;
-
- ldouble err, errbest;
- //allocating arrays
- ldouble *tJ, *tiJ,**J,**iJ;
- ldouble *f1,*f2,*f3,*xxx,*xxx0;
- f1=(ldouble*)malloc(N*sizeof(ldouble));
- f2=(ldouble*)malloc(N*sizeof(ldouble));
- f3=(ldouble*)malloc(N*sizeof(ldouble));
- xxx=(ldouble*)malloc(N*sizeof(ldouble));
- xxx0=(ldouble*)malloc(N*sizeof(ldouble));
- J=(ldouble**)malloc(N*sizeof(ldouble*));
- iJ=(ldouble**)malloc(N*sizeof(ldouble*));
- tJ=(ldouble*)malloc(N*N*sizeof(ldouble));
- tiJ=(ldouble*)malloc(N*N*sizeof(ldouble));
- for(ib=0;ib<N;ib++)
-   {
-     J[ib]=(ldouble*)malloc(N*sizeof(ldouble));
-     iJ[ib]=(ldouble*)malloc(N*sizeof(ldouble));
-   }
-
- //initial guess
- for(i=0;i<5;i++)
-   xxx[i]=xxx0[i]=pp[i];
-
-  do //main solver loop
-    {	 
-      failed=0;
-      iter++;
-
-      if(verbose)
-	{
-	printf("##### iter = %d ##### \n",iter);
-	print_Nvector(xxx,N);
-	}
-
-      //values at base state1
-      if(f_u2p_solver_5d(xxx,uu0,pp0,f1,&params,&err)<0) 
-	{
-	  if(verbose>0) printf("base state! \n");
-	  return -1;	  
-	}
-      
-      ldouble del;
-      ldouble EPS=1.e-6;
-
-      for(j=0;j<N;j++)
-	xxx0[j]=xxx[j];
-
-      //calculating approximate Jacobian
-      for(j=0;j<N;j++)
-	{
-	  xxx[j]=xxx0[j];
-	  
-	  //one-way derivatives
-	  ldouble sign=-1.;
-	  if(j==RHO)
-	    {
-	      del=sign*EPS*xxx[j]; 
-	    }
-	  if(j==UU)
-	    {
-	      del=sign*EPS*1.e2*my_max(xxx[j],1.e-6*xxx[RHO]); 
-	    }	    
-	  if(j>=VX && j<=VZ) //velocities 
-	    {
-	      del=sign*EPS*my_sign(xxx[j])*my_max(fabs(xxx[j]),1.e-8); 
-	    }	    
-	   
-	  xxx[j]+=del;
-	      
-	  int fret=f_u2p_solver_5d(xxx,uu0,pp0,f2,&params,&err);
-	    
-	  if(fret<0) 
-	    {
-	      if(verbose>0) printf("u2p 5d - jacobian state!\n");
-	      free_solve_implicit_lab_4dprim(J, iJ, tJ, tiJ, f1, f2, f3, xxx, xxx0,N);
-	      return -1;	  
-	    }
-  
-	  //Jacobian matrix component
-	  for(i=0;i<N;i++)
-	    {
-	      J[i][j]=(f2[i] - f1[i])/(xxx[j]-xxx0[j]);
-	    }
-	}
- 
-      //inversion
-      int ret,ib;
-
-#pragma omp critical //for some reason gsl-based inverse does not work on my mac with openmp
-      {
-	for(i=0;i<N;i++)
-	  for(j=0;j<N;j++)
-	    tJ[i*N+j]=J[i][j];
-	
-	ret=inverse_matrix(tJ,tiJ,N);
-
-	for(i=0;i<N;i++)
-	  for(j=0;j<N;j++)
-	    iJ[i][j]=tiJ[i*N+j];
-      }
-	
-
-
-      if(ret<0)
-	{
-	  failed=1;
-	  if(verbose || 1) 
-	    printf("u2p 5d Jacobian NxN inversion failed\n");//getchar();
-	  break;
-	}
-
-      if(verbose>1 )
-	{
-	  print_NNtensor(J,N);
-	  print_NNtensor(iJ,N);
-	}
-
-      //applying corrections
-      ldouble xiapp=1.;
-      do //check whether energy density positive and the error function returns 0
-	{	    
-	  //original x
-	  for(i=0;i<N;i++)
-	    {
-	      xxx[i]=xxx0[i];		
-	    }
-
-	  //updating x
-	  for(i=0;i<N;i++)
-	    {
-	      for(j=0;j<N;j++)
-		{
-		  xxx[i]-=xiapp*iJ[i][j]*f1[j];
-		}
-	    }
-
-
-	  if(verbose)
-	    {
-	      printf("\nsub> trying with xi=%e\n",xiapp);
-	      print_Nvector(xxx,N);
-	    }
-	  
-	  int okcheck=1;
-
-	  //minimal energy density that you can go down to in one step
-	  ldouble edenmin=xxx0[UU]/1e1;
-	  //maximal energy density that you can go up to in one step
-	  ldouble edenmax=xxx0[UU]*1e1;
-	  //check if energy density positive 
-	  if(xxx[UU]<edenmin || xxx[UU]>edenmax) 
-	    {
-	      okcheck=0;
-	       if(verbose>0) 
-		 {
-		   printf("u2p 5d change in energy density too large\n");
-		 }
-	     }
-
-	  ldouble rhomin=xxx0[RHO]/1e1;
-	  ldouble rhomax=xxx0[RHO]*1e1;
-	  if(xxx[RHO]<rhomin || xxx[RHO]>rhomax) 
-	    {
-	      okcheck=0;
-	       if(verbose>0) 
-		 {
-		   printf("u2p 5d change in rho too large\n");
-		 }
-	     }
-
-	   if(okcheck==1) break;
-	  
-	   //if not - decrease the applied fraction
-	   xiapp/=10.; 
-
-	   if(xiapp<1.e-6) 
-	     {
-	       if(verbose) printf("u2p 5d damped unsuccesfully in implicit_4dprim\n");
-	       failed=1;
-	       break;
-	     }
-	}
-      while(1); 
-
-      //      if(verbose) getch();
-
-      if(failed==0)
-	{
-	  //criterion of convergence on relative change of quantities
-	  for(i=0;i<N;i++)
-	    {
-	      f3[i]=xxx[i]-xxx0[i];
-	      f3[i]=fabs(f3[i]/xxx0[i]);
-	    }
-
-	  if(verbose) {
-	    printf("rel. change:  \n");print_Nvector(f3,N);
-	  }
-
-	  //regular solver
-	  int convrelcheck=1;
-	  for (ib=0;ib<N;ib++)
-	    if(f3[ib]>1.e-6) 
-	      {
-		convrelcheck=0;
-		break;
-	      }
-	  if(convrelcheck) 
-	    {
-	      if(verbose) printf("\n === success (rel.change) ===\n");
-	      break;
-	    }     
-	}
-     
-      if(iter>MAXITER || failed==1)
-	break;
-    }
-  while(1); //main solver loop
-
-
-  if(iter>MAXITER || failed==1)
-    {
-      if(verbose)
-	{
-	  printf("u2p 5d iter (%d) or failed in solve_implicit_lab_4dprim() for frdt=%f (%e) - free memory!\n",iter,dt,errbest);	  
-	}
-      free_solve_implicit_lab_4dprim(J, iJ, tJ, tiJ, f1, f2, f3, xxx, xxx0,N);
-      return -1;       
-    }
-
-  //success!
-
-  for (i=0;i<5;i++)
-    {
-      pp[i]=xxx[i];
-    }
-
-  free_solve_implicit_lab_4dprim(J, iJ, tJ, tiJ, f1, f2, f3, xxx, xxx0,N);
-
-  //postprocessing:
-
-  //pure entropy evolution - updated only in the end of RK2
-  ldouble utcon[4];
-  utcon[0]=0.;
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
-  conv_vels(utcon,utcon,VELPRIM,VEL4,geom->gg,geom->GG);
-
-  pp[ENTR]=uu[ENTR] * gdetu_inv / utcon[0];
-
-
-#ifdef MAGNFIELD
-  //magnetic conserved=primitives
-  pp[B1]=uu[B1] * gdetu_inv;
-  pp[B2]=uu[B2] * gdetu_inv;
-  pp[B3]=uu[B3] * gdetu_inv;
-#endif
-
-#ifdef EVOLVEELECTRONS
-  ldouble Se=uu[ENTRE] * gdetu_inv /utcon[0];
-  pp[ENTRE]=Se;
-  ldouble Si=uu[ENTRI] * gdetu_inv /utcon[0];
-  pp[ENTRI]=Si;
-#endif
-
-
-#ifdef RELELECTRONS
-  //int ib;
-  for(ib=0;ib<NRELBIN;ib++)
-    pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv / utcon[0];
-#endif
-
-
-  return 0;
-}
-
-//**********************************************************************
-//5D gsl solver
-//only energy equation so far, no entropy equation
-//**********************************************************************
-
-struct f_u2p_solver_5d_params_gsl
-  {
-    double uu0[NVMHD];
-    struct geometry *geom;
-    int verbose;
-  };
-
-
-static int
-f_u2p_solver_5d_gsl(const gsl_vector * x, void *params, 
-		      gsl_vector * f)
-{
-  struct f_u2p_solver_5d_params *par
-    = (struct f_u2p_solver_5d_params *) params;
-
-  ldouble pp[NVMHD];
-  ldouble uu[NVMHD];
-
-  int i,j;
-
-  for (i=0;i<5;i++)
-    {
-      pp[i]=gsl_vector_get(x,i);
-    }
-  #ifdef MAGNFIELD
-  pp[B1]=gsl_vector_get(x,5);
-  pp[B2]=gsl_vector_get(x,6);
-  pp[B3]=gsl_vector_get(x,7);
-  #endif
-
-  p2u_mhd(pp,uu,par->geom);
-
-  
-  for (i=0;i<5;i++)
-    {
-      gsl_vector_set (f, i, (uu[i]-par->uu0[i])/par->uu0[i]);
-    }
-
-#ifdef MAGNFIELD
-  gsl_vector_set (f, 5, (uu[B1]-par->uu0[B1])/my_max(fabs(par->uu0[B1]),1.e-8*par->uu0[RHO]));
-  gsl_vector_set (f, 6, (uu[B2]-par->uu0[B2])/my_max(fabs(par->uu0[B2]),1.e-8*par->uu0[RHO]));
-  gsl_vector_set (f, 7, (uu[B3]-par->uu0[B3])/my_max(fabs(par->uu0[B3]),1.e-8*par->uu0[RHO]));
-#endif
-
-if (par->verbose) 
-    {
-      //print_metric(par->geom->gg);
-      //print_primitives(pp);
-      //print_conserved(uu);
-      printf(">>>\n");
-      printf("%e %e %e %e %e %e %e %e\n",
-	     gsl_vector_get(x,0),
-	     gsl_vector_get(x,1),
-	     gsl_vector_get(x,2),
-	     gsl_vector_get(x,3),
-	     gsl_vector_get(x,4),
-	     gsl_vector_get(x,5),
-	     gsl_vector_get(x,6),
-	     gsl_vector_get(x,7));
-      printf("%e %e %e %e %e %e %e %e\n",
-	     gsl_vector_get(f,0),
-	     gsl_vector_get(f,1),
-	     gsl_vector_get(f,2),
-	     gsl_vector_get(f,3),
-	     gsl_vector_get(f,4),
-	     gsl_vector_get(f,5),
-	     gsl_vector_get(f,6),
-	     gsl_vector_get(f,7));
-      printf("\n");
-      getch();
-    }
-
-
-  return GSL_SUCCESS;
-}
-
-int
-u2p_solver_5d_gsl(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
-{
-  int ret,i,j;
-  //prepare geometry
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  ldouble gdet, gdetu, gdetu_inv;
-  gdet=geom->gdet;gdetu=gdet;
-#if (GDETIN==0) //gdet out of derivatives
-  gdetu=1.;
-#endif
-  gdetu_inv = 1. / gdetu;
-
-  const gsl_multiroot_fsolver_type *T;
-  gsl_multiroot_fsolver *s;
-
-  int status;
-  int iter = 0;
-
-  int n = 5;
-  #ifdef MAGNFIELD
-  n+=3;
-  #endif
-
-  struct f_u2p_solver_5d_params params;
-  for(i=0;i<NVMHD;i++)
-      params.uu0[i]=uu[i];
-  params.geom=ggg;
-  params.verbose=verbose;
-
-  gsl_multiroot_function f = {&f_u2p_solver_5d_gsl, n, &params};
-
-  double x_init[2] = {-10.0, -5.0};
-  gsl_vector *x = gsl_vector_alloc (n);
-
-  for(i=0;i<5;i++)
-    gsl_vector_set (x, i, pp[i]);
-#ifdef MAGNFIELD
-  gsl_vector_set (x, 5, pp[B1]);
-  gsl_vector_set (x, 6, pp[B2]);
-  gsl_vector_set (x, 7, pp[B3]);
-#endif
-
-  T = gsl_multiroot_fsolver_hybrids;
-  s = gsl_multiroot_fsolver_alloc (T, n);
-  gsl_multiroot_fsolver_set (s, &f, x);
-
-  do
-    {
-      iter++;
-      status = gsl_multiroot_fsolver_iterate (s);
-
-      if (status)   /* check if solver is stuck */
-        break;
-
-      status = 
-        gsl_multiroot_test_delta (s->dx, s->x, 0., 1e-7);
-    }
-  while (status == GSL_CONTINUE && iter < 100);
-
-  if (verbose) printf ("status = %s\n",gsl_strerror (status));
-
-
-  if(status==GSL_SUCCESS)
-    {
-      for (i=0;i<5;i++)
-	  pp[i]=gsl_vector_get(s->x,i);
-      #ifdef MAGNFIELD
-      pp[B1]=gsl_vector_get(s->x,5);
-      pp[B2]=gsl_vector_get(s->x,6);
-      pp[B3]=gsl_vector_get(s->x,7);
-      #endif
-
-    }
-
-  gsl_multiroot_fsolver_free (s);
-  gsl_vector_free (x);
-
-  //postprocessing:
-
-  //pure entropy evolution - updated only in the end of RK2
-  ldouble utcon[4];
-  utcon[0]=0.;
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
-  conv_vels(utcon,utcon,VELPRIM,VEL4,geom->gg,geom->GG);
-
-  pp[ENTR]=uu[ENTR] * gdetu_inv / utcon[0];
-
-#ifdef MAGNFIELD
-  //magnetic conserved=primitives
-  pp[B1]=uu[B1] * gdetu_inv;
-  pp[B2]=uu[B2] * gdetu_inv;
-  pp[B3]=uu[B3] * gdetu_inv;
-#endif
-
-#ifdef EVOLVEELECTRONS
-  ldouble Se=uu[ENTRE] * gdetu_inv /utcon[0];
-  pp[ENTRE]=Se;
-  ldouble Si=uu[ENTRI] * gdetu_inv /utcon[0];
-  pp[ENTRI]=Si;
-#endif
-
-
-#ifdef RELELECTRONS
-  int ib;
-  for(ib=0;ib<NRELBIN;ib++)
-    pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv /utcon[0];
-#endif
-
-  return 0;
-}
-
-//**********************************************************************
-//Wp + 5D solver
-//uses u2p_solver_Wp for initial guess
-//**********************************************************************
-
-int
-u2p_solver_Wpplus5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
-{
-  int ret;
-  //prepare geometry
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  ret=u2p_solver_Wp(uu,pp,ggg,Etype,verbose);
-  if(ret<0 && verbose>0)
-    {
-      //printf("%d %d %d > solver_Wp failed in solver_Wpplus5d\n");
-      return ret;
-    }
-
-   return u2p_solver_5d(uu,pp,ggg,Etype,verbose);
-}
-
-
 //**********************************************************************
 //Newton-Raphson solver 
 //upgraded - uses Wp instead of W
 //Etype == 0 -> hot inversion (uses D,Ttt,Tti)
 //Etype == 1 -> entropy inversion (uses D,S,Tti)
-//Etype == 2 -> hotmax inversion (uses D,Tti,u over rho max ratio)
-//Etype == 3 -> cold inversion (uses D,Tti,u over rho min ratio)
 //**********************************************************************
 
 int
@@ -2242,8 +1585,6 @@ u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 //iterates W, not Wp
 //Etype == 0 -> hot inversion (uses D,Ttt,Tti)
 //Etype == 1 -> entropy inversion (uses D,S,Tti)
-//Etype == 2 -> hotmax inversion (uses D,Tti,u over rho max ratio)
-//Etype == 3 -> cold inversion (uses D,Tti,u over rho min ratio)
 //**********************************************************************
 
 int
@@ -2424,7 +1765,6 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   {
     f0=dfdW=0.;
     
- 
     //if(Etype!=U2P_HOT) //entropy-like solvers require this additional check
     //now invoked for all solvers:
     (*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
@@ -2526,7 +1866,11 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
     return -102;
   }
   
-  if(!isfinite(W) || !isfinite(W)) {if(verbose) printf("nan/inf W in u2p_solver with Etype: %d\n",Etype); return -103;}
+  if(!isfinite(W) || !isfinite(W))
+  {
+    if(verbose) printf("nan/inf W in u2p_solver with Etype: %d\n",Etype);
+    return -103;
+  }
   
   if(verbose>1)
   {
@@ -2552,9 +1896,7 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   utcon[3]=gamma/(W+Bsq)*(Qtcon[3]+QdotB*Bcon[3]/W);
 
   if(verbose>1)
-    printf("end2: %e %e %e %e %e %e\n",W,D,pgamma,gamma2,rho,uint);
-
-      
+    printf("end2: %e %e %e %e %e %e\n",W,D,pgamma,gamma2,rho,uint);  
   if(!isfinite(utcon[1]))
   {
     return -120;
@@ -2581,7 +1923,8 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   
   if(rho<0.)
   {
-    if(verbose>0) printf("neg rho in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);//getchar();
+    if(verbose>0) printf("neg rho in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);
+    //getchar();
     return -105;
   }
   
@@ -2822,54 +2165,3 @@ test_inversion_nonrel()
   return 0;
 
 }
-
-int
-test_inversion_5d()
-{
-  ldouble pp[NV],pp2[NV],uu[NV],ucon[4]={0.,0.,0.,0.};
-  struct geometry geom,geomBL;
-  int iv;
-
-  fill_geometry(10,NY/2,0,&geom);
-
-  print_metric(geom.gg);
-
-  ucon[1]=0.1;
-  ucon[2]=0.01;
-  ucon[3]=0.001;
-  conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
-
-  pp[RHO]=1.;
-  pp[UU]=1.e-5;
-  pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],geom.ix,geom.iy,geom.iz);
-  pp[VX]=ucon[1];
-  pp[VY]=ucon[2];
-  pp[VZ]=ucon[3];
-
-#ifdef MAGNFIELD
-  pp[B1]=pp[B2]=pp[B3]=0.;
-  pp[B1]=0.e-6;
-  pp[B2]=0.e-4;
-  pp[B3]=0.e-6;
-#endif
-
-#ifdef RADIATION
-  pp[EE]=pp[UU];
-  pp[FX]=pp[FY]=pp[FZ]=0.;
-#endif
-
-  //print_primitives(pp);
-  p2u(pp,uu,&geom);
-  //print_conserved(uu);
-
-  pp[VX]*=1.1;
-  pp[RHO]*=1.2;
-  pp[UU]*=3.2;
-  
-  u2p_solver_5d(uu,pp,&geom,-1,1); 
-  print_primitives(pp);
-
-  return 0;
-
-}
-

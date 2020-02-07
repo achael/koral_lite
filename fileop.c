@@ -2,7 +2,6 @@
  \brief File operations
  */
 
-
 #include "ko.h"
 
 /*************************************************/
@@ -3267,9 +3266,9 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
        fprintf(fout1,"%.5e %.5e ",x1,x2); //(3-4)
        fprintf(fout1,"%.5e %.5e ",r,th); //(5-6)
        fprintf(fout1,"%.5e %.5e %.5e ",rhoavg,uintavg,pgasavg); //(7-9)
-       fprintf(fout1,"%.5e %.5e %.5e %.5e ",uconavg[0],uconavg[1],uconavg[2],uconavg[3]); //(7-9)
-       fprintf(fout1,"%.5e %.5e %.5e ",Bavg[0],Bavg[1],Bavg[2]); //(7-9)
-       fprintf(fout1,"%.5e %.5e %.5e %.5e ",bsqavg,betaavg,betainvavg,sigmaavg); //(7-9)
+       fprintf(fout1,"%.5e %.5e %.5e %.5e ",uconavg[0],uconavg[1],uconavg[2],uconavg[3]); //(10-13)
+       fprintf(fout1,"%.5e %.5e %.5e ",Bavg[0],Bavg[1],Bavg[2]); //(14-16)
+       fprintf(fout1,"%.5e %.5e %.5e %.5e ",bsqavg,betaavg,betainvavg,sigmaavg); //(17-20)
        fprintf(fout1,"\n");
 
      } // iy loop

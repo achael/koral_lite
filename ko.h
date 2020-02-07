@@ -992,18 +992,6 @@ int test_maginv();
 ///////////////////////////////////////////////////////////////
 // u2p.c //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-//static FTYPE dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq,FTYPE gamma);
-//static FTYPE compute_idwmrho0dp(FTYPE wmrho0,FTYPE gamma);
-//static FTYPE compute_idrho0dp(FTYPE wmrho0);
-//static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble pgamma);
-//static FTYPE pressure_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-//static FTYPE compute_inside_entropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-//static FTYPE compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-//static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
-//static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
-//static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
-//static int f_u2p_solver_5d(ldouble *xxx, ldouble* uu0, ldouble* pp0, ldouble *f1, void *params, ldouble* err);
-//static int f_u2p_solver_5d_gsl(const gsl_vector * x, void *params, gsl_vector * f);
 
 int calc_primitives(int ix,int iy,int iz,int type,int setflags);
 int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
@@ -1011,9 +999,6 @@ int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
 
 int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_5d_gsl(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_Wpplus5d(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
@@ -1029,10 +1014,6 @@ int test_inversion_5d();
 ///////////////////////////////////////////////////////////////
 // u2prad.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-//static int get_m1closure_gammarel2_cold(int verbose, void *ggg, FTYPE *Avcon,FTYPE *Avcov,FTYPE *gammarel2return, FTYPE *deltareturn, FTYPE *numeratorreturn, FTYPE *divisorreturn, FTYPE *Erfreturn, FTYPE *urfconrel);
-//static int get_m1closure_gammarel2(int verbose,void *ggg, ldouble *Avcon, ldouble *Avcov, ldouble *gammarel2return,ldouble *deltareturn, ldouble *numeratorreturn, ldouble *divisorreturn);
-//static int get_m1closure_Erf(void *ggg, ldouble *Avcon, ldouble gammarel2, ldouble *Erfreturn);
-//static int get_m1closure_urfconrel(int verbose, void *ggg, ldouble *pp, ldouble *Avcon, ldouble *Avcov, ldouble gammarel2, ldouble delta, ldouble numerator,ldouble divisor, ldouble *Erfreturn, ldouble *urfconrel, int *corflag);
 
 int u2p_rad(ldouble *uu, ldouble *pp, void *ggg, int *corrected);
 int u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected);

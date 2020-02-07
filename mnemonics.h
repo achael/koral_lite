@@ -51,26 +51,26 @@
 #define FZ0 FZ
 #define NF0 NF
 
-//radiative closures -- no longer used except M1
+//radiative closures
 #define M1CLOSURE 0
-#define EDDCLOSURE 1
-#define VETCLOSURE 2
-#define M1ORTOCLOSURE 3
-#define MINERBOCLOSURE 4
+//#define EDDCLOSURE 1 // no longer used
+//#define VETCLOSURE 2
+//#define M1ORTOCLOSURE 3
+//#define MINERBOCLOSURE 4
 
 //u2p inversion types
 #define U2P_HOT 0
 #define U2P_ENTROPY 1
-#define U2P_HOTMAX 2
-#define U2P_COLD 3
-#define U2P_SLOW 4
+//#define U2P_HOTMAX 2 // no longer used
+//#define U2P_COLD 3
+//#define U2P_SLOW 4
 
 #define U2P_EQS_NOBLE 0
 #define U2P_EQS_JON 1
 
 #define U2P_SOLVER_WP 0
 #define U2P_SOLVER_W 1
-#define U2P_SOLVER_WPPLUS5D 2
+//#define U2P_SOLVER_WPPLUS5D 2 // no longer used
 
 //coordinates/metric
 #define BLCOORDS 1

@@ -139,7 +139,7 @@
 //136 CONTACTELECTRONTEST - Contact discontinuity electron heating test
 //137 KATOTORUS_TILTED - radiative torus initiated like in Kato+2004 with a tilt from BH spin axis
 //138 JETCOORDS -- test jet coordinate system
-//139 JETCOORDS -- MAD code comparison
+//139 MADCC -- MAD code comparison
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!

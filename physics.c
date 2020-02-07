@@ -40,7 +40,6 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
   state->pgas = pgas;
 
   //ANDREW this is in different units than in pp[ENTR]!
-  //Sgas = calc_S2fromrhoT(rho, Tgas, GAS);
   Sgas = kB_over_mugas_mp*calc_Sfromu(rho, uint, geom->ix,geom->iy,geom->iz);
 
   Tgas = calc_PEQ_Teifrompp(pp,&Te,&Ti,geom->ix,geom->iy,geom->iz);
@@ -1468,7 +1467,6 @@ calc_S2fromrhou(ldouble rho, ldouble uint, int type)
   ldouble S2;
   
   #ifdef NOLOGINS2
-  //S2=n*pow(p,indexn)/pow(n,indexn+1.0);
   S2 = n*uint / pow(n,gamma);
   #else
   S2 = n*K_BOLTZ*log(pow(pre,indexn)/pow(n,indexn+1.)); 

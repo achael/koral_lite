@@ -269,11 +269,6 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     if(u2con[0]<0)
       u2con[0] = fabs(u2con[0]);
 
-    //ANDREW's version
-    //u2con[1]=(u1[1]-alpgam*GG[0][1])/u2con[0];
-    //u2con[2]=(u1[2]-alpgam*GG[0][2])/u2con[0];
-    //u2con[3]=(u1[3]-alpgam*GG[0][3])/u2con[0];
-
     //Identical to Olek's
     u2con[1]=u1[1]/u2con[0] + GG[0][1]/GG[0][0];
     u2con[2]=u1[2]/u2con[0] + GG[0][2]/GG[0][0];

@@ -122,8 +122,8 @@ main(int argc, char **argv)
   //test_gammagas(); exit(1);
   //test_epsilon(); exit(1);
   //test_metric(); exit(1);
+  //test_inversion(); exit(1);
   //test_inversion_nonrel(); exit(1);
-  //test_inversion_5d(); exit(1);
   //test_solve_implicit_lab_file(); exit(1);  
   //test_solve_implicit_lab(); exit(1);
   //test_Gi();  exit(-1);
