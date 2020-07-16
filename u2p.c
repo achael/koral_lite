@@ -194,6 +194,8 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     pp[0]=RHOFLOOR; //used when not fixing up
     uu[0]=RHOFLOOR*gdetu;
     ret=-2;    //to request fixup
+               //ANDREW -- but ret=-1 if energy inversion failes but entropy inversion does not!
+               //ANDREW -- do we always want a fixup if we have negative uu[0] ? 
     u2pret=-1; // indicates that inversion is needed
     
 #ifndef SWAPPAPC
@@ -261,7 +263,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   else
     fixups[0]=0;
   
-
   //************************************
   //radiation part
   //************************************
@@ -311,12 +312,10 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //************************************
   
   //rad fixups only for critical failure in implicit
-#if (DORADFIXUPS==1)  // this is the default (see choices.h)
   if(radcor>0)     
     fixups[1]=1;
   else
     fixups[1]=0;
-#endif
     
   if(hdcorr>0) corrected[0]=1;
   if(radcor>0) corrected[1]=1;
@@ -363,7 +362,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   }
 
   //**********************************************************************
-  //rho too small, BH-disk like
+  //rho too small, use floor scaling as r^-3/2
 #ifdef RHOFLOOR_BH
   ldouble xxBL[4];
   #ifdef PRECOMPUTE_MY2OUT
@@ -587,12 +586,9 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pp[ENTRI]=Sinew;
 #endif  //EVOLVEELECTRONS
 
-      
       ret=-1;      
-    } //end of B2 too large
-
-#endif
-
+  } //if(magpre>B2RHORATIOMAX*pp[RHO]) 
+#endif //MAGNFIELD
 
   //**********************************************************************
   //too fast
@@ -648,16 +644,19 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   }
 
   // relative floor
-  if(Teloc<TEMPEMINIMALFRACTION*Tgas)
-  {
-    Teloc=TEMPEMINIMALFRACTION*Tgas;
+  ldouble Teminimal=TEMPEMINIMALFRACTION*Tgas;
+  if(Teloc<Teminimal)
+  {  
+    Teloc=Teminimal;
   }
-
+  
   // ceiling
   ldouble Temaximal=TEMPEMAXIMALFRACTION*Tgas;
   if(Teloc>Temaximal)
+  {
     Teloc=Temaximal;
-
+  }
+  
   //Ion Temperature
   ldouble Tiloc,Tiloc0;
   Tiloc=calc_TfromSerho(pp[ENTRI],pp[RHO],IONS,geom->ix,geom->iy,geom->iz);
@@ -665,34 +664,35 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   
   // absolute floor
   if(Tiloc<TEMPIMINIMAL)
-    {
-      Tiloc=TEMPIMINIMAL;
-    }
+  {
+    Tiloc=TEMPIMINIMAL;
+  }
  
   // relative floor
-  if(Tiloc<TEMPIMINIMALFRACTION*Tgas)
-    {
-      Tiloc=TEMPIMINIMALFRACTION*Tgas;
-    }
+  ldouble Timinimal=TEMPIMINIMALFRACTION*Tgas;
+  if(Tiloc<Timinimal)
+  {
+      Tiloc=Timinimal;
+  }
 
   // celing 
   ldouble Timaximal=TEMPIMAXIMALFRACTION*Tgas;
   if(Tiloc>Timaximal)
+  {
     Tiloc=Timaximal;
- 
+  }
+  
   if(Teloc!=Teloc0) //update temperature of electrons
-    {
-      ldouble neth=calc_thermal_ne(pp);
-      ldouble rhoeth=MU_E*M_PROTON*neth;
-      pp[ENTRE]=calc_SefromrhoT(rhoeth,Teloc,ELECTRONS);
-      ret=-1;
-    }
+  {  
+    pp[ENTRE]=calc_SefromrhoT(rhoeth,Teloc,ELECTRONS);
+    ret=-1;
+  }
 
   if(Tiloc!=Tiloc0) //update temperature of ioms
-    { 
-      pp[ENTRI]=calc_SefromrhoT(pp[RHO],Tiloc,IONS);
-      ret=-1;
-    }
+  { 
+    pp[ENTRI]=calc_SefromrhoT(pp[RHO],Tiloc,IONS);
+    ret=-1;
+  }
       
 #ifdef RELELECTRONS
   int ie;
@@ -732,29 +732,11 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pp[NEREL(ie)] *= (MAX_RELEL_FRAC_U/relfracu);
     }
   }
-
-  /*
-  //Not too much rel electron pressure
-  ldouble pgamma=GAMMA;
-  #ifdef CONSISTENTGAMMA
-  pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
-  #endif
-  p_relel = calc_relel_p(pp);
-  p_tot = pp[UU] * (pgamma - 1.);
-  relfracp=p_relel/p_tot;
-  if (relfracp > MAX_RELEL_FRAC_P) 
-  {
-    for (ie=0; ie<NRELBIN; ie++)
-    {
-      pp[NEREL(ie)] *= (MAX_RELEL_FRAC_P/relfracp);
-    }
-  } 
-  */
   
 #endif //RELELECTRONS
 #endif //EVOLVEELECTRONS
 
-  //ANDREW TODO do we want this? Is this inconsistent with keeping entropy as a backup until end of time step? 
+  //ANDREW TODO do we want this? Is this inconsistent with keeping entropy as a backup until the very end of time step? 
   //updates entropy after floor corrections
   if(ret<0)
     pp[5]=calc_Sfromu(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);

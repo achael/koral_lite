@@ -266,12 +266,12 @@
 #define NCCORRECTPOLAR 2
 #endif
 
-#ifndef DOFIXUPS
-#define DOFIXUPS 0
+#ifndef ALLOWENTROPYU2P
+#define ALLOWENTROPYU2P 1
 #endif
 
-#ifndef DORADFIXUPS
-#define DORADFIXUPS 1
+#ifndef DOFIXUPS
+#define DOFIXUPS 1
 #endif
 
 #ifndef DOU2PRADFIXUPS
@@ -286,13 +286,6 @@
 #define DORADIMPFIXUPS 0
 #endif
 
-#ifndef ALLOWENTROPYU2P
-#define ALLOWENTROPYU2P 1
-#endif
-
-#ifndef ALLOWCOLDU2P
-#define ALLOWCOLDU2P 0
-#endif
 
 /****** Floors *******/
 

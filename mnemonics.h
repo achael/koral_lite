@@ -53,8 +53,8 @@
 
 //radiative closures
 #define M1CLOSURE 0
-//#define EDDCLOSURE 1 // no longer used
-//#define VETCLOSURE 2
+#define EDDCLOSURE 1 // no longer used
+#define VETCLOSURE 2
 //#define M1ORTOCLOSURE 3
 //#define MINERBOCLOSURE 4
 

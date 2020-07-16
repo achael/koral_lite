@@ -4965,14 +4965,14 @@ cell_fixup(int type)
       //do not correct if overwritten later on
       if(is_cell_corrected_polaraxis(ix,iy,iz)) continue;
 
-
       if(((get_cflag(HDFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PMHD) ||
 	  (get_cflag(RADFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PRAD) ||
 	  (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
 	)
 	{
-	  //ANDREW - I think maybe this should be here, to set the flag back to its default? 
-	  //this should not be here, should it?
+	  
+	  //this will flag cells as not needing fixups which may  be counted as valid neighbor cells later!
+	  //ANDREW TODO ok??
 	  /*
 	  if(type==FIXUP_U2PMHD) set_cflag(HDFIXUPFLAG,ix,iy,iz,0); //try only once
 	  if(type==FIXUP_U2PRAD) set_cflag(RADFIXUPFLAG,ix,iy,iz,0); //try only once
@@ -4985,7 +4985,7 @@ cell_fixup(int type)
 
 	  ldouble ppn[6][NV],pp[NV],uu[NV];
 
-	  //should care about global but at the stage where it is called knowns not about the boundaries
+	  //should care about global but at the stage where it is called tile bcs not set
 	  //so fixups idividually in tiles but later exchanged 
 
 	  in=0; //number of successful neighbors
@@ -5414,7 +5414,6 @@ correct_polaraxis()
 			  pp[VX]=get_u(p,VX,ix,iysrc,iz);
 			  pp[VZ]=get_u(p,VZ,ix,iysrc,iz);
 			  pp[VY]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,VY,ix,iysrc,iz);
-
 			  
 #ifdef MAGNFIELD
 #ifdef CORRECTMAGNFIELD
@@ -5424,7 +5423,6 @@ correct_polaraxis()
 			  pp[B2]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,B2,ix,iysrc,iz);
 #endif
 #endif
-
 
 #ifdef RADIATION
 			  //rad density
@@ -5638,7 +5636,6 @@ correct_polaraxis()
   return 0; 
 }
 
-
 //**********************************************************************
 //treats the most polar cells is a special way, correcting them, not evolving them
 //**********************************************************************
@@ -5678,7 +5675,6 @@ correct_polaraxis_3d()
 		  if(TJ==0)
 #endif
 		    {
-
 
 		      iysrc=nc;
 		      for(ic=0;ic<nc;ic++)
@@ -5764,7 +5760,6 @@ correct_polaraxis_3d()
 			  //rad density
 			  pp[EE]=axis1_primplus[EE][gix];
 
-
 #ifdef EVOLVEPHOTONNUMBER
 			  //no. of photons
 			  pp[NF]=axis1_primplus[NF][gix];
@@ -5806,7 +5801,6 @@ correct_polaraxis_3d()
 #endif //RADIATION
 #endif //POLARAXISAVGIN3D
 
-
 			  //update gamma in the corrected cell
 #ifdef CONSISTENTGAMMA
 			  ldouble newgamma=calc_gammagas(pp,ix,iy,iz);
@@ -5838,7 +5832,6 @@ correct_polaraxis_3d()
 
 			  fill_geometry(ix,iy,iz,&geom);
 			  fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
-
 			  
 			  PLOOP(iv) pp[iv]=get_u(p,iv,ix,iysrc,iz);
 	      	 
@@ -5962,7 +5955,6 @@ correct_polaraxis_3d()
 	     
 	    }
 	}
-
 
   return 0; 
 }
