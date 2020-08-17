@@ -146,7 +146,7 @@
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 138
+#define PROBLEM 87
 
 
 #if(PROBLEM==139)
@@ -873,6 +873,8 @@
 
 #define PR_DEFINE "PROBLEMS/INFDISK/define.h"
 #define PR_BC "PROBLEMS/INFDISK/bc.c"
+#define PR_BC_SPECIAL "PROBLEMS/INFDISK/bc_special.c"
+#define PR_BC_SPECIAL_LOOP "PROBLEMS/INFDISK/loop_alloc_special.c"
 #define PR_INIT "PROBLEMS/INFDISK/init.c"
 //#define PR_KAPPA "PROBLEMS/INFDISK/kappa.c"
 #define PR_KAPPAES "PROBLEMS/INFDISK/kappaes.c"

@@ -304,6 +304,27 @@ am_i_sane()
     exit(-1);
   }
 
+#ifdef CORRECT_POLARAXIS
+  if (TNY == 1)
+  {
+    printf("\nERROR!! Using CORRECT_POLARAXIS on a 2D problem in r-phi. No evolution will occur! Switch off polar axis correction and recompile!\n\n");
+    exit(-1);
+  }
+#endif
+
+#ifdef TRANSMITTING_YBC
+if (TNZ % 2 != 0)
+{
+  printf("\nERROR!! Using transmitting y boundary. TNZ = %d must be divisible by 2!\n\n", TNZ);
+  exit(-1);
+}
+if (NTZ % 2 != 0)
+{
+  printf("\nERROR!! Using transmitting y boundary. NTZ = %d must be divisible by 2!\n\n", NTZ);
+  exit(-1);
+}
+#endif  
+
 #ifdef PRECOMPUTE_MY2OUT
   if (PROCID==0){
   printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");

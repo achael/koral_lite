@@ -629,6 +629,11 @@ op_explicit(ldouble t, ldouble dtin)
   int ix,iy,iz,iv,ii;
   ldouble dt;
   
+  int perform_sweep = 1; //Brandon - Added for special conditions where a sweep should not be performed under SPECIAL_BC_CHECK
+  #ifdef SPECIAL_BC_CHECK
+  int giix,giiy,giiz;
+  #endif
+
   // Save conserveds and primitives over domain + ghost (no corners)
   copyi_u(1.,u,upreexplicit); //conserved quantities before explicit update
   copyi_u(1.,p,ppreexplicit); //primitive quantities before explicit update
@@ -650,10 +655,24 @@ op_explicit(ldouble t, ldouble dtin)
       iy=loop_1[ii][1];
       iz=loop_1[ii][2];
 
+      #ifdef SPECIAL_BC_CHECK
+      giix = ix + TOI;
+      giiy = iy + TOJ;
+      giiz = iz + TOK;
+      #endif
+
       #ifndef MPI4CORNERS
       if(if_outsidegc(ix,iy,iz)==1) continue; //avoid corners
       #endif
      
+      #ifdef SPECIAL_BC_CHECK
+      #include PR_BC_SPECIAL_LOOP
+      if(ret_val == 4) 
+      {
+        continue; //Exclude 'corners' in stream region
+      }
+      #endif
+
       //create arrays for interpolating conserved quantities
       struct geometry geom;
       //ldouble x0[3],x0l[3],x0r[3],xm1[3],xp1[3];
@@ -680,15 +699,47 @@ op_explicit(ldouble t, ldouble dtin)
       // x 'sweep'
       //**********************************************************************
 
+      perform_sweep = 1;
+
 #ifdef MPI4CORNERS
-      if(NX>1 && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1) //needed to calculate face fluxes for flux-CT divB enforcement
+      if(NX>1 && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1 && perform_sweep == 1) //needed to calculate face fluxes for flux-CT divB enforcement
 #else
-      if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ)
+      if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ && perform_sweep == 1)
 #endif
       {
 		dol=dor=1;
 		if(ix<0) dol=0;
 		if(ix>=NX) dor=0;
+
+                #ifdef SPECIAL_BC_CHECK //Don't do l/r fluxes when at GC - Brandon
+                #ifndef SEARCH_STREAM_BOUNDARY
+                if(TNY>1 && TNZ==1)
+                {
+                  if(giiy >= STREAM_IYT && giiy <= STREAM_IYB)
+                  {
+                    if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3)) dor=0;
+                  }
+                }
+                else if(TNY==1 && TNZ>1)
+                {
+                  if(giiz >= STREAM_IZT && giiz <= STREAM_IZB)
+                  {
+                    if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3)) dor=0;
+                  }
+                }
+                else if(TNY>1 && TNZ>1)
+                {
+                  #ifndef STREAM_RING
+                  if(giiy >= STREAM_IYT && giiy <= STREAM_IYB && giiz >= STREAM_IZT && giiz <= STREAM_IZB)
+                  #else
+                  if(giiy >= STREAM_IYT && giiy <= STREAM_IYB)
+                  #endif
+                  {
+                    if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3)) dor=0;
+                  }
+                }
+                #endif
+                #endif
 
                 // is_cell_active is currently always 1
 		// skip flux calculation if not needed
@@ -792,10 +843,52 @@ op_explicit(ldouble t, ldouble dtin)
       //y 'sweep'
       //**********************************************************************
   
+      perform_sweep = 1;
+#ifdef SPECIAL_BC_CHECK
+      //if(giix > STREAM_IX)
+      //if(giix > STREAM_IX && giix <= (STREAM_IX+1))
+      if(giix > STREAM_IX && giix <= (STREAM_IX+3))
+      {
 #ifdef MPI4CORNERS
-      if(NY>1 && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1)
+        if(TNY>1 && TNZ==1)
+        {
+          if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+        }
+        else if(TNY>1 && TNZ>1)
+        {
+          #ifndef STREAM_RING
+          if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB-1))
+          { 
+            if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+          }
+          #else
+          if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+          #endif
+        }
 #else
-      if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ)
+        if(TNY>1 && TNZ==1)
+        {
+          if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+        }
+        else if(TNY>1 && TNZ>1)
+        {
+          #ifndef STREAM_RING
+          if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB-1))
+          { 
+            if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+          }
+          #else
+          if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+          #endif
+        }
+#endif
+      }
+#endif
+
+#ifdef MPI4CORNERS
+      if(NY>1 && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1 && perform_sweep == 1)
+#else
+      if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ && perform_sweep == 1)
 #endif
       {
 		dol=dor=1;
@@ -904,10 +997,51 @@ op_explicit(ldouble t, ldouble dtin)
       //z 'sweep'
       //**********************************************************************
 	      
+      perform_sweep = 1;
+
+#ifdef SPECIAL_BC_CHECK
+      if(giix > STREAM_IX && giix <= (STREAM_IX+3))
+      {
 #ifdef MPI4CORNERS
-      if(NZ>1 && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1)
+        if(TNY==1 && TNZ>1)
+        {
+          if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB+1)) perform_sweep = 0;
+        }
+        else if(TNY>1 && TNZ>1)
+        {
+          #ifndef STREAM_RING
+          if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB-1))
+          { 
+            if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+          }
+          #else
+          if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+          #endif
+        }
 #else
-      if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY)
+        if(TNY==1 && TNZ>1)
+        {
+          if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB+1)) perform_sweep = 0;
+        }
+        else if(TNY>1 && TNZ>1)
+        {
+          #ifndef STREAM_RING
+          if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB-1))
+          { 
+            if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+          }
+          #else
+          if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+          #endif
+        }
+#endif
+      }
+#endif
+
+#ifdef MPI4CORNERS
+      if(NZ>1 && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1 && perform_sweep == 1)
+#else
+      if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY && perform_sweep == 1)
 #endif
       {
 	        dol=dor=1;
@@ -1895,6 +2029,11 @@ alloc_loops()
 	  {
 	    for(iz=iz1;iz<iz2;iz++)
 	      {	
+                #ifdef SPECIAL_BC_CHECK
+                #include PR_BC_SPECIAL_LOOP
+                if(ret_val != 0) continue;
+                #endif
+
 		loop_0[Nloop_0][0]=ix;
 		loop_0[Nloop_0][1]=iy;
 		loop_0[Nloop_0][2]=iz;
@@ -1935,6 +2074,11 @@ alloc_loops()
 	  {
 	    for(iz=-zlim1+iz1;iz<iz2+zlim2;iz++)
 	      {	
+                #ifdef SPECIAL_BC_CHECK
+                #include PR_BC_SPECIAL_LOOP
+                if(ret_val == 4) continue;
+                #endif
+
 		loop_1[Nloop_1][0]=ix;
 		loop_1[Nloop_1][1]=iy;
 		loop_1[Nloop_1][2]=iz;
@@ -1973,10 +2117,22 @@ alloc_loops()
 	    for(iz=-zlim1+iz1;iz<iz2+zlim2;iz++)
 	      {	 
 		//within domain:
+                #ifdef SPECIAL_BC_CHECK
+                #include PR_BC_SPECIAL_LOOP
+                if(ret_val == 0) //"globally" not in corner or domain, but maybe not on tile - Brandon
+                { 
+                  if(if_indomain(ix,iy,iz)==1) continue; //in domain on tile
+		  if(if_outsidegc(ix,iy,iz)==1) continue; //corner on tile
+                }
+                else if(ret_val == 4)
+                {
+                  continue;
+                }
+                #else
 		if(if_indomain(ix,iy,iz)==1) continue;
-
 		//but not at the corners
 		if(if_outsidegc(ix,iy,iz)==1) continue;
+                #endif
 
 		loop_2[Nloop_2][0]=ix;
 		loop_2[Nloop_2][1]=iy;
@@ -2794,9 +2950,42 @@ int set_bc(ldouble t,int ifinit)
       if(iz<0) BCtype=ZBCLO;
       if(iz>=NZ) BCtype=ZBCHI;
 
+      #ifdef SPECIAL_BC_CHECK
+      //need special check in mpi for if BCs are real BCs
+      int is_disk_XBC = 0;
+      int is_disk_YBC = 0;
+      int is_disk_ZBC = 0;
+      //if( (ix+TOI) == STREAM_IX || (ix+TOI) == (STREAM_IX+1))
+      if( (ix+TOI) == STREAM_IX || (ix+TOI) == (STREAM_IX+1) || (ix+TOI) == (STREAM_IX+2) || (ix+TOI) == (STREAM_IX+3))
+      {
+        if(TNY>1 && TNZ==1) //2D r-theta
+        { 
+          if( (iy+TOJ) >= STREAM_IYT && (iy+TOJ) <= STREAM_IYB ) is_disk_XBC = 1;
+        }
+        else if(TNY==1 && TNZ>1) //2D r-phi
+        { 
+          if( (iz+TOK) >= STREAM_IZT && (iz+TOK) <= STREAM_IZB ) is_disk_XBC = 1;
+        }
+        else if(TNY>1 && TNZ>1) //2D r-phi
+        { 
+          #ifndef STREAM_RING
+          if( (iy+TOJ) >= STREAM_IYT && (iy+TOJ) <= STREAM_IYB && (iz+TOK) >= STREAM_IZT && (iz+TOK) <= STREAM_IZB ) is_disk_XBC = 1;
+          #else
+          if( (iy+TOJ) >= STREAM_IYT && (iy+TOJ) <= STREAM_IYB ) is_disk_XBC = 1;
+          #endif
+        }
+      }
+ 
+      #include PR_BC_SPECIAL //special BC check - Brandon
+      #endif
+
       if(BCtype==-1) my_err("wrong GC in loop_2\n");
 
+      #ifdef SPECIAL_BC_CHECK
+      if(mpi_isitBC(BCtype)==0 && is_disk_XBC == 0 && is_disk_YBC == 0 && is_disk_ZBC == 0) //this border exchanged through MPI
+      #else
       if(mpi_isitBC(BCtype)==0) //this border exchanged through MPI
+      #endif
 	{
 	  struct geometry geom;
 	  fill_geometry(ix,iy,iz,&geom);
@@ -4965,14 +5154,14 @@ cell_fixup(int type)
       //do not correct if overwritten later on
       if(is_cell_corrected_polaraxis(ix,iy,iz)) continue;
 
+
       if(((get_cflag(HDFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PMHD) ||
 	  (get_cflag(RADFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PRAD) ||
 	  (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
 	)
 	{
-	  
-	  //this will flag cells as not needing fixups which may  be counted as valid neighbor cells later!
-	  //ANDREW TODO ok??
+	  //ANDREW - I think maybe this should be here, to set the flag back to its default? 
+	  //this should not be here, should it?
 	  /*
 	  if(type==FIXUP_U2PMHD) set_cflag(HDFIXUPFLAG,ix,iy,iz,0); //try only once
 	  if(type==FIXUP_U2PRAD) set_cflag(RADFIXUPFLAG,ix,iy,iz,0); //try only once
@@ -4985,7 +5174,7 @@ cell_fixup(int type)
 
 	  ldouble ppn[6][NV],pp[NV],uu[NV];
 
-	  //should care about global but at the stage where it is called tile bcs not set
+	  //should care about global but at the stage where it is called knowns not about the boundaries
 	  //so fixups idividually in tiles but later exchanged 
 
 	  in=0; //number of successful neighbors
@@ -4995,9 +5184,30 @@ cell_fixup(int type)
 	      (get_cflag(RADFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
 	      (get_cflag(RADIMPFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_RADIMP)))	      
 	    {
+              #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream cell
+              if(TNY>1 && TNZ==1)
+              {
+                if((iy+TOJ) >= STREAM_IYT && (iy+TOJ) <= STREAM_IYB && (ix+TOI) > (STREAM_IX+1))
+                {
+                  if((ix-1+TOI) > (STREAM_IX+3)) //not a stream cell in ix-1
+                  {
+                    in++;
+                    for(iv=0;iv<NV;iv++)
+                      ppn[in-1][iv]=get_u(p,iv,ix-1,iy,iz);
+                  }
+                }
+                else
+                {
+                  in++;
+                  for(iv=0;iv<NV;iv++)
+                    ppn[in-1][iv]=get_u(p,iv,ix-1,iy,iz);
+                }
+              }
+              #else
 	      in++;
 	      for(iv=0;iv<NV;iv++)
-		ppn[in-1][iv]=get_u(p,iv,ix-1,iy,iz);
+    		ppn[in-1][iv]=get_u(p,iv,ix-1,iy,iz);
+              #endif
 	    }
 
 	  if(ix+1<NX &&
@@ -5005,9 +5215,30 @@ cell_fixup(int type)
 	      (get_cflag(RADFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
 	      (get_cflag(RADIMPFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_RADIMP)))
 	    {
+              #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
+              if(TNY>1 && TNZ==1)
+              {
+                if((iy+TOJ) >= STREAM_IYT && (iy+TOJ) <= STREAM_IYB && (ix+TOI) < STREAM_IX)
+                {
+                  if((ix+1+TOI) < STREAM_IX) //not a stream cell in ix+1
+                  {
+                    in++;
+                    for(iv=0;iv<NV;iv++)
+                      ppn[in-1][iv]=get_u(p,iv,ix+1,iy,iz);
+                  }
+                }
+                else //not in danger of using a stream ghost to do a fixup
+                {
+                  in++;
+                  for(iv=0;iv<NV;iv++)
+                    ppn[in-1][iv]=get_u(p,iv,ix+1,iy,iz);
+                }
+              }
+              #else
 	      in++;
 	      for(iv=0;iv<NV;iv++)
 		ppn[in-1][iv]=get_u(p,iv,ix+1,iy,iz);
+              #endif
 	    }
 
 	  if(iy-1>=0 &&
@@ -5015,9 +5246,30 @@ cell_fixup(int type)
 	      (get_cflag(RADFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PRAD) ||
 	      (get_cflag(RADIMPFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_RADIMP)))
 	    {
+              #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
+              if(TNY>1 && TNZ==1)
+              {
+                if((ix+TOI) >= STREAM_IX && (ix+TOI) <= (STREAM_IX+3) && (iy+TOJ) > STREAM_IYB)
+                {
+                  if((iy-1+TOJ) > STREAM_IYB) //not a stream cell in iy-1
+                  {
+                    in++;
+                    for(iv=0;iv<NV;iv++)
+                      ppn[in-1][iv]=get_u(p,iv,ix,iy-1,iz);
+                  }
+                }
+                else //not in danger of using a stream ghost to do a fixup
+                {
+                  in++;
+                  for(iv=0;iv<NV;iv++)
+                    ppn[in-1][iv]=get_u(p,iv,ix,iy-1,iz);
+                }
+              }
+              #else
 	      in++;
 	      for(iv=0;iv<NV;iv++)
 		ppn[in-1][iv]=get_u(p,iv,ix,iy-1,iz);
+              #endif
 	    }
 
 	  if(iy+1<NY &&
@@ -5025,9 +5277,30 @@ cell_fixup(int type)
 	      (get_cflag(RADFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PRAD) ||
 	      (get_cflag(RADIMPFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_RADIMP)))
 	    {
+              #ifdef SPECIAL_BC_CHECK //make sure that iy+1 is not a stream ghost cell
+              if(TNY>1 && TNZ==1)
+              {
+                if((ix+TOI) >= STREAM_IX && (ix+TOI) <= (STREAM_IX+3) && (iy+TOJ) < STREAM_IYT)
+                {
+                  if((iy+1+TOJ) < STREAM_IYT) //not a stream cell in iy+1
+                  {
+                    in++;
+                    for(iv=0;iv<NV;iv++)
+                      ppn[in-1][iv]=get_u(p,iv,ix,iy+1,iz);
+                  }
+                }
+                else //not in danger of using a stream ghost to do a fixup
+                {
+                  in++;
+                  for(iv=0;iv<NV;iv++)
+                    ppn[in-1][iv]=get_u(p,iv,ix,iy+1,iz);
+                }
+              }
+              #else
 	      in++;
 	      for(iv=0;iv<NV;iv++)
 		ppn[in-1][iv]=get_u(p,iv,ix,iy+1,iz);
+              #endif
 	    }
 
 	  if(iz-1>=0 &&
