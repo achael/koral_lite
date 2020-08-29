@@ -719,6 +719,7 @@ int mpi_savedata();
 
 int mpi_hasBC();
 int mpi_isitBC(int BCtype);
+int mpi_isitBC_forcorners(int BCtype);
 void mpi_synchtiming(ldouble *time);
 void mpi_myinit(int argc, char *argv[]);
 void mpi_myfinalize();

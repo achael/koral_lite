@@ -3311,6 +3311,12 @@ int set_bc(ldouble t,int ifinit)
 
   //corners of the whole domain are sometimes not real BC
   //so need to fill them with something  
+  /**************************************/
+  // Brandon - Note that here we use mpi_isitBC_forcorners since these values correspond to 
+  // boundaries where we would NOT have passed values via mpi    
+  // since here mpi_isitBC(XBC)=1 but mpi_isitBC(YBC)=0 
+  // at upper and lower poles for transmitting boundary
+  /**************************************/
   int xlim,ylim,zlim;
   int lim,i,j,k;
   int ix1,iy1,iz1;
@@ -3323,7 +3329,7 @@ int set_bc(ldouble t,int ifinit)
       //total corners, filling one cell deep surfaces
 
       //bottom-left corner
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCLO)==1)
 	{
 
 	  for(i=0;i<NG-1;i++)
@@ -3374,7 +3380,7 @@ int set_bc(ldouble t,int ifinit)
 	}
   
       //top-left corner
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCHI)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCHI)==1)
 	{
  
 	  for(i=0;i<NG-1;i++)
@@ -3424,7 +3430,7 @@ int set_bc(ldouble t,int ifinit)
 	}
 
   //bottom-right corner
-      if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCLO)==1)
 	{
 	  for(i=0;i<NG-1;i++)
 	    {
@@ -3472,7 +3478,7 @@ int set_bc(ldouble t,int ifinit)
 	}
 
       //top-right corner
-      if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCHI)==1)
+      if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCHI)==1)
 	{
 	  for(i=0;i<NG-1;i++)
 	    {
@@ -3526,7 +3532,7 @@ int set_bc(ldouble t,int ifinit)
       //total corners, filling one cell deep surfaces
 
       //bottom-left corner
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(ZBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 #ifdef SHEARINGBOX //in shearing box copy into corners along z
 	  PLOOP(iv)
@@ -3592,7 +3598,7 @@ int set_bc(ldouble t,int ifinit)
 	}
   
       //top-left corner
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(ZBCHI)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 
 #ifdef SHEARINGBOX //in shearing box copy into corners along z
@@ -3658,7 +3664,7 @@ int set_bc(ldouble t,int ifinit)
 	}
 
   //bottom-right corner
-      if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(ZBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  #ifdef SHEARINGBOX //in shearing box copy into corners along z
 	  PLOOP(iv)
@@ -3722,7 +3728,7 @@ int set_bc(ldouble t,int ifinit)
 	}
 
       //top-right corner
-      if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(ZBCHI)==1)
+      if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  #ifdef SHEARINGBOX //in shearing box copy into corners along z
 	  PLOOP(iv)
@@ -3978,7 +3984,7 @@ int set_bc(ldouble t,int ifinit)
 
       //elongated corners along z
       //filling one cell deep surfaces, and averaging diagonally
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCLO)==1)
 	{
 	  for(iz=-NG;iz<NZ+NG;iz++) { //in the total total corners it fills crap but overwritten below!
 	    for(i=0;i<NG-1;i++) {
@@ -4001,7 +4007,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCHI)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCHI)==1)
 	{
 	  for(iz=-NG;iz<NZ+NG;iz++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4022,7 +4028,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-      if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCLO)==1)
 	{
 	  for(iz=-NG;iz<NZ+NG;iz++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4043,7 +4049,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-       if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCHI)==1)
+       if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCHI)==1)
 	{
 	  for(iz=-NG;iz<NZ+NG;iz++) {
 	    for(i=0;i<NG-1;i++)
@@ -4069,7 +4075,7 @@ int set_bc(ldouble t,int ifinit)
 	}
 
        //elongated corners along y, filling one cell deep surfaces, and averaging diagonally
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(ZBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(iy=-NG;iy<NY+NG;iy++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4090,7 +4096,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-      if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(ZBCHI)==1)
+      if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(iy=-NG;iy<NY+NG;iy++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4112,7 +4118,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-      if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(ZBCLO)==1)
+      if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(iy=-NG;iy<NY+NG;iy++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4134,7 +4140,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-       if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(ZBCHI)==1)
+       if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(iy=-NG;iy<NY+NG;iy++) {
 	    for(i=0;i<NG-1;i++)
@@ -4159,7 +4165,7 @@ int set_bc(ldouble t,int ifinit)
 	}
 
       //elongated corners along x, filling one cell deep surfaces, and averaging diagonally
-      if(mpi_isitBC(YBCLO)==1 && mpi_isitBC(ZBCLO)==1)
+      if(mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=-NG;ix<NX+NG;ix++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4180,7 +4186,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-      if(mpi_isitBC(YBCLO)==1 && mpi_isitBC(ZBCHI)==1)
+      if(mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(ix=-NG;ix<NX+NG;ix++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4201,7 +4207,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-      if(mpi_isitBC(YBCHI)==1 && mpi_isitBC(ZBCLO)==1)
+      if(mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=-NG;ix<NX+NG;ix++) {
 	    for(i=0;i<NG-1;i++) {
@@ -4223,7 +4229,7 @@ int set_bc(ldouble t,int ifinit)
 	  }
 	}
 
-       if(mpi_isitBC(YBCHI)==1 && mpi_isitBC(ZBCHI)==1)
+       if(mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(ix=-NG;ix<NX+NG;ix++) {
 	    for(i=0;i<NG-1;i++)
@@ -4248,7 +4254,7 @@ int set_bc(ldouble t,int ifinit)
 
        //total total corners
        //TODO - so far very simplified!!!
-       if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCLO)==1 && mpi_isitBC(ZBCLO)==1)
+       if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=-NG;ix<0;ix++) 
 	    for(iy=-NG;iy<0;iy++) 
@@ -4260,7 +4266,7 @@ int set_bc(ldouble t,int ifinit)
 		}
 	}
 
-       if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCLO)==1 && mpi_isitBC(ZBCLO)==1)
+       if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=NX;ix<NX+NG;ix++) 
 	    for(iy=-NG;iy<0;iy++) 
@@ -4272,7 +4278,7 @@ int set_bc(ldouble t,int ifinit)
 		}
 	}
        
-       if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCHI)==1 && mpi_isitBC(ZBCLO)==1)
+       if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=-NG;ix<0;ix++) 
 	    for(iy=NY;iy<NY+NG;iy++) 
@@ -4284,7 +4290,7 @@ int set_bc(ldouble t,int ifinit)
 		}
 	}
 
-       if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCHI)==1 && mpi_isitBC(ZBCLO)==1)
+       if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=NX;ix<NX+NG;ix++) 
 	    for(iy=NY;iy<NY+NG;iy++) 
@@ -4296,7 +4302,7 @@ int set_bc(ldouble t,int ifinit)
 		}
 	}
 
-       if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCLO)==1 && mpi_isitBC(ZBCHI)==1)
+       if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(ix=-NG;ix<0;ix++) 
 	    for(iy=-NG;iy<0;iy++) 
@@ -4308,7 +4314,7 @@ int set_bc(ldouble t,int ifinit)
 		}
 	}
 
-       if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCLO)==1 && mpi_isitBC(ZBCHI)==1)
+       if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(ix=NX;ix<NX+NG;ix++) 
 	    for(iy=-NG;iy<0;iy++) 
@@ -4320,7 +4326,7 @@ int set_bc(ldouble t,int ifinit)
 		}
 	}
        
-       if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCHI)==1 && mpi_isitBC(ZBCHI)==1)
+       if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(ix=-NG;ix<0;ix++) 
 	    for(iy=NY;iy<NY+NG;iy++) 
@@ -4332,7 +4338,7 @@ int set_bc(ldouble t,int ifinit)
 		}
 	}
 
-       if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCHI)==1 && mpi_isitBC(ZBCHI)==1)
+       if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(ZBCHI)==1)
 	{
 	  for(ix=NX;ix<NX+NG;ix++) 
 	    for(iy=NY;iy<NY+NG;iy++) 
@@ -4357,7 +4363,7 @@ int set_bc(ldouble t,int ifinit)
  if(TNY>1 && TNZ==1)
    {
      iz=0;
-     if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCLO)==0)
+     if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCLO)==0)
        {
 	 for(i=-NG;i<0;i++)
 	   for(j=-NG;j<0;j++)
@@ -4370,7 +4376,7 @@ int set_bc(ldouble t,int ifinit)
 	       }
 	     }
        }
-     if(mpi_isitBC(XBCLO)==1 && mpi_isitBC(YBCHI)==0)
+     if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCHI)==0)
        {
 	 for(i=-NG;i<0;i++)
 	   for(j=NY;j<NY+NG;j++)
@@ -4383,7 +4389,7 @@ int set_bc(ldouble t,int ifinit)
 	       }
 	     }
        }
-     if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCLO)==0)
+     if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCLO)==0)
        {
 	 for(i=NX;i<NX+NG;i++)
 	   for(j=-NG;j<0;j++)
@@ -4396,7 +4402,7 @@ int set_bc(ldouble t,int ifinit)
 	       }
 	     }
        }
-     if(mpi_isitBC(XBCHI)==1 && mpi_isitBC(YBCHI)==0)
+     if(mpi_isitBC_forcorners(XBCHI)==1 && mpi_isitBC_forcorners(YBCHI)==0)
        {
 	 for(i=NX;i<NX+NG;i++)
 	   for(j=NY;j<NY+NG;j++)
@@ -4409,7 +4415,7 @@ int set_bc(ldouble t,int ifinit)
 	       }
 	     }
        }
-     if(mpi_isitBC(YBCLO)==1 && mpi_isitBC(XBCLO)==0)
+     if(mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(XBCLO)==0)
        {
 	 for(i=-NG;i<0;i++)
 	   for(j=-NG;j<0;j++)
@@ -4422,7 +4428,7 @@ int set_bc(ldouble t,int ifinit)
 	       }
 	     }
        }
-     if(mpi_isitBC(YBCLO)==1 && mpi_isitBC(XBCHI)==0)
+     if(mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(XBCHI)==0)
        {
 	 for(i=NX;i<NX+NG;i++)
 	   for(j=-NG;j<0;j++)
@@ -4435,7 +4441,7 @@ int set_bc(ldouble t,int ifinit)
 	       }
 	     }
        }
-     if(mpi_isitBC(YBCHI)==1 && mpi_isitBC(XBCLO)==0)
+     if(mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(XBCLO)==0)
        {
 	 for(i=-NG;i<0;i++)
 	   for(j=NY;j<NY+NG;j++)
@@ -4448,7 +4454,7 @@ int set_bc(ldouble t,int ifinit)
 	       }
 	     }
        }
-     if(mpi_isitBC(YBCHI)==1 && mpi_isitBC(XBCHI)==0)
+     if(mpi_isitBC_forcorners(YBCHI)==1 && mpi_isitBC_forcorners(XBCHI)==0)
        {
 	 for(i=NX;i<NX+NG;i++)
 	   for(j=NY;j<NY+NG;j++)
@@ -4463,6 +4469,10 @@ int set_bc(ldouble t,int ifinit)
        }
    }
 
+ /****************************/
+ // Brandon - here we need to call mpi_isitBC since this is asking the question, 
+ // is this border exchanged through MPI? 
+ // If the answer is no, it will use regular bc, which we don't want for transmitting boundary
  /****************************/
  if(TNY>1 && TNZ>1) //full 3d
    {

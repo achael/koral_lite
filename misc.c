@@ -313,6 +313,12 @@ am_i_sane()
 #endif
 
 #ifdef TRANSMITTING_YBC
+  if(PROCID==0) 
+  {
+    printf("Note: Using TRANSMITTING_YBC. Recommended MINY >= 0.005. Difussion around pole dominates transmission otherwise.\n");
+  }
+
+
 if (TNZ % 2 != 0)
 {
   printf("\nERROR!! Using transmitting y boundary. TNZ = %d must be divisible by 2!\n\n", TNZ);
