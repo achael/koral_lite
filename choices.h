@@ -515,7 +515,7 @@
 
 //number of profiles
 #ifndef NRADPROFILES
-#define NRADPROFILES (66-1)
+#define NRADPROFILES (68-1)
 #endif
 
 #ifndef NTHPROFILES
@@ -715,6 +715,7 @@
 #ifdef RADIATION
 #ifndef NO_COMPTONIZATION
 #define COMPTONIZATION
+#define COMPTONIZATIONFLAG
 #endif
 #endif
 

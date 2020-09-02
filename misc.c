@@ -358,8 +358,7 @@ if (NTZ % 2 != 0)
 #endif
 
 #ifdef RADIATION  
-#if !defined(NO_COMPTONIZATION) && !defined(COMPTONIZATION)
-#define COMPTONIZATION
+#if defined(COMPTONIZATIONFLAG)
   if (PROCID == 0)
   {
     printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");

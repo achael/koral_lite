@@ -521,9 +521,10 @@ int calc_radialprofiles(ldouble profiles[][NX])
         //if(muBe>0.05 && (xxBL[2]<M_PI/4. || xxBL[2]>3.*M_PI/4.))
         //  isjet=1;
 	//new criterion based on beta*gamma
-	if(betagamma2>1.)
+	if(betagamma2>1. && xxBL[2]<M_PI/3.) // top jet only
 	  isjet=1;
-        else isjet=0;
+        else 
+          isjet=0;
         
         ldouble pregas = GAMMAM1*uint;
         ldouble ptot = pregas;
@@ -631,7 +632,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
 
 	//density-weighted MRI wavelength using code comparison paper defn
 	//ANDREW?? -- should it be bsq/2?
-	ldouble lambdaMRI = 2*M_PI * bcon[2] / sqrt(bsq + rho + uint + pregas) / Omega;
+	ldouble lambdaMRI = 2*M_PI * fabs(bcon[2]) / sqrt(bsq + rho + uint + pregas) / fabs(Omega);
 	rholambda134[ix] += rho*lambdaMRI* dx[1]*dx[2]*geomBL.gdet; 
 	  
         //total mhd energy flux (14)
@@ -914,7 +915,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
     profiles[11][ix]=calc_photloc(ix);
     
     // special quantities for problem 134/139
-    if (PROBLEM == 134 || PROBLEM ==  139)
+    if (PROBLEM == 134 || PROBLEM == 139)
     {
       profiles[7][ix] = rho134[ix] / normalize[ix];
       profiles[8][ix] = pgas134[ix] / normalize[ix];

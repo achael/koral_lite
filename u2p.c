@@ -1848,7 +1848,7 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
     return -102;
   }
   
-  if(!isfinite(W) || !isfinite(W))
+  if(!isfinite(W))
   {
     if(verbose) printf("nan/inf W in u2p_solver with Etype: %d\n",Etype);
     return -103;

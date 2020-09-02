@@ -269,6 +269,11 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     if(u2con[0]<0)
       u2con[0] = fabs(u2con[0]);
 
+    //ANDREW's version
+    //u2con[1]=(u1[1]-alpgam*GG[0][1])/u2con[0];
+    //u2con[2]=(u1[2]-alpgam*GG[0][2])/u2con[0];
+    //u2con[3]=(u1[3]-alpgam*GG[0][3])/u2con[0];
+
     //Identical to Olek's
     u2con[1]=u1[1]/u2con[0] + GG[0][1]/GG[0][0];
     u2con[2]=u1[2]/u2con[0] + GG[0][2]/GG[0][0];
@@ -511,6 +516,43 @@ calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon)
 int
 set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype)
 {
+  if(atmtype==-1) // for MAD code comparison project
+    {
+      // normal observer -- zero in BL
+      ldouble ucon[4];
+      ldouble xx2[4];
+      ldouble GGBL[4][5];
+
+      // BL coords
+      coco_N(xx,xx2,MYCOORDS,BLCOORDS);
+      calc_G_arb(xx2,GGBL,BLCOORDS);
+
+      // normal observer in BL = stationary observer
+      calc_normalobs_4vel(GGBL,ucon);
+
+      // to MYCOORDS
+      trans2_coco(xx2,ucon,ucon,BLCOORDS,MYCOORDS);
+
+      // to VELPRIM
+      conv_vels(ucon,ucon,VEL4,VELPRIM,gg,GG);
+
+      pp[2]=ucon[1];
+      pp[3]=ucon[2];
+      pp[4]=ucon[3];
+
+      // density & pressure
+      ldouble r=xx2[1];
+      ldouble rout=1.; //RHOATMMIN etc. given at rout=2
+
+      pp[0] = RHOATMMIN*pow(r/rout,-1.5);
+      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+
+      #ifdef MAGNFIELD
+      pp[B1]=pp[B2]=pp[B3]=0.;
+      #endif
+
+      return 0;
+    }
   if(atmtype==0) //normal observer plur rho \propto r^-1.5
     {
       //normal observer

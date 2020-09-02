@@ -1654,7 +1654,7 @@ calc_TfromS3rho(ldouble S3,ldouble rho, int type,int ix,int iy,int iz)
     }
 
   if(!isfinite(T))
-    T=BIG;
+    T = BIG;
 
   return T;
 }
@@ -1775,29 +1775,37 @@ entri_from_entre_energy_cons(ldouble *pp, int ix, int iy, int iz)
 ldouble calc_PEQ_Teifrompp(ldouble* pp, ldouble* Te, ldouble* Ti,int ix, int iy, int iz)
 {
   ldouble Tgas=calc_PEQ_Tfromurho(pp[UU],pp[RHO],ix,iy,iz);
-
+  
+  ldouble Tiloc,Teloc;
 #ifndef EVOLVEELECTRONS
-  *Ti=*Te=Tgas;
+  Tiloc=Teloc=Tgas;
 
 #ifdef FIXEDTETIRATIO
   ldouble factor=FIXEDTETIRATIO;
-  *Te=  (factor*MU_E*MU_I*Tgas)/(MU_GAS * (MU_E + factor * MU_I));
-  *Ti = *Te/factor;
+  Teloc=  (factor*MU_E*MU_I*Tgas)/(MU_GAS * (MU_E + factor * MU_I));
+  Tiloc = Teloc/factor;
 #endif
 
 #else //EVOLVEELECTRONS
 
   ldouble neth = calc_thermal_ne(pp);
   ldouble rhoeth = MU_E * M_PROTON * neth;
-  ldouble Teloc=calc_TfromSerho(pp[ENTRE],rhoeth,ELECTRONS,ix,iy,iz);
-  ldouble Tiloc=calc_TfromSerho(pp[ENTRI],pp[RHO],IONS,ix,iy,iz);
+  Teloc=calc_TfromSerho(pp[ENTRE],rhoeth,ELECTRONS,ix,iy,iz);
+  Tiloc=calc_TfromSerho(pp[ENTRI],pp[RHO],IONS,ix,iy,iz);
 
+#endif //EVOLVEELECTRONS
+  
+  //!AC -- modified for  issues with gammagas in  corners
+  //!AC -- this will effectively make all corner gammagas 4/3
+  // I don't think that matters though...
+  if(!isfinite(Teloc)) Teloc=BIG;
+  if(!isfinite(Tiloc)) Tiloc=BIG;
+  
   if(Teloc<TEMPEMINIMAL) Teloc=TEMPEMINIMAL;
   if(Tiloc<TEMPIMINIMAL) Tiloc=TEMPIMINIMAL;
-  
+
   *Te=Teloc;
   *Ti=Tiloc;
-#endif //EVOLVEELECTRONS
 
   return Tgas;
 }
@@ -1953,7 +1961,6 @@ ldouble pick_gammagas(int ix,int iy,int iz)
 //********************************************************************************
 // Calculate gamma_int for total gas
 //********************************************************************************
-
 ldouble
 calc_gammagas(ldouble* pp,int ix,int iy,int iz)
 {
@@ -1970,9 +1977,26 @@ calc_gammagas(ldouble* pp,int ix,int iy,int iz)
   gamma=calc_gammaintfromTei(Te,Ti);
   #endif
 
+  //!AC
+  /*
+  ldouble Tgas=calc_PEQ_Tfromurho(pp[UU],pp[RHO],ix,iy,iz);
+  if(!isfinite(Te) || !isfinite(Ti) || !isfinite(Tgas))
+    {
+      int gix, giy, giz;
+      mpi_local2globalidx(ix, iy, iz, &gix, &giy, &giz);
+      printf("Te/Ti not finite >>> %d: > %d %d %d > %e %e %e %e %e %e\n",PROCID,gix,giy,giz,Te,Ti,Tgas,pp[RHO],pp[UU],gamma); 
+      fflush(stdout);
+      //getch();
+      //exit(-1);
+    }
+  */
+  
   if(!isfinite(gamma))
     {
-      printf("gammagas not finite >>> %d: > %d %d %d > %e %e %e %e %e\n",PROCID,ix,iy,iz,Te,Ti,calc_relel_ne(pp), calc_relel_uint(pp),gamma); 
+      ldouble Tgas=calc_PEQ_Tfromurho(pp[UU],pp[RHO],ix,iy,iz);
+      int gix, giy, giz;
+      mpi_local2globalidx(ix, iy, iz, &gix, &giy, &giz);
+      printf("gammagas not finite >>> %d: > %d %d %d > %e %e %e %e %e %e\n",PROCID,gix,giy,giz,Te,Ti,Tgas,pp[RHO],pp[UU],gamma); 
       fflush(stdout);
       //getch();
       //exit(-1);
@@ -2347,7 +2371,7 @@ heat_electronions_with_state(ldouble dtin)
 	  p_index=RELEL_HEAT_INDEX;
 	  #endif
 
-          #endif
+          #endif //RELEL_HEAT_RECONNECTION
 
 	  //Determine gamma_inj_min & gamma_inj_max
 	  #ifndef RELEL_HEAT_FIX_LIMITS

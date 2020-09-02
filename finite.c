@@ -5419,7 +5419,7 @@ smooth_polaraxis()
   //spherical like coords
   if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
       MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==TKS3COORDS ||
-      MYCOORDS==MSPH1COORDS)
+      MYCOORDS==MSPH1COORDS || MYCOORDS==JETCOORDS)
     {
       int ix;
 //#pragma omp parallel for private(ix)
@@ -5652,7 +5652,7 @@ correct_polaraxis()
       //spherical like coords
       if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
 	  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS || MYCOORDS==MKS3COORDS || MYCOORDS==TKS3COORDS ||
-	  MYCOORDS==MSPH1COORDS)
+	  MYCOORDS==MSPH1COORDS || MYCOORDS==JETCOORDS)
 	{
 	  #pragma omp parallel for private(ic,ix,iy,iz,iv,iysrc) schedule (static)
 	  for(ix=0;ix<NX;ix++)
@@ -5931,7 +5931,7 @@ correct_polaraxis_3d()
       //spherical like coords
       if (MYCOORDS==SCHWCOORDS || MYCOORDS==KSCOORDS || MYCOORDS==KERRCOORDS || MYCOORDS==SPHCOORDS ||
 	  MYCOORDS==MKS1COORDS || MYCOORDS==MKS2COORDS|| MYCOORDS==MKS3COORDS|| MYCOORDS==TKS3COORDS ||
-	  MYCOORDS==MSPH1COORDS)
+	  MYCOORDS==MSPH1COORDS || MYCOORDS==JETCOORDS)
 	{
           int ix;
 //#pragma omp parallel for private(ix)

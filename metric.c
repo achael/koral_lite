@@ -4478,7 +4478,7 @@ calc_gttpert_arb(double *xx, int COORDS)
       gpert[0][0]=gpert[1][1]=2.*r/Sigma;
       gpert[2][2]=gbase[2][2]-1.0;
       gpert[3][3]=gbase[3][3]-1.0;
-      //PIN
+      
       //transformation matrix
       if(COORDS==MKS1COORDS) dxdx_MKS12KS(xx,dxdxp);
       if(COORDS==MKS2COORDS) dxdx_MKS22KS(xx,dxdxp);
@@ -4523,7 +4523,6 @@ calc_gttpert_arb(double *xx, int COORDS)
 
   return gttpert;
 }
-
 
 /******************************************************/
 //helper functions for jet coordinates and cylindrification
@@ -4815,6 +4814,7 @@ int set_cyl_params()
 
    
    //test
+   /*
    printf("RCYL %e rmidcyl %e x2cyl %e \n",RCYL,rmidcyl,x2cyl);
    printf("THETACYL: %e THETAAX %e\n",thetaCYL,thetaAX);
    
@@ -4831,8 +4831,9 @@ int set_cyl_params()
    printf("thcyl %.14e\n",cylindrify(rtest,x2test,&tpar));
    if(sinth0(rtest,x2test,&tpar)>1)
      {printf("nan in cylindrify for r=%e, x2test=%e!\n",rtest,x2test); exit(-1);}
-    
-  return 0;
+   */
+   
+   return 0;
 }
 
 

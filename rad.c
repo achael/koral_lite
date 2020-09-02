@@ -737,8 +737,9 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 	  print_state_implicit_lab_4dprim(iter-1,xxx,f1,err,N); 
 	  printf("\n kappaCGS: %e ", kappaGU2CGS(calc_kappa(pp,geom,&opac)/pp[RHO]) );
 	  printf("rhoCGS: %e ", rhoGU2CGS(pp[RHO]));
-	  ldouble Ti0,Te0;
           ldouble Tgas0=state0.Tgas;
+	  ldouble Te0=state0.Te;
+	  ldouble Ti0=state0.Ti;
 	  ldouble Trad0=state0.Trad;
 	  printf("T: %e Te: %e ", Tgas0,Te0);
 	  printf("Trad: %e ", Trad0);
@@ -1644,7 +1645,12 @@ f_implicit_lab_4dprim_with_state(ldouble *uu, ldouble *pp, void *sss,
 
     //ANDREW - in the entropy equation, should there be a chemical potential term due to change in volume?
     //is this equation without relel consistent with equation in terms of entropy per particle? 
-    ldouble Qe = CC + EA + CC_relel + cool_relel_dq - mu*cool_relel_dn;
+    ldouble Qe;
+    Qe = CC + EA + CC_relel + cool_relel_dq - mu*cool_relel_dn;
+    #ifdef SKIP_ELECTRON_COOL
+    Qe=0.;
+    #endif
+
     f[ientre]=Te*(pp[ENTRE] - pp0[ENTRE]) - dtau * Qe;
     if(fabs(f[ientre])>SMALL)
       err[ientre]=fabs(f[ientre])/(fabs(pp[ENTRE]*Te)+fabs(pp0[ENTRE]*Te)+fabs(dtau*Qe));
@@ -2755,7 +2761,7 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
   fac=step_function(xxBL[1]-1.2*rhorizonBL,.1*rhorizonBL);
   if(xxBL[1]<rhorizonBL) fac=0.;
 #endif
-  
+
   for(i = 0; i < 4; i++)
   {
     Gith_lab[i] += fac * Gic_lab[i];
@@ -2931,14 +2937,16 @@ calc_Compt_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble *Gic, ldoubl
   ldouble kappaes = state->kappaes;
   ldouble ThatradBB = state->TradBB;
   ldouble Thatrad = state->Trad;
-  
+
+  /*
   ldouble urfcon[4], uffcov[4];
   for (i = 0; i < 4; i++)
   {
     urfcon[i] = state->urfcon[i];
     uffcov[i] = state->ucov[i];
   }
-
+  */
+  
   //ANDREW correction factor for the nonthermal electrons present in kappa_es
   ldouble relel_corr = 1.0;
 #ifdef RELELECTRONS
