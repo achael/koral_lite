@@ -32,21 +32,6 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
   set_radatmosphere(pp,geom->xxvec,geom->gg,geom->GG,0);
 #endif
 
-  /*
-  #ifdef SPECIAL_BC_CHECK
-  int giy = iy + TOJ;
-  int iy_str_top, iy_str_bot;
-  iy_str_top = STREAM_IYT;
-  iy_str_bot = STREAM_IYB;
-
-  if(giy < iy_str_top || giy > iy_str_bot)
-    return -1;
-  #else
-  if(theq>thmax)
-    return -1; //outside disk;
-  #endif  
-  */
-  //return -1; //turn off inflow completely
   if(TNY>1 && TNZ==1)
   {
     if(theq>thmax)
@@ -154,7 +139,7 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
      #endif
   }
 
-  rho=DISKRHO*rhopref; //initial guess at what density should be
+  rho=DISKRHO;//*rhopref; //initial guess at what density should be
 
 
   if(rhopref < 0) rho = pp[0]; //Set rho to atm if happens to go negative
@@ -421,48 +406,95 @@ pp[UU]*=1.+PERTMAGN*sin(10.*2.*M_PI*(MAXZ-geomBL->zz)/(MAXZ-MINZ));
 //Calculate entropy?
 pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);
   
-//set right GC to domain value in ix-1, no inflow in X into stream region
+//Special BC. Done here for simplicity instead of bc.c. No inflow in X into stream region
 #ifdef SPECIAL_BC_CHECK
+  int iv = 0; 
+  int shutoffatinner=0;
 
-int iv = 0;
-
-if(gix == (STREAM_IX+3))
-{
-  for(iv=0; iv<NV; ++iv)
+  //Reflecting boundary in front after shutoff
+  #ifdef SHUTOFF_AFTER_TSHUTOFF
+  #ifdef TSHUTOFF
+  if(global_time > TSHUTOFF) shutoffatinner = 1; //turn off inflow completely
+  #else
+  ldouble TLB;
+  if(EPSILON_MAX < 0.) //Only use dynamics based model if all mass returns in finite time
   {
-    #ifdef MAGNFIELD
-    if(iv==VX || iv==B1 || iv==FX0)
-    #else
-    if(iv==VX || iv==FX0)
-    #endif
-      pp[iv]=-get_u(p,iv,ix+1,iy,iz);
-    else
-      pp[iv]=get_u(p,iv,ix+1,iy,iz);
+    TLB = 2.*M_PI*pow((-1./(2.*EPSILON_MAX)),1.5);
+    if(global_time > (TLB-TFB0)) shutoffatinner = 1; //apply reflecting boundary as in XBCHI?
   }
+  #endif
 
-#ifdef MAGNFIELD//setting them zero not to break the following coordinate transformation
-  pp[B1]=pp[B2]=pp[B3]=0.; 
-#endif
-}
-
-if(gix == (STREAM_IX+2))
-{
-  for(iv=0; iv<NV; ++iv)
+  if(shutoffatinner)
   {
-    #ifdef MAGNFIELD
-    if(iv==VX || iv==B1 || iv==FX0)
-    #else
-    if(iv==VX || iv==FX0)
-    #endif
-      pp[iv]=-get_u(p,iv,ix+3,iy,iz);
-    else
-      pp[iv]=get_u(p,iv,ix+3,iy,iz);
-  }
+    if(gix == (STREAM_IX))
+    {
+      for(iv=0; iv<NV; ++iv)
+      {
+        #ifdef MAGNFIELD
+        if(iv==VX || iv==B1 || iv==FX0)
+        #else
+        if(iv==VX || iv==FX0)
+        #endif
+          pp[iv]=-get_u(p,iv,ix-1,iy,iz);
+        else
+          pp[iv]=get_u(p,iv,ix-1,iy,iz);
+      }
+    }
 
-#ifdef MAGNFIELD//setting them zero not to break the following coordinate transformation
-  pp[B1]=pp[B2]=pp[B3]=0.; 
-#endif
-}
+    if(gix == (STREAM_IX+1))
+    {
+      for(iv=0; iv<NV; ++iv)
+      {
+        #ifdef MAGNFIELD
+        if(iv==VX || iv==B1 || iv==FX0)
+        #else
+        if(iv==VX || iv==FX0)
+        #endif
+          pp[iv]=-get_u(p,iv,ix-3,iy,iz);
+        else
+          pp[iv]=get_u(p,iv,ix-3,iy,iz);
+      }
+    }
+  }
+  #endif
+
+  //Reflecting boundary behind stream
+  if(gix == (STREAM_IX+3))
+  {
+    for(iv=0; iv<NV; ++iv)
+    {
+      #ifdef MAGNFIELD
+      if(iv==VX || iv==B1 || iv==FX0)
+      #else
+      if(iv==VX || iv==FX0)
+      #endif
+        pp[iv]=-get_u(p,iv,ix+1,iy,iz);
+      else
+        pp[iv]=get_u(p,iv,ix+1,iy,iz);
+    }
+
+  #ifdef MAGNFIELD//setting them zero not to break the following coordinate transformation
+    pp[B1]=pp[B2]=pp[B3]=0.; 
+  #endif
+  }
+  if(gix == (STREAM_IX+2))
+  {
+    for(iv=0; iv<NV; ++iv)
+    {
+      #ifdef MAGNFIELD
+      if(iv==VX || iv==B1 || iv==FX0)
+      #else
+      if(iv==VX || iv==FX0)
+      #endif
+        pp[iv]=-get_u(p,iv,ix+3,iy,iz);
+      else
+        pp[iv]=get_u(p,iv,ix+3,iy,iz);
+    }
+
+  #ifdef MAGNFIELD//setting them zero not to break the following coordinate transformation
+    pp[B1]=pp[B2]=pp[B3]=0.; 
+  #endif
+  }
 #endif
 
   return 0;
