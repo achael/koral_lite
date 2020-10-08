@@ -753,9 +753,8 @@ main(int argc, char **argv)
 	  fwrite(&iz,sizeof(int),1,fout);
 	}
 
-  //double Br11,Br12,Br21,Br22,Bth11,Bth12,Bth21,Bth22;
-  //double divB,a1,a2,a3; //prefactors for solving for new B-field
-  //struct geometry geomBL; //just used to output r, th values
+  double Br11,Br12,Br21,Br22,Bth11,Bth12,Bth21,Bth22;
+  double divB,a1,a2,a3; //prefactors for solving for new B-field
 
   //printf("%e %e %e \n",pick_gdet(0,0,0),get_x(0,0),get_x(0,1));
 
