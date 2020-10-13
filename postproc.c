@@ -1740,12 +1740,14 @@ ldouble
 calc_totalmass()
 {
   int ix, iy, iz;
-  ldouble xx[4], dx[3], mass, rho, gdet;
   
-  mass = 0.;
+  ldouble mass = 0.;
   
+#pragma omp parallel for private(ix,iy,iz) reduction(+:mass)
   for(iz = 0; iz < NZ; iz++)
   {
+    ldouble xx[4], dx[3], rho, gdet;
+
     for(iy = 0; iy < NY; iy++)
     {
       for(ix = 0; ix < NX; ix++)
@@ -1811,9 +1813,8 @@ calc_totalmass()
       }
     }
   }
-  
 
-    return mass;
+  return mass;
 }
 
 
@@ -1943,11 +1944,7 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 {
 
   int ix,iy,iz,iv,i,j;
-  ldouble xx[4],xxBL[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
-  ldouble Rij[4][4],Rtt,ehat,ucongas[4];
-  ldouble tautot[3],tau=0.;
-  ldouble gdet;
-
+  ldouble xx[4],xxBL[4];
  
   //search for appropriate radial index
   for(ix=0;ix<NX-1;ix++)
@@ -1976,8 +1973,13 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 
   if(NY==1 && NZ==1) //spherical symmetry
     {
+
       iz=0; 
       iy=0;
+      ldouble dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
+      ldouble Rij[4][4],Rtt,ehat,ucongas[4];
+      ldouble tautot[3],tau=0.;
+      ldouble gdet;
 
       for(iv=0;iv<NV;iv++)
 	pp[iv]=get_u(p,iv,ix,iy,iz);
@@ -1986,7 +1988,8 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       fill_geometry_arb(ix,iy,iz,&geomBL,KERRCOORDS);
       struct geometry geom;
       fill_geometry(ix,iy,iz,&geom);
-  
+
+
       if(doingavg)
 	{
 	  PLOOP(iv)
@@ -2039,7 +2042,7 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 #endif
 	  jet=geomBL.gdet*(Trt+rhour+Rrt)*4.*M_PI;
 	}
-      else
+      else //doingavg
 	{
 	
 	  ucongas[1]=pp[2];
@@ -2099,9 +2102,17 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
     }
   else //non-sph symmetry
     {
+
+#pragma omp parallel for private(iy,iz) reduction(+:lum) reduction(+:jet)
       for(iz=0;iz<NZ;iz++)
+      {
       for(iy=0;iy<NY;iy++)
 	{
+	  ldouble dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
+          ldouble Rij[4][4],Rtt,ehat,ucongas[4];
+          ldouble tautot[3],tau=0.;
+          ldouble gdet;
+
 	  for(iv=0;iv<NV;iv++)
 	    pp[iv]=get_u(p,iv,ix,iy,iz);
 
@@ -2289,9 +2300,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	      #else 
 	      lum+=geomBL.gdet*uintur*dxBL[1]*dxBL[2];
 	      #endif
-	    }
-
-	}
+	    } //snapshot
+	  } //iy
+        } // iz
       
       *radlum=lum;
       *totallum=jet;
@@ -2432,8 +2443,8 @@ calc_resmri(ldouble radius)
 #ifdef MAGNFIELD
 
   int ix,iy,iz,iv;
-  ldouble xx[4],xxBL[4],dx[3];
-  ldouble qtheta=0.,qphi=0.,sigma=0.,rho;
+  ldouble xx[4],xxBL[4];
+  ldouble qtheta=0.,sigma=0.;
  
   //search for appropriate radial index
   for(ix=0;ix<NX;ix++)
@@ -2448,17 +2459,20 @@ calc_resmri(ldouble radius)
       if(xxBL[1]>radius) break;
     }
 
+#pragma omp parallel for private(iy,iz) reduction(+:sigma) reduction(+:qtheta)
   for(iz=0;iz<NZ;iz++)
     for(iy=0;iy<NY;iy++)
       {
+	ldouble dx[3];
 	dx[1]=get_size_x(iy,1);
-	rho=get_u(p,RHO,ix,iy,iz);
-
-	sigma+=rho*dx[1];
+	ldouble rho=get_u(p,RHO,ix,iy,iz);
+	
 	ldouble q1,q2;
 	calc_Qthetaphi(ix,iy,iz,&q1,&q2);
+
+        sigma+=rho*dx[1];
 	qtheta+=rho*q1*dx[1];
-	qphi+=rho*q2*dx[1];
+	//qphi+=rho*q2*dx[1];
       }
 
   return qtheta/sigma;
@@ -2476,14 +2490,14 @@ calc_resmri(ldouble radius)
 ldouble
 calc_meantemp(ldouble radius)
 {
+  
 #ifndef BHDISK_PROBLEMTYPE
   return -1.; //no disk no cry
 #endif
 
-
-  int ix, iy, iz, iv;
-  ldouble xx[4], xxBL[4], dx[3];
-  ldouble mtemp = 0., sigma = 0., rho, ugas;
+  int ix, iy, iz;
+  ldouble xx[4], xxBL[4];
+  ldouble mtemp = 0., sigma = 0.;
  
   //search for appropriate radial index
   for(ix = 0; ix < NX; ix++)
@@ -2498,13 +2512,15 @@ calc_meantemp(ldouble radius)
     if(xxBL[1] > radius) break;
   }
 
+#pragma omp parallel for private(iy,iz) reduction(+:sigma) reduction(+:mtemp)
   for (iz = 0; iz < NZ; iz++)
   {
     for(iy = 5; iy < NY-5; iy++)
     {
+      ldouble dx[3];
       dx[1] = get_size_x(iy, 1);
-      rho = get_u(p, RHO, ix, iy, iz);
-      ugas = get_u(p, UU, ix, iy, iz);
+      ldouble rho = get_u(p, RHO, ix, iy, iz);
+      ldouble ugas = get_u(p, UU, ix, iy, iz);
       ldouble temp = calc_PEQ_Tfromurho(ugas, rho, ix, iy, iz);
       sigma += rho * dx[1];
       mtemp += rho * temp*dx[1];
@@ -2613,9 +2629,9 @@ calc_photloc(int ix)
 ldouble
 calc_mdot(ldouble radius, int type)
 {
-  int ix, iy, iz, iv;
-  ldouble xx[4], xxBL[4], dx[3], mdot, gdet, rho, rhouconr, ucon[4], pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5];
-
+  int ix, iy, iz;
+  ldouble xx[4], xxBL[4];
+  
   //search for appropriate radial index
   for(ix = 0; ix < NX; ix++)
   {
@@ -2628,11 +2644,13 @@ calc_mdot(ldouble radius, int type)
 
     if(xxBL[1] > radius) break;
   }
-  
-  mdot = 0.;
-  
+
+  ldouble mdot=0.;
+#pragma omp parallel for private(iy,iz) reduction(+:mdot)
   for(iz = 0; iz < NZ; iz++)
   {
+    int iv;
+    ldouble dx[3], gdet, rho, rhouconr, ucon[4], pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5];
     for(iy = 0; iy < NY; iy++)
     {
       struct geometry geom;
@@ -2714,7 +2732,7 @@ calc_mdot(ldouble radius, int type)
         mdot += gdet * rhouconr * dx[1] * dx[2];
     }
   }
-  
+
   return mdot;
 }
 
@@ -2726,10 +2744,9 @@ calc_mdot(ldouble radius, int type)
 ldouble
 calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max)
 {
-  int ix, iy, iz, iv;
-  ldouble Edot, xx[4], xxBL[4], dx[3], gdet, pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5];
-  ldouble rho, uu, pressure, bsq, bfield, ucon[4], ucov[4], bcon[4], bcov[4], luminosity;
-  
+  int ix, iy, iz;
+
+  ldouble xx[4], xxBL[4];
   //search for appropriate radial index
   for(ix = 0; ix < NX; ix++)
   {
@@ -2742,12 +2759,16 @@ calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max)
 
     if(xxBL[1] > radius) break;
   }
-  int ixmin = ix;
-
-  luminosity = 0.;
   
+  int ixmin = ix;
+  ldouble luminosity = 0.;
+
+#pragma omp parallel for private(iy,iz) reduction(+:luminosity)
   for(iz = 0; iz < NZ; iz++)
   {
+    ldouble Edot, dx[3], gdet, pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5];
+    ldouble rho, uu, pressure, bsq, bfield, ucon[4], ucov[4], bcon[4], bcov[4];
+
     for(iy = 0; iy < NY; iy++)
     {
       for(ix = ixmin; ix < NX; ix++)
@@ -2764,7 +2785,8 @@ calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max)
         {
           struct geometry geom;
           fill_geometry_arb(ix, iy, iz, &geom, MYCOORDS);
-          
+
+	  int iv;
           for(iv = 0; iv < NVMHD; iv++)
             pp[iv] = get_u(p, iv, ix, iy, iz);
           
@@ -2820,9 +2842,8 @@ calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max)
 ldouble
 calc_Edot(ldouble radius)
 {
-  int ix, iy, iz, iv;
-  ldouble Edot, xx[4], xxBL[4], dx[3], gdet, rhouconrucovt, uuuconrucovt, bsquconrucovt, bconrbcovt;
-  ldouble pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5], ucon[4], ucov[4], bcon[4], bcov[4], rho, uu, bsq;
+  int ix, iy, iz;
+  ldouble xx[4], xxBL[4];
   
   //search for appropriate radial index
   for(ix = 0; ix < NX; ix++)
@@ -2837,10 +2858,13 @@ calc_Edot(ldouble radius)
     if(xxBL[1] > radius) break;
   }
   
-  Edot = 0.;
-  
+  ldouble Edot = 0.;
+
+#pragma omp parallel for private(iy,iz) reduction(+:Edot)
   for(iz = 0; iz < NZ; iz++)
   {
+    ldouble dx[3], gdet, rhouconrucovt, uuuconrucovt, bsquconrucovt, bconrbcovt;
+    ldouble pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5], ucon[4], ucov[4], bcon[4], bcov[4], rho, uu, bsq;
     for(iy = 0; iy < NY; iy++)
     {
       struct geometry geom;
@@ -2886,6 +2910,7 @@ calc_Edot(ldouble radius)
       }
       else //snapshot
       {
+	int iv;
         for(iv = 0; iv < NVMHD; iv++)
           pp[iv] = get_u(p, iv, ix, iy, iz);
         
@@ -2942,9 +2967,8 @@ calc_Edot(ldouble radius)
 ldouble
 calc_Ldot(ldouble radius)
 {
-  int ix, iy, iz, iv;
-  ldouble Ldot, xx[4], xxBL[4], dx[3], gdet, rhouconrucovphi, uuuconrucovphi, bsquconrucovphi, bconrbcovphi;
-  ldouble pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5], ucon[4], ucov[4], bcon[4], bcov[4], rho, uu, bsq;
+  int ix, iy, iz;
+  ldouble xx[4], xxBL[4];
   
   //search for appropriate radial index
   for(ix = 0; ix < NX; ix++)
@@ -2959,10 +2983,14 @@ calc_Ldot(ldouble radius)
     if(xxBL[1] > radius) break;
   }
   
-  Ldot = 0.;
-  
+  ldouble Ldot = 0.;
+
+#pragma omp parallel for private(iy,iz) reduction(+:Ldot)
   for(iz = 0; iz < NZ; iz++)
   {
+    ldouble dx[3], gdet, rhouconrucovphi, uuuconrucovphi, bsquconrucovphi, bconrbcovphi;
+    ldouble pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5], ucon[4], ucov[4], bcon[4], bcov[4], rho, uu, bsq;
+
     for(iy = 0; iy < NY; iy++)
     {
       struct geometry geom;
@@ -3008,6 +3036,7 @@ calc_Ldot(ldouble radius)
       }
       else
       {
+	int iv;
         for(iv = 0; iv < NVMHD; iv++)
           pp[iv] = get_u(p, iv, ix, iy, iz);
         
@@ -3073,8 +3102,9 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
 
 #ifdef MAGNFIELD
 
-  int ix, iy, iz, iv, i4;
-  ldouble xx[4], xxBL[4], dx[3], Psi, Psiquad, rho, ucon[4], pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5];
+  int ix, iy, iz;
+  ldouble xx[4], xxBL[4];
+  ldouble Psi, Psiquad;
 
   //search for appropriate radial index ix corresponding to the required radius
   for(ix = 0; ix < NX; ix++)
@@ -3093,9 +3123,12 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
   Psiquad = 0.;  // quadrupole flux
 
   // We have changed the following so that it can handle both NZ=1 and NZ>1
+#pragma omp parallel for private(iy,iz) reduction(+:Psi) reduction(+:Psiquad)
   for (iz = 0; iz < NZ; iz++)
   {
-    for(iy=0;iy<NY;iy++)
+    ldouble rho, ucon[4], pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5];
+    ldouble dx[3];
+    for(iy = 0; iy < NY; iy++)
     {
       struct geometry geom;
       fill_geometry_arb(ix,iy,iz,&geom,MYCOORDS);
@@ -3128,7 +3161,8 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
         ldouble alphanorm = bsq / dotB(bcon, bcov);
         if(alphanorm < 0.)
 	  my_err("alpha.lt.0 in b0 norm !!\n");
-        for(i4 = 0; i4 < 4; i4++)
+        int i4;
+	for(i4 = 0; i4 < 4; i4++)
         {
           bcon[i4] *= sqrt(alphanorm);
         }
@@ -3176,6 +3210,7 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
       }
       else  // working with snapshot
       {
+	int iv;
         for(iv = 0; iv < NVMHD; iv++)
         {
           pp[iv] = get_u(p, iv, ix, iy, iz);
