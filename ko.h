@@ -323,7 +323,8 @@ ldouble xx_relel_inj;
 
 ldouble **msgbufs;
 ldouble *scent, *savg;
-ldouble *u,*x,*ucent,*xb,*xout, *du,*ut1,*ut2,*ut3,*ut4,*ut0,*u_bak_fixup,*p_bak_fixup,
+ldouble *u,*x,*ucent,*xb,*xout, *xbout_xface, *xbout_yface, *xbout_zface,
+  *du,*ut1,*ut2,*ut3,*ut4,*ut0,*u_bak_fixup,*p_bak_fixup,
   *u_step1,*u_step2,*gammagas,
   *vischeating,*vischeatingnegebalance,*vischeatingnegibalance,*vischeatingtimesdeltae,
   *u_step3,*u_step4,*ahdx,*ahdy,*ahdz,
@@ -478,7 +479,7 @@ struct OpTable {
 					               (iY(iy)+(NGCY))*(SX)*NFLAGS + \
 						       (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val
 
-// outcoords
+// outcoords at centers 
 //note as in get_x idim is spatial (0=x, 1=y, 2=z)
 #define get_xout(idim,ix,iy,iz) xout[idim + (iX(ix)+(NGCX))*3 + \
 				            (iY(iy)+(NGCY))*(SX)*3 + \
@@ -486,6 +487,28 @@ struct OpTable {
 #define set_xout(idim,ix,iy,iz,val) xout[idim + (iX(ix)+(NGCX))*3 +	\
 				                (iY(iy)+(NGCY))*(SX)*3 + \
 					        (iZ(iz)+(NGCZ))*(SY)*(SX)*3]=val
+
+//outcoords at faces
+#define get_xbout_xface(idim,ix,iy,iz) xbout_xface[idim + (iX(ix)+(NGCX))*3 +	     \
+				                          (iY(iy)+(NGCY))*(SX+1)*3 + \
+					                  (iZ(iz)+(NGCZ))*(SY)*(SX+1)*3]
+#define set_xbout_xface(idim,ix,iy,iz,val) xbout_xface[idim + (iX(ix)+(NGCX))*3 +	\
+				                              (iY(iy)+(NGCY))*(SX+1)*3 + \
+					                      (iZ(iz)+(NGCZ))*(SY)*(SX+1)*3]=val
+
+#define get_xbout_yface(idim,ix,iy,iz) xbout_yface[idim + (iX(ix)+(NGCX))*3 + \
+				                          (iY(iy)+(NGCY))*(SX)*3 + \
+					                  (iZ(iz)+(NGCZ))*(SY+1)*(SX)*3]
+#define set_xbout_yface(idim,ix,iy,iz,val) xbout_yface[idim + (iX(ix)+(NGCX))*3 +	\
+				                              (iY(iy)+(NGCY))*(SX)*3 + \
+					                      (iZ(iz)+(NGCZ))*(SY+1)*(SX)*3]=val
+
+#define get_xbout_zface(idim,ix,iy,iz) xbout_zface[idim + (iX(ix)+(NGCX))*3 + \
+				                          (iY(iy)+(NGCY))*(SX)*3 + \
+					                  (iZ(iz)+(NGCZ))*(SY)*(SX)*3]
+#define set_xbout_zface(idim,ix,iy,iz,val) xbout_zface[idim + (iX(ix)+(NGCX))*3 +	\
+				                              (iY(iy)+(NGCY))*(SX)*3 + \
+					                      (iZ(iz)+(NGCZ))*(SY)*(SX)*3]=val
 
 //primitive and flux arrays
 #define get_u(uarr,iv,ix,iy,iz) uarr[iv + (iX(ix)+(NGCX))*NV + \

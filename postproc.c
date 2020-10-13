@@ -1239,10 +1239,6 @@ int calc_scalars(ldouble *scalars,ldouble t)
   //accretion rate through horizon in Edd. units (6)
   scalars[4]=-mdot*mdotscale/calc_mdotEdd();
 
-  ldouble xx[4],xxBL[4];
-  get_xx(NX-1,0,0,xx);
-  coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
-
   //luminosities 
   ldouble rlum=15.;
 #if(PROBLEM==69) //INJDISK
@@ -1273,6 +1269,15 @@ int calc_scalars(ldouble *scalars,ldouble t)
   scalars[10]=totallum;
   
   //mri resolution parameter Q_theta (7) at rmri
+
+  ldouble xx[4],xxBL[4];
+  get_xx(NX-1,0,0,xx);
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(NX-1, 0, 0, xxBL);
+  #else
+  coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
+  #endif
+  
   ldouble rmri=xxBL[1]/2.;  // middle radial cell
 #if(PROBLEM==69) //INJDISK
   rmri=20.;
@@ -1590,7 +1595,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
 #endif
 
 
-#endif
+#endif //SEDDRIVEN or SEDRIVENTURBRELEL
 
 
   /*********************************************/
@@ -1643,7 +1648,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
     }
    scalars[3]=beta/rho2;
 
-#endif
+#endif //SOFTBALL
 
   /*********************************************/
   //L1 ERRRORS for some problems
@@ -1682,7 +1687,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
       L1+=fabs(get_u(p,0,i,0,0)-myrho);
     }
   scalars[0]=L1/(ldouble)NX;
-#endif
+#endif //CALCL1_HDWAVE
 
 #ifdef CALCL1_HUBBLE
   //temporarily here: L1 error for HUBBLE
@@ -1698,7 +1703,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
       L1+=fabs(get_u(p,0,i,0,0)-myrho);
     }
   scalars[0]=L1/(ldouble)NX;
-#endif
+#endif //CALCL1_HUBBLE
 
   return 0;
 }
@@ -1741,12 +1746,9 @@ calc_totalmass()
           coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
           coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
           dx[1] = fabs(xx2[2] - xx1[2]);
-          xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-          xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-          coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-          coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-          dx[2] = fabs(xx2[3] - xx1[3]);
-          if(NZ==1) 
+
+
+	  if(NZ==1) 
           {
             dx[2] = 2. * M_PI;
           }
@@ -1754,10 +1756,18 @@ calc_totalmass()
           {
             #ifdef PHIWEDGE
             dx[2] *= (2. * M_PI / PHIWEDGE);
+            #else
+	    
+  	    xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
+            xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
+            coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
+            coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
+            dx[2] = fabs(xx2[3] - xx1[3]);
+
             #endif
           }
         }
-        else
+        else 
         {
           get_xx(ix, iy, iz, xx);
           dx[0] = get_size_x(ix, 0);

@@ -537,7 +537,15 @@ initialize_arrays()
   //arrays for MYCOORDS->OUTCOORDS transformation
   if((xout=(ldouble*)malloc((Ngrid*3)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
   if((dxdx_my2out=(ldouble*)malloc((Ngridmet*16)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  if((dxdx_out2my=(ldouble*)malloc((Ngridmet*16)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");  
+  if((dxdx_out2my=(ldouble*)malloc((Ngridmet*16)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+
+  //outcoords at x-faces // only if postproc==1 ??
+  long long Ngrid_xface=(SX+1)*(SY)*(SZ);
+  long long Ngrid_yface=(SX)*(SY+1)*(SZ);
+  long long Ngrid_zface=(SX)*(SY)*(SZ+1);
+  if((xbout_xface=(ldouble*)malloc((Ngrid_xface*3)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  if((xbout_yface=(ldouble*)malloc((Ngrid_yface*3)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  if((xbout_zface=(ldouble*)malloc((Ngrid_zface*3)*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
 #endif
   
   //primitives at cell centers
@@ -600,7 +608,7 @@ initialize_arrays()
   if((gammagas=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
  
   /****************** extra arrays, used only for time evolution **********************/
-  //we might need some of these arrays in postproc (if doingpostproc_avg==1
+  //we might need some of these arrays in postproc (if doingpostproc_avg==1)
   #ifdef DIVIDEVISCHEATBYDT
   if(1.)
   #else

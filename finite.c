@@ -1946,7 +1946,8 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
   return 0;
 }
 
-// sets the output grid coordinates at the cell centers in xout
+// sets the output grid coordinates at the cell centers and faces
+// used with PRECOMPUTE_MY2OUT defined
 int set_grid_outcoords()
 {
 
@@ -1964,6 +1965,46 @@ int set_grid_outcoords()
 
 	for(ii=0;ii<3;ii++)
 	  set_xout(ii,ix,iy,iz,xxout[ii+1]);
+
+	// TODO these are only needed when postproc==1 ? 
+        //x-faces
+	if(ix==-NG)
+	{
+          xx[0] = global_time; xx1[1] = get_xb(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_x(iz, 2);
+          coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+	  for(ii=0;ii<3;ii++)
+	    set_xbout_xface(ii,ix,iy,iz,xxout[ii+1]);
+	}
+	xx[0] = global_time; xx[1] = get_xb(ix+1,0); xx[2] = get_x(iy,1); xx[3] = get_x(iz,2);
+	coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+        for(ii=0;ii<3;ii++)
+	  set_xbout_xface(ii,ix+1,iy,iz,xxout[ii+1]);
+	  
+	//y-faces
+	if(iy==-NG)
+	{
+          xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_xb(iy,1); xx[3] = get_x(iz,2);
+          coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+	  for(ii=0;ii<3;ii++)
+	    set_xbout_yface(ii,ix,iy,iz,xxout[ii+1]);
+	}
+	xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_xb(iy+1,1); xx[3] = get_x(iz,2);
+	coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+	for(ii=0;ii<3;ii++)
+	  set_xbout_yface(ii,ix,iy+1,iz,xxout[ii+1]);
+
+	//z-faces
+	if(iz==-NG)
+	{
+          xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_x(iy,1); xx[3] = get_xb(iz,2);
+          coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+	  for(ii=0;ii<3;ii++)
+	    set_xbout_zface(ii,ix,iy,iz,xxout[ii+1]);
+	}
+	xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_x(iy,1); xx[3] = get_xb(iz+1,2);
+	coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+        for(ii=0;ii<3;ii++)
+	  set_xbout_zface(ii,ix,iy,iz+1,xxout[ii+1]);	  
      }
 
  return 0;

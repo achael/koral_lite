@@ -38,13 +38,12 @@ calc_metric()
   #endif
 
   //it is not loop_5 because NGCZ != NGCZMET
-  // Note: NGCX=NG, NGCY=NG if NY>1 else 0, NGCZMET=NG if NZ>1 and the metric is non-axisymmetric, else NGCZMET=0
-  
+  // Note: NGCX=NG, NGCY=NG if NY>1 else 0, NGCZMET=NG if NZ>1 and the metric is non-axisymmetric, else NGCZMET=0  
   #pragma omp parallel for private(ix,iy,iz,ii) 
     for(ix=-NGCX;ix<NX+NGCX;ix++)
       for(iy=-NGCY;iy<NY+NGCY;iy++)
         for(iz=-NGCZMET;iz<NZ+NGCZMET;iz++)
-          {
+        {
 
 	//printf("%d %d %d \n", ix,iy,iz);
 #ifdef METRICAXISYMMETRIC
@@ -55,6 +54,7 @@ calc_metric()
 	ldouble Kr[4][4][4];
 	ldouble xx[4];
 	int i,j,k;
+	
 	//cell centers
 	xx[0]=global_time;
 	xx[1]=get_x(ix,0);
@@ -62,23 +62,10 @@ calc_metric()
 	xx[3]=get_x(iz,2);
 
 	calc_g(xx,gloc);
-
-	/*
-	if((ix==-2 && iy==0))
-	  {
-	    ldouble xxtmp[4];
-	    coco_N(xx,xxtmp,MYCOORDS,OUTCOORDS);
-	    printf("\n");
-            printf("%d %d %d\n",ix,iy,iz);
-	    print_4vector(xx);
-	    print_4vector(xxtmp);
-            print_metric(gloc);
-	  }
-	*/
-	
 	for(i=0;i<4;i++)
 	  for(j=0;j<4;j++)
 	    set_g(g,i,j,ix,iy,iz,gloc[i][j]);
+
 	for(j=0;j<3;j++)
 	  set_g(g,j,4,ix,iy,iz,calc_dlgdet(xx,j));
             
@@ -112,14 +99,12 @@ calc_metric()
 #endif
 	
 	if(doingpostproc==0) //metric at faces needed only for time evolution
-	  {
+	{
 	    //x-faces
 	    if(ix==-NG)
-	      {
-		xx[0]=global_time;
-		xx[1]=get_xb(ix,0);
-		xx[2]=get_x(iy,1);
-		xx[3]=get_x(iz,2);
+	    {
+		xx[0]=global_time; xx[1]=get_xb(ix,0); xx[2]=get_x(iy,1); xx[3]=get_x(iz,2);
+		
 		calc_g(xx,gloc);
 		for(i=0;i<4;i++)
 		  for(j=0;j<4;j++)
@@ -129,16 +114,16 @@ calc_metric()
 		for(i=0;i<4;i++)
 		  for(j=0;j<4;j++)
 		    set_gb(Gbx,i,j,ix,iy,iz,gloc[i][j],0);
+		
 		for(j=0;j<3;j++)
 		  set_gb(gbx,j,4,ix,iy,iz,calc_dlgdet(xx,j),0);
-		set_gb(gbx,3,4,ix,iy,iz,calc_gdet(xx),0);
 
+		set_gb(gbx,3,4,ix,iy,iz,calc_gdet(xx),0);
 		set_gb(Gbx,3,4,ix,iy,iz,calc_gttpert(xx),0);
-	      }
-	    xx[0]=global_time;
-	    xx[1]=get_xb(ix+1,0);
-	    xx[2]=get_x(iy,1);
-	    xx[3]=get_x(iz,2);
+	    }
+	    
+	    xx[0]=global_time; xx[1]=get_xb(ix+1,0); xx[2]=get_x(iy,1); xx[3]=get_x(iz,2);
+	    
 	    calc_g(xx,gloc);
 	    for(i=0;i<4;i++)
 	      for(j=0;j<4;j++)
@@ -151,17 +136,15 @@ calc_metric()
 
 	    for(j=0;j<3;j++)
 	      set_gb(gbx,j,4,ix+1,iy,iz,calc_dlgdet(xx,j),0);
+	    
 	    set_gb(gbx,3,4,ix+1,iy,iz,calc_gdet(xx),0);
-
 	    set_gb(Gbx,3,4,ix+1,iy,iz,calc_gttpert(xx),0);
 
 	    //y-faces
 	    if(iy==-NG)
-	      {
-		xx[0]=global_time;
-		xx[1]=get_x(ix,0);
-		xx[2]=get_xb(iy,1);
-		xx[3]=get_x(iz,2);
+	    {
+		xx[0]=global_time; xx[1]=get_x(ix,0); xx[2]=get_xb(iy,1); xx[3]=get_x(iz,2);
+
 		calc_g(xx,gloc);
 		for(i=0;i<4;i++)
 		  for(j=0;j<4;j++)
@@ -171,18 +154,16 @@ calc_metric()
 		for(i=0;i<4;i++)
 		  for(j=0;j<4;j++)
 		    set_gb(Gby,i,j,ix,iy,iz,gloc[i][j],1);
+		
 		for(j=0;j<3;j++)
 		  set_gb(gby,j,4,ix,iy,iz,calc_dlgdet(xx,j),1);
+		
 		set_gb(gby,3,4,ix,iy,iz,calc_gdet(xx),1);
-
 		set_gb(Gby,3,4,ix,iy,iz,calc_gttpert(xx),1);
-	      }
+	    }
 
+	    xx[0]=global_time; xx[1]=get_x(ix,0); xx[2]=get_xb(iy+1,1); xx[3]=get_x(iz,2);
 
-	    xx[0]=global_time;
-	    xx[1]=get_x(ix,0);
-	    xx[2]=get_xb(iy+1,1);
-	    xx[3]=get_x(iz,2);
 	    calc_g(xx,gloc);
 	    for(i=0;i<4;i++)
 	      for(j=0;j<4;j++)
@@ -192,19 +173,18 @@ calc_metric()
 	    for(i=0;i<4;i++)
 	      for(j=0;j<4;j++)
 		set_gb(Gby,i,j,ix,iy+1,iz,gloc[i][j],1);
+	    
 	    for(j=0;j<3;j++)
 	      set_gb(gby,j,4,ix,iy+1,iz,calc_dlgdet(xx,j),1);
-	    set_gb(gby,3,4,ix,iy+1,iz,calc_gdet(xx),1);
 
+	    set_gb(gby,3,4,ix,iy+1,iz,calc_gdet(xx),1);
 	    set_gb(Gby,3,4,ix,iy+1,iz,calc_gttpert(xx),1);
 		
 	    //z-faces
 	    if(iz==-NG)
-	      {
-		xx[0]=global_time;
-		xx[1]=get_x(ix,0);
-		xx[2]=get_x(iy,1);
-		xx[3]=get_xb(iz,2);
+	    {
+		xx[0]=global_time; xx[1]=get_x(ix,0); xx[2]=get_x(iy,1); xx[3]=get_xb(iz,2);
+		
 		calc_g(xx,gloc);
 		for(i=0;i<4;i++)
 		  for(j=0;j<4;j++)
@@ -214,19 +194,17 @@ calc_metric()
 		for(i=0;i<4;i++)
 		  for(j=0;j<4;j++)
 		    set_gb(Gbz,i,j,ix,iy,iz,gloc[i][j],2);
+
 		for(j=0;j<3;j++)
 		  set_gb(gbz,j,4,ix,iy,iz,calc_dlgdet(xx,j),2);
 		set_gb(gbz,3,4,ix,iy,iz,calc_gdet(xx),2);
-
 		set_gb(Gbz,3,4,ix,iy,iz,calc_gttpert(xx),2);
 
-
-	      }
-	    xx[0]=global_time;
-	    xx[1]=get_x(ix,0);
-	    xx[2]=get_x(iy,1);
-	    xx[3]=get_xb(iz+1,2);
+	    }
+	    
+	    xx[0]=global_time; xx[1]=get_x(ix,0); xx[2]=get_x(iy,1); xx[3]=get_xb(iz+1,2);
 	    calc_g(xx,gloc);
+	    
 	    for(i=0;i<4;i++)
 	      for(j=0;j<4;j++)
 		set_gb(gbz,i,j,ix,iy,iz+1,gloc[i][j],2);	  
@@ -235,14 +213,15 @@ calc_metric()
 	    for(i=0;i<4;i++)
 	      for(j=0;j<4;j++)
 		set_gb(Gbz,i,j,ix,iy,iz+1,gloc[i][j],2);	  
+
 	    for(j=0;j<3;j++)
 	      set_gb(gbz,j,4,ix,iy,iz+1,calc_dlgdet(xx,j),2);
-	    set_gb(gbz,3,4,ix,iy,iz+1,calc_gdet(xx),2);
 	    
+	    set_gb(gbz,3,4,ix,iy,iz+1,calc_gdet(xx),2);
 	    set_gb(Gbz,3,4,ix,iy,iz+1,calc_gttpert(xx),2);
 
-	  }
-	  }
+	} //doingpostproc
+	} //loop over cells
 
     //precalculating characteristic radii and parameters
     //works for all metrics but makes sense only for BH problems
