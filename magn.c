@@ -732,20 +732,29 @@ calc_Qthetaphi(int ix, int iy, int iz,ldouble *Qtheta,ldouble *Qphi)
       ldouble Omega = get_uavg(pavg,AVGUCON(3),ix,iy,iz)/get_uavg(pavg,AVGUCON(0),ix,iy,iz);
       ldouble rho = get_uavg(pavg,RHO,ix,iy,iz);
       ldouble dxth,dxph;
-      ldouble xx1[4],xx2[4];
+      ldouble xx1[4],xx2[4],dx[3];
 
-      // AA! Since this coco is on the boundary and not the cell center we can't use precompute
-      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-      coco_N(xx1,xx1,MYCOORDS,BLCOORDS);
-      coco_N(xx2,xx2,MYCOORDS,BLCOORDS);
-      dxth=fabs(xx2[2]-xx1[2]);
-      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz,2);
-      coco_N(xx1,xx1,MYCOORDS,BLCOORDS);
-      coco_N(xx2,xx2,MYCOORDS,BLCOORDS);
-      dxph=fabs(xx2[3]-xx1[3]);
-
+      // ANDREW TODO -- do we need need this to be in BL? 
+      if(OUTCOORDS==BLCOORDS)
+      {
+        get_cellsize_out(ix, iy, iz, dx);
+	dxth = dx[1];
+	dxph = dx[2];
+      }
+      else
+      {
+      
+        xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
+        xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
+        coco_N(xx1,xx1,MYCOORDS,BLCOORDS);
+        coco_N(xx2,xx2,MYCOORDS,BLCOORDS);
+        dxth=fabs(xx2[2]-xx1[2]);
+        xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
+        xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz,2);
+        coco_N(xx1,xx1,MYCOORDS,BLCOORDS);
+        coco_N(xx2,xx2,MYCOORDS,BLCOORDS);
+        dxph=fabs(xx2[3]-xx1[3]);
+      }
       *Qtheta = 2.*M_PI/fabs(Omega)/dxth*fabs(bcon2)/sqrt(rho);
       *Qphi= 2.*M_PI/fabs(Omega)/dxph*fabs(bcon3)/sqrt(rho);
     }

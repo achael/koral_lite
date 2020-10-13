@@ -1920,29 +1920,11 @@ fill_geometry_arb(int ix,int iy,int iz,void *geom,int COORDS)
 
   get_xx(ix,iy,iz,xxvec);
 
-  //AA TODO check!
 #ifdef PRECOMPUTE_MY2OUT 
   if(COORDS == OUTCOORDS)
   {
-    get_xxout(ix, iy, iz, xxvecC); // AA! Warning! the time coordinate will be nonsense
+    get_xxout(ix, iy, iz, xxvecC); // ANDREW Warning! the time coordinate will be nonsense
 
-    // use precomputed jacobin if COORDS == OUTCOORDS
-    // this is unnecessary, because OUTCOORDS should have a pretty simple metric
-    /*
-    int i,j;
-    ldouble ggmy[4][5], GGmy[4][5];
-    ldouble Gb[4][4], G[4][4], g[4][4];
-    pick_g(ix,iy,iz,ggmy); 
-    pick_G(ix,iy,iz,GGmy); // inverse metric in code coordinates
-
-    DLOOP(i,j) Gb[i][j]=GGmy[i][j]; //contravarient
-    DLOOP(i,j) dxdx[i][j] = get_dxdx(dxdx_my2out,i,j,ix,iy,iz); // jacobian MYCOORDS->OUTCOORDS
-    multiply22(Gb,G,dxdx); // transformed contravarient metric
-    inverse_44matrix(G,g); // covarient metric
-
-    DLOOP(i,j) ggg->gg=g[i][j];
-    DLOOP(i,j) ggg->GG=G[i][j];
-    */
     calc_g_arb(xxvecC,ggg->gg,COORDS);
     calc_G_arb(xxvecC,ggg->GG,COORDS);
   }
@@ -1958,10 +1940,6 @@ fill_geometry_arb(int ix,int iy,int iz,void *geom,int COORDS)
   calc_G_arb(xxvecC,ggg->GG,COORDS);
 #endif
   
-  //ANDREW: do we need tetrades and ZAMOS any more? 
-  //calc_tetrades(ggg->gg,ggg->tup,ggg->tlo,COORDS);
-  //calc_ZAMOes(ggg->gg,ggg->eup,ggg->elo,COORDS);
-
   ggg->alpha=sqrt(-1./ggg->GG[0][0]);
   ggg->ix=ix;  ggg->iy=iy;  ggg->iz=iz;
   ggg->ifacedim=-1;

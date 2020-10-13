@@ -1575,14 +1575,65 @@ decompose_vels(ldouble *pp,int velidx, ldouble v[4],void *ggg,  void *gggBL)
 // get cell size in x,y,z
 //**********************************************************************
 
+
+// ANDREW TODO DEBUG
+// get the size of a cell dx in 3 dimensions in OUTCOOORDS
+int get_cellsize_out(int ix, int iy, int iz, ldouble dx[3])
+{
+   ldouble xx1[4], xx2[4];
+#ifdef PRECOMPUTE_MY2OUT
+   int ii;
+   xx1[0] = 0.; xx2[0] = 0.;
+   for(ii=0;ii<3;ii++)
+     xx1[ii] = get_xbout_xface(ii,ix,iy,iz);
+     xx2[ii] = get_xbout_xface(ii,ix+1,iy,iz);
+
+   dx[0] = fabs(xx2[1] - xx1[1]);
+
+   for(ii=0;ii<3;ii++)
+     xx1[ii] = get_xbout_yface(ii,ix,iy,iz);
+     xx2[ii] = get_xbout_yface(ii,ix,iy+1,iz);
+
+   dx[1] = fabs(xx2[2] - xx1[2]);
+
+   for(ii=0;ii<3;ii++)
+     xx1[ii] = get_xbout_zface(ii,ix,iy,iz);
+     xx2[ii] = get_xbout_zface(ii,ix,iy,iz+1);
+       
+   dx[2] = fabs(xx2[3] - xx1[3]);
+          
+#else
+   xx1[0] = 0.; xx1[1] = get_xb(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_x(iz, 2);
+   xx2[0] = 0.; xx2[1] = get_xb(ix+1, 0);xx2[2] = get_x(iy, 1); xx2[3] = get_x(iz, 2);
+   coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
+   coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
+
+   dx[0] = fabs(xx2[1] -xx1[1]);
+
+   xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
+   xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
+   coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
+   coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
+
+   dx[1] = fabs(xx2[2] - xx1[2]);
+
+   xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
+   xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
+   coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
+   coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
+
+   dx[2] = fabs(xx2[3] - xx1[3]);
+
+#endif
+   return 0;
+
+}
+
 int
-get_cell_size_arb(int ix,int iy,int iz,ldouble *dx,int COORDS)
+get_cellsize_arb(int ix,int iy,int iz,ldouble dx[3],int COORDS)
 {
   
-  ldouble xx1[4],xx2[4],xx[4],xxBL[4]; 
-  get_xx(ix,iy,iz,xx);	      
-  // AA! Since this coco is on the boundary and not the cell center we can't use precompute
-  coco_N(xx,xxBL,MYCOORDS,COORDS);
+  ldouble xx1[4],xx2[4]; 
   xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
   xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
   coco_N(xx1,xx1,MYCOORDS,COORDS);

@@ -336,8 +336,7 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   struct geometry geomout;
   fill_geometry_arb(ix,iy,iz,&geomout,OUTCOORDS);
 
-  // AA now that we have set avg[AVGRHOURDIFF] = 0, we don't need these
-
+  // ANDREW now that we have set avg[AVGRHOURDIFF] = 0, we don't need these
   /*
   struct geometry geoml;
   fill_geometry_face(ix,iy,iz,0,&geoml);
@@ -362,14 +361,6 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
 #else      
   trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
 #endif
-
-  // AA -- replaced with trans_pall -- ok?
-  /*
-#ifdef RADIATION
-  trans_prad_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
-#endif
-  trans_pmhd_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomout);
-  */
   
   ldouble (*gg)[5],(*GG)[5];
   gg=geomout.gg;
@@ -459,7 +450,7 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
       avg[AVGFLUXZL(iv)]=get_ub(flbz,iv,ix,iy,iz,2);
     }
 
-  // AA - unclear why this is necessary
+  // ANDREW - unclear why this is necessary
   // and it has a bug! (iv != 0 in vector[1] = get_ub)
   avg[AVGRHOURDIFF] = 0;
 /*

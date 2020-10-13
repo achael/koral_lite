@@ -1237,10 +1237,14 @@ ldouble gdot_turb_advect(ldouble gamma)
 // advection from zhdankin 2019
 ldouble gdot_z19_advect(ldouble gamma)
 {
+#ifdef RELEL_ADVECT_Z19
   ldouble D  =RELEL_RATE2*(RELEL_GAMMA0*RELEL_GAMMA0 + gamma*gamma);
   ldouble Ap =RELEL_RATEH*RELEL_GAMMA0 + RELEL_RATEA*gamma;
   ldouble Acool= -gamma*gamma / RELEL_GAMMA0;
   return -1*(2.*D/gamma + Ap + Acool)/RELEL_TAUC;
+#else
+  return 0.;
+#endif
 }
 
 
@@ -1253,8 +1257,12 @@ ldouble d_turb_diffuse(ldouble gamma)
 }
 ldouble d_z19_diffuse(ldouble gamma)
 {
+#ifdef RELEL_DIFFUSE_Z19
   ldouble D=RELEL_RATE2*(RELEL_GAMMA0*RELEL_GAMMA0 + gamma*gamma);
   return D/RELEL_TAUC;
+#else
+  return 0.;
+#endif
 }
 //*********************************************/
 //* Nonthermal Error Function
@@ -2063,7 +2071,8 @@ fprint_relel_avg_spectrum(ldouble t, int jx, int jy, int jz, int nfile, char* fo
 	
 	  //coordinate
 	  ldouble dx[3];
-	  get_cell_size_arb(ix,iy,iz,dx,OUTCOORDS); // AA this may take a long time with JETCOORDS!
+	  get_cellsize_out(ix,iy,iz,dx);
+	  //get_cellsize_arb(ix,iy,iz,dx,OUTCOORDS); 
 
           ldouble dvol=dx[0]*dx[1]*dx[2]*geomBL.gdet;
 	  volume+=dvol;

@@ -331,8 +331,12 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      struct geometry geomout;
 	      fill_geometry_arb(iix,iiy,iiz,&geomout,OUTCOORDS);
 
-	      // !AA can't use precomputed here, because it uses cell faces
-	      ldouble dxph[3],dx[3];
+	      //cell dimensions
+    	      //ANDREW put cell size code in a function with precompute option
+              ldouble dxph[3],dx[3];
+	      get_cellsize_out(ix, iy, iz, dx);
+	  
+		/*
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
@@ -348,7 +352,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
 	      dx[2]=fabs(xx2[3]-xx1[3]);
-
+		*/
 	      dxph[0]=dx[0]*sqrt(geomout.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomout.gg[2][2]);
 	      dxph[2]=dx[2]*sqrt(geomout.gg[3][3]);
@@ -379,7 +383,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
               #endif
 
-	      // AA! speed up calc_gdet? 
+	      // ANDREW TODO speed up calc_gdet? 
 	      gdet1=calc_gdet_arb(xx1,OUTCOORDS);
 	      gdet2=calc_gdet_arb(xx2,OUTCOORDS);
 
@@ -426,14 +430,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               #else      
               trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
               #endif
-
-              // AA -- replaced with trans_pall -- ok?
-	      /*
-              #ifdef RADIATION
-	      trans_prad_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
-              #endif
-	      trans_pmhd_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
-              */
 	      
 	      //magnetic fields
               #ifdef MAGNFIELD
@@ -1293,8 +1289,11 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      struct geometry geomout;
 	      fill_geometry_arb(iix,iiy,iiz,&geomout,OUTCOORDS);
 
-	      //!AA can't use precomputed here, since it uses cell faces
 	      ldouble dxph[3],dx[3];
+	      //cell dimensions
+       	      //ANDREW put cell size code in a function with precompute option
+              get_cellsize_out(ix, iy, iz, dx);
+	      /*
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
@@ -1310,7 +1309,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
 	      dx[2]=fabs(xx2[3]-xx1[3]);
-
+              */
 	      dxph[0]=dx[0]*sqrt(geomout.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomout.gg[2][2]);
 	      dxph[2]=dx[2]*sqrt(geomout.gg[3][3]);
@@ -1377,14 +1376,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
               #endif
 
-              // AA -- replaced with trans_pall -- ok?
-              /*	      
-              #ifdef RADIATION
-	      trans_prad_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
-              #endif
-	      trans_pmhd_coco(pp, pp, MYCOORDS,OUTCOORDS, xxvec,&geom,&geomout);
-              */
-	      
               //velocities etc
 	      ldouble vel[4],vcov[4],vcon[4],velprim[4];
 

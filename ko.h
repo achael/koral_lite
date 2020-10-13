@@ -710,7 +710,9 @@ int print_conserved(ldouble *u);
 int print_Nvector(ldouble v[4],int N);
 int my_clock_gettime(void* tsptr);
 int decompose_vels(ldouble *pp,int velidx, ldouble v[4],void *ggg,  void *gggBL);
-int get_cell_size_arb(int ix,int iy,int iz,ldouble *dx,int COORDS);
+int get_cellsize_out(int ix,int iy,int iz,ldouble dx[3]);
+int get_cellsize_arb(int ix,int iy,int iz,ldouble dx[3],int COORDS);
+
 int pertsign_3d(int a,int b,int c);
 int pertsign_4d(int a,int b,int c, int d);
 int epsilon_4d(int a,int b,int c, int d);

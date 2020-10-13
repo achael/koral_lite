@@ -1,6 +1,6 @@
 /*! \file fileop.c
  \brief File operations
- */
+*/
 
 #include "ko.h"
 
@@ -720,16 +720,11 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
 #ifdef RESTARTOUTPUTINBL
   printf("\n RESTARTOUTPUTINBL not allowed in hdf5 output!\n";
   exit(1);
-    //struct geometry geom,geomBL;
-    //fill_geometry(ix,iy,iz,&geom);
-    //fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
-    //trans_pall_coco(ppout, ppout, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
 #endif
 
 #ifdef OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING
   printf("\n OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING not allowed in hdf5 output!\n";
   exit(1);
-    //ppout[ENTR]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);
 #endif
 
   // Finally, redefine restart files to the current dump
@@ -887,7 +882,7 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
 
     get_prim_name(prim_name, iv);
     printf("  prim_name: %s\n", prim_name);
-    //
+    
     dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT, &(primitive[0][0][0]));
     status = H5Dclose(dumps_dataset_array);
@@ -900,16 +895,11 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
 #ifdef RESTARTOUTPUTINBL
   printf("\n RESTARTOUTPUTINBL not allowed in hdf5 output!\n";
   exit(1);
-    //struct geometry geom,geomBL;
-    //fill_geometry(ix,iy,iz,&geom);
-    //fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
-    //trans_pall_coco(ppout, ppout, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
 #endif
 
 #ifdef OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING
   printf("\n OVERWRITEENTROPYINRESTARTFILESWITHNEGEHEATING not allowed in hdf5 output!\n";
   exit(1);
-    //ppout[ENTR]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);
 #endif
 
   // Finally, redefine restart files to the current dump
@@ -2472,8 +2462,13 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 		    pp[iv]=get_u(p,iv,ix,iy,iz);
 	      }
 
-	      // AA! can't use precomputed coords here, because it's at the boundaries
-	      ldouble dxph[3],dx[3],xx1[4],xx2[4];
+	      //cell dimensions
+     	      //ANDREW put cell size code in a function with precompute option
+              ldouble dxph[3],dx[3];
+              get_cellsize_out(ix, iy, iz, dx);
+
+	      /*
+	      ldouble xx1[4],xx2[4];
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
@@ -2489,7 +2484,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
 	      dx[2]=fabs(xx2[3]-xx1[3]);
-
+              */
 	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
 	      dxph[2]=dx[2]*sqrt(geomBL.gg[3][3]);
@@ -3025,7 +3020,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
                               
 /*********************************************/
 /* prints phi-averaged ASCII */
-/* only code-comparison quantities for now 
+/* only code-comparison quantities for now */
 /*********************************************/
                               
 int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
@@ -3093,8 +3088,12 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
 	          pp[iv]=get_u(p,iv,ix,iy,iz);
 	      }
 
-	      ldouble dxph[3],dx[3],xx1[4],xx2[4];
-	      int ij;
+	      //cell dimensions
+      	      //ANDREW put cell size code in a function with precompute option
+              ldouble dxph[3],dx[3];
+	      get_cellsize_out(ix, iy, iz, dx);
+	      /*
+	      ldouble xx1[4],xx2[4];
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
@@ -3110,7 +3109,8 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
 	      dx[2]=fabs(xx2[3]-xx1[3]);
-
+              */
+		
 	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
 	      dxph[2]=dx[2]*sqrt(geomBL.gg[3][3]);
@@ -3282,7 +3282,7 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
 
 /*********************************************/
 /* print radius and phi dependent correlation functions in rho and betainv ASCII */
-/* see code comparison paper
+/* see code comparison paper */
 /*********************************************/
                               
 int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
@@ -3336,7 +3336,12 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
          for(iz=0;iz<nz;iz++)
          {
 	 
-	      ldouble dx[3],xx1[4],xx2[4];
+	   ldouble dx[3];
+	   //cell dimensions
+    	   //ANDREW put cell size code in a function with precompute option
+           get_cellsize_out(ix, iy, iz, dx);
+	   /*
+	      ldouble x1[4],xx2[4];
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
@@ -3352,7 +3357,7 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
 	      dx[2]=fabs(xx2[3]-xx1[3]);
-
+	   */
 	    if(doingavg)
 	    {
 	     rho=get_uavg(pavg,RHO,ix,iy,iz);

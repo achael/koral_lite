@@ -1970,13 +1970,13 @@ int set_grid_outcoords()
         //x-faces
 	if(ix==-NG)
 	{
-          xx[0] = global_time; xx1[1] = get_xb(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_x(iz, 2);
-          coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+          xx[0] = global_time; xx[1] = get_xb(ix, 0); xx[2] = get_x(iy, 1); xx[3] = get_x(iz, 2);
+          coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
 	  for(ii=0;ii<3;ii++)
 	    set_xbout_xface(ii,ix,iy,iz,xxout[ii+1]);
 	}
 	xx[0] = global_time; xx[1] = get_xb(ix+1,0); xx[2] = get_x(iy,1); xx[3] = get_x(iz,2);
-	coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+	coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
         for(ii=0;ii<3;ii++)
 	  set_xbout_xface(ii,ix+1,iy,iz,xxout[ii+1]);
 	  
@@ -1984,12 +1984,12 @@ int set_grid_outcoords()
 	if(iy==-NG)
 	{
           xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_xb(iy,1); xx[3] = get_x(iz,2);
-          coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+          coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
 	  for(ii=0;ii<3;ii++)
 	    set_xbout_yface(ii,ix,iy,iz,xxout[ii+1]);
 	}
 	xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_xb(iy+1,1); xx[3] = get_x(iz,2);
-	coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+	coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
 	for(ii=0;ii<3;ii++)
 	  set_xbout_yface(ii,ix,iy+1,iz,xxout[ii+1]);
 
@@ -1997,12 +1997,12 @@ int set_grid_outcoords()
 	if(iz==-NG)
 	{
           xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_x(iy,1); xx[3] = get_xb(iz,2);
-          coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+          coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
 	  for(ii=0;ii<3;ii++)
 	    set_xbout_zface(ii,ix,iy,iz,xxout[ii+1]);
 	}
 	xx[0] = global_time; xx[1] = get_x(ix,0); xx[2] = get_x(iy,1); xx[3] = get_xb(iz+1,2);
-	coco_N(xx,xxout,MYCOORDS,OUTCOORDS)
+	coco_N(xx,xxout,MYCOORDS,OUTCOORDS);
         for(ii=0;ii<3;ii++)
 	  set_xbout_zface(ii,ix,iy,iz+1,xxout[ii+1]);	  
      }
@@ -2439,7 +2439,7 @@ ldouble get_size_x(int ic, int idim)
 //returns four-vector of coordinates
 //***********************************************************
 int
-get_xx(int ix,int iy,int iz,ldouble *xx)
+get_xx(int ix,int iy, int iz, ldouble *xx)
 {
   xx[0]=global_time;
   xx[1]=get_x(ix,0);
@@ -2451,7 +2451,7 @@ get_xx(int ix,int iy,int iz,ldouble *xx)
 // in OUTCOORDS
 // NOTE that the time coordinate is useless here!!
 int
-get_xxout(int ix,int iy,int iz,ldouble *xx)
+get_xxout(int ix, int iy, int iz, ldouble *xx)
 {
   xx[0]=-1;
   xx[1]=get_xout(0,ix,iy,iz);
@@ -2622,8 +2622,9 @@ int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim
   return 0;
 }
 
-/*
+///////////////////////////////////////////////////////////////
 //deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x gSIZE] - cell boundaries in idim metric
+/*
 ldouble get_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,int idim)
 {
   if(idim==0)
@@ -2644,8 +2645,10 @@ ldouble get_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,int idim)
   return 0;
 }
 */
-/*
+
+///////////////////////////////////////////////////////////////
 //deals with arrays [NX+NG x NY+NG x NZ+NG] - cell centers 
+/*
 int set_u_scalar(ldouble* uarr,int ix,int iy,int iz,ldouble value)
 {
   if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_u_scalar - index ouf of range");
@@ -2655,8 +2658,9 @@ int set_u_scalar(ldouble* uarr,int ix,int iy,int iz,ldouble value)
 }
 */
 
+///////////////////////////////////////////////////////////////
 //deals with arrays [NX+NG x NY+NG x NZ+NG x NV] - cell centers 
- /*
+/*
 ldouble get_u_scalar(ldouble* uarr,int ix,int iy,int iz)
 {
   if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_u_scalar - index ouf of range");
@@ -6460,7 +6464,7 @@ mix_entropies(ldouble dt)
       gfac = gm1;      
     
       #ifdef NOLOGINS
-      scalefac = kappainit / (sinit*gfac); //AA should be 1. 
+      scalefac = kappainit / (sinit*gfac); 
       #else
       scalefac = kappainit / (exp(sinit*gfac));
       #endif
@@ -6657,7 +6661,7 @@ mix_entropies(ldouble dt)
       
       #if !defined(CONSISTENTGAMMA) && defined(NOLOGINS2)
       gfac = (gammae-1.);      
-      scalefac = kappainit / (sinit*gfac); //AA should be 1. factors of m? 
+      scalefac = kappainit / (sinit*gfac); 
       #else
       gfac = (gammae-1.)/K_BOLTZ;      
       scalefac = kappainit / (exp(sinit*gfac));
@@ -6872,7 +6876,7 @@ mix_entropies(ldouble dt)
       //find the scale factor that relates kappa to exp(s)
       #if !defined(CONSISTENTGAMMA) && defined(NOLOGINS2)
       gfac = (gammai-1.);
-      scalefac = kappainit / (sinit*gfac); //AA should be 1.
+      scalefac = kappainit / (sinit*gfac); 
       #else
       gfac = (gammai-1.)/K_BOLTZ;      
       scalefac = kappainit / (exp(sinit*gfac));

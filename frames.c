@@ -1898,23 +1898,9 @@ int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg)
   ldouble Rij[4][4];
 
   int verbose=0;
-  //calc_Rij_M1_ff(pp1,Rij);  
-  //trans22_on2cc(Rij,Rij,tlo);  
-  //boost22_ff2lab(Rij,Rij,pp1,gg,GG); 
  
   calc_Rij(pp1,geom,Rij);  
   boost22_ff2lab_with_alpha(Rij, Rij, pp1, gg, GG, geom->alpha);
-
-  //TEST
-  /*
-  if(geom->ix==60 && geom->iy==NY/2)
-    {
-      print_tensor(Rij); 
-      ldouble Rijlab[4][4];
-      boost22_lab2ff(Rij,Rijlab,pp1,gg,GG); 
-      print_tensor(Rijlab); 
-    }
-  */
 
   indices_2221(Rij,Rij,gg);  
 
@@ -1938,15 +1924,6 @@ int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg)
   int corrected;
   u2p_rad(uu,pp2,geom,&corrected);
 
-  //TEST
-  /*
-    if(geom->ix==60 && geom->iy==NY/2)
-     {
-     calc_Rij(pp2,geom,Rij); //calculates R^munu in OUTCOORDS
-     print_tensor(Rij);
-     getch();
-}
-  */
   #ifdef EVOLVEPHOTONNUMBER
   //velocities of the frames
   ldouble ut[4];ut[1]=pp2[VX];ut[2]=pp2[VY];ut[3]=pp2[VZ];
