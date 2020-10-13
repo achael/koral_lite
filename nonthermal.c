@@ -51,6 +51,9 @@ int set_relel_gammas()
   relel_gammas[0] = exp(relel_log_gammas[0]);
 #endif
 
+  relel_gammas_inv[0] = 1./relel_gammas[0];
+  relel_gammas_e_inv[0] = 1./relel_gammas_e[0];
+  
   // gammas of bin centers and and edges
   for(ie=1; ie<NRELBIN; ie++)
   {
@@ -58,6 +61,7 @@ int set_relel_gammas()
     relel_log_gammas[ie] = relel_log_gammas[ie-1] + logbinspace;
     relel_gammas_e[ie] = exp(relel_log_gammas_e[ie]);
     relel_gammas[ie] = exp(relel_log_gammas[ie]);
+    
     relel_gammas_inv[ie] = 1./relel_gammas[ie];
     relel_gammas_e_inv[ie] = 1./relel_gammas_e[ie];
   }
@@ -1222,7 +1226,36 @@ gdot_coul(ldouble gamma, ldouble neth_cgs)
   return bc1 * (log(gamma) + bc2) * timegu2cgs;
 } 
 
+// Advection term from Wong, Zhdankin, + 2020
+// Cannot use in upwind, since sign changes.
+// TODO dependence on other parameters!
+ldouble gdot_turb_advect(ldouble gamma)
+{
+  ldouble a = 545. - 172.*log(1.+gamma/33.);
+  return -1*a; // sign convention 
+}
+// advection from zhdankin 2019
+ldouble gdot_z19_advect(ldouble gamma)
+{
+  ldouble D  =RELEL_RATE2*(RELEL_GAMMA0*RELEL_GAMMA0 + gamma*gamma);
+  ldouble Ap =RELEL_RATEH*RELEL_GAMMA0 + RELEL_RATEA*gamma;
+  ldouble Acool= -gamma*gamma / RELEL_GAMMA0;
+  return -1*(2.*D/gamma + Ap + Acool)/RELEL_TAUC;
+}
 
+
+// Diffusion term from Wong, Zhdankin, + 2020
+// TODO dependence on other parameters!
+ldouble d_turb_diffuse(ldouble gamma)
+{
+  ldouble d = 920.*pow(gamma,2./3.) + 0.055*gamma*gamma;
+  return d;
+}
+ldouble d_z19_diffuse(ldouble gamma)
+{
+  ldouble D=RELEL_RATE2*(RELEL_GAMMA0*RELEL_GAMMA0 + gamma*gamma);
+  return D/RELEL_TAUC;
+}
 //*********************************************/
 //* Nonthermal Error Function
 //*********************************************/
@@ -1244,8 +1277,11 @@ calc_relel_f_and_fmag_from_state(ldouble *pp, void *sss, ldouble *pp0, void *ggg
 #endif
 
   if (done==-1)
-     calc_relel_cooling_from_state(pp, state, pp0, dtau, qcool); //simple upwind 
-
+  {
+    printf("fallback to UPWIND!");
+    calc_relel_cooling_from_state(pp, state, pp0, dtau, qcool); //simple upwind 
+  }
+  
 #ifdef NORELELCOOLATBH
   ldouble xxBL[4];
   #ifdef PRECOMPUTE_MY2OUT
@@ -1387,6 +1423,7 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   ldouble neth_cgs=0.; //cm^-3
   ldouble trad_cgs=0.; //K
   ldouble erad_cgs=0.; //erg cm^-3 // in fluid frame!
+  
 #ifdef RELELECTRONS
   // synchrotron cooling rate
   #ifdef RELEL_SYN
@@ -1427,62 +1464,75 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   #endif
 
   int ie;
-  ldouble n_l[NRELBIN]; //primitives at cell left boundaries
-  ldouble n_r[NRELBIN]; //primitives at cell right boundaries
+  ldouble n_l[NRELBIN+1]; //primitives at cell left boundaries
+  ldouble n_r[NRELBIN+1]; //primitives at cell right boundaries
   ldouble f[NRELBIN+1]; //fluxes at cell boundaries
   
   //linear interpolation using minmod theta flux limiter to cell walls
   ldouble mmtheta = RELEL_MINMOD_THETA;
-  ldouble np1, nm1, n0;
+  ldouble np1, nm1, n0, nr, nl;
   ldouble slope, deltam, deltap;
   ldouble uL,uR,fL, fR, wspeed,wspeed2;
-  ldouble gdot_wall, gamma; 
-  
-  for (ie=0; ie<NRELBIN; ie++) //Loop over cells and interpolate n
+  ldouble gdot_wall, gamma,aedge;
+
+  // Calculates flux-limited bin values at the cell walls
+  for (ie=0; ie<NRELBIN; ie++)
   {
-    n0 = pp[NEREL(ie)];//*relel_gammas[ie];
+    n0 = pp[NEREL(ie)]*relel_gammas[ie]; // the quantity we interpolate is n(gamma)*gamma
     
     //Ghost cells -- all values zero  
-    if (ie==0) nm1=0.;
-    else nm1=pp[NEREL(ie-1)];//*relel_gammas[ie-1];
+    if (ie==0)
+      nm1=0.;
+    else
+      nm1=pp[NEREL(ie-1)]*relel_gammas[ie-1];
 
-    if (ie==NRELBIN-1) np1=0.;
-    else np1=pp[NEREL(ie+1)];//*relel_gammas[ie+1];
+    if (ie==NRELBIN-1)
+      np1=0.;
+    else
+      np1=pp[NEREL(ie+1)]*relel_gammas[ie+1];
 
     //left and right slopes
-    deltam = n0-nm1;
-    deltap = np1-n0;
+    deltam = n0 - nm1;
+    deltap = np1 - n0;
      
     if (deltam * deltap <= 0.)
     {
       // We are at a local maximum or minimum. Use zero slope (i.e., donor cell)
-      n_l[ie] = n0;
-      n_r[ie] = n0;
+      nl = n0;
+      nr = n0;
     }
     else
     {
       if (deltam > 0.)
       {
-      // Slopes are positive. 
-         slope = my_min(my_min(mmtheta*deltam, 0.5*(deltam+deltap)), mmtheta*deltap); // theta=1 is MinMod, theta=2 is MC
+         // Slopes are positive. 
+         //slope = my_min(my_min(mmtheta*deltam, 0.5*(deltam+deltap)), mmtheta*deltap); // theta=1 is MinMod, theta=2 is MC
+	 slope = my_max(my_min(2*deltam, deltap), my_min(deltam, 2*deltap)); // SUPERBEE
       }
       else
       {
-      // Slopes are negative.
-         slope = my_max(my_max(mmtheta*deltam, 0.5*(deltam+deltap)), mmtheta*deltap); // theta=1 is MinMod, theta=2 is MC
+         // Slopes are negative.
+         //slope = my_max(my_max(mmtheta*deltam, 0.5*(deltam+deltap)), mmtheta*deltap); // theta=1 is MinMod, theta=2 is MC
+	 slope = my_min(my_max(2*deltam, deltap), my_max(deltam, 2*deltap)); // SUPERBEE
       }
         
-      n_r[ie] = n0 + 0.5*slope;
-      n_l[ie] = n0 - 0.5*slope;
-
-      if (n_r[ie] < 0.) n_r[ie]=0.;
-      if (n_l[ie] < 0.) n_l[ie]=0.;
-			
+      nr = n0 + 0.5*slope;
+      nl = n0 - 0.5*slope;			
     }
+
+    n_r[ie] = nl; //left wall from cell perspective is right wall from edge perspective
+    n_l[ie+1] = nr;
+
+    if (n_r[ie] < 0.) n_r[ie]=0.;
+    if (n_l[ie] < 0.) n_l[ie]=0.;
   }
 
-  //calculate LF fluxes on the cell boundaries 
-  for(ie=0;ie<NRELBIN+1;ie++)
+  // Wall values at the right and left boundaries
+  n_r[NRELBIN] = n_l[NRELBIN]; //TODO -- just copy rightmost wall? 
+  n_l[0] = n_r[0]; // TODO -- just copy leftmost wall? 
+  
+  // Calculate LF fluxes on all the walls 
+  for(ie=0; ie<NRELBIN+1; ie++)
   {
     gamma = relel_gammas_e[ie];
     gdot_wall = 0.;
@@ -1499,45 +1549,68 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
     #ifdef RELEL_COUL
     gdot_wall += gdot_coul(gamma, neth_cgs);
     #endif
-      
+    #ifdef RELEL_TURB_ADVECT
+    gdot_wall = gdot_turb_advect(gamma); // TODO -- dependence on parameters
+    #endif
+    #ifdef RELEL_ADVECT_Z19
+    gdot_wall = gdot_z19_advect(gamma);
+    #endif
+    
+    aedge = -gdot_wall / gamma;      
+
+    fR = n_r[ie]*aedge;
+    fL = n_l[ie]*aedge;
+
+    f[ie] = 0.5 * (fR + fL - fabs(aedge) * (n_r[ie] - n_l[ie]));
+
+    // Diffusion part
+    #ifdef RELEL_DIFFUSE
+    ldouble D_edge, nplus, nminus;
+    D_edge=0.;
+    #ifdef RELEL_TURB_DIFFUSE
+    D_edge = d_turb_diffuse(gamma) / gamma; // TODO -- dependence on parameters
+    #endif
+    #ifdef RELEL_DIFFUSE_Z19
+    D_edge = d_z19_diffuse(gamma) / gamma;
+    #endif
+    
     if(ie==0)
     {
-      fL=0.;
-      uL=0.;
+      nplus = pp[NEREL(0)]; // no gamma term in diffusion part
+      nminus = 0.;
+    }
+    else if(ie==NRELBIN)
+    {
+      nplus=0;
+      nminus=pp[NEREL(NRELBIN-1)];
     }
     else
     {
-      uL = n_r[ie-1]*relel_gammas_e[ie]; //logspace conserved is gamma*n
-      fL = -gdot_wall*n_r[ie-1];//*relel_gammas_e_inv[ie];
-    }
-    
-    if(ie==NRELBIN)
-    {
-      fR=0.;
-      uR=0.;
-    }
-    else
-    {
-      uR = n_l[ie]*relel_gammas_e[ie]; //logspace conserved is gamma*n
-      fR = -gdot_wall*n_l[ie];//*relel_gammas_e_inv[ie];      
+      nplus=pp[NEREL(ie)];
+      nminus=pp[NEREL(ie-1)];
     }
 
-    //which type  of LF do we do? 
-    wspeed= fabs(gdot_wall*relel_gammas_e_inv[ie]); //reverts to upwind in appropriate direction
-    //wspeed= fabs(gdot_wall); //reverts to upwind in appropriate direction    
-    //wspeed2 = logbinspace/dtau; //bounded by Courant
-    f[ie] = 0.5*(fL + fR) - 0.5*wspeed*(uR - uL);
+    ldouble f_diffusion = -D_edge * (nplus - nminus) * logbinspace_inv;
+    f[ie] += f_diffusion;
+    #endif // RELEL_DIFFUSE 
 
-    //printf("%d %e %e %e \n",ie,fL,fR,f[ie]);
   }
 
-  //calculates derivatives at cell
   
+  // Apply Neumann BCs
+  // TODO -- dirichlet? 
+  f[0] = 0.;
+  f[NRELBIN] = 0.;
+  
+  //printf("f[0] , f[1] %e %e\n",f[0],f[1]);
+  // Calculates derivatives at cell
   for(ie=0; ie<NRELBIN; ie++)
   {
-    qcool[ie] = (f[ie] - f[ie+1]) * logbinspace_inv * relel_gammas_inv[ie];
+    qcool[ie] = - (f[ie+1] - f[ie]) * logbinspace_inv * relel_gammas_inv[ie];
     if isnan(qcool[ie]) out = -1;
   }
+  //printf("q[0] %e %e %e \n",qcool[0],relel_gammas[1],relel_gammas_inv[1]);
+
 #endif
   //getch();
   //if (out==-1) printf("\n \n -1 -1 -1 \n\n\n");
@@ -1602,7 +1675,6 @@ calc_relel_G0_fluidframe_from_state(ldouble *pp, void *sss, void *ggg, ldouble r
 #endif
   return G0;
 }
-
 
 // fluid frame total energy loss rate from relel. to radiation 
 // radtype = 0: all
@@ -1885,11 +1957,6 @@ ldouble calc_relel_CoulombCoupling_from_state(ldouble *pp, void *sss)
 #endif  
   return CoulombC;
 }
-
-
-
-
-
 
 // fluid frame total energy loss rate from relel. to radiation 
 // type = 0: compute with integral over gammadots

@@ -504,11 +504,20 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       if(rettemp<0) 
       {
 #ifdef BHDISK_PROBLEMTYPE
-	if(geom->ix+TOI>5) //report only outside horizon
+	//if(geom->ix+TOI>5) //report only outside horizon
 #endif
-	    printf("u2p failed after imposing bsq over rho floors at %d %d %d with gamma=%f\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,get_u_scalar(gammagas,geom->ix,geom->iy,geom->iz));
-	  print_primitives(pp);
-	  exit(-1);
+	  printf("u2p failed after imposing bsq over rho floors at %d %d %d with gamma=%f\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,get_u_scalar(gammagas,geom->ix,geom->iy,geom->iz));
+
+#ifdef B2RHOFLOOR_BACKUP_FFFRAME
+       // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
+       for(iv=0;iv<NVMHD;iv++)
+         pp[iv]=pporg[iv];
+       pp[RHO]*=f;
+       pp[UU]*=f;
+#else
+       print_primitives(pp);
+       exit(-1);
+#endif
       }
     
 #elif(B2RHOFLOORFRAME==FFFRAME) //new mass in fluid frame

@@ -84,7 +84,7 @@ solve_implicit_lab(int ix,int iy,int iz,ldouble dt,int verbose)
     pp[iv]=get_u(p,iv,ix,iy,iz); //some reasonable estimate of primitives 
   }
 
-  //otherwise assumes *u and *p consistent! 
+  //otherwise assumes *u and *p are already consistent! 
   #if (FORCEUEQPINIMPLICIT==1)  //this is the default in choices.h
   p2u(pp,uu,&geom);
   #endif
@@ -221,39 +221,39 @@ solve_implicit_lab(int ix,int iy,int iz,ldouble dt,int verbose)
       ret=solve_implicit_lab_4dprim(uu0,pp0,&geom,dt,verbose,params,pp);
     }
 
-   //*********** 4th ************
-   //use entropy fluid frame eqns
-   //and switch MHD <--> RAD 
-   if(ret!=0)
-   {
-     PLOOP(iv) { pp0[iv]=pp00[iv]; uu0[iv]=uu00[iv]; }
-     params[1]=RADIMPLICIT_ENTROPYEQ;
-     params[2]=RADIMPLICIT_FF;
-     
-     if(params[0]==RAD) params[0]=MHD;
-     else params[0]=RAD;
-     ret=solve_implicit_lab_4dprim(uu0,pp0,&geom,dt,verbose,params,pp);
-   }
-   #endif //BASICRADIMPLICIT
+    //*********** 4th ************
+    //use entropy fluid frame eqns
+    //and switch MHD <--> RAD 
+    if(ret!=0)
+    {
+      PLOOP(iv) { pp0[iv]=pp00[iv]; uu0[iv]=uu00[iv]; }
+      params[1]=RADIMPLICIT_ENTROPYEQ;
+      params[2]=RADIMPLICIT_FF;
+      
+      if(params[0]==RAD) params[0]=MHD;
+      else params[0]=RAD;
+      ret=solve_implicit_lab_4dprim(uu0,pp0,&geom,dt,verbose,params,pp);
+    }
+    #endif //BASICRADIMPLICIT
 
-   if(ret==0) //success!
-   {
-     set_cflag(RADFIXUPFLAG,ix,iy,iz,0);
-     break;
-   }
-   else if(ret!=0)  
-   {
-     set_cflag(RADFIXUPFLAG,ix,iy,iz,-1); // flag cell for fixups
-     global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFIXUPS]++;      
-     continue; //with lower, damped opacities
-   }
+    if(ret==0) //success!
+    {
+      set_cflag(RADFIXUPFLAG,ix,iy,iz,0);
+      break;
+    }
+    else if(ret!=0)  
+    {
+      set_cflag(RADFIXUPFLAG,ix,iy,iz,-1); // flag cell for fixups
+      global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFIXUPS]++;      
+      continue; //with lower, damped opacities
+    }
  } //the end of the opdamp loop
 
  //report failure
  if(ret<0) 
  {
-   //if(ix==0 && iy==0) printf("\n implicit solver failed at %i %i %i\n",ix,iy,iz);
-   return -1;
+    //if(ix==0 && iy==0) printf("\n implicit solver failed at %i %i %i\n",ix,iy,iz);
+    return -1;
  }
 
  //else, succeeded!
@@ -266,23 +266,22 @@ solve_implicit_lab(int ix,int iy,int iz,ldouble dt,int verbose)
  //save to memory consistent pp & uu
  PLOOP(iv)
  {
-#ifdef SKIPHDEVOLUTION
+    #ifdef SKIPHDEVOLUTION
     if(iv>=NVMHD)
-#endif
+    #endif
 
-#ifdef RADIATION
-#ifdef SKIPRADEVOLUTION
-#ifdef EVOLVEPHOTONNUMBER
+    #ifdef RADIATION
+    #ifdef SKIPRADEVOLUTION
+    #ifdef EVOLVEPHOTONNUMBER
     if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
-#else
+    #else
     if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
-#endif
-#endif
-#endif
-
-#ifdef SKIPHDBUTENERGY
+    #endif
+    #endif
+    #endif
+    #ifdef SKIPHDBUTENERGY
     if(iv>=NVMHD || iv==UU)
-#endif
+    #endif
     {
       set_u(p,iv,ix,iy,iz,pp[iv]);
       set_u(u,iv,ix,iy,iz,uu[iv]);
@@ -402,13 +401,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   Ti00 = state00.Ti;
   Trad00BB = state00.TradBB;
   Trad00=Trad00BB;
-
-  /*
-  if(ix==0 && iy==3 && iz==0)
-  {   
-      verbose=1;
-  }
-  */
+  
   // dump a problematic case to file 
   if(verbose) 
   {
@@ -453,26 +446,26 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   #endif
 
   // fix the temperature at the start of implicit
-#ifdef RADIMPSTARTFIXTEMP
+  #ifdef RADIMPSTARTFIXTEMP
   pp0[UU]=calc_PEQ_ufromTrho(RADIMPSTARTFIXTEMP,pp0[RHO],ix,iy,iz);
-#endif
+  #endif
   
   // solve for initial rad guess with bisection
-#ifdef RADIMP_START_WITH_BISECT
+  #ifdef RADIMP_START_WITH_BISECT
   solve_implicit_lab_1dprim(uu00, pp00, &state00, geom, dt,  verbose, pp0, &state0);  
-#endif
+  #endif
   
   // solve for initial photon number with bisection
-#ifdef EVOLVEPHOTONNUMBER
-#ifdef NPH_START_WITH_BISECT
+  #ifdef EVOLVEPHOTONNUMBER
+  #ifdef NPH_START_WITH_BISECT
   solve_implicit_nphoton_rad_1dprim(uu00, pp00, &state00, geom, dt, verbose, pp0, &state0);
-#endif
-#endif
+  #endif
+  #endif
 
-  // fix the temperature to the radiation temperature at the start of implicit
-#ifdef RADIMPSTARTTRAD
+  // fix the gas temperature to the radiation temperature at the start of implicit
+  #ifdef RADIMPSTARTTRAD
   pp0[UU] = calc_PEQ_ufromTrho(Trad00,pp0[RHO]);
-#endif
+  #endif
 
   //Now that we have initial guess pp0, get corresponding uu0 and state0
   p2u(pp0,  uu0, geom);
@@ -483,10 +476,8 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   struct opacities opac;
   ldouble kappa,kappaes,chi,xi1,xi2;
   ldouble ucon[4];
-      ldouble Gi00[4],Gihat00[4];
+  ldouble Gi00[4],Gihat00[4];
 
-
-  
   if(verbose) 
   {
       kappa=calc_kappa(pp0,geom,&opac);
@@ -547,6 +538,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       printf("ue: %e ui: %e (%e)\n",ue,ui,(ue+ui)/pp0[UU]);
       #endif
   }
+
   //make the choice of which primitives to evolve
   int whichprim,whicheq,do_mom_over,ifncompt,ifentre,ifrelel;
   if(params[5]==0)
@@ -596,7 +588,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   }
  
   whicheq=params[1];
-  do_mom_over = params[3];
+  do_mom_over=params[3];
 
   int sh;
   if(whichprim==MHD) 
@@ -628,7 +620,6 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
   {
       printf("=== ix, iy, iz: %d %d %d\n\n",ix,iy,iz);
       printf("Conserveds:\n");
-      //ANDREW this uu0 may not be consistent with pp0 above, haven't applied p2u yet
       print_conserved(uu0); 
       printf("Primitives:\n");
       print_primitives(pp0);
@@ -649,7 +640,6 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
       printf("gttpert:\n");
       printf("%e\n",geom->gttpert);
 
-      
       printf("\n===\n Trying imp lab 4d prim with dt : %e \n",dt);
   }
 
@@ -750,7 +740,7 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 
       //error vector at base state
       //uses fret from previous loop iteration of f_implicit_lab_4dprim_with_state in check
-      //pp should already be consistent -- i.e. implicit_apply_constraints applied at bottom of loop
+      //pp should already be consistent -- i.e. implicit_apply_constraints is applied at bottom of loop
       if(fret<-1)
       {
 	if(verbose>0) printf("base state\n");
@@ -931,7 +921,6 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 
 	ret=inverse_matrix(tJ,tiJ,N);
  
-
 	for(i=0;i<N;i++)
 	  for(j=0;j<N;j++)
 	    iJ[i][j]=tiJ[i*N+j];
@@ -1171,9 +1160,9 @@ solve_implicit_lab_4dprim(ldouble *uu00,ldouble *pp00,void *ggg,
 
 	if(verbose)
 	{
-	      printf("rel. change:  \n");
-	      print_Nvector(f3,np);
-	      getch();
+	    printf("rel. change:  \n");
+	    print_Nvector(f3,np);
+	    getch();
 	}
 
 	//convergence criterion

@@ -21,7 +21,11 @@ solve_the_problem(ldouble tstart, char* folder)
   ldouble totalmass=0.;
 
 #ifdef DTOUT_LOG
-  ldouble dtout = pow(10,DTOUT1_LOG_INIT);
+  ldouble dtout;
+  if(tstart==0.)
+    dtout = pow(10,DTOUT1_LOG_INIT);
+  else
+    dtout = pow(10,floor(log10(tstart)+1));
   printf("dtout 1 %e\n",dtout);
 #else  
   ldouble dtout = DTOUT1;

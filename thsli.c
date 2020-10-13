@@ -87,70 +87,6 @@ main
       //reading damp file parameters
       int intpar[6];
 
-      //if(ifavg) //avg follows old writing sequence
-      //{
-	  /*
-	  sprintf(bufor,"cp %s %s\n",fnamehead,fnameheadout);
-	  system(bufor);
-	  nx=TNX;
-	  ny=TNY;
-	  nz=TNZ;
-	  problem=PROBLEM;
-
-	  fout=fopen(fnameout,"w");
-	  //body file
-	  fdump=fopen(fname,"rb");
- 
-	  printf("avg file (%s) read no. %d\n",
-		 fname,itot);
-
-	  
-	  for(j=0;j<ny;j++)
-	    for(i=0;i<nx;i++)
-	      for(iv=0;iv<nv;iv++)
-		prims[i][j][iv]=0.;
-
-	  for(k=0;k<1;k++)
-	    {
-	      for(j=0;j<ny;j++)
-		{
-		  for(i=0;i<nx;i++)
-		    {
-		      int gix,giy,giz;
-		  
-		      ret=fread(&gix,sizeof(int),1,fdump);
-		      ret=fread(&giy,sizeof(int),1,fdump);
-		      ret=fread(&giz,sizeof(int),1,fdump);
-		      ret=fread(pp,sizeof(double),nv,fdump);
-
-
-		      if(gix<0 || gix>=nx ||giy<0 || giy>=ny)
-			printf("blont: %d %d %d vs %d %d %d | %d %d %d\n",i,j,k,gix,giy,giz,nx,ny,nz);
-		      else
-			for(iv=0;iv<nv;iv++)
-			  prims[gix][giy][iv]+=pp[iv];
-		    }
-		}
-	    }
-
-	  //print to a file
-	  k=0;
-	  for(j=0;j<ny;j++)
-	    for(i=0;i<nx;i++)
-	      {
-		fwrite(&i,sizeof(int),1,fout);
-		fwrite(&j,sizeof(int),1,fout);
-		fwrite(&k,sizeof(int),1,fout);
-		fwrite(&prims[i][j][0],sizeof(ldouble),nv,fout);	    
-	      }
-
-	
-	  fclose(fdump);
-	  fclose(fout);
-	  
-//	}
-*/
-
       if(ifavg) //avg follows old writing sequence - to correct!!!
 	{
 	  sprintf(bufor,"cp %s %s\n",fnamehead,fnameheadout);
@@ -249,13 +185,6 @@ main
 		  prims[gix][giz][iv]=pp[iv];
 
 	    }
-
-	  /*
-	  for(j=0;j<ny;j++)
-	    for(i=0;i<nx;i++)
-	      for(iv=0;iv<nv;iv++)
-		prims[i][j][iv]/=(double)nz;
-	  */
 
 	  //print to a file
       

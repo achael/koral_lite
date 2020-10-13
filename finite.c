@@ -234,7 +234,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
     
     for(iv=0;iv<NV;iv++)
     {
-      // dri, drip1, drim1 are the slopes delta a_j, delta a_{j+1}, delta a__{j-1} in eq (1.7) of C&W
+      // dri, drip1, drim1 are the slopes delta a_j, delta a_{j+1}, delta a_{j-1} in eq (1.7) of C&W
       dri[iv] = dx0 * dxm1_plus_dx0_plus_dxp1_inv *
       (dx0_plus_twodxm1 * dxp1_plus_dx0_inv * (up1[iv]-u0[iv]) +
        twodxp1_plus_dx0 * dx0_plus_dxm1_inv * (u0[iv]-um1[iv]));

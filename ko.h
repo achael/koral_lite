@@ -1356,6 +1356,8 @@ ldouble gdot_syn(ldouble gamma, ldouble bsq_cgs);
 ldouble gdot_ff(ldouble gamma, ldouble nion_cgs);
 ldouble gdot_ic(ldouble gamma, ldouble trad_cgs, ldouble eradhat_cgs);
 ldouble gdot_coul(ldouble gamma, ldouble neth_cgs);
+ldouble gdot_turb_advect(ldouble gamma);
+ldouble d_turb_diffuse(ldouble gamma);
 
 int calc_relel_f_and_fmag_from_state(ldouble *pp, void *sss, ldouble *pp0, void *ggg, ldouble dtau,ldouble *frel,ldouble *frelmag);
 int calc_relel_cooling_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble dtau, ldouble *qcool);

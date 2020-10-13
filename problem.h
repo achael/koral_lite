@@ -146,7 +146,7 @@
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 139
+#define PROBLEM 107
 
 
 #if(PROBLEM==139)
@@ -589,8 +589,8 @@
 #define PR_INIT "PROBLEMS/RELELTEST/init.c"
 //#define PR_KAPPA "PROBLEMS/RELELTEST/kappa.c"
 #define PR_KAPPAES "PROBLEMS/RELELTEST/kappaes.c"
-#define PR_OUT2GIF_2D "PROBLEMS/RELELTEST/out2gif_2d.c"
-#define PR_OUT2GIF_1D "PROBLEMS/RELELTEST/out2gif_1d.c"
+//#define PR_OUT2GIF_2D "PROBLEMS/RELELTEST/out2gif_2d.c"
+//#define PR_OUT2GIF_1D "PROBLEMS/RELELTEST/out2gif_1d.c"
 #define PR_DUMP "PROBLEMS/RELELTEST/dump.c"
 #define PR_TOOLS "PROBLEMS/RELELTEST/tools.c"
 #define PR_POSTINIT "PROBLEMS/RELELTEST/postinit.c"

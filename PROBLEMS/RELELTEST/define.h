@@ -75,7 +75,7 @@
 /************************************/
 #define INT_ORDER 1
 #define TIMESTEPPING RK2HEUN//IMEX
-#define TSTEPLIM .9
+#define TSTEPLIM .95
 #define FLUXLIMITER 0
 #define MINMOD_THETA 1.5
 #define SHUFFLELOOPS 0
@@ -83,8 +83,14 @@
 #define DORADFIXUPS 1
 
 /************************************/
-//viscosity choices
+//thermal electrons
 /************************************/
+#define CONSISTENTGAMMA
+#define GAMMAINTCONSISTENTWITHCV //Ramesh's routine for inverting gammaint
+//#define ELECTRONIONHEATTYPE ELECTRONIONHEATTYPE_THROUGHENTROPY
+#define RELELENTROPY
+//#define SKIPRADSOURCE
+//#define ENFORCE_HEATING_ENERGY_SUM
 
 /************************************/
 //rmhd floors
@@ -112,71 +118,44 @@
 #define BHSPIN 0.
 
 /************************************/
-//initial setup
+// test problem setup
 /************************************/
-//#define TEST 100 // synchrotron only
-#define TEST 200 // sychrotron + FF
-
-#define CONSISTENTGAMMA
-#define GAMMAINTCONSISTENTWITHCV //Ramesh's routine for inverting gammaint
-//#define ELECTRONIONHEATTYPE ELECTRONIONHEATTYPE_THROUGHENTROPY
-#define RELELENTROPY
-//#define SKIPRADSOURCE
-//#define ENFORCE_HEATING_ENERGY_SUM
-
-#if (TEST == 100)
-#define MASS (1./MSUNCM*CCC_CGS) //so that time in seconds!
-
-//Synchrotron cooling -- log time output
-#define SIZE 1.e-3 //scales time step
-#define NSTEPSTOP 100000000
-
-#define DTOUT_LOG  1        //logarithmic output in time
-#define DTOUT1_LOG_INIT -3  //begin at 1.e-3 s, then 1.e-2, etc
-
-#define TMAX  10000 //3 //stop in seconds, if takes too long, increase  SIZE
-#define DTOUT1 .001  //dt for output in seconds
-
-#endif
-
-//Synchrotron + IC -- linear time output
-#if (TEST == 200)
-#define MASS (1./MSUNCM*CCC_CGS)*3155692597470 //so that time in 10^5 yr!
-#define SIZE 1.e-3 //scales time step
-#define NSTEPSTOP 100000000
-#define TMAX  20. //3 //stop in seconds, if takes too long, increase  SIZE
-#define DTOUT1 1. //dt for output in 10^5 yr
-
-#endif
-
-#define NTH_SPEC_IX 0
-#define NTH_SPEC_IY 0
-#define NTH_SPEC_IZ 0
-
+// common setup
 #define RHO_INIT rhoCGS2GU(1.e-8)
 #define NPH_INIT numdensCGS2GU(2.0287e12)
 #define TE_INIT tempCGS2GU(1.e12) 
 #define TI_INIT tempCGS2GU(1.e12) 
 #define TR_INIT tempCGS2GU(1.e4)
 
-//For relativistic electrons
-#define NRELBIN 64
+//#define TEST 100 // synchrotron only
+//#define TEST 200 // sychrotron + IC
+//#define TEST 300 // Wong+Zhdankin turbulent diffusion-advection
+#define TEST 400
+
+// Synchrotron Test
+#if (TEST == 100)
+#define MASS (1./MSUNCM*CCC_CGS) //so that time in seconds!
+
+#define SIZE 1.e-2 //scales time step
+#define NSTEPSTOP 100000000
+
+#define DTOUT_LOG  1        //logarithmic output in time
+#define DTOUT1_LOG_INIT -3  //begin at 1.e-3 s, then 1.e-2, etc
+
+#define TMAX  10000 //3 //stop in seconds, if takes too long, increase  SIZE
+#define DTOUT1 .01 //.001  //dt for output in seconds
+
+#define NRELBIN 100//64
 #define NSCALARS (NRELBIN + 12)
-#define RELGAMMAMIN 10.
+#define RELGAMMAMIN 1.001
 #define RELGAMMAMAX 1.e10
 
-//#define RELEL_ADIAB_LOGSPACE_LF
 #define RELEL_IMPLICIT_LOGSPACE_LF
 #define RELEL_MINMOD_THETA 1.5
 #define RELEL_NRELEL 0.0000001 //initial condition
-//#define ZERO_NONTHERMAL_LOWGAMMA
-
-//#define RELEL_ADIAB_ART
-//#define RELEL_DIV_ART 0. 
 #define SKIPRELELEXPANSION
+//#define SKIPRELELHEATING
 
-//Synchrotron test
-#if (TEST == 100)
 #define RELEL_SYN
 #define RELEL_SYN_ART
 #define RELEL_B_ART 200.
@@ -184,6 +163,8 @@
 //#define RELEL_NETH_ART 3.7e15 //cm^-3
 //#define RELEL_TRAD_ART 3e4 //K
 //#define RELEL_ERAD_ART 10e8 //erg cm^-3
+//#define RELEL_ADIAB_ART
+//#define RELEL_DIV_ART 0. 
 
 #define RELEL_HEAT_FIX_FRAC
 #define RELEL_HEAT_FRAC 0.2
@@ -197,18 +178,35 @@
 #define RELEL_INJ_MAX 1.e6
 #endif
 
+//Synchrotron + IC -- linear time output
 #if (TEST == 200)
-//Synchrotron + FF test
+#define MASS (1./MSUNCM*CCC_CGS)*3155692597470 //so that time in 10^5 yr!
+#define SIZE 1.e-3 //scales time step
+#define NSTEPSTOP 100000000
+#define TMAX  100. //stop in 10^5 yr
+#define DTOUT1 1. //dt for output in 10^5 yr
+
+#define NRELBIN 100
+#define NSCALARS (NRELBIN + 12)
+#define RELGAMMAMIN 1.001
+#define RELGAMMAMAX 1.e10
+
+#define RELEL_IMPLICIT_LOGSPACE_LF
+#define RELEL_MINMOD_THETA 1.5
+#define RELEL_NRELEL 0.0000001 //initial condition
+#define SKIPRELELEXPANSION
+//#define SKIPRELELHEATING
+
 #define RELEL_SYN
 #define RELEL_SYN_ART
 #define RELEL_IC
 #define RELEL_IC_ART
+//#define RELEL_ADIAB_ART
+//#define RELEL_DIV_ART 0. 
 
 #define RELEL_B_ART 10.e-6
 #define RELEL_TRAD_ART 30000. //K 
 #define RELEL_ERAD_ART 7.95775e-10 //erg cm^-3 
-
-//#define NORELELINJSCALE
 
 #define RELEL_HEAT_ART
 #define RELEL_HEAT_NORM 0.001 //0.001 //cm^-3
@@ -221,7 +219,77 @@
 #define RELEL_HEAT_FIX_INDEX
 #endif
 
-//#define SKIPRELELHEATING
+// Diffusion-Advection Test
+#if (TEST == 300)
+#define MASS (1.) // TODO -- figure out time scaling later
+
+#define SIZE 1.e-4 //scales time step
+#define NSTEPSTOP 100000000
+#define TMAX  10 
+#define DTOUT1 1 
+
+#define NRELBIN 100//64
+#define NSCALARS (NRELBIN + 12)
+#define RELGAMMAMIN 1.001
+#define RELGAMMAMAX 1.e10
+
+#define RELEL_IMPLICIT_LOGSPACE_LF
+#define RELEL_MINMOD_THETA 1.5
+#define RELEL_NRELEL 0.0000001 //initial condition
+#define RELEL_INIT_MAXWELL
+#define RELEL_INIT_THETA 100.
+#define RELEL_INIT_NORM 1.
+
+#define SKIPRELELEXPANSION
+#define SKIPRELELHEATING
+
+#define RELEL_TURB_ADVECT // TODO -- figure out parameter dependence
+#define RELEL_DIFFUSE
+#define RELEL_TURB_DIFFUSE
+
+#define RELEL_HEAT_INDEX 3.5
+#endif
+
+// Diffusion-Advection Test, steady-state
+#if (TEST == 400)
+#define MASS (1.) // TODO -- figure out time scaling later
+
+#define SIZE 1.e-6 //scales time step
+#define NSTEPSTOP 100000000
+#define TMAX  .3
+#define DTOUT1 .1 
+
+#define NRELBIN 64
+#define NSCALARS (NRELBIN + 12)
+#define RELGAMMAMIN 1.001
+#define RELGAMMAMAX 1.e6
+
+#define RELEL_IMPLICIT_LOGSPACE_LF
+#define RELEL_MINMOD_THETA 1.5
+#define RELEL_NRELEL 0.00000000001 //initial condition
+#define RELEL_INIT_MAXWELL
+#define RELEL_INIT_THETA 100.
+#define RELEL_INIT_NORM 1.
+
+#define SKIPRELELEXPANSION
+#define SKIPRELELHEATING
+
+#define RELEL_ADVECT_Z19
+#define RELEL_GAMMA0 300. 
+#define RELEL_RATEA -3.5
+#define RELEL_RATEH -5.0
+
+#define RELEL_DIFFUSE
+#define RELEL_DIFFUSE_Z19
+#define RELEL_RATE2 1.4
+#define RELEL_TAUC 1.0
+
+//#define RELEL_TURB_ADVECT // TODO -- figure out parameter dependence
+//#define RELEL_TURB_DIFFUSE
+#define RELEL_HEAT_INDEX 3.5
+
+#endif
+
 
 
 /************************************/
@@ -249,6 +317,7 @@
 #define PERIODIC_XBC
 #define PERIODIC_YBC
 
+
 /************************************/
 //output
 /************************************/
@@ -265,6 +334,10 @@
 #define RELELSPECTRUMOUTPUT 1
 #define AVGOUTPUT 0
 #define DTOUT2 1.e100
+
+#define NTH_SPEC_IX 0 // which bin to print output from
+#define NTH_SPEC_IY 0
+#define NTH_SPEC_IZ 0
 
 /************************************/
 //common physics

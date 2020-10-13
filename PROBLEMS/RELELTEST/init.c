@@ -24,11 +24,23 @@ pp[NF]=NPH_INIT;
 
 #ifdef EVOLVEELECTRONS
 
+// Initial conditions
 #ifdef RELELECTRONS
 int ie;
-for (ie=0; ie < NRELBIN; ie++){
+for (ie=0; ie < NRELBIN; ie++)
+ {
    pp[NEREL(ie)] = RELEL_NRELEL;
  }
+#endif
+#ifdef RELEL_INIT_MAXWELL
+ldouble g;
+ldouble b;
+for (ie=0; ie < NRELBIN; ie++)
+{
+   g = relel_gammas[ie];
+   b = pow((1. - 1./(g*g)), 0.5);
+   pp[NEREL(ie)] = numdensCGS2GU(RELEL_INIT_NORM) * g * g * b * exp(-g/RELEL_INIT_THETA);
+}
 #endif
 
 ldouble neth=calc_thermal_ne(pp);
