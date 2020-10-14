@@ -139,7 +139,7 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
      #endif
   }
 
-  rho=DISKRHO;//*rhopref; //initial guess at what density should be
+  rho=DISKRHO*rhopref; //initial guess at what density should be
 
 
   if(rhopref < 0) rho = pp[0]; //Set rho to atm if happens to go negative
