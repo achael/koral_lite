@@ -1943,8 +1943,8 @@ int
 calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 {
 
-  int ix,iy,iz,iv,i,j;
-  ldouble xx[4],xxBL[4];
+  int ix,iy,iz;
+  ldouble xxC[4],xxBL[4];
  
   //search for appropriate radial index
   for(ix=0;ix<NX-1;ix++)
@@ -1952,8 +1952,8 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       #ifdef PRECOMPUTE_MY2OUT
       get_xxout(ix, 0, 0, xxBL);
       #else
-      get_xx(ix,0,0,xx);
-      coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
+      get_xx(ix,0,0,xxC);
+      coco_N(xxC,xxBL,MYCOORDS,OUTCOORDS);
       #endif
 
       if(xxBL[1]>radius) break;
@@ -1964,15 +1964,14 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       #ifdef PRECOMPUTE_MY2OUT
       get_xxout(ix, 0, 0, xxBL);
       #else
-      get_xx(ix,0,0,xx);      
-      coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
+      get_xx(ix,0,0,xxC);      
+      coco_N(xxC,xxBL,MYCOORDS,OUTCOORDS);
       #endif
     }
       
-  ldouble lum=0.,jet=0.;
 
   if(NY==1 && NZ==1) //spherical symmetry
-    {
+  {
 
       iz=0; 
       iy=0;
@@ -1980,7 +1979,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       ldouble Rij[4][4],Rtt,ehat,ucongas[4];
       ldouble tautot[3],tau=0.;
       ldouble gdet;
+      ldouble lum,jet;
 
+      int iv;
       for(iv=0;iv<NV;iv++)
 	pp[iv]=get_u(p,iv,ix,iy,iz);
 
@@ -1989,9 +1990,8 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       struct geometry geom;
       fill_geometry(ix,iy,iz,&geom);
 
-
       if(doingavg)
-	{
+      {
 	  PLOOP(iv)
 	    pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
 
@@ -2004,8 +2004,10 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	    + get_uavg(pavg,AVGBSQUCONUCOV(1,0),ix,iy,iz)
 	    - get_uavg(pavg,AVGBCONBCOV(1,0),ix,iy,iz); 
 
+	  Rrt=0.;
 #ifdef RADIATION
 
+	  int i,j;
 	  if(type==0) //R^r_t outside photosphere
 	    {
 	      Rrt=0.;
@@ -2030,20 +2032,15 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	    }
 	  else
 	    Rrt=0.;
-#else
-	  Rrt=0.;
-#endif
 
-	
-#ifdef RADIATION
 	  lum=-geom.gdet*Rrt*4.*M_PI;
-#else 
+#else //RADIATION
 	  lum=-geom.gdet*uintur*4.*M_PI;    
 #endif
 	  jet=geomBL.gdet*(Trt+rhour+Rrt)*4.*M_PI;
-	}
+      }
       else //doingavg
-	{
+      {
 	
 	  ucongas[1]=pp[2];
 	  ucongas[2]=pp[3];
@@ -2056,6 +2053,8 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	  calc_Tij(pp,&geom,Tij);
 	  indices_2221(Tij,Tij,geom.gg);
 	  Trt=Tij[1][0];
+
+	  Rrt=0.;
 
 #ifdef RADIATION	      
 	  if(type==0) //R^r_t outside photosphere
@@ -2083,36 +2082,33 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	    }
 	  else
 	    Rrt=0.;
-#else
-	  Rrt=0.;
-#endif
-
-#ifdef RADIATION
 	  lum=-geom.gdet*Rrt*4.*M_PI;
-#else 
+#else //RADIATION 
 	  lum=-geom.gdet*uintur*4.*M_PI;    
 #endif
-
 	  jet=geom.gdet*(rhour+Trt+Rrt)*4.*M_PI;
-	}
+      }
 
       *radlum=lum;
       *totallum=jet;
       return 0.;
-    }
+  }
   else //non-sph symmetry
-    {
+  {
 
-#pragma omp parallel for private(iy,iz) reduction(+:lum) reduction(+:jet)
+      ldouble lum=0.;
+      ldouble jet=0.;
+      #pragma omp parallel for private(iy,iz) reduction(+:lum) reduction(+:jet)
       for(iz=0;iz<NZ;iz++)
       {
-      for(iy=0;iy<NY;iy++)
+        for(iy=0;iy<NY;iy++)
 	{
-	  ldouble dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
+	  ldouble xx[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
           ldouble Rij[4][4],Rtt,ehat,ucongas[4];
           ldouble tautot[3],tau=0.;
-          ldouble gdet;
+          //ldouble gdet;
 
+	  int iv;
 	  for(iv=0;iv<NV;iv++)
 	    pp[iv]=get_u(p,iv,ix,iy,iz);
 
@@ -2120,13 +2116,14 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	  fill_geometry_arb(ix,iy,iz,&geomBL,KERRCOORDS);
 	  struct geometry geom;
 	  fill_geometry(ix,iy,iz,&geom);
-	  get_xx(ix,iy,iz,xx);
-	  dx[0]=get_size_x(ix,0);
-	  dx[1]=get_size_x(iy,1);
-	  dx[2]=2.*M_PI;
-	  gdet=geom.gdet;
+
+	  //get_xx(ix,iy,iz,xx);
+	  //dx[0]=get_size_x(ix,0);
+	  //dx[1]=get_size_x(iy,1);
+	  //dx[2]=2.*M_PI;
+	  //gdet=geom.gdet;
+
 	  ldouble dxph[3],dxBL[3];
-	  
 	  
 	  //cell dimensions
 	  //ANDREW put cell size code in a function with precompute option
@@ -2164,7 +2161,7 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	  dxph[2]=dxBL[2]*sqrt(geomBL.gg[3][3]);
 	  
 	  if(doingavg)
-	    {
+	  {
 	      PLOOP(iv)
 		pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
 
@@ -2183,7 +2180,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 
 	      tau+=ucont*tautot[1];
 
+	      Rrt=0.;
 #ifdef RADIATION
+	      int i,j;
 	      if(type==0) //R^r_t outside photosphere
 		{
 		  if(tau>1.) break;
@@ -2224,20 +2223,16 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 		}
 	      else
 		Rrt=0.;
-#else
-	      Rrt=0.;
+	      
+	      lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
+#else //RADIATION 
+	      lum+=geomBL.gdet*uintur*dxBL[1]*dxBL[2];
 #endif
 
-#ifdef RADIATION
-	      lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
-	      #else 
-	      lum+=geomBL.gdet*uintur*dxBL[1]*dxBL[2];
-	      #endif
-
 	      jet+=geomBL.gdet*(rhour+Rrt+Rrt)*dxBL[1]*dxBL[2];
-	    }
+	  }
 	  else //snapshot
-	    { 
+	  { 
 	      
 	      //to BL
 	      #ifdef PRECOMPUTE_MY2OUT
@@ -2262,7 +2257,8 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	      Trt=Tij[1][0];
 
 	      tau+=ucongas[0]*tautot[1];
-	      
+
+	      Rrt=0.;
 #ifdef RADIATION
 	      if(type==0) //R^r_t outside photosphere
 		{
@@ -2289,25 +2285,21 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 		}
 	      else
 		Rrt=0.;
-#else
-	      Rrt=0.;
-#endif
 
-	      jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
-
-	      #ifdef RADIATION
 	      lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
-	      #else 
+#else //RADIATION
 	      lum+=geomBL.gdet*uintur*dxBL[1]*dxBL[2];
-	      #endif
-	    } //snapshot
-	  } //iy
-        } // iz
+#endif
+	      jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
+	      
+	  } //snapshot
+	} //iy
+      } // iz
       
       *radlum=lum;
       *totallum=jet;
       return 0.;
-    }
+  } // axisymmetric or not
 
     return -1;
 }
@@ -2763,7 +2755,7 @@ calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max)
   int ixmin = ix;
   ldouble luminosity = 0.;
 
-#pragma omp parallel for private(iy,iz) reduction(+:luminosity)
+#pragma omp parallel for private(ix,iy,iz) reduction(+: luminosity)
   for(iz = 0; iz < NZ; iz++)
   {
     ldouble Edot, dx[3], gdet, pp[NV], gg[4][5], GG[4][5], ggBL[4][5], GGBL[4][5];

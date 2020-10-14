@@ -1585,21 +1585,27 @@ int get_cellsize_out(int ix, int iy, int iz, ldouble dx[3])
    int ii;
    xx1[0] = 0.; xx2[0] = 0.;
    for(ii=0;ii<3;ii++)
-     xx1[ii] = get_xbout_xface(ii,ix,iy,iz);
-     xx2[ii] = get_xbout_xface(ii,ix+1,iy,iz);
+   {
+     xx1[ii+1] = get_xbout_xface(ii,ix,iy,iz);
+     xx2[ii+1] = get_xbout_xface(ii,ix+1,iy,iz);
+   }
 
    dx[0] = fabs(xx2[1] - xx1[1]);
 
    for(ii=0;ii<3;ii++)
-     xx1[ii] = get_xbout_yface(ii,ix,iy,iz);
-     xx2[ii] = get_xbout_yface(ii,ix,iy+1,iz);
-
+   {
+     xx1[ii+1] = get_xbout_yface(ii,ix,iy,iz);
+     xx2[ii+1] = get_xbout_yface(ii,ix,iy+1,iz);
+   }
+   
    dx[1] = fabs(xx2[2] - xx1[2]);
 
    for(ii=0;ii<3;ii++)
-     xx1[ii] = get_xbout_zface(ii,ix,iy,iz);
-     xx2[ii] = get_xbout_zface(ii,ix,iy,iz+1);
-       
+   {
+     xx1[ii+1] = get_xbout_zface(ii,ix,iy,iz);
+     xx2[ii+1] = get_xbout_zface(ii,ix,iy,iz+1);
+   }
+   
    dx[2] = fabs(xx2[3] - xx1[3]);
           
 #else
