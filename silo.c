@@ -2,7 +2,6 @@
  \brief Routines for SILO output files
  */
 
-
 #ifndef NOSILO
 
 //KORAL - silo.c
@@ -336,7 +335,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
               ldouble dxph[3],dx[3];
 	      get_cellsize_out(ix, iy, iz, dx);
 	  
-		/*
+	      /*
 	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
 	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
@@ -352,7 +351,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
 	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
 	      dx[2]=fabs(xx2[3]-xx1[3]);
-		*/
+	      */
+	      
 	      dxph[0]=dx[0]*sqrt(geomout.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomout.gg[2][2]);
 	      dxph[2]=dx[2]*sqrt(geomout.gg[3][3]);

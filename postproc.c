@@ -1302,6 +1302,9 @@ int calc_scalars(ldouble *scalars,ldouble t)
 #if(PROBLEM==69) //INJDISK
   rmri=20.;
 #endif
+#if(PROBLEM==RADSURVEY)
+  rmri=20.;
+#endif
   scalars[5]=calc_resmri(rmri);
 
   //rho-weighted temperature at rtemp (8)

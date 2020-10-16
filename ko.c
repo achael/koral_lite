@@ -492,7 +492,7 @@ main(int argc, char **argv)
   free_arrays();
   fprint_closefiles();
   mpi_myfinalize();
-  
+
   return 0;
 } 
 

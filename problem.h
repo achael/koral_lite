@@ -140,14 +140,25 @@
 //137 KATOTORUS_TILTED - radiative torus initiated like in Kato+2004 with a tilt from BH spin axis
 //138 JETCOORDS -- test jet coordinate system
 //139 MADCC -- MAD code comparison
+//140 RADSURVEY -- radiative parameter survey
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 107
+#define PROBLEM 140
 
+#if(PROBLEM==140)
+
+#define PR_DEFINE "PROBLEMS/RADSURVEY/define.h"
+#define PR_BC "PROBLEMS/RADSURVEY/bc.c"
+#define PR_INIT "PROBLEMS/RADSURVEY/init.c"
+#define PR_KAPPAES "PROBLEMS/RADSURVEY/kappaes.c"
+#define PR_TOOLS "PROBLEMS/RADSURVEY/tools.c"
+#define PR_POSTINIT "PROBLEMS/RADSURVEY/postinit.c"
+
+#endif
 
 #if(PROBLEM==139)
 
