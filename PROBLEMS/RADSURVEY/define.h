@@ -21,7 +21,7 @@
 #define RESTARTGENERALINDICES
 #define RESTARTNUM -1
 #define PERTURBUINT 0.02
-//#define PERTURBAFTERINIT
+//#define PERTURBAFTERINIT //will not perturb after init if this is not defined
 
 /************************************/
 //blackhole
