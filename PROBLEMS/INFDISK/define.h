@@ -89,9 +89,9 @@
 #else
 #define TIMESTEPPING RK2HEUN
 #endif
-#define TSTEPLIM .9
+#define TSTEPLIM .6
 #define FLUXLIMITER 0
-#define MINMOD_THETA 1.8
+#define MINMOD_THETA 1.0
 #define DOFIXUPS 0
 #define DOU2PRADFIXUPS 0
 #define DOU2PMHDFIXUPS 0
@@ -138,7 +138,7 @@
 //coordinates / resolution
 /************************************/
 #define myMKS2COORDS
-#define ROUT 1.e3
+#define ROUT 1.e4
 #define RMIN 1.8
 
 #ifdef myMKS1COORDS //modified Kerr-Shild
@@ -161,9 +161,9 @@
 #endif
 
 //total resolution
-#define TNX 96
-#define TNY 96//96
-#define TNZ 128
+#define TNX 128
+#define TNY 192//96
+#define TNZ 1
 //number of tiles
 #define NTX 16
 #define NTY 16//4//16
@@ -179,11 +179,11 @@
 #define PERIODIC_ZBC
 
 //special definitions for new grid
-#define RMIN_DISK 200.//100. //ROUT //special definition used in BC
+#define RMIN_DISK 80.//100. //ROUT //special definition used in BC
 #define SPECIAL_BC_CHECK
-#define STREAM_IX 73
-#define STREAM_IYT 44
-#define STREAM_IYB 51
+#define STREAM_IX 56
+#define STREAM_IYT 87
+#define STREAM_IYB 104
 #define STREAM_IZT 63
 #define STREAM_IZB 64
 //#define SEARCH_STREAM_BOUNDARY //need to run in serial first to use this
@@ -199,13 +199,13 @@
 #define ALLSTEPSOUTPUT 0
 //#define RADOUTPUTINZAMO
 #define NSTEPSTOP 1.e10
-#define NOUTSTOP 1//1000//120
+#define NOUTSTOP 500//1000//120
 
 #define SIMOUTPUT 0
 //#define RAD_INTEGRATION //strictly for getting tau surface in simoutput
 
 #define COORDOUTPUT 0
-#define SCAOUTPUT 0
+#define SCAOUTPUT 1
 #define SILOOUTPUT 1
 #define RADOUTPUT 0
 #define AVGOUTPUT 0
@@ -213,7 +213,7 @@
 #define PRINTXGC_RIGHT
 //#define PRINTEACHT
 
-#define DTOUT1 10.//100.
+#define DTOUT1 100.//100.
 #define DTOUT2 1000.
 
 /************************************/
@@ -225,14 +225,14 @@
 #define MFRAC (1. - HFRAC - HEFRAC)
 
 //parameters for inflow
-#define EPSILON_TIME_DEPENDENT
-#define MDOT_TIME_DEPENDENT
+//#define EPSILON_TIME_DEPENDENT
+//#define MDOT_TIME_DEPENDENT
 #define USE_TPLUSTFB
 
 //Stellar properties before disruption
 #define MSTAR 1. //in solar masses
 #define RSTAR 1. //in solar radii
-#define BETASTAR 5. //Rp/Rt penetration factor
+#define BETASTAR 1. //Rp/Rt penetration factor
 #define ECCSTAR 0.97 //eccentricity
 #define RTIDAL 47.*pow((MASS/1.e6),1./3.)*pow(MSTAR,-1./3.)*RSTAR //Tidal radius
 #define EPSSTAR -BETASTAR*(1.-ECCSTAR)/(2.*RTIDAL)
@@ -241,17 +241,18 @@
 #define EPSILON_MAX (EPSSTAR + 0.5*DEPSILON) //least bound gas 
 
 //Inputs for stream (can use stellar properties defined above)
-#define EPSILON0 EPSILON_MIN//-2.15e-3 //Base epsilon for model, defines t_fb
+#define EPSILON0 -7.5e-3//EPSILON_MIN//-2.15e-3 //Base epsilon for model, defines t_fb
 #define TFB0 2.*M_PI*pow((-1./(2.*EPSILON0)),1.5) //Fallback time of most bound material
+#define TSTARTDECAY TFB0
 //#define TSHUTOFF 20. //forced shutoff time (debugging only)
-#define SHUTOFF_AFTER_TSHUTOFF
+//#define SHUTOFF_AFTER_TSHUTOFF
 #define DISKHR 0.05
 #define DISKHCGS (DISKHR*RMIN_DISK*MASS*147700.) 
-#define MDOTEDD0 81.5 //initial inflow rate in units of Eddington accretion rate (~Mdot_target/10)
+#define MDOTEDD0 1000.//81.5 //initial inflow rate in units of Eddington accretion rate (~Mdot_target/10)
 //#define MDOTIN (MDOTEDDIN*2.48e18*MASS)
 //#define DISKSIGMA surfdensCGS2GU(-MDOTIN/(2.*M_PI*RMIN_DISK*147700.*MASS*3.e10*DISKVR))
 #define DISKRCIR 2.*RTIDAL/BETASTAR //20. //circularization radius
-#define DISKTEMP 1.e5//1.e4//DISKHR*DISKHR*(5./7.)/RMIN_DISK/(1.5e-13)
+#define DISKTEMP 1.e6//1.e4//DISKHR*DISKHR*(5./7.)/RMIN_DISK/(1.5e-13)
 //#define VERTBTIME 1000.
 #define VERTICALB
 
@@ -262,7 +263,7 @@
 
 #define MAGNOMEGA 0.//(2.*M_PI/500.)//0.
 //#define MAGNOMEGA 0.*(1.5e-2*pow(200./50.,-1.5)) //omega should follow the free fall time?
-#define MAGBETA 3.e-2
+#define MAGBETA 9.e-2
 //#define SANEFIELD
 
 //atmosphere

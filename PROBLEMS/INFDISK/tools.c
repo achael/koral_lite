@@ -64,22 +64,24 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
   #endif
 
   int iiy;
-  ldouble EPSILON,MDOTEDDIN,DISKVR,MDOTIN,DISKSIGMA,DISKRHO,TFB_STR;
+  ldouble EPSILON,MDOTEDDIN,DISKVR,MDOTIN,DISKSIGMA,DISKRHO,TFB_STR,TDECAY;
   ldouble rho,uint,uphi,Om,Omk,ucon[4],temp,pre0,uint0,temp0,ell;
   ldouble meanuint,newT,mdotR,mdotL,mdotIN,rhorescale,rhoL,vL,rhoR,vR,rhoB,vB,mdotB,xx[4],dx[3];
 
   TFB_STR = TFB0;
+  TDECAY = TSTARTDECAY;
 
   #ifndef USE_TPLUSTFB
   #ifdef EPSILON_TIME_DEPENDENT
-  if(global_time <= TFB_STR) EPSILON = EPSILON0;
-  else if(global_time > TFB_STR) EPSILON = EPSILON0*pow( (global_time/TFB_STR) , -2./3.);
+  if(global_time <= TDECAY) EPSILON = EPSILON0;
+  else if(global_time > TDECAY) EPSILON = EPSILON0*pow( ((global_time-TDECAY+TFB_STR)/TFB_STR) , -2./3.);
   #else
   EPSILON = EPSILON0;
   #endif
 
   #ifdef MDOT_TIME_DEPENDENT
-  MDOTEDDIN = MDOTEDD0/(1. + pow((global_time/TFB_STR),5./3.) );
+  if(global_time <= TDECAY) MDOTEDDIN = MDOTEDD0;
+  else if(global_time > TDECAY) MDOTEDDIN = MDOTEDD0*pow(((global_time-TDECAY+TFB_STR)/TFB_STR),-5./3.);
   #else
   MDOTEDDIN = MDOTEDD0;
   #endif
