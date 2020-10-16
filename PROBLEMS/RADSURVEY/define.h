@@ -3,6 +3,17 @@
 /************************************/
 #define BHDISK_PROBLEMTYPE
 
+
+//***********************************/
+// Main problem specification
+// SPIN, SANE vs MAD, Coordinates, Torus
+//***********************************/
+#define SPINp25     //or: SPINp5 SPINp75 SPINm25 SPINm5 SPINm75
+#define NTORUS 3    //3 for SANE, 1 for MAD
+
+#define myJETCOORDS //or: myMKS2COORDS, myMKS3COORDS
+#define LIMOTORUS   //or: FISHMONCTORUS
+
 /************************************/
 //restart
 /************************************/
@@ -16,16 +27,32 @@
 //blackhole
 /************************************/
 #define MASS 6.5e9   
-#define SPIN25
 
+// this defines the spin and sets the grid inner radius and torus parameters
+
+#if defined(SPINm75)
 #define BHSPIN -0.75
+#define RH 1.66144   //a=.75 1.66144, a=.5 1.86603, a=.25 1.96825
 
-#if(BHSPIN==0.25 || BHSPIN==-0.25)
+#elif defined(SPINm5)
+#define BHSPIN -0.5
+#define RH 1.86603   //a=.75 1.66144, a=.5 1.86603, a=.25 1.96825
+
+#elif defined(SPINm25)
+#define BHSPIN -0.25
 #define RH 1.96825   //a=.75 1.66144, a=.5 1.86603, a=.25 1.96825
-#elif(BHSPIN==0.5 || BHSPIN==-0.5)
-#define RH 1.86603
-#elif(BHSPIN==0.75 || BHSPIN==-0.75)
-#define RH 1.66144
+
+#elif defined(SPINp25)
+#define BHSPIN 0.25
+#define RH 1.96825   //a=.75 1.66144, a=.5 1.86603, a=.25 1.96825
+
+#elif defined(SPINp5)
+#define BHSPIN 0.5
+#define RH 1.86603   //a=.75 1.66144, a=.5 1.86603, a=.25 1.96825
+
+#elif defined(SPINp75)
+#define BHSPIN 0.75
+#define RH 1.66144   //a=.75 1.66144, a=.5 1.86603, a=.25 1.96825
 #endif
 
 /************************************/
@@ -226,9 +253,6 @@
 /************************************/
 //coordinates
 /************************************/
-#define myJETCOORDS
-//#define myMKS2COORDS
-//#define myMKS3COORDS
 
 #define METRICAXISYMMETRIC
 
@@ -325,9 +349,6 @@
 //Initial Torus/Atmosphere
 /************************************/
 
-#define LIMOTORUS
-#define NTORUS 3 //3 for SANE, 1 for MAD
-
 #ifdef LIMOTORUS
 // Penna et all 2013 limotorus
 #define LT_KAPPA 0.008   //This density normalization gives peak density ~1
@@ -340,17 +361,17 @@
 //LT_XI sets the torus size -- these values chosen to give outer radius ~500
 //a=0.75 0.752, a=0.5 0.757, a=0.25 0.761
 // a=-0.25 0.771, a=-.5 0.776, a=-.75 0.782
-#if(BHSPIN==-0.75)
+#if defined(SPINm75)
 #define LT_XI 0.782
-#elif(BHSPIN==-0.5)
+#elif defined(SPINm5)
 #define LT_XI 0.776
-#elif(BHSPIN==-0.25)
+#elif defined(SPINm25)
 #define LT_XI 0.771
-#if(BHSPIN==0.25)
+#elif defined(SPINp25)
 #define LT_XI 0.761
-#elif(BHSPIN==0.5)
+#elif defined(SPINp5)
 #define LT_XI 0.757
-#elif(BHSPIN==0.75)
+#elif defined(SPINp75)
 #define LT_XI 0.752
 #endif
 
