@@ -1299,10 +1299,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   #endif
   
   ldouble rmri=xxBL[1]/2.;  // middle radial cell
-#if(PROBLEM==69) //INJDISK
-  rmri=20.;
-#endif
-#if(PROBLEM==RADSURVEY)
+#if(PROBLEM==69 || PROBLEM==140) //INJDISK or RADSURVEY
   rmri=20.;
 #endif
   scalars[5]=calc_resmri(rmri);
@@ -1357,7 +1354,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   calc_local_lum(ix,NCCORRECTPOLAR+1,0,&radlum,&totlum);
   scalars[11]=totlum;
   
-#if(PROBLEM==134 || PROBLEM==139)  // FISHMONC for EHT code comparison tests
+#if(PROBLEM==134 || PROBLEM==139 || PROBLEM==140)  // FISHMONC for EHT code comparison tests
   ldouble Edot;
   Edot = calc_Edot(rhorizonBL);
   scalars[11] = Edot - mdot;
@@ -2466,7 +2463,7 @@ calc_resmri(ldouble radius)
 	calc_Qthetaphi(ix,iy,iz,&q1,&q2);
 
         sigma+=rho*dx[1];
-	qtheta+=rho*q1*dx[1];
+	qtheta+=rho*fabs(q1)*dx[1];
 	//qphi+=rho*q2*dx[1];
       }
 

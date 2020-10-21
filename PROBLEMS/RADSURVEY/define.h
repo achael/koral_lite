@@ -263,7 +263,7 @@
 #define METRICNUMERIC
 #define MYCOORDS MKS2COORDS
 
-#define MKSR0 0.//35
+#define MKSR0 0. //-1.35
 #define MKSH0 0.7
 #define MKSMY1 0.002
 #define MKSMY2 0.02
