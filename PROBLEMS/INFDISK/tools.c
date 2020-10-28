@@ -64,24 +64,22 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
   #endif
 
   int iiy;
-  ldouble EPSILON,MDOTEDDIN,DISKVR,MDOTIN,DISKSIGMA,DISKRHO,TFB_STR,TDECAY;
+  ldouble EPSILON,MDOTEDDIN,DISKVR,MDOTIN,DISKSIGMA,DISKRHO,TFB_STR;
   ldouble rho,uint,uphi,Om,Omk,ucon[4],temp,pre0,uint0,temp0,ell;
   ldouble meanuint,newT,mdotR,mdotL,mdotIN,rhorescale,rhoL,vL,rhoR,vR,rhoB,vB,mdotB,xx[4],dx[3];
 
   TFB_STR = TFB0;
-  TDECAY = TSTARTDECAY;
 
   #ifndef USE_TPLUSTFB
   #ifdef EPSILON_TIME_DEPENDENT
-  if(global_time <= TDECAY) EPSILON = EPSILON0;
-  else if(global_time > TDECAY) EPSILON = EPSILON0*pow( ((global_time-TDECAY+TFB_STR)/TFB_STR) , -2./3.);
+  if(global_time <= TFB_STR) EPSILON = EPSILON0;
+  else if(global_time > TFB_STR) EPSILON = EPSILON0*pow( (global_time/TFB_STR) , -2./3.);
   #else
   EPSILON = EPSILON0;
   #endif
 
   #ifdef MDOT_TIME_DEPENDENT
-  if(global_time <= TDECAY) MDOTEDDIN = MDOTEDD0;
-  else if(global_time > TDECAY) MDOTEDDIN = MDOTEDD0*pow(((global_time-TDECAY+TFB_STR)/TFB_STR),-5./3.);
+  MDOTEDDIN = MDOTEDD0/(1. + pow((global_time/TFB_STR),5./3.) );
   #else
   MDOTEDDIN = MDOTEDD0;
   #endif
@@ -141,7 +139,7 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
      #endif
   }
 
-  rho=DISKRHO*rhopref; //initial guess at what density should be
+  rho=DISKRHO;//*rhopref; //initial guess at what density should be
 
 
   if(rhopref < 0) rho = pp[0]; //Set rho to atm if happens to go negative
@@ -457,6 +455,11 @@ pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);
           pp[iv]=get_u(p,iv,ix-3,iy,iz);
       }
     }
+
+    //zero B-field as in behind stream?
+    #ifdef MAGNFIELD//setting them zero not to break the following coordinate transformation
+    pp[B1]=pp[B2]=pp[B3]=0.; 
+    #endif
   }
   #endif
 
