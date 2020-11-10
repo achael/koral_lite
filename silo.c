@@ -89,6 +89,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *expansion = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *NHr = (ldouble*)malloc(nx*ny*nz*sizeof(double));
 
+  ldouble *entrlnT = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+
   #ifdef PRINTVISCHEATINGTOSILO
   ldouble *dtauarr= (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vischeat= (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -192,6 +194,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *tauscar2 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *tauabsr2 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *taueffr2 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+
+  ldouble *entrrad = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   #endif //RADIATION
 
     
@@ -827,6 +831,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      
 	      ldouble temploc=calc_PEQ_Tfromurho(uint[zonalindex],rho[zonalindex],ix,iy,iz);
 	      temp[zonalindex]=temploc;
+              entrlnT[zonalindex]=kB_over_mugas_mp*entr[zonalindex]/pp[RHO];
 
 #ifdef CGSOUTPUT
 	      rho[zonalindex]=rhoGU2CGS(rho[zonalindex]);
@@ -1149,6 +1154,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
           
 	      trad[zonalindex]=tradloc;
 	      tradlte[zonalindex]=tradlteloc;
+	      entrrad[zonalindex]=(4./3.)*A_RAD*tradloc*tradloc*tradloc/pp[RHO];
 
 	      Fx[zonalindex]=Rij22[1][0];
 	      Fy[zonalindex]=Rij22[2][0];
@@ -1544,6 +1550,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
+  DBPutQuadvar1(file, "entrlnT","mesh1", entrlnT,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+
   DBPutQuadvar1(file, "rho","mesh1", rho,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
@@ -1708,6 +1718,11 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
   DBPutQuadvar1(file, "taueff_r","mesh1", taueffr,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+
+  // Write scalars to the file
+  DBPutQuadvar1(file, "entrrad","mesh1", entrrad,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
@@ -1938,6 +1953,7 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
 
   free(rho);
   free(uint);
+  free(entr);
   free(temp);
   free(Omega);
   free(muBe);
@@ -1946,6 +1962,8 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   free(taucoupling);
   free(expansion);
   free(NHr);
+  
+  free(entrlnT);
 
 #ifdef EVOLVEELECTRONS
   free(tempe);
@@ -2044,6 +2062,8 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
   free(tauscar2);
   free(tauabsr2);
   free(taueffr2);
+
+  free(entrrad);
   #endif
 
   return (0);
