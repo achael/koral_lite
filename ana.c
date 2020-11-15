@@ -317,12 +317,19 @@ main(int argc, char **argv)
       fprint_silofile(t,nfout1,"analysis",prefix);
 #endif
 #endif
+      
       //sim output
 #if(SIMOUTPUT!=0)	  
       sprintf(prefix,"sim%s",suffix);  
       fprint_simplefile(t,nfout1,"analysis",prefix);
 #endif
 
+      //hdf5 analysis output (replaces sim)
+#ifdef ANAOUT_HDF5
+      sprintf(prefix,"ana%s",suffix);
+      fprint_anaout_hdf5(t, "analysis",prefix);
+#endif
+      
       //relativistic electron spectrum
 #if(RELELSPECTRUMOUTPUT==1)
       int ixx, iyy, izz;

@@ -105,7 +105,7 @@
 #include <mach/mach.h>
 #endif
 
-#if defined COORDOUTPUT_HDF5 || defined DUMPS_CONVERT_HDF5 || defined DUMPS_READ_HDF5 || defined DUMPS_WRITE_HDF5
+#if defined COORDOUTPUT_HDF5 || defined DUMPS_CONVERT_HDF5 || defined DUMPS_READ_HDF5 || defined DUMPS_WRITE_HDF5 || defined ANAOUT_HDF5
 #include "hdf5.h"
 #endif
 
@@ -1460,6 +1460,8 @@ int fprint_restartfile_mpi_hdf5(ldouble t, char* folder);
 int fprint_restartfile_serial_hdf5(ldouble t, char* folder);
 int fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t);
 int fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t);
+int fprint_anaout_hdf5(ldouble t, char* folder,char* prefix);
+
 void get_prim_name(char* prim_name, int iv);
 
 
