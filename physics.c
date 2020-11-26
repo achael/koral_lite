@@ -2071,6 +2071,78 @@ calc_gammaintfromtheta(ldouble theta)
   return gamma;
 }
 
+ldouble calc_meanlorentz(ldouble theta)
+{
+  ldouble gamma;
+  if(theta<1.e-3)
+  {
+    gamma = 1.5*theta + 1.;
+  }
+  else if(theta>1.e3)
+  {
+    gamma = 3*theta;
+  }
+  else //Interpolate in the transition zone
+  {
+    ldouble xval = log10(theta);
+    int n=61;
+    ldouble xarr[61] = {-3., -2.9, -2.8, -2.7, -2.6, -2.5, -2.4, -2.3, -2.2, -2.1, -2., \
+	    -1.9, -1.8, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1, -1., -0.9, \
+	    -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, \
+	     0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1., 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, \
+	     1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.};
+
+    ldouble gammarr[61] = {1.0015, 1.00189, 1.00238, 1.003, 1.00378, 1.00476, 1.006, 1.00756, \
+	       1.00954, 1.01203, 1.01519, 1.01918, 1.02424, 1.03066, 1.03883, \
+	       1.04925, 1.06257, 1.07966, 1.10165, 1.13008, 1.16699, 1.2151, 1.2781, \
+	       1.36087, 1.46995, 1.6139, 1.80386, 2.05412, 2.38271, 2.81217, \
+	       3.37044, 4.09199, 5.01943, 6.20561, 7.71639, 9.63422, 12.0626, \
+	       15.1319, 19.006, 23.8917, 30.0494, 37.8071, 47.5782, 59.8828, \
+	       75.3764, 94.8841, 119.445, 150.366, 189.295, 238.305, 300.005, \
+	       377.682, 475.471, 598.581, 753.568, 948.685, 1194.32, 1503.56, \
+	       1892.87, 2382.99, 3000.};
+    //locate
+    int ipos;
+    int jl,ju,jm;
+    jl = 0;
+    ju = n+1;
+    while(ju-jl <= 1)
+    {
+      jm = (ju+jl)/2;
+      if(xval>=xarr[jm-1])
+	jl = jm;
+      else
+	ju = jm;
+    }
+    if(xval==xarr[0]) ipos = 0;
+    else if(xval==xarr[n-1]) ipos=n-2;
+    else if(xval<xarr[0]) ipos=-1;
+    else if(xval>xarr[n-1]) ipos = n-1;
+    else ipos = jl-1;
+    
+    //interpolate
+    if(ipos<(n-1) && ipos>-1)
+     {
+       ldouble frac = (xval - xarr[ipos])/(xarr[ipos+1] - xarr[ipos]);
+       gamma = gammarr[ipos] + frac*(gammarr[ipos+1] - gammarr[ipos]);
+     }
+     else if(ipos==n-1)
+     {
+       gamma = gammarr[n-1];
+     }
+     else if (ipos==-1)
+     {
+       gamma = gammarr[0];
+     }
+     else
+     {
+       gamma = theta;
+       printf("error in interp gammaavg!\n");
+     }
+  }
+  return gamma;
+}
+
 //********************************************************************************
 //Solves for species temperature from number density, mass, and energy
 //********************************************************************************
@@ -2732,7 +2804,7 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
     }
   else if(delta<0.)
     delta=0.;
-    
+        
 #elif defined(HEATELECTRONS_ROWAN3)
   //Michael's fit to the reconnection electron heating fraction with guide field
   //Rowan 2019 eqn 19
@@ -2796,10 +2868,35 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
     }
   else if(delta<0.)
     delta=0.;
-    
-#endif  
 
+#elif defined(HEATELECTRONS_ZHDANKIN)
+  //based on ratio of gyroradi Zhdankin 2019 
+  
 
+  ldouble Ti = state->Ti;
+  ldouble Te = state->Te;
+  ldouble the = kB_over_me * Te;
+  ldouble thi = kB_over_mui_mp * Ti;
+  ldouble gammae=GAMMAE;
+  ldouble gammai=GAMMAI;
+  #ifndef FIXEDGAMMASPECIES
+  gammae=calc_gammaintfromtheta(the);
+  gammai=calc_gammaintfromtheta(thi);
+  #endif
+  ldouble gmeane = calc_meanlorentz(the);
+  ldouble gmeani = calc_meanlorentz(thi);
+  ldouble gyroratio = 1836.15267 * sqrt((gmeani*gmeani - 1.)/(gmeane*gmeane-1.));
+  ldouble uioue = pow(gyroratio,2./3.);
+  delta = 1./(uioue + 1.);
+
+  
+  if(!isfinite(delta) || delta>1.)
+    {
+      delta=1.;
+    }
+  else if(delta<0.)
+    delta=0.;
+#endif
 #endif //HEATELECTRONS
 
   return delta;

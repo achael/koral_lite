@@ -3601,7 +3601,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   else if(MYCOORDS==MKS3COORDS)
     sprintf(metric_run,"%s","MKS3");
   else if(MYCOORDS==MKS2COORDS)
-    sprintf(metric_run,"%s","MKS3");
+    sprintf(metric_run,"%s","MKS2");
   else if(MYCOORDS==KSCOORDS)
     sprintf(metric_run,"%s","KS");
   else
@@ -3797,7 +3797,9 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 #if(MYCOORDS==JETCOORDS)
   dumps_group_id3 = H5Gcreate2(dumps_file_id, "/header/geom/jetcoords", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   ldouble mksr0=MKSR0;
-  ldouble hyperbrk=HYPRBRK;
+  ldouble rmin=RMIN;
+  ldouble rmax=RMAX;
+  ldouble rbrk=HYPRBRK;
   ldouble fjet=FJET;
   ldouble fdisk=FDISK;
   ldouble runi=RUNI;
@@ -3810,7 +3812,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 #ifdef CYLINDRIFY
   int cylindrify=1;
   ldouble rcyl=RCYL;
-  ldouble ncyl=ncyl;
+  ldouble ncyl=NCYL;
 #else
   int cylindrify=0;
   ldouble rcyl=-1.;
@@ -3826,9 +3828,19 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 		    &mksr0);
   status = H5Dclose(dumps_dataset_double);
 
-  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/jetcoords/hyperbrk", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/jetcoords/rmin", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-		    &hyperbrk);
+		    &rmin);
+  status = H5Dclose(dumps_dataset_double);
+
+  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/jetcoords/rmax", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &rmax);
+  status = H5Dclose(dumps_dataset_double);
+
+  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/jetcoords/rbrk", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &rbrk);
   status = H5Dclose(dumps_dataset_double);
 
   dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/jetcoords/fjet", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -3994,7 +4006,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   #endif
   
   int iz,iy,ix,iv,i;
-  
+#pragma omp parallel for private(iz,iy,ix,iv,i)
   for(iz=0;iz<NZ;iz++)
   {
     for(iy=0;iy<NY;iy++)
@@ -4136,6 +4148,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
     }
   }
 
+  // !AC -- we don't need this with the left corner defined in /header/geom
+  /*
   // Write runtime grid
   dumps_group_id = H5Gcreate2(dumps_file_id, "/grid_run", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   
@@ -4155,7 +4169,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Dclose(dumps_dataset_array);
 
   status = H5Gclose(dumps_group_id);  // close /grid_run
-
+  */
+  
   // Write output grid
   dumps_group_id = H5Gcreate2(dumps_file_id, "/grid_out", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   

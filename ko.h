@@ -1333,6 +1333,7 @@ ldouble pick_gammagas(int ix,int iy,int iz);
 ldouble calc_gammagas(ldouble* pp,int ix,int iy,int iz);
 ldouble calc_gammaintfromTei(ldouble Te,ldouble Ti);
 ldouble calc_gammaintfromtheta(ldouble theta);
+ldouble calc_meanlorentz(ldouble theta);
 ldouble calc_gammaintfromtemp(ldouble temp,int type);
 ldouble solve_Teifromnmu(ldouble n, ldouble m, ldouble u, int species);
 ldouble solve_Teifromnmu_inconsistent(ldouble n, ldouble m, ldouble u);
