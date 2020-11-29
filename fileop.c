@@ -1027,13 +1027,53 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
    for(ic=0;ic<NX*NY*NZ;ic++)
     {
 
-#ifdef RESTARTFROMNORELEL
+
+      // restart options
+      // TODO currently can do EITHER RESTARTFROMMHD (for radiation and/or electrons)
+      // OR RESTARTFROMNORELEL (FROM radiation+electrons to relelectrons)
+      // SHOULD add more options
+#if defined(RESTARTFROMMHD) //restart from mhd only
+#ifdef RADIATION
+
+      int nvold = 9;
+      ldouble ppold[nvold]; 
+      ret=fread(ppold,sizeof(ldouble),nvold,fdump);
+
+      // copy over mhd primitives
+      int ie;
+      for (ie=0; ie<nvold; ie++) pp[ie] = ppold[ie]; 
+
+      // initialize radiation primitives
+      ldouble Erad=pp[UU]*INITURADFRAC;   //initial radiation energy density
+      pp[EE]=Erad;
+      pp[FX]=pp[VX]; //initial radiation velocity is same as fluid     
+      pp[FY]=pp[VY];
+      pp[FZ]=pp[VZ];
+
+#ifdef EVOLVEPHOTONNUMBER
+      pp[NF]=calc_NFfromE(Erad); //initially blackbody
+#endif
+
+#ifdef EVOLVEELECTRONS
+      // initialize electron primitives
+      ldouble rhogas=pp[RHO];
+      ldouble ue=(INITUEFRAC)*pp[UU];
+      ldouble ui=(1.-INITUEFRAC)*pp[UU];
+
+      pp[ENTRE]=calc_Sefromrhou(rhogas,ue,ELECTRONS); //TODO -- non hydrogen?
+      pp[ENTRI]=calc_Sefromrhou(rhogas,ui,IONS);
+#endif
+#endif //RADIATION
+
+
+#elif defined(RESTARTFROMNORELEL)
+#ifdef RELELECTRONS
       int nvold=NV-NRELBIN;
 
 #ifdef RESTARTFROMNORELEL_NOCOMPT
       nvold += 1;
 #endif
-      
+
       ldouble ppold[nvold]; 
       ret=fread(ppold,sizeof(ldouble),nvold,fdump);
 
@@ -1042,6 +1082,8 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
       for (ie=0; ie<NRELBIN; ie++) pp[NVHD-NRELBIN+ie] = 0.0; 
       for (ie=0; ie<NV-NVHD; ie++) pp[NVHD+ie] = ppold[NVHD-NRELBIN+ie];
 
+#endif
+      
 #else
       ret=fread(pp,sizeof(ldouble),NV,fdump);
 #endif
@@ -1151,11 +1193,14 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
   /***** first read ALL the indices ******/
 
  int nvold;
-#ifdef RESTARTFROMNORELEL
+#if defined(RESTARTFROMMHD)
+  nvold=9;
+#elif defined(RESTARTFROMNORELEL) //TODO can only do EITHRE RESTARTFROMMHD OR RESTARTFROMNORELEL
   nvold=NV-NRELBIN;
-#ifdef RESTARTFROMNORELEL_NOCOMPT
+  #ifdef RESTARTFROMNORELEL_NOCOMPT
   nvold += 1;
-#endif
+  #endif
+
 #else
   nvold=NV;
 #endif
@@ -1215,25 +1260,62 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 	    {
 	      fill_geometry(ix,iy,iz,&geom);
 
-#ifdef RESTARTFROMNORELEL
-          int ie;
-          for (ie=0; ie<8; ie++) set_u(p,ie,ix,iy,iz,pout[ppos+ie]);
-	  for (ie=0; ie<(NV-NVHD); ie++) set_u(p,NVHD+ie,ix,iy,iz,pout[ppos+8+ie]);
-          for (ie=0; ie<NRELBIN; ie++) set_u(p,8+ie,ix,iy,iz, 0.0); //set relel bins to zero 
+#if defined(RESTARTFROMMHD) //restart from mhd only
+#ifdef RELELECTRONS
+              my_err("RESTARTFROMMHD does not work with RELELECTRONS currently!\n");
+#endif
+              // copy over mhd primitives
+              int ie;
+              for(ie=0; ie<6; ie++)
+                set_u(p,ie,ix,iy,iz,pout[ppos+ie]); //density, energy, velocities, entropy
+	      for(ie=0; ie<3; ie++)
+		set_u(p,NVHD+ie,ix,iy,iz,pout[ppos+6+ie]); //magnetic field
+
+#ifdef RADIATION		       
+	      // initialize radiation primitives
+	      ldouble Erad=pout[ppos+UU]*INITURADFRAC;   //initial radiation energy density
+
+	      set_u(p,EE,ix,iy,iz,Erad);
+	      set_u(p,FX,ix,iy,iz,pout[ppos+VX]); //initial radiation velocity is same as fluid     
+	      set_u(p,FY,ix,iy,iz,pout[ppos+VY]);
+	      set_u(p,FZ,ix,iy,iz,pout[ppos+VZ]);
+
+#ifdef EVOLVEPHOTONNUMBER
+	      ldouble Nrad=calc_NFfromE(Erad); //initially blackbody
+	      set_u(p,NF,ix,iy,iz,Nrad);
+#endif
+
+#ifdef EVOLVEELECTRONS
+	      // initialize electron primitives
+	      ldouble rhogas=pout[ppos+RHO];
+	      ldouble ue=(INITUEFRAC)*pout[ppos+UU];
+	      ldouble ui=(1.-INITUEFRAC)*pout[ppos+UU];
+	      ldouble Se=calc_Sefromrhou(rhogas,ue,ELECTRONS); //TODO -- non hydrogen?
+	      ldouble Si=calc_Sefromrhou(rhogas,ui,IONS);
+	      set_u(p,ENTRE,ix,iy,iz,Se);
+	      set_u(p,ENTRI,ix,iy,iz,Si);
+#endif
+#endif //RADIATION
+	  
+#elif defined(RESTARTFROMNORELEL) // TODO only an option if NOT RESTARTFROMMHD
+	      int ie;
+	      for (ie=0; ie<8; ie++) set_u(p,ie,ix,iy,iz,pout[ppos+ie]);
+	      for (ie=0; ie<(NV-NVHD); ie++) set_u(p,NVHD+ie,ix,iy,iz,pout[ppos+8+ie]);
+	      for (ie=0; ie<NRELBIN; ie++) set_u(p,8+ie,ix,iy,iz, 0.0); //set relel bins to zero 
 #else
-	  PLOOP(iv) set_u(p,iv,ix,iy,iz,pout[ppos+iv]);
+	      PLOOP(iv) set_u(p,iv,ix,iy,iz,pout[ppos+iv]);
 #endif
 
 	      
 #ifdef CONSISTENTGAMMA
-	  ldouble Te,Ti;
-	  calc_PEQ_Teifrompp(&get_u(p,0,ix,iy,iz),&Te,&Ti,ix,iy,iz);
-	  ldouble gamma=calc_gammaintfromTei(Te,Ti);
-	  set_u_scalar(gammagas,ix,iy,iz,gamma);
+	      ldouble Te,Ti;
+	      calc_PEQ_Teifrompp(&get_u(p,0,ix,iy,iz),&Te,&Ti,ix,iy,iz);
+	      ldouble gamma=calc_gammaintfromTei(Te,Ti);
+	      set_u_scalar(gammagas,ix,iy,iz,gamma);
 #endif
 
 
-	  p2u(&get_u(p,0,ix,iy,iz),&get_u(u,0,ix,iy,iz),&geom);
+	      p2u(&get_u(p,0,ix,iy,iz),&get_u(u,0,ix,iy,iz),&geom);
 	      
 
 	    }

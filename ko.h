@@ -154,7 +154,7 @@ ldouble tempcgs2gu, tempgu2cgs, lencgs2gu, lengu2cgs, numdenscgs2gu, numdensgu2c
   one_over_four_sigmarad, k_over_mecsq, mugas_mp_over_kB, kB_over_mugas_mp, kB_over_mp,
   kB_over_me, one_over_kB_2p70118, one_over_mugas_mp, one_over_mui_mp, one_over_mue_mp,
   kB_over_mui_mp, kB_over_mue_mp,mui_over_mue,
-  four_third, five_third, one_third, log_2p6, one_over_log_2p6;
+  four_third, five_third, one_third, two_third, log_2p6, one_over_log_2p6;
 
 ldouble global_double1,global_double2; //for general use
 

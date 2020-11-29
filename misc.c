@@ -84,9 +84,18 @@ void initialize_constants()
     
   four_third = 4. / 3.;
   one_third = 1. / 3.;
+  two_third = 2./3.;
   log_2p6 = log(2.6);
   one_over_log_2p6 = 1. / log_2p6;
 
+  /*  
+  printf("Testing gammainterp\n");
+  printf("%e %e %e \n",calc_meanlorentz(1.e-3),calc_meanlorentz(1.1e-3),calc_meanlorentz(5.e-3));
+  printf("%e %e %e \n",calc_meanlorentz(0.74),calc_meanlorentz(1.23),calc_meanlorentz(7.54));
+  printf("%e %e %e \n",calc_meanlorentz(14.3),calc_meanlorentz(77.3),calc_meanlorentz(144.));
+  printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
+  exit(-1);
+  */
   // Coordinate specific factors
   #if (MYCOORDS==JETCOORDS)
   //printf("Finding hypx1out\n");
@@ -98,6 +107,7 @@ void initialize_constants()
   #ifdef CYLINDRIFY
   set_cyl_params();
   #endif
+
   
   //ANDREW -- diagnostics for new jet coordinates/metric
 
@@ -497,6 +507,10 @@ if (NTZ % 2 != 0)
   exit(-1);
 #endif
 
+#ifdef RESTARTFROMMHD
+  if(PROCID==0) printf("RESTARTFROMMHD\n");
+  if(PROCID==0) printf("urad/uu: %e ue/uu: %e\n", INITURADFRAC, INITUEFRAC);
+#endif
   return;
 }
 

@@ -2085,6 +2085,7 @@ ldouble calc_meanlorentz(ldouble theta)
   else //Interpolate in the transition zone
   {
     ldouble xval = log10(theta);
+    //printf("theta: %e, xval: %e\n",theta, xval);
     int n=61;
     ldouble xarr[61] = {-3., -2.9, -2.8, -2.7, -2.6, -2.5, -2.4, -2.3, -2.2, -2.1, -2., \
 	    -1.9, -1.8, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1, -1., -0.9, \
@@ -2106,9 +2107,11 @@ ldouble calc_meanlorentz(ldouble theta)
     int jl,ju,jm;
     jl = 0;
     ju = n+1;
-    while(ju-jl <= 1)
+    //jm = (ju+jl)/2;
+    while((ju-jl) > 1)
     {
       jm = (ju+jl)/2;
+      //printf("%d %d %d \n",jl,ju,jm);
       if(xval>=xarr[jm-1])
 	jl = jm;
       else
@@ -2120,25 +2123,27 @@ ldouble calc_meanlorentz(ldouble theta)
     else if(xval>xarr[n-1]) ipos = n-1;
     else ipos = jl-1;
     
+    //printf("\njl: %d , ipos: %d\n",jl, ipos);
+
     //interpolate
     if(ipos<(n-1) && ipos>-1)
-     {
+    {
        ldouble frac = (xval - xarr[ipos])/(xarr[ipos+1] - xarr[ipos]);
        gamma = gammarr[ipos] + frac*(gammarr[ipos+1] - gammarr[ipos]);
-     }
-     else if(ipos==n-1)
-     {
-       gamma = gammarr[n-1];
-     }
-     else if (ipos==-1)
-     {
-       gamma = gammarr[0];
-     }
-     else
-     {
-       gamma = theta;
-       printf("error in interp gammaavg!\n");
-     }
+    }
+    else if(ipos==n-1)
+    {
+      gamma = gammarr[n-1];
+    }
+    else if (ipos==-1)
+    {
+      gamma = gammarr[0];
+    }
+    else
+    {
+      gamma = theta;
+      printf("error in interp gammaavg!\n");
+    }
   }
   return gamma;
 }
@@ -2872,21 +2877,20 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
 #elif defined(HEATELECTRONS_ZHDANKIN)
   //based on ratio of gyroradi Zhdankin 2019 
   
-
   ldouble Ti = state->Ti;
   ldouble Te = state->Te;
   ldouble the = kB_over_me * Te;
   ldouble thi = kB_over_mui_mp * Ti;
-  ldouble gammae=GAMMAE;
-  ldouble gammai=GAMMAI;
-  #ifndef FIXEDGAMMASPECIES
-  gammae=calc_gammaintfromtheta(the);
-  gammai=calc_gammaintfromtheta(thi);
-  #endif
+  //ldouble gammae=GAMMAE;
+  //ldouble gammai=GAMMAI;
+  //#ifndef FIXEDGAMMASPECIES
+  //gammae=calc_gammaintfromtheta(the);
+  //gammai=calc_gammaintfromtheta(thi);
+  //#endif
   ldouble gmeane = calc_meanlorentz(the);
   ldouble gmeani = calc_meanlorentz(thi);
   ldouble gyroratio = 1836.15267 * sqrt((gmeani*gmeani - 1.)/(gmeane*gmeane-1.));
-  ldouble uioue = pow(gyroratio,2./3.);
+  ldouble uioue = pow(gyroratio,two_third);
   delta = 1./(uioue + 1.);
 
   

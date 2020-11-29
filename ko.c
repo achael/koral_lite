@@ -311,7 +311,7 @@ main(int argc, char **argv)
   // Rescale density to adjust  accretion rate
 #ifdef RESCALEDENSITY
 
-  if(PROCID==0) printf("RESCALEDENSITY: %f\n",RESCALEDENSITY);
+  if(PROCID==0) printf("RESCALEDENSITY: %e\n",RESCALEDENSITY);
  
   for(i=0;i<Nloop_0;i++)                                                                                                                                
   {

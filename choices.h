@@ -204,6 +204,7 @@
 //number of hydro variables
 #ifndef EVOLVEELECTRONS
 #define NVHD (6)
+
 #else
 
 #ifdef RELELECTRONS
