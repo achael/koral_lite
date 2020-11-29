@@ -86,7 +86,7 @@
 /************************************/
 //radiation choices
 /************************************/
-//#define RADIATION
+#define RADIATION
 
 //#define SKIPRADSOURCE    //advective only
 //#define SKIPRADEVOLUTION //keeps initial values in place
@@ -146,10 +146,10 @@
 //#define SKIPRADEVOLUTION
 //#define SKIPEVOLUTION
 //#define SKIPRADSOURCE
-//#define SKIPCOULOMBCOUPLING
+#define SKIPCOULOMBCOUPLING
 //#define RADIMPSTOPWHENFAIL
 #define DAMPCOMPTONIZATIONATBH
-//#define NO_COMPTONIZATION
+#define NO_COMPTONIZATION
 //#define SKIPFANCYOPACITIES
 //#define ENFORCEENTROPY
 //#define GASRADCOUPLEDWAVESPEEDS
@@ -159,7 +159,7 @@
 /************************************/
 //electron choices
 /************************************/
-//#define EVOLVEELECTRONS
+#define EVOLVEELECTRONS
 
 #ifdef EVOLVEELECTRONS
 #define CONSISTENTGAMMA
@@ -170,14 +170,15 @@
 #define HEATELECTRONS
 //#define HEATELECTRONS_HOWES
 //#define HEATELECTRONS_ROWAN
-#define HEATELECTRONS_ROWAN2
+//#define HEATELECTRONS_ROWAN2
 //#define HEATELECTRONS_ROWAN3
+#define HEATELECTRONS_ZHDANKIN
 
 #define NOHEATATBH
 
 //#define HEATELECTRONSATENDRK2
 //#define DISSIPATIONFROMGASONLY
-#define FORCEGAMMAGASFIXED
+//#define FORCEGAMMAGASFIXED
 
 //entropy mixing
 //#define MIXENTROPIESPROPERLY
@@ -189,14 +190,14 @@
 //#define PRINTCOULOMBTOSILO
 
 //floors
-#define UEUINTMINRATIO 1.e-3
-#define UIUINTMINRATIO 1.e-3
-#define TEMPEMINIMAL 1.e2
-#define TEMPIMINIMAL 1.e2
+#define UEUINTMINRATIO 1.e-6
+#define UIUINTMINRATIO 1.e-6
+#define TEMPEMINIMAL 1.e4
+#define TEMPIMINIMAL 1.e4
 #define TEMPEMINIMALFRACTION 1.e-6
 #define TEMPIMINIMALFRACTION 1.e-6
-#define TEMPEMAXIMALFRACTION 1.e2
-#define TEMPIMAXIMALFRACTION 1.e2
+#define TEMPEMAXIMALFRACTION 1.e3
+#define TEMPIMAXIMALFRACTION 1.e3
 #endif
 
 /************************************/
