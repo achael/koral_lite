@@ -64,22 +64,25 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
   #endif
 
   int iiy;
-  ldouble EPSILON,MDOTEDDIN,DISKVR,MDOTIN,DISKSIGMA,DISKRHO,TFB_STR;
+  ldouble EPSILON,MDOTEDDIN,DISKVR,MDOTIN,DISKSIGMA,DISKRHO,TFB_STR,TDECAY,TVISCDELAY;
   ldouble rho,uint,uphi,Om,Omk,ucon[4],temp,pre0,uint0,temp0,ell;
   ldouble meanuint,newT,mdotR,mdotL,mdotIN,rhorescale,rhoL,vL,rhoR,vR,rhoB,vB,mdotB,xx[4],dx[3];
 
   TFB_STR = TFB0;
+  TDECAY = TSTARTDECAY;
+  TVISCDELAY = TVISC;
 
   #ifndef USE_TPLUSTFB
   #ifdef EPSILON_TIME_DEPENDENT
-  if(global_time <= TFB_STR) EPSILON = EPSILON0;
-  else if(global_time > TFB_STR) EPSILON = EPSILON0*pow( (global_time/TFB_STR) , -2./3.);
+  if(global_time <= TDECAY) EPSILON = EPSILON0;
+  else if(global_time > TDECAY) EPSILON = EPSILON0*pow( ((global_time-TDECAY+TFB_STR)/TFB_STR) , -2./3.);
   #else
   EPSILON = EPSILON0;
   #endif
 
   #ifdef MDOT_TIME_DEPENDENT
-  MDOTEDDIN = MDOTEDD0/(1. + pow((global_time/TFB_STR),5./3.) );
+  if(global_time <= TDECAY) MDOTEDDIN = MDOTEDD0;
+  else if(global_time > TDECAY) MDOTEDDIN = MDOTEDD0*pow(((global_time-TDECAY+TFB_STR)/TFB_STR),-5./3.);
   #else
   MDOTEDDIN = MDOTEDD0;
   #endif
@@ -101,7 +104,7 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
   #endif
   #endif
 
-  DISKVR = -1.*sqrt(2.*(1./RMIN_DISK + EPSILON));
+  DISKVR = -0.1/sqrt(r); // Assumes MRI active//-1.*sqrt(2.*(1./RMIN_DISK + EPSILON));
   MDOTIN = (MDOTEDDIN*2.48e18*MASS);
 
   //gas density
@@ -139,138 +142,29 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
      #endif
   }
 
-  rho=DISKRHO;//*rhopref; //initial guess at what density should be
-
-
+  rho=DISKRHO*rhopref; //initial guess at what density should be
   if(rhopref < 0) rho = pp[0]; //Set rho to atm if happens to go negative
 
-  //check the mass flux across STREAMIX-1/STREAMIX cell boundary (domain/ghost cell boundary)
-  //rescale if need be. Note mdotL is a global variable set in ko.h and computed in ***
-  newT = 0.;
-  rhorescale = 1.;
-
-  #ifdef FIX_INFLOW_RATE
-  if(gix == STREAM_IX && giy >= STREAM_IYT && giy <= STREAM_IYB)
-  {
-    mdotL = 0.;
-    meanuint = 0.;
-
-    #ifndef CELL_BY_CELL_RESCALE
-    for(iiy=0; iiy<(NY+1); ++iiy)
-    {
-      if((iiy+TOJ) >= STREAM_IYT && (iiy+TOJ) < (STREAM_IYB+1))
-      {
-        get_xx(ix-1, iiy, iz, xx);
-        dx[0] = get_size_x(ix-1, 0);
-        dx[1] = get_size_x(iiy, 1);
-        dx[2] = get_size_x(iz, 2);
-        if(NZ==1)
-        {
-          dx[2] = 2.* M_PI;
-        }
-        else
-        {
-          #ifdef PHIWEDGE
-          dx[2]*=(2. * M_PI / PHIWEDGE);
-          #endif
-        }
-
-        rhoR = rho;
-        vR = -DISKVR;
-
-        rhoL = get_u(p, 0, ix-1, iiy, iz);
-        vL = my_max( get_u(p, 2, ix-1, iiy, iz)*(-1), 0.);
-      
-        rhoB = 0.5*(rhoL + rhoR);
-        vB = 0.5*(vL + vR);
-
-        mdotL += rhoL*vL*dx[1]*dx[2];
-        meanuint += get_u(p, 1, ix-1, iiy, iz);
-      }
-    }
-    #endif
-  
-    #ifdef CELL_BY_CELL_RESCALE
-    get_xx(ix-1, iy, iz, xx);
-    dx[0] = get_size_x(ix-1, 0);
-    dx[1] = get_size_x(iy, 1);
-    dx[2] = get_size_x(iz, 2);
-    if(NZ==1)
-    {
-      dx[2] = 2.* M_PI;
-    }
-    else
-    {
-      #ifdef PHIWEDGE
-      dx[2]*=(2. * M_PI / PHIWEDGE);
-      #endif
-    }
-
-    rhoL = get_u(p, 0, ix-1, iy, iz);
-    vL = get_u(p, 2, ix-1, iy, iz);//vL = my_max( get_u(p, 2, ix-1, iy, iz)*(-1), 0.);
-    
-    rhoR = rho;
-    vR = DISKVR;
-      
-    rhoB = 0.5*(rhoL + rhoR);
-    vB = 0.5*(vL + vR);
-
-    mdotL = rhoL*vL*dx[1]*dx[2];
-    meanuint = get_u(p, 1, ix-1, iy, iz);
-    #endif
-
-    mdotIN = MDOTIN*GGG/(CCC*CCC*CCC); //in GU
-    mdotR = DISKRHO*(32./35.)*DISKHR*M_PI*M_PI*r*r*(-DISKVR); //in GU
-
-    if( mdotR < (mdotIN+mdotL) || mdotR > (mdotIN+mdotL) )
-      rhorescale= ((mdotIN+mdotL)/mdotR);
-
-    //Rescale pressure to match that outside of stream? (this will lead to a hot stream, but maybe it should be heated later as disk forms and interacts with it?)
-    #ifndef CELL_BY_CELL_RESCALE
-    meanuint = meanuint/(STREAM_IYB + 1 - STREAM_IYT);
-    #endif
-
-    newT=calc_PEQ_Tfromurho(meanuint,DISKRHO*rhorescale,ix,iy,iz);
-
-    rho = rho*rhorescale;
-    rhoR = (-2.*mdotIN/vB/(DISKHR*M_PI*M_PI*r*r)) - rhoL;
-    //if(rhoR > 0.) rho = rhoR;
-  }
-  else if(gix == (STREAM_IX+1))
-  {
-    mdotIN = MDOTIN*GGG/(CCC*CCC*CCC); //in GU
-    mdotR = DISKRHO*(32./35.)*DISKHR*M_PI*M_PI*r*r*(-DISKVR); //in GU
-
-    if( mdotR < mdotIN || mdotR > mdotIN )
-      rhorescale= (mdotIN/mdotR);
-
-    rho = rho*rhorescale;
-  }
-  #endif
-
   temp=DISKTEMP;
-
-  //switching off temp fixing for now
-  //#ifdef FIX_INFLOW_RATE
-  //if(newT > temp) temp = newT;
-  //#endif
-
   uint=calc_PEQ_ufromTrho(temp,rho,ix,iy,iz);
-
   Omk=1./sqrt(r*r*r);
-
-  // pre0 = DISKSIGMA * Omk * Omk * DISKH * DISKH / 2. / DISKH ;  //P=2Hp, P/S = Om^2 H^2 
-  //uint0 = pre0 / GAMMAM1;
-  //temp0 = calc_PEQ_Tfromurho(uint0, DISKRHO);
-
   //ang.momentum corresponding to DISKRCIR
   ell=sqrt(DISKRCIR);
   Om=ell/r/r;
   
+  #ifdef COPY_DOMAIN_UINT
+  if(global_time > TVISCDELAY)
+  {
+    #ifdef SPECIAL_BC_CHECK
+    if(gix == (STREAM_IX)) uint=get_u(p,1,ix-1,iy,iz);
+    if(gix == (STREAM_IX+1)) uint=get_u(p,1,ix-2,iy,iz);
+    #endif
+  }
+  #endif
 
   ucon[1]=DISKVR;
   ucon[2]=0.;
-  ucon[3]=Om;
+  ucon[3]=Omk;
     
   conv_vels_ut(ucon,ucon,VEL4,VELPRIM,geomBL->gg,geomBL->GG);
  
@@ -287,9 +181,9 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
 #endif
 
 #ifdef RADIATION
-
-#ifdef STR_USETRADATM
-
+#ifdef COPY_DOMAIN_EHAT
+if(global_time > TVISCDELAY)
+{
 #ifdef SPECIAL_BC_CHECK
   if(gix == (STREAM_IX)) pp[EE0]=get_u(p,EE0,ix-1,iy,iz);
   if(gix == (STREAM_IX+1)) pp[EE0]=get_u(p,EE0,ix-2,iy,iz);
@@ -303,9 +197,43 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
     pp[NF0]=calc_NFfromE(pp[EE0]);
   #endif
 #endif
-
-#else 
+}
+else
+{
   //split pressure into rad and gas assuming LTE
+  ldouble Eatm=pp[EE0];
+  ldouble E,Fx, Fy,Fz;
+  //distributing pressure
+  ldouble P,aaa,bbb;
+  P=GAMMAM1*pp[1];
+  //solving for T satisfying P=pgas+prad=bbb T + aaa T^4
+  aaa=4.*SIGMA_RAD/3.;
+  bbb=K_BOLTZ*pp[0]/MU_GAS/M_PROTON;
+  ldouble naw1=cbrt(9*aaa*Power(bbb,2) - Sqrt(3)*Sqrt(27*Power(aaa,2)*Power(bbb,4) + 256*Power(aaa,3)*Power(P,3)));
+  ldouble T4=-Sqrt((-4*Power(0.6666666666666666,0.3333333333333333)*P)/naw1 + naw1/(Power(2,0.3333333333333333)*Power(3,0.6666666666666666)*aaa))/2. + Sqrt((4*Power(0.6666666666666666,0.3333333333333333)*P)/naw1 - naw1/(Power(2,0.3333333333333333)*Power(3,0.6666666666666666)*aaa) + (2*bbb)/(aaa*Sqrt((-4*Power(0.6666666666666666,0.3333333333333333)*P)/naw1 + naw1/(Power(2,0.3333333333333333)*Power(3,0.6666666666666666)*aaa))))/2.;
+    
+  E=calc_LTE_EfromT(T4);
+  Fx=Fy=Fz=0.;
+  uint=calc_PEQ_ufromTrho(T4,rho,ix,iy,iz);
+
+  pp[UU]=uint;//my_max(uint,uintatm);
+  pp[EE0]=E;//my_max(E,Eatm);
+
+  pp[FX0]=Fx;
+  pp[FY0]=Fy;
+  pp[FZ0]=Fz;
+
+  //#ifdef NCOMPTONIZATION
+    //pp[NF0]=calc_NFfromE(pp[EE0]);
+    //pp[NF]=calc_NFfromT(calc_PEQ_Tfromurho(pp[UU],pp[RHO]));
+    //pp[NF]=1./2.70118/K_BOLTZ * pp[EE]/calc_PEQ_Tfromurho(pp[UU],pp[RHO]);
+    //pp[NF]=1./2.70118/K_BOLTZ * pp[EE]/T4;
+  //#endif
+  #ifdef EVOLVEPHOTONNUMBER
+    pp[NF0]=calc_NFfromE(pp[EE0]);
+  #endif
+}
+#else //split pressure into rad and gas assuming LTE and using Tgas from above
   ldouble Eatm=pp[EE0];
   ldouble E,Fx, Fy,Fz;
   //distributing pressure
@@ -352,7 +280,7 @@ int diskatboundary(ldouble *pp, void *ggg, void *gggBL)
 #ifdef MAGNFIELD 
   //artificially impose poloidal magnetic field
   ldouble Pgas,Prad;
-  Pgas=GAMMAM1*uint;
+  Pgas=GAMMAM1*pp[1];
 #ifdef RADIATION
   Prad=pp[EE0]/3.;
 #else

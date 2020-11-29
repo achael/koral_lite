@@ -141,13 +141,30 @@
 //138 JETCOORDS -- test jet coordinate system
 //139 MADCC -- MAD code comparison
 //140 RADSURVEY -- radiative parameter survey
+//141 KEPINF -- INFDISK modified for injecting keplerian 
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 140
+#define PROBLEM 141
+
+#if(PROBLEM==141)
+
+#define PR_DEFINE "PROBLEMS/KEPINF/define.h"
+#define PR_BC "PROBLEMS/KEPINF/bc.c"
+#define PR_BC_SPECIAL "PROBLEMS/KEPINF/bc_special.c"
+#define PR_BC_SPECIAL_LOOP "PROBLEMS/KEPINF/loop_alloc_special.c"
+#define PR_INIT "PROBLEMS/KEPINF/init.c"
+//#define PR_KAPPA "PROBLEMS/KEPINF/kappa.c"
+#define PR_KAPPAES "PROBLEMS/KEPINF/kappaes.c"
+#define PR_OUT2GIF_2D "PROBLEMS/KEPINF/out2gif_2d.c"
+#define PR_OUT2GIF_1D "PROBLEMS/KEPINF/out2gif_1d.c"
+#define PR_DUMP "PROBLEMS/KEPINF/dump.c"
+#define PR_TOOLS "PROBLEMS/KEPINF/tools.c"
+
+#endif
 
 #if(PROBLEM==140)
 
