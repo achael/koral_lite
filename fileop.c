@@ -323,6 +323,12 @@ int
 fprint_restartfile_mpi(ldouble t, char* folder)
 {
   #ifdef MPI
+
+  if (PROCID == 0)
+  {
+    printf("Entering fprint_restartfile_mpi\n");
+  }
+
   char bufor[250];
 
   //header
@@ -431,6 +437,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
 int 
 fprint_restartfile_bin(ldouble t, char* folder)
 {
+  printf("Entering fprint_restartfile_bin\n");
   char bufor[250];
   
   //header
@@ -504,17 +511,22 @@ fprint_restartfile_bin(ldouble t, char* folder)
 int //parallel MPI hdf5 output
 fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
 {
-#if defined DUMPS_WRITE_HDF5 && defined MPI
+  #if defined DUMPS_WRITE_HDF5 && defined MPI
+
+#ifndef FOLDER_HDF5
+#define FOLDER_HDF5 "./dumps"
+#endif
+
+  if (PROCID == 0)
+  {
+    printf("Entering fprint_restartfile_mpi_hdf5:  FOLDER_HDF5 = %s\n", FOLDER_HDF5);
+  }
 
   MPI_Comm comm  = MPI_COMM_WORLD;
   MPI_Info info  = MPI_INFO_NULL;
 
   char bufor[250];
   
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
-
   // Write out header information in group HEADER in HDF5 file
   // Only PROCID=0 does this, but all processes open the file, group and dataspace
 
@@ -737,7 +749,7 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
     iv=system(bufor);
   }
 
-#endif  // DUMPS_WRITE_HDF5
+  #endif  // DUMPS_WRITE_HDF5
 
   return 0;
 }
@@ -749,13 +761,15 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
 int //serial hdf5 output
 fprint_restartfile_serial_hdf5(ldouble t, char* folder)
 {
-#ifdef DUMPS_WRITE_HDF5
+  #ifdef DUMPS_WRITE_HDF5
 
   char bufor[250];
   
 #ifndef FOLDER_HDF5
 #define FOLDER_HDF5 "./dumps"
 #endif
+
+  printf("Entering fprint_restartfile_serial_hdf5: FOLDER_HDF5 = %s\n", FOLDER_HDF5);
 
   // Write out header information in group HEADER in HDF5 file
 
@@ -881,7 +895,7 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
    // Then find the primitive name and save in the hdf5 file
 
     get_prim_name(prim_name, iv);
-    printf("  prim_name: %s\n", prim_name);
+    //printf("  prim_name: %s\n", prim_name);
     
     dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT, &(primitive[0][0][0]));
@@ -909,7 +923,7 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
   sprintf(bufor,"ln -s res%04d.h5 %s/reslast.h5", nfout1, FOLDER_HDF5);
   iv=system(bufor);
 
-#endif  // DUMPS_WRITE_HDF5
+  #endif  // DUMPS_WRITE_HDF5
 
   return 0;
 }
@@ -957,6 +971,7 @@ fread_restartfile(int nout1, char* folder,ldouble *t)
 int 
 fread_restartfile_bin(int nout1, char *folder, ldouble *t)
 {
+  printf("Entering fread_restartfile_bin\n");
   int ret, ix,iy,iz,iv,i,ic,gix,giy,giz;
   char fname[400],fnamehead[400];
   if(nout1>=0)
@@ -1137,6 +1152,12 @@ int
 fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 {
   #ifdef MPI
+
+  if (PROCID == 0)
+  {
+    printf("Entering fread_restartfile_mpi\n");
+  }
+
   int ret, ix,iy,iz,iv,i,ic,gix,giy,giz,tix,tiy,tiz;
   char fname[400],fnamehead[400];
 
@@ -1338,14 +1359,19 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 int //parallel MPI hdf5 input
 fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
 {
-#if defined DUMPS_READ_HDF5 && defined MPI
-
-  MPI_Comm comm  = MPI_COMM_WORLD;
-  MPI_Info info  = MPI_INFO_NULL;
+  #if defined DUMPS_READ_HDF5 && defined MPI
 
 #ifndef FOLDER_HDF5
 #define FOLDER_HDF5 "./dumps"
 #endif
+
+  if (PROCID == 0)
+  {
+    printf("Entering fread_restartfile_mpi_hdf5:  FOLDER_HDF5 = %s\n", FOLDER_HDF5);
+  }
+
+  MPI_Comm comm  = MPI_COMM_WORLD;
+  MPI_Info info  = MPI_INFO_NULL;
 
   hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dataspace_array, dumps_memspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id, plist_id;
   hsize_t dims_h5[3], chunk_dims[3], offset_3d[3], stride_3d[3], count_3d[3], block_3d[3];
@@ -1587,7 +1613,7 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
     }
   }
 
-#endif  // DUMPS_READ_HDF5
+  #endif  // DUMPS_READ_HDF5
 
   return 0;
 }
@@ -1599,7 +1625,13 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
 int //serial hdf5 input
 fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
 {
-#ifdef DUMPS_READ_HDF5
+  #ifdef DUMPS_READ_HDF5
+
+#ifndef FOLDER_HDF5
+#define FOLDER_HDF5 "./dumps"
+#endif
+
+  printf("Entering fread_restartfile_serial_hdf5:  FOLDER_HDF5 = %s\n", FOLDER_HDF5);
 
   hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id;
   hsize_t dims_h5[3];
@@ -1613,10 +1645,6 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
     
   int ret, ix,iy,iz,iv,i,ic,gix,giy,giz;
   char fname_h5[400];
-
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
 
   if(nout1>=0)
   {
@@ -1799,7 +1827,7 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
     }
   }
 
-#endif  // DUMPS_READ_HDF5
+  #endif  // DUMPS_READ_HDF5
 
   return 0;
 }
