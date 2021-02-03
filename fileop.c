@@ -88,9 +88,12 @@ fprint_openfiles(char* folder)
 #ifndef MPI
   sprintf(bufor,"%s/scalars.dat",folder);
   fout_scalars=fopen(bufor,"a");
+  printf("fopen %s in function openfiles\n", bufor);
 
   sprintf(bufor,"%s/failures.dat",folder);
   fout_fail=fopen(bufor,"a");
+  printf("fopen %s in function openfiles\n", bufor);
+
 #endif
 
   return 0;
@@ -125,6 +128,7 @@ fprint_gridfile(char* folder)
   char bufor[50];
   sprintf(bufor,"%s/grid.dat",folder);
   out=fopen(bufor,"w");
+  printf("fopen %s in function fprint_gridfile\n", bufor);
 
   int ix,iy,iz,iv;
   ldouble pp[NV],uu[NV];
@@ -196,6 +200,7 @@ fprint_radprofiles(ldouble t, int nfile, char* folder, char* prefix)
       sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
 
       fout_radprofiles=fopen(bufor,"w");
+      printf("fopen %s in function fprint_radprofiles\n", bufor);
 
       ldouble mdotscale = (rhoGU2CGS(1.)*velGU2CGS(1.)*lenGU2CGS(1.)*lenGU2CGS(1.))/calc_mdotEdd();
       ldouble lumscale = (fluxGU2CGS(1.)*lenGU2CGS(1.)*lenGU2CGS(1.))/calc_lumEdd();
@@ -242,6 +247,7 @@ fprint_thprofiles(ldouble t, int nfile, char* folder, char* prefix)
   sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
 
   FILE *fout_thprofiles=fopen(bufor,"w");
+  printf("fopen %s in function fprint_thprofiles\n", bufor);
 
   int ix,iy,iv;
 
@@ -336,6 +342,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
     {
        sprintf(bufor,"%s/res%04d.head",folder,nfout1);
        fout1=fopen(bufor,"w"); 
+       printf("fopen %s in function fprint_restartfile_mpi, PROCID = %d\n", bufor, PROCID);
        sprintf(bufor,"## %5d %5d %10.6e %5d %5d %5d %5d\n",nfout1,nfout2,t,PROBLEM,TNX,TNY,TNZ);
        fprintf(fout1,"%s",bufor);
        fclose(fout1);
@@ -352,6 +359,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
   MPI_Request req;
 
   int rc = MPI_File_open( MPI_COMM_WORLD, bufor, MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &cFile );
+  //printf("MPI_File_open in fprint_restartfile_mpi, PROCID = %d\n", PROCID);
   if (rc)
   {
     printf( "Unable to open/create file %s\n", bufor );fflush(stdout); exit(-1);
@@ -445,6 +453,7 @@ fprint_restartfile_bin(ldouble t, char* folder)
     {
        sprintf(bufor,"%s/res%04d.head",folder,nfout1);
        fout1=fopen(bufor,"w"); 
+       printf("fopen %s in function fprint_restartfile_bin\n", bufor);
        sprintf(bufor,"## %5d %5d %10.6e %5d %5d %5d %5d\n",nfout1,nfout2,t,PROBLEM,TNX,TNY,TNZ);
        fprintf(fout1,"%s",bufor);
        fclose(fout1);
@@ -453,6 +462,7 @@ fprint_restartfile_bin(ldouble t, char* folder)
   //body
   sprintf(bufor,"%s/res%04d.dat",folder,nfout1);
   fout1=fopen(bufor,"wb"); 
+  printf("fopen %s in function fprint_restartfile_bin\n", bufor);
 
   int ix,iy,iz,iv;
   int gix,giy,giz;
@@ -549,7 +559,7 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
   dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
 
   plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_number);
@@ -998,6 +1008,7 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
   /***********/
   //header file
   fdump=fopen(fnamehead,"r");
+  printf("fopen %s in function fread_restartfile_bin\n", fnamehead);
   if(fdump==NULL) return 1; //request start from scratch
 
   //reading parameters, mostly time
@@ -1013,7 +1024,8 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
   /***********/
   //body file
   fdump=fopen(fname,"rb");
- 
+  printf("fopen %s in function fread_restartfile_bin\n", fname);
+
   struct geometry geom;
   ldouble xxvec[4],xxvecout[4];
   ldouble uu[NV],pp[NV],ftemp;
@@ -1172,27 +1184,48 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
       sprintf(fnamehead,"%s/reslast.head",folder);
     }
 
-  FILE *fdump;
-
   /***********/
-  //header file
+  //Read header file from process 0 if it exists. If not return for start from scratch
  
-  fdump=fopen(fnamehead,"r");
-  if(fdump==NULL) 
+  int exists = 0;
+
+  if (PROCID == 0)
+  {
+    FILE *fdump = fopen(fnamehead,"r");
+    printf("fopen %s in function fread_restartfile_mpi, PROCID = %d\n", fnamehead, PROCID);
+    exists = (fdump != NULL); // cast file open to an integer for broadcasting
+    if(exists == 1)
     {
-      return 1; //request start from scratch
+      //reading parameters, mostly time
+      int intpar[6];
+      ret=fscanf(fdump,"## %d %d %lf %d %d %d %d\n",&intpar[0],&intpar[1],t,&intpar[2],&intpar[3],&intpar[4],&intpar[5]);
+      if(PROCID==0)
+      printf("restart file (%s) read no. %d at time: %f of PROBLEM: %d with NXYZ: %d %d %d\n", fname,intpar[0],*t,intpar[2],intpar[3],intpar[4],intpar[5]); 
+      nfout1=intpar[0]+1; //global file no.
+      nfout2=intpar[1]; //global file no. for avg
+      fclose(fdump);
     }
+  }
+ 
+  // Broadcast `exists` from process 0 to all other processors using a blocking function         
+
+  //printf("Before MPI_Bcast: PROCID, exists, nfout1, nfout2, t = %d %d %d %d %e\n", PROCID, exists, nfout1, nfout2, *t);
+  int intexchange[3];
+  intexchange[0] = exists;
+  intexchange[1] = nfout1;
+  intexchange[2] = nfout2;
+  MPI_Bcast(intexchange, 3, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(t, 1, MPI_LONG_DOUBLE, 0, MPI_COMM_WORLD);
+  exists = intexchange[0];
+  nfout1 = intexchange[1];
+  nfout2 = intexchange[2];
+  //printf("After MPI_Bcast: PROCID, exists, nfout1, nfout2, t = %d %d %d %d %e\n", PROCID, exists, nfout1, nfout2, *t);
+
+  if (exists == 0)
+  {
+    return 1; //request start from scratch
+  }
   
-  //reading parameters, mostly time
-  int intpar[6];
-  ret=fscanf(fdump,"## %d %d %lf %d %d %d %d\n",&intpar[0],&intpar[1],t,&intpar[2],&intpar[3],&intpar[4],&intpar[5]);
-  if(PROCID==0)
-  printf("restart file (%s) read no. %d at time: %f of PROBLEM: %d with NXYZ: %d %d %d\n",
-	 fname,intpar[0],*t,intpar[2],intpar[3],intpar[4],intpar[5]); 
-  nfout1=intpar[0]+1; //global file no.
-  nfout2=intpar[1]; //global file no. for avg
-  fclose(fdump);
-    
   //maybe not needed
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -1206,6 +1239,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
   MPI_Request req;
 
   int rc = MPI_File_open( MPI_COMM_WORLD, fname, MPI_MODE_RDONLY, MPI_INFO_NULL, &cFile );
+  //printf("MPI_File_open in fread_restartfile_mpi, PROCID = %d\n", PROCID);
   if (rc)
   {
     printf( "Unable to open/create file %s\n", fname );fflush(stdout); exit(-1);
@@ -1390,13 +1424,24 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
     sprintf(fname_h5, "%s/reslast.h5", FOLDER_HDF5);
   }
 
-  // Check if hdf5 file exists
-  FILE *fhdf5;
-  fhdf5=fopen(fname_h5,"r");
-  if(fhdf5==NULL) 
-  {
-    return 1; //request start from scratch
+  int exists;
+
+  // Check if hdf5 file exists from process 0
+  if (PROCID == 0) {
+    FILE *fhdf5 = fopen(fname_h5, "r");
+    printf("fopen %s in fread_restartfile_mpi_hdf5: PROCID = %d\n", fname_h5, PROCID);
+    exists = (fhdf5 != NULL); // cast to an integer so it can be safely broadcasted
+    if (exists == 1) fclose(fhdf5);
   }
+
+  // Broadcast `exists` from process 0 to all other processors using a blocking function
+  MPI_Bcast(&exists, 1, MPI_INT, 0, comm);
+
+  // Request start from scratch if hdf5 file does not exist
+  if(!exists)
+    {
+      return 1;
+    }
 
   /***********/
   // Open hdf5 file and read header information from group HEADER
@@ -1404,11 +1449,12 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
   plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, comm, info);
   dumps_file_id = H5Fopen(fname_h5, H5F_ACC_RDONLY, plist_id);
+  //printf("H5Fopen in function fread_restartfile_mpi_hdf5, PROCID = %d\n", PROCID);
   H5Pclose(plist_id);
 
   if(&dumps_file_id==NULL)
   {
-    printf("Input hdf5 file not available!\n");
+    printf("Input hdf5 file not available! PROCID = %d\n", PROCID);
     exit(1);
   }
 
@@ -1416,7 +1462,7 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
   dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
 
   plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   dumps_dataset_int = H5Dopen2(dumps_group_id, "FILE_NUMBER", H5P_DEFAULT);
   status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_number);
@@ -1658,6 +1704,7 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
   // Check if hdf5 file exists
   FILE *fhdf5;
   fhdf5=fopen(fname_h5,"r");
+  printf("fopen %s in function fread_restartfile_mpi_hdf5, PROCID = %d\n", fname_h5, PROCID);
   if(fhdf5==NULL) 
   {
     return 1; //request start from scratch
@@ -1667,9 +1714,10 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
   // Open hdf5 file and read header information from group HEADER
 
   dumps_file_id = H5Fopen (fname_h5, H5F_ACC_RDWR, H5P_DEFAULT);
+  //printf("H5Fopen in function fread_restartfile_serial_hdf5, PROCID = %d\n", PROCID);
   if(&dumps_file_id==NULL)
   {
-    printf("Input hdf5 file not available!\n");
+    printf("Input hdf5 file not available!  PROCID = %d\n", PROCID);
     exit(1);
   }
 
@@ -1868,6 +1916,7 @@ fprint_avgfile_mpi(ldouble t, char* folder, char* prefix)
     {
       sprintf(bufor,"%s/%s%04d.head",folder,prefix,nfout2);
       fout1=fopen(bufor,"w"); 
+      printf("fopen %s in function fprint_avgfile_mpi, PROCID = %d\n", bufor, PROCID);
       sprintf(bufor,"## %5d %10.6e %10.6e %10.6e\n",nfout2,t-avgtime,t,avgtime);
       fprintf(fout1,"%s",bufor);
       fclose(fout1);
@@ -1882,6 +1931,7 @@ fprint_avgfile_mpi(ldouble t, char* folder, char* prefix)
 
  
   int rc = MPI_File_open( MPI_COMM_WORLD, bufor, MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &cFile );
+  //printf("MPI_File_open in fprint_avgfile_mpi, PROCID = %d\n", PROCID);
   if (rc)
   {
     printf( "Unable to open/create file %s\n", bufor );fflush(stdout); exit(-1);
@@ -1963,6 +2013,7 @@ fprint_avgfile_bin(ldouble t, char* folder,char *prefix)
     {
       sprintf(bufor,"%s/%s%04d.head",folder,prefix,nfout2);
       fout1=fopen(bufor,"w"); 
+      printf("fopen %s in function fprint_avgfile_bin, PROCID = %d\n", bufor, PROCID);
       sprintf(bufor,"## %5d %10.6e %10.6e %10.6e\n",nfout2,t-avgtime,t,avgtime);
       fprintf(fout1,"%s",bufor);
       fclose(fout1);
@@ -1971,6 +2022,7 @@ fprint_avgfile_bin(ldouble t, char* folder,char *prefix)
   //body
   sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfout2);
   fout1=fopen(bufor,"wb"); 
+  printf("fopen %s in function fprint_avgfile_bin, PROCID = %d\n", bufor, PROCID);
 
   int ix,iy,iz,iv;
   int gix,giy,giz;
@@ -2042,6 +2094,7 @@ fread_avgfile_bin(int nout1, char *base, ldouble *pavg, ldouble *dt, ldouble *t)
   /***********/
   //header file
   fdump=fopen(fnamehead,"r");
+  printf("fopen %s in function fread_avgfile_bin, PROCID = %d\n", fnamehead, PROCID);
 
   //reading parameters, mostly time
   int intpar[5];
@@ -2058,6 +2111,7 @@ fread_avgfile_bin(int nout1, char *base, ldouble *pavg, ldouble *dt, ldouble *t)
   //body file
 
   fdump=fopen(fname,"rb");
+  printf("fopen %s in function fread_avgfile_bin, PROCID = %d\n", fname, PROCID);
 
   struct geometry geom;
   ldouble xxvec[4],xxvecout[4];
@@ -2139,7 +2193,7 @@ int fprint_coordBL(char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%sBL.dat",folder,prefix);
    FILE* fout1=fopen(bufor,"w");
-
+   printf("fopen %s in function fprint_coordBL\n", bufor);
 
 #ifdef COORDOUTPUT_HDF5
    hid_t coordBL_file_id, coordBL_dataspace_id, r_dataset_id, theta_dataset_id, phi_dataset_id;
@@ -2255,7 +2309,8 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simplecart\n", bufor);
+
    //header
    fprintf(fout1,"## %d %e %d %d %d %d\n",nfout1,t,PROBLEM,NX,NY,NZ);
 
@@ -2462,7 +2517,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
    sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
    #endif
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simplesph\n", bufor);
+
    /***********************************/  
    /** writing order is fixed  ********/  
    /***********************************/  
@@ -3138,7 +3194,8 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%s%04d_simphiavg.dat",folder,prefix,nfile);
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simple_phiavg\n", bufor);
+
    /***********************************/  
    /** writing order is fixed  ********/  
    /***********************************/  
@@ -3400,7 +3457,8 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%s%04d_phicorr.dat",folder,prefix,nfile);
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simple_phicorr\n", bufor);
+
    /***********************************/  
    /** writing order is fixed  ********/  
    /***********************************/  
