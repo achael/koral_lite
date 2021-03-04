@@ -12,7 +12,7 @@
 /************************************/
 //restart
 /************************************/
-#define RESTART
+//#define RESTART
 #define RESTARTGENERALINDICES
 #define RESTARTNUM -1
 
@@ -40,7 +40,7 @@
 /************************************/
 //magnetic choices
 /************************************/
-//#define MIMICDYNAMO
+#define MIMICDYNAMO
 //#define CALCHRONTHEGO
 #define THETAANGLE 0.25
 #define ALPHAFLIPSSIGN                                                        
@@ -58,7 +58,7 @@
 //reconstruction / Courant
 /************************************/
 #define INT_ORDER 1
-#define TIMESTEPPING RK2HEUN//IMEX
+#define TIMESTEPPING RK2IMEX//HEUN//IMEX
 #define TSTEPLIM .5
 #define FLUXLIMITER 0
 #define MINMOD_THETA 1.5
@@ -172,7 +172,7 @@
 #define OUTCOORDS KERRCOORDS                                                                    
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
-#define RADOUTPUTINZAMO
+//#define RADOUTPUTINZAMO
 //#define RADOUTPUTWITHINDISK
 #define NOUTSTOP 5000
 #define SILOOUTPUT 0
@@ -191,7 +191,7 @@
 //common physics / torus / atmosphere
 /************************************/
 #define RHOATMMIN  1.e-24
-#define UINTATMMIN  (calc_PEQ_ufromTrho(1.e10,RHOATMMIN))
+#define UINTATMMIN  (calc_PEQ_ufromTrho(1.e10,RHOATMMIN,0,0,0))
 #define ERADATMMIN  (calc_LTE_EfromT(3.e6)/10)
 #define GAMMA (5./3.)
 
