@@ -276,154 +276,140 @@ ldouble calc_opacities_from_state(ldouble *pp, void *sss, void *ggg, void *op)
   #undef BOUNDELECTRON
   #undef BOUNDFREE
   
-  if (SD_LAMBDA_READ == 0)  // Read in table of Sutherland_Dopita Lambda values
-  {
+  if (SD_LAMBDA_READ == 0){  // Read in table of Sutherland_Dopita Lambda values
     // The metallicity is log( (Z/X)/(Z/X)_Sun )
-#ifdef METALLICITY //BRANDON - [Fe/H] as defined in define file
-    ldouble metallicity = METALLICITY;
-#else //BRANDON - [Fe/H] calculated from user defined mass abundances (HFRAC, HEFRAC, MFRAC). This is more consistent.
-    ldouble metallicity = -4.; // Z=0 metallicity by default
+    #ifdef METALLICITY //BRANDON - [Fe/H] as defined in define file
+      ldouble metallicity = METALLICITY;
+    #else //BRANDON - [Fe/H] calculated from user defined mass abundances (HFRAC, HEFRAC, MFRAC). This is more consistent.
+      ldouble metallicity = -4.; // Z=0 metallicity by default
 
-    if (MFRAC > 0.)
-    {
-      metallicity = log10( (MFRAC/HFRAC)/(MFRAC_SUN/HFRAC_SUN) );
-    }
-#endif
+      if (MFRAC > 0.){
+        metallicity = log10( (MFRAC/HFRAC)/(MFRAC_SUN/HFRAC_SUN) );
+      }
+      #endif
     
-    if (metallicity > 0.5)
-    {
-      printf("\nERROR!!  metallicity = %e is outside allowed range!!\n\n", metallicity);
-      exit(1);
-    }
-    
-    if (metallicity == 0.)  // solar metallicity
-    {
-      if(PROCID==0) printf("\nUsing Sutherland-Dopita (1993) opacities for metallicity: %e\n\n", metallicity);
-      
-      FILE *read_SD_data = fopen("./OPACITIES/Sutherland_Dopita_1993/SD_Z0.dat", "r");
-      fscanf(read_SD_data,"%d", &N_TEMPERATURE);
-      fscanf(read_SD_data,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
-      delta_temperaturelog_inv = 1. / delta_temperaturelog;
-      
-      if ( ( temperaturelog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble)) ) == NULL )
-        my_err("malloc err\n");
-      if ( ( Lambdalog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble))) == NULL )
-        my_err("malloc err\n");
-      ldouble ignore;
-      
-      int itemperature;
-      for (itemperature = 0; itemperature < N_TEMPERATURE; itemperature++)
-      {
-        fscanf(read_SD_data,"%lf %lf %lf", &temperaturelog[itemperature], &Lambdalog[itemperature], &ignore);
-      }
-      fclose(read_SD_data);
-    }
-    else if (metallicity < -3.)  // Use Z=0 metallicity
-    {
-      if(PROCID==0) printf("\nUsing Sutherland-Dopita (1993) opacities for zero metallicity\n\n");
-      
-      FILE *read_SD_data = fopen("./OPACITIES/Sutherland_Dopita_1993/SD_Zzero.dat", "r");
-      fscanf(read_SD_data,"%d", &N_TEMPERATURE);
-      fscanf(read_SD_data,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
-      delta_temperaturelog_inv = 1. / delta_temperaturelog;
-      
-      if ( ( temperaturelog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble)) ) == NULL )
-        my_err("malloc err\n");
-      if ( ( Lambdalog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble))) == NULL )
-        my_err("malloc err\n");
-      ldouble ignore;
-      
-      int itemperature;
-      for (itemperature = 0; itemperature < N_TEMPERATURE; itemperature++)
-      {
-        fscanf(read_SD_data,"%lf %lf %lf", &temperaturelog[itemperature], &Lambdalog[itemperature], &ignore);
-      }
-      fclose(read_SD_data);
-    }
-    else  // Interpolate between nearest two metallicities
-    {
-      if(PROCID==0) printf("\nUsing Sutherland-Dopita (1993) opacities for metallicity: %e\n\n", metallicity);
-      
-      char *SD_data1;
-      char *SD_data2;
-      ldouble met1, met2;
-      
-      if (metallicity > 0. && metallicity <= 0.5)
-      {
-        SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Z0.dat";
-        SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Z.5.dat";
-        met1 = 0.;
-        met2 = 0.5;
-      }
-      else if (metallicity > -0.5 && metallicity <= 0.)
-      {
-        SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm.5.dat";
-        SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Z0.dat";
-        met1 = -0.5;
-        met2 = 0.;
-      }
-      else if (metallicity > -1. && metallicity <= -0.5)
-      {
-        SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.dat";
-        SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm.5.dat";
-        met1 = -1.;
-        met2 = -0.5;
-      }
-      else if (metallicity > -1.5 && metallicity <= -1.)
-      {
-        SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.5.dat";
-        SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.dat";
-        met1 = -1.5;
-        met2 = -1.;
-      }
-      else if (metallicity > -2. && metallicity <= -1.5)
-      {
-        SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm2.dat";
-        SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.5.dat";
-        met1 = -2.;
-        met2 = -1.5;
-      }
-      else if (metallicity >= -3. && metallicity <= -2.)
-      {
-        SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm3.dat";
-        SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm2.dat";
-        met1 = -3.;
-        met2 = -2.;
-      }
-      else  // Error in metallicity
-      {
+      if (metallicity > 0.5){
         printf("\nERROR!!  metallicity = %e is outside allowed range!!\n\n", metallicity);
         exit(1);
       }
+    
+      if (metallicity == 0.) { // solar metallicity
+        if(PROCID==0) printf("\nUsing Sutherland-Dopita (1993) opacities for metallicity: %e\n\n", metallicity);
       
-      FILE *read_SD_data1 = fopen(SD_data1, "r");
-      FILE *read_SD_data2 = fopen(SD_data2, "r");
-      fscanf(read_SD_data1,"%d", &N_TEMPERATURE);
-      fscanf(read_SD_data1,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
-      fscanf(read_SD_data2,"%d", &N_TEMPERATURE);
-      fscanf(read_SD_data2,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
-      delta_temperaturelog_inv = 1. / delta_temperaturelog;
+        FILE *read_SD_data = fopen("./OPACITIES/Sutherland_Dopita_1993/SD_Z0.dat", "r");
+        fscanf(read_SD_data,"%d", &N_TEMPERATURE);
+        fscanf(read_SD_data,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
+        delta_temperaturelog_inv = 1. / delta_temperaturelog;
       
-      if ( ( temperaturelog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble)) ) == NULL )
-        my_err("malloc err\n");
-      if ( ( Lambdalog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble))) == NULL )
-        my_err("malloc err\n");
-      ldouble ignore;
+        if ( ( temperaturelog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble)) ) == NULL )
+          my_err("malloc err\n");
+        if ( ( Lambdalog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble))) == NULL )
+          my_err("malloc err\n");
+        ldouble ignore;
       
-      int itemperature;
-      ldouble wt1 = (met2 - metallicity) / (met2 - met1);
-      ldouble wt2 = (metallicity - met1) / (met2 - met1);
-      ldouble Lambdalog1, Lambdalog2;
-      for (itemperature = 0; itemperature < N_TEMPERATURE; itemperature++)
-      {
-        fscanf(read_SD_data1,"%lf %lf %lf", &temperaturelog[itemperature], &Lambdalog1, &ignore);
-        fscanf(read_SD_data2,"%lf %lf %lf", &ignore, &Lambdalog2, &ignore);
-        Lambdalog[itemperature] = wt1 * Lambdalog1 + wt2 * Lambdalog2;
+        int itemperature;
+        for (itemperature = 0; itemperature < N_TEMPERATURE; itemperature++){
+          fscanf(read_SD_data,"%lf %lf %lf", &temperaturelog[itemperature], &Lambdalog[itemperature], &ignore);
+        }
+        fclose(read_SD_data);
       }
-      fclose(read_SD_data1);
-      fclose(read_SD_data2);
+      else if (metallicity < -3.){  // Use Z=0 metallicity
+    
+        if(PROCID==0) printf("\nUsing Sutherland-Dopita (1993) opacities for zero metallicity\n\n");
+        FILE *read_SD_data = fopen("./OPACITIES/Sutherland_Dopita_1993/SD_Zzero.dat", "r");
+        fscanf(read_SD_data,"%d", &N_TEMPERATURE);
+        fscanf(read_SD_data,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
+        delta_temperaturelog_inv = 1. / delta_temperaturelog;
       
-    }
+        if ( ( temperaturelog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble)) ) == NULL )
+          my_err("malloc err\n");
+        if ( ( Lambdalog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble))) == NULL )
+          my_err("malloc err\n");
+        ldouble ignore;
+      
+        int itemperature;
+        for (itemperature = 0; itemperature < N_TEMPERATURE; itemperature++){
+          fscanf(read_SD_data,"%lf %lf %lf", &temperaturelog[itemperature], &Lambdalog[itemperature], &ignore);
+        }
+        fclose(read_SD_data);
+      }
+      
+      else { // Interpolate between nearest two metallicities
+    
+        if(PROCID==0) printf("\nUsing Sutherland-Dopita (1993) opacities for metallicity: %e\n\n", metallicity);
+      
+        char *SD_data1;
+        char *SD_data2;
+        ldouble met1, met2;
+      
+        if (metallicity > 0. && metallicity <= 0.5){
+          SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Z0.dat";
+          SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Z.5.dat";
+          met1 = 0.;
+          met2 = 0.5;
+        }
+        else if (metallicity > -0.5 && metallicity <= 0.){
+          SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm.5.dat";
+          SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Z0.dat";
+          met1 = -0.5;
+          met2 = 0.;
+        }
+        else if (metallicity > -1. && metallicity <= -0.5){
+          SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.dat";
+          SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm.5.dat";
+          met1 = -1.;
+          met2 = -0.5;
+        }
+        else if (metallicity > -1.5 && metallicity <= -1.){
+          SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.5.dat";
+          SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.dat";
+          met1 = -1.5;
+          met2 = -1.;
+         }
+        else if (metallicity > -2. && metallicity <= -1.5){
+          SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm2.dat";
+          SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm1.5.dat";
+          met1 = -2.;
+          met2 = -1.5;
+        }
+        else if (metallicity >= -3. && metallicity <= -2.){
+          SD_data1 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm3.dat";
+          SD_data2 = "./OPACITIES/Sutherland_Dopita_1993/SD_Zm2.dat";
+          met1 = -3.;
+          met2 = -2.;
+         }
+        else  // Error in metallicity
+          {
+          printf("\nERROR!!  metallicity = %e is outside allowed range!!\n\n", metallicity);
+          exit(1);
+          }
+      
+        FILE *read_SD_data1 = fopen(SD_data1, "r");
+        FILE *read_SD_data2 = fopen(SD_data2, "r");
+        fscanf(read_SD_data1,"%d", &N_TEMPERATURE);
+        fscanf(read_SD_data1,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
+        fscanf(read_SD_data2,"%d", &N_TEMPERATURE);
+        fscanf(read_SD_data2,"%lf %lf %lf", &temperature_min_log, &temperature_max_log, &delta_temperaturelog);
+        delta_temperaturelog_inv = 1. / delta_temperaturelog;
+      
+        if ( ( temperaturelog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble)) ) == NULL )
+          my_err("malloc err\n");
+        if ( ( Lambdalog = (ldouble *) malloc(N_TEMPERATURE*sizeof(ldouble))) == NULL )
+          my_err("malloc err\n");
+        ldouble ignore;
+      
+        int itemperature;
+        ldouble wt1 = (met2 - metallicity) / (met2 - met1);
+        ldouble wt2 = (metallicity - met1) / (met2 - met1);
+        ldouble Lambdalog1, Lambdalog2;
+        for (itemperature = 0; itemperature < N_TEMPERATURE; itemperature++){
+          fscanf(read_SD_data1,"%lf %lf %lf", &temperaturelog[itemperature], &Lambdalog1, &ignore);
+          fscanf(read_SD_data2,"%lf %lf %lf", &ignore, &Lambdalog2, &ignore);
+          Lambdalog[itemperature] = wt1 * Lambdalog1 + wt2 * Lambdalog2;
+        }
+        fclose(read_SD_data1);
+        fclose(read_SD_data2);
+      }
     
     SD_LAMBDA_READ = 1;  // Read the data only once
     
@@ -448,15 +434,15 @@ ldouble calc_opacities_from_state(ldouble *pp, void *sss, void *ggg, void *op)
   scalePlaRosFF = (14.12/(432.7 - 106.8 * zetaRoot5_inv_3 + 43.17 * zetaRoot5_inv_4 + 57.88 * zeta_inv)	);
   kappagasffross = kappagasff * 0.0330;
 
-#ifdef GRAY_BREMSS
-  kapparadff = kappagasff;
-  kapparadffross = kappagasffross;
-#else
-  kapparadff = kappagasff * log1p(1.6*zeta) * one_over_log_2p6 * zeta_inv_3;
-  kapparadffross = kappagasff * scalePlaRosFF * zeta_inv_3;
-#endif
+  #ifdef GRAY_BREMSS
+    kapparadff = kappagasff;
+    kapparadffross = kappagasffross;
+  #else
+    kapparadff = kappagasff * log1p(1.6*zeta) * one_over_log_2p6 * zeta_inv_3;
+    kapparadffross = kappagasff * scalePlaRosFF * zeta_inv_3;
+  #endif
   
-#elif defined(CHIANTI_LAMBDA)  // end of SUTHERLAND_DOPITA_LAMBDA, start of CHIANTI_LAMBDA
+ #elif defined(CHIANTI_LAMBDA)  // end of SUTHERLAND_DOPITA_LAMBDA, start of CHIANTI_LAMBDA
   
   // When we use CHIANTI opacities, we want to switch off BREMSSTRAHLUNG, BOUNDELECTRON, BOUNDFREE
   #undef SUTHERLAND_DOPITA_LAMBDA
