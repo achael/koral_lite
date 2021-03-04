@@ -1,8 +1,13 @@
 //unfortunately this is what it was:
-#define MU_GAS 1.
-#define MU_I 2.
-#define MU_E 2.
+//#define MU_GAS 1.
+//#define MU_I 2.
+//#define MU_E 2.
 
+/************************************/
+//Solar metalicity - for AGN case only
+/************************************/
+#define HFRAC HFRAC_SUN
+#define HEFRAC HEFRAC_SUN
 
 /************************************/
 //general
@@ -14,13 +19,15 @@
 /************************************/
 #define RESTART
 #define RESTARTGENERALINDICES
-#define RESTARTNUM -1
+#define RESTARTNUM -1 
 
 /************************************/
 //radiation choices
 /************************************/
 #define RADIATION
+// Balancing energy from radiation, wif entropy u2p fails - 
 #define BALANCEENTROPYWITHRADIATION
+
 #define COMPTONIZATION
 #define U2PCONV 1.e-10
 #define RADIMPLICITDAMPINGFACTOR 3.
@@ -37,10 +44,28 @@
 #define OPDAMPINIMPLICIT 0
 #define MAXRADIMPDAMPING 1.e-3
 
+//no bremsstrahlung in AGN
+#define BREMSSTRAHLUNG
+#define GRAY_BREMSS
+#define SYNCHROTRON
+//suppress synchrotron opacity at nonrelativistic temperatures -- avoids numerical problems at low temperatures
+#define USE_SYNCHROTRON_BRIDGE_FUNCTIONS
+
+
+#define KLEINNISHINA
+
+//for AGN case
+//#define SUTHERLAND_DOPITA_LAMBDA
+
+
+//#define EVOLVEPHOTONNUMBER
+//we need this for evolvephotonnumber
+//#define SCALE_JACOBIAN
+
 /************************************/
 //magnetic choices
 /************************************/
-//#define MIMICDYNAMO
+#define MIMICDYNAMO
 //#define CALCHRONTHEGO
 #define THETAANGLE 0.25
 #define ALPHAFLIPSSIGN                                                        
@@ -58,8 +83,8 @@
 //reconstruction / Courant
 /************************************/
 #define INT_ORDER 1
-#define TIMESTEPPING RK2HEUN//IMEX
-#define TSTEPLIM .5
+#define TIMESTEPPING RK2IMEX
+#define TSTEPLIM 0.5
 #define FLUXLIMITER 0
 #define MINMOD_THETA 1.5
 #define DOFIXUPS 1
@@ -94,21 +119,23 @@
 #define B2UURATIOMAX 100000.
 #define B2RHORATIOMIN 0.
 #define B2RHORATIOMAX 50.
-#define GAMMAMAXRAD 10.
-#define GAMMAMAXHD 10.
+#define GAMMAMAXRAD 50.
+#define GAMMAMAXHD 50.
 
 /************************************/
 //blackhole
 /************************************/
 #define MASS 10.
+//AGN case
+//#define MASS 1.e7
 #define BHSPIN 0.
 
 /************************************/
 //coordinates / resolution
 /************************************/
 #define myMKS2COORDS
-#define MKSR0 0.
-#define MKSH0 0.875
+#define MKSR0 0.0
+#define MKSH0 0.8
 #define MKSMY1 0.001
 #define MKSMY2 0.2
 #define MKSMP0 1.5
@@ -138,50 +165,52 @@
 #define MAXZ (PHIWEDGE/2.)
 
 //total resolution
-#define TNX 320 //32*10
-#define TNY 320 //64*5
-#define TNZ 1 //32 //2*8
+#define TNX 384 //32*10
+#define TNY 360 //64*
+#define TNZ 1 //48 //2*8
 //number of tiles
-#define NTX 20
-#define NTY 40
-#define NTZ 2
+#define NTX 32
+#define NTY 30
+#define NTZ 1
 
 #define SPECIFIC_BC
 #define PERIODIC_ZBC
 
+
+
 /************************************/
 //output
 /************************************/
-#define DTOUT1 50.
-#define DTOUT2 100.
+#define DTOUT1 100.
+#define DTOUT2 1000.
 
 
 #define BOXOUTPUT 0
-#define BOXVERTOUTPUT 0
+//#define BOXVERTOUTPUT 0
 //#undef CALCHRONTHEGO
-#define TSTART 64000.
-#define BOXR1 6.//(pow(pow(19.9,3.5)-10.5*(global_time-TSTART),1./3.5))//12. //v=-3./R^2.5
-#define BOXR2 7.//(pow(pow(20.,3.5)-10.5*(global_time-TSTART),1./3.5))//14.
+//#define TSTART 64000.
+//#define BOXR1 6.//(pow(pow(19.9,3.5)-10.5*(global_time-TSTART),1./3.5))//12. //v=-3./R^2.5
+//#define BOXR2 7.//(pow(pow(20.,3.5)-10.5*(global_time-TSTART),1./3.5))//14.
 //y for testing the runonthego feature of ./ana
 //#define NSTEPSTOP 2.
-#define PRINTEACHT
-#define BOXITH (320/2-31) //distance from eq.plane in cells  
+//#define PRINTEACHT
+//#define BOXITH (320/2-31) //distance from eq.plane in cells  
 //#define BOXITH (320/2) //distance from eq.plane in cells  
 
 
 #define OUTCOORDS KERRCOORDS                                                                    
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
-#define RADOUTPUTINZAMO
+//#define RADOUTPUTINZAMO
 //#define RADOUTPUTWITHINDISK
 #define NOUTSTOP 5000
 #define SILOOUTPUT 0
 #define OUTOUTPUT 0
 #define COORDOUTPUT 0
-#define SIMOUTPUT 4 //1
-//#define GRTRANSSIMOUTPUT
+#define SIMOUTPUT 0
+#define GRTRANSSIMOUTPUT
 #define RADOUTPUT 0 
-#define SCAOUTPUT 1
+#define SCAOUTPUT 0
 #define AVGOUTPUT 0 
 #define THOUTPUT 0
 #define THPROFRAD1US 30
@@ -191,15 +220,16 @@
 //common physics / torus / atmosphere
 /************************************/
 #define RHOATMMIN  1.e-24
-#define UINTATMMIN  (calc_PEQ_ufromTrho(1.e10,RHOATMMIN))
+#define UINTATMMIN  (calc_PEQ_ufromTrho(1.e10,RHOATMMIN,0,0,0))
 #define ERADATMMIN  (calc_LTE_EfromT(3.e6)/10)
 #define GAMMA (5./3.)
 
 #define NTORUS 8
+#define QUADLOOPS
 
 #define RESTORETORUS
 //#define RESCALEDENSITY 0.9
-#define RESCALETORUS 0.8
+//#define RESCALETORUS 0.8
 
 #if(NTORUS==8) //thinnish, colder disk
 #define LT_KAPPA 6.e1
@@ -300,4 +330,3 @@
 #define LT_GAMMA 4./3.
 #define LT_RIN 10.
 #endif
-
