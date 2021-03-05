@@ -1296,8 +1296,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   calc_lum(rlum,1,&radlum,&totallum);
 
   //radiative luminosity everywhere (4)
-  //scalars[2]=radlum*mdotscale*CCC0*CCC0/calc_lumEdd();
-  scalars[2]=rlum*mdotscale*CCC0*CCC0/calc_lumEdd();
+  scalars[2]=radlum*mdotscale*CCC0*CCC0/calc_lumEdd();
 
   if(PROBLEM==89 || PROBLEM==79) //RADTORUS or SOFTBALL
   {
