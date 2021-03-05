@@ -45,7 +45,7 @@
 //rho-wighted prad/pgas (33)
 //alpha (34)
 //rad. viscosity energy flux (35)
-//rho-weighted minus radial velocity in the outflow (36)
+//rho-weighted minus radial velocity in the outflow (36) -> rho-weighted eccentricity for problem 87
 
 //conserved flux rho ur transformed to OUTCOORDS (37)
 //conserved flux rho ur in MYCOORDS (38)
@@ -592,7 +592,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         
         //rho-weighted prad/pgas (33)
 #ifdef RADIATION
-        profiles[31][ix]+=rho*prerad/pregas*dxph[1];
+        profiles[31][ix]+=rho*prerad/(pregas+prerad+0.5*bsq)*dxph[1];
 #else
         profiles[31][ix]+=0.;
 #endif
@@ -610,8 +610,8 @@ int calc_radialprofiles(ldouble profiles[][NX])
 #endif
         
         //surface density in the inflow (23)
-        if(utcon[1]<0.)
-          profiles[21][ix]+=rho*dxph[1];
+        //if(utcon[1]<0.)
+        //  profiles[21][ix]+=rho*dxph[1];
         
         //rho-weighted q-theta (28)
         profiles[26][ix]+=rho*qtheta*dxph[1];
@@ -782,8 +782,23 @@ int calc_radialprofiles(ldouble profiles[][NX])
           profiles[22][ix]+=-rhouconr*dxph[1];
         
         //rho-weighted minus radial velocity in the outflow (36)
+        #if(PROBLEM==87)
+        ldouble angmomR = ucov[3];
+        ldouble epsR =-(1.+ucov[0]);
+        ldouble eccR = 2.*angmomR*angmomR*epsR;
+        if(eccR > -1.) 
+        {
+          profiles[34][ix]+= rho*dxph[1]*sqrt(1. - 2.*ucov[3]*ucov[3]*(1.+ucov[0]));
+          profiles[21][ix]+=rho*dxph[1];
+        }
+        //if(eccN > -1.) profiles[34][ix]+= rho*dxph[1]*sqrt(1. + eccN); //eccentricity
+        #else
+        if(utcon[1]<0.)
+          profiles[21][ix]+=rho*dxph[1];
         if(utcon[1]>0.)
           profiles[34][ix]+=rhouconr*dxph[1];
+        #endif
+
         
         //abs optical depth (7)
         profiles[5][ix]=tauabs;
@@ -874,7 +889,11 @@ int calc_radialprofiles(ldouble profiles[][NX])
     
     profiles[49][ix]/=sigmaout; //normalized by surface density in the outlfow
     profiles[22][ix]/=profiles[21][ix]; //sigma in
+    #if(PROBLEM==87)
+    profiles[34][ix]/=profiles[21][ix];
+    #else
     profiles[34][ix]/=sigmaout;
+    #endif
     profiles[26][ix]/=profiles[0][ix];
     profiles[49][ix]/=(profiles[0][ix]-profiles[21][ix]); //normalized by surface density in the outlfow
     profiles[45][ix]/=profiles[0][ix];
@@ -1260,7 +1279,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   scalars[4]=-mdot*mdotscale/calc_mdotEdd();
 
   //luminosities 
-  ldouble rlum=15.;
+  ldouble rlum=5000.;
 #if(PROBLEM==69) //INJDISK
   rlum=2./3.*DISKRCIR;
 #endif
@@ -1277,7 +1296,8 @@ int calc_scalars(ldouble *scalars,ldouble t)
   calc_lum(rlum,1,&radlum,&totallum);
 
   //radiative luminosity everywhere (4)
-  scalars[2]=radlum*mdotscale*CCC0*CCC0/calc_lumEdd();
+  //scalars[2]=radlum*mdotscale*CCC0*CCC0/calc_lumEdd();
+  scalars[2]=rlum*mdotscale*CCC0*CCC0/calc_lumEdd();
 
   if(PROBLEM==89 || PROBLEM==79) //RADTORUS or SOFTBALL
   {
@@ -1369,14 +1389,14 @@ int calc_scalars(ldouble *scalars,ldouble t)
 #endif
 
   // accretion rates through the outer edge for TDEMILIO 
-#if(PROBLEM==91 || PROBLEM==94)
-  rmdot = 300.;
+#if(PROBLEM==91 || PROBLEM==94 || PROBLEM==87)
+  rmdot = 500.;
   
-  //inflow (12)
+  //total outflow (12)
+  mdot=calc_mdot(rmdot,3);
+  scalars[10]=mdot*mdotscale/calc_mdotEdd();
+  //unbound outflow (13)
   mdot=calc_mdot(rmdot,1);
-  scalars[10]=-mdot*mdotscale/calc_mdotEdd();
-  //outflow (13)
-  mdot=calc_mdot(rmdot,2);
   scalars[11]=-mdot*mdotscale/calc_mdotEdd();
   
 #endif
@@ -2104,7 +2124,7 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
         for(iy=0;iy<NY;iy++)
 	{
 	  ldouble xx[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
-          ldouble Rij[4][4],Rtt,ehat,ucongas[4];
+          ldouble Rij[4][4],Rtt,ehat,ucongas[4],ucovgas[4];
           ldouble tautot[3],tau=0.;
           //ldouble gdet;
 
@@ -2249,6 +2269,8 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	      ucongas[3]=pp[4];	      
 	      conv_vels(ucongas,ucongas,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
 
+	      indices_21(ucongas,ucovgas,geomBL.gg);
+
 	      rhour = pp[RHO]*ucongas[1];
 	      uintur = pp[UU]*ucongas[1];
 	  
@@ -2290,8 +2312,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 #else //RADIATION
 	      lum+=geomBL.gdet*uintur*dxBL[1]*dxBL[2];
 #endif
-	      jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
-	      
+	      //jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
+              jet+=-geomBL.gdet*rhour*(ucovgas[0]+sqrt(-geomBL.gg[0][0]))*dxBL[1]*dxBL[2];  
+
 	  } //snapshot
 	} //iy
       } // iz
@@ -2616,6 +2639,7 @@ calc_photloc(int ix)
 //type == 0 (net)
 //type == 1 (inflow only)
 //type == 2 (outflow only)
+//type == 3 (Be>0 outflow only)
 //**********************************************************************
 
 ldouble
@@ -2623,6 +2647,10 @@ calc_mdot(ldouble radius, int type)
 {
   int ix, iy, iz;
   ldouble xx[4], xxBL[4];
+
+  //variables for Bernoulli computation on the fly
+  ldouble rhoucont,Tij[4][4],Ttt;
+  ldouble Rij[4][4],Rtt,Be;
   
   //search for appropriate radial index
   for(ix = 0; ix < NX; ix++)
@@ -2712,6 +2740,27 @@ calc_mdot(ldouble radius, int type)
         conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
         rhouconr = rho * ucon[1];
         gdet = geom.gdet;
+
+        //compute bernoulli 
+        Be=0.;
+        Ttt=0.;
+        Rtt=0.;
+
+	calc_Tij(pp,&geom,Tij);
+	indices_2221(Tij,Tij,geom.gg);
+	Ttt=Tij[0][0];
+
+        rhoucont= rho*ucon[0];
+        Be += -(Ttt+rhoucont)/rhoucont;
+        
+        #ifdef RADIATION
+	calc_Rij(pp,&geom,Rij);
+	indices_2221(Rij,Rij,geom.gg);
+	Rtt=Rij[0][0];
+
+        Be += -Rtt/rhoucont;
+        #endif
+        //printf("%e \n",Be);
       }
       
       if(NY==1)
@@ -2720,7 +2769,7 @@ calc_mdot(ldouble radius, int type)
         dx[2] = 2. * M_PI;
       }
       
-      if(type==0 || (type==1 && rhouconr<0.) || (type==2 && rhouconr>0.))
+      if(type==0 || (type==1 && rhouconr<0.) || (type==2 && rhouconr>0.) || (type==3 && Be > 0.) )
         mdot += gdet * rhouconr * dx[1] * dx[2];
     }
   }
