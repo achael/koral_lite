@@ -1280,6 +1280,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
 
   //luminosities 
   ldouble rlum=5000.;
+  ldouble taulimit=2./3.;
 #if(PROBLEM==69) //INJDISK
   rlum=2./3.*DISKRCIR;
 #endif
@@ -1294,6 +1295,9 @@ int calc_scalars(ldouble *scalars,ldouble t)
 #endif
   ldouble radlum,totallum;
   calc_lum(rlum,1,&radlum,&totallum);
+  #if(PROBLEM==87)
+  calc_lum_tausurface(taulimit,&radlum);
+  #endif
 
   //radiative luminosity everywhere (4)
   scalars[2]=radlum*mdotscale*CCC0*CCC0/calc_lumEdd();
@@ -2320,6 +2324,161 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       
       *radlum=lum;
       *totallum=jet;
+      return 0.;
+  } // axisymmetric or not
+
+    return -1;
+}
+
+
+int
+calc_lum_tausurface(ldouble taumax,ldouble *radlum)
+{
+
+  int ix,iy,iz;
+  ldouble xxC[4],xxBL[4];
+      
+  if(NY>1) //non-sph symmetry
+  {
+
+    ldouble lum=0.;
+    #pragma omp parallel for private(iy,iz) reduction(+:lum)
+    for(iz=0;iz<NZ;iz++)
+    {
+      for(iy=0;iy<NY;iy++)
+      {
+        ldouble tau=0.;
+        //search for appropriate radial index
+        for(ix=NX-1;ix>-1;ix--)
+        {
+          #ifdef PRECOMPUTE_MY2OUT
+          get_xxout(ix, 0, 0, xxBL);
+          #else
+          get_xx(ix,0,0,xxC);
+          coco_N(xxC,xxBL,MYCOORDS,OUTCOORDS);
+          #endif
+
+	  ldouble xx[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
+          ldouble Rij[4][4],Rtt,ehat,ucongas[4],ucovgas[4];
+          //ldouble gdet;
+
+	  int iv;
+	  for(iv=0;iv<NV;iv++)
+	    pp[iv]=get_u(p,iv,ix,iy,iz);
+
+	  struct geometry geomBL;
+	  fill_geometry_arb(ix,iy,iz,&geomBL,KERRCOORDS);
+	  struct geometry geom;
+	  fill_geometry(ix,iy,iz,&geom);
+
+	  ldouble dxph[3],dxBL[3];
+	  
+	  //cell dimensions
+	  //ANDREW put cell size code in a function with precompute option
+          get_cellsize_out(ix, iy, iz, dxBL);
+
+	  if(NZ==1) 
+          {
+            dxBL[2]=2.*M_PI;
+          }
+          else
+          {
+            #ifdef PHIWEDGE
+            dxBL[2] *= (2. * M_PI / PHIWEDGE);
+            #endif
+          }
+	  dxph[0]=dxBL[0]*sqrt(geomBL.gg[1][1]);
+	  dxph[1]=dxBL[1]*sqrt(geomBL.gg[2][2]);
+	  dxph[2]=dxBL[2]*sqrt(geomBL.gg[3][3]);
+	  
+	  if(doingavg)
+	  {
+	      PLOOP(iv)
+		pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
+
+	      ldouble ucont=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
+	      ldouble uconr=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);		  
+
+	      rhour=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz);
+	      uintur=get_uavg(pavg,AVGUUUCON(1),ix,iy,iz);
+	      
+	      Trt=get_uavg(pavg,AVGRHOUCONUCOV(1,0),ix,iy,iz)
+		+ GAMMA*get_uavg(pavg,AVGUUUCONUCOV(1,0),ix,iy,iz)
+		+ get_uavg(pavg,AVGBSQUCONUCOV(1,0),ix,iy,iz)
+		- get_uavg(pavg,AVGBCONBCOV(1,0),ix,iy,iz); 
+
+	      tau+=(ucongas[0]-ucongas[1])*calc_kappaes(pp,&geomBL)*dxph[0];
+
+	      Rrt=0.;
+#ifdef RADIATION
+	      int i,j;
+	      if(tau >= taumax) //R^r_t outside photosphere
+		{
+		  for(i=0;i<4;i++)
+		    for(j=0;j<4;j++)
+		      Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
+		  Rrt=Rij[1][0];
+		  if(Rrt<0.) Rrt=0.;
+                  break;
+		}
+	      else
+		Rrt=0.;
+
+              if(xxBL[1] < 2.) break;
+#endif
+	      
+	      lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
+	  }
+	  else //snapshot
+	  { 
+	      
+	      //to BL
+	      #ifdef PRECOMPUTE_MY2OUT
+              trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+              #else      
+              trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+              #endif
+
+	      ucongas[1]=pp[2];
+	      ucongas[2]=pp[3];
+	      ucongas[3]=pp[4];	      
+	      conv_vels(ucongas,ucongas,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
+
+	      indices_21(ucongas,ucovgas,geomBL.gg);
+
+	      rhour = pp[RHO]*ucongas[1];
+	      uintur = pp[UU]*ucongas[1];
+	  
+	      calc_Tij(pp,&geomBL,Tij);
+	      indices_2221(Tij,Tij,geomBL.gg);
+	      Trt=Tij[1][0];
+
+	      tau+=(ucongas[0]-ucongas[1])*calc_kappaes(pp,&geomBL)*dxph[0];
+
+	      Rrt=0.;
+#ifdef RADIATION
+	      if(tau >= taumax) //R^r_t outside photosphere
+		{
+		  calc_Rij(pp,&geomBL,Rij); 
+		  indices_2221(Rij,Rij,geomBL.gg);
+		  Rrt=-Rij[1][0];
+		  if(Rrt<0.) Rrt=0.;
+                  break;
+		}
+	      else
+		Rrt=0.;
+
+              if(xxBL[1] < 2.) break;
+#endif
+
+	      lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
+
+	  } //snapshot
+        } //ix
+      } //iy
+    } // iz
+      
+      *radlum=lum;
       return 0.;
   } // axisymmetric or not
 
