@@ -2417,8 +2417,21 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 		  for(i=0;i<4;i++)
 		    for(j=0;j<4;j++)
 		      Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
-		  Rrt=Rij[1][0];
+		  Rrt=-Rij[1][0];
 		  if(Rrt<0.) Rrt=0.;
+	          lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
+                  break;
+		}
+	      else
+		Rrt=0.;
+
+              if(xxBL[1] < 2.) break;
+#else
+	      if(tau >= taumax) //R^r_t outside photosphere
+		{
+		  Rrt=uintur;
+		  if(Rrt<0.) Rrt=0.;
+	          lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
                   break;
 		}
 	      else
@@ -2426,8 +2439,6 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 
               if(xxBL[1] < 2.) break;
 #endif
-	      
-	      lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
 	  }
 	  else //snapshot
 	  { 
@@ -2463,6 +2474,19 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 		  indices_2221(Rij,Rij,geomBL.gg);
 		  Rrt=-Rij[1][0];
 		  if(Rrt<0.) Rrt=0.;
+    	          lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
+                  break;
+		}
+	      else
+		Rrt=0.;
+
+              if(xxBL[1] < 2.) break;
+#else
+	      if(tau >= taumax) //R^r_t outside photosphere
+		{
+		  Rrt=uintur;
+		  if(Rrt<0.) Rrt=0.;
+    	          lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
                   break;
 		}
 	      else
@@ -2470,9 +2494,6 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 
               if(xxBL[1] < 2.) break;
 #endif
-
-	      lum+=geomBL.gdet*Rrt*dxBL[1]*dxBL[2];
-
 	  } //snapshot
         } //ix
       } //iy
