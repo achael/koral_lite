@@ -2851,25 +2851,27 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   if(!isfinite(sigmaw) || sigmaw>1.e10) sigmaw=1.e10; //magnetic field dominates, delta->.5
   if(!isfinite(beta) || sigmaw>1.e10) beta=1.e10; //no magnetic field, delta->.5
   
-  betamax = 0.25/sigmaw;
+  //betamax = 0.25/sigmaw;
+  betamax = 0.5/(sigmaw*(1.+tratio));
 
   if(betamax<1.e-10) betamax=1.e-10;
-  if(!isfinite(betamax)) betamax=1.e10; //no magnetic field, delta->.4
+  if(!isfinite(betamax)) betamax=1.e10; 
 
   betanorm = beta/betamax;
   if(!isfinite(betanorm) || betanorm>1.) betanorm=1.;
   if(betanorm<0.) betanorm=0.;
   #endif
 
-  //Fit to simulation numbers
+  //OLD Fit to simulation numbers
   ldouble numer = sqrt(1-betanorm) * (1-betanorm);
-  ldouble denom = pow(sigmaw,0.3) * (0.41 + tratio);
+  ldouble denom = pow(sigmaw,0.3) * (0.42 + tratio);
 
-  delta = GUIDE_PREF * tanh(numer/denom) + 0.5;
+  delta = 0.5*(GUIDE_PREF*tanh(numer/denom) + 1.); //GUIDE_PREF = 1.7*(tanh(0.33bg)-0.4)
   
   if(!isfinite(delta))
     {
-      delta=1.;
+      //delta=1.;
+      delta=0.5; //default to equal heating
     }
   else if(delta<0.)
     delta=0.;
@@ -2889,11 +2891,10 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   //#endif
   ldouble gmeane = calc_meanlorentz(the);
   ldouble gmeani = calc_meanlorentz(thi);
-  ldouble gyroratio = 1836.15267 * sqrt((gmeani*gmeani - 1.)/(gmeane*gmeane-1.));
-  ldouble uioue = pow(gyroratio,two_third);
+  ldouble gyroratio = 1836.15267 * sqrt((gmeani*gmeani - 1.)/(gmeane*gmeane - 1.));
+  ldouble uioue = pow(gyroratio,2./3.);
   delta = 1./(uioue + 1.);
 
-  
   if(!isfinite(delta) || delta>1.)
     {
       delta=1.;

@@ -1938,6 +1938,7 @@ fill_geometry_arb(int ix,int iy,int iz,void *geom,int COORDS)
   coco_N(xxvec,xxvecC,MYCOORDS,COORDS);
   calc_g_arb(xxvecC,ggg->gg,COORDS);
   calc_G_arb(xxvecC,ggg->GG,COORDS);
+  
 #endif
   
   ggg->alpha=sqrt(-1./ggg->GG[0][0]);

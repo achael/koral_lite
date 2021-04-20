@@ -1390,7 +1390,7 @@ op_implicit(ldouble t, ldouble dtin)
     iy=loop_0[ii][1];
     iz=loop_0[ii][2]; 
 
-    if(is_cell_active(ix,iy,iz)==0 || is_cell_corrected_polaraxis(ix,iy,iz)==1)
+    if(is_cell_active(ix,iy,iz)==0 || is_cell_corrected_polaraxis(ix,iy,iz)==1 || skip_cell_implicit(ix,iy,iz)==1)
       continue;
 
     //timestep
@@ -6313,6 +6313,53 @@ is_cell_corrected_polaraxis(int ix, int iy, int iz)
   return 0;
 }
 
+//**********************************************************************
+/* do we skip implicit for some reason*/
+//**********************************************************************
+
+int
+skip_cell_implicit(int ix, int iy, int iz)
+{
+
+  int skip=0;
+
+#if defined(SKIPIMPLICIT_ATBH) || defined(SKIPIMPLICIT_HIGHSIGMA)
+  struct geometry geom;
+  
+  fill_geometry(ix,iy,iz,&geom);
+  
+#ifdef SKIPIMPLICIT_ATBH
+  ldouble xxBL[4];
+
+  #ifdef PRECOMPUTE_MY2OUT
+  get_xxout(geom.ix, geom.iy, geom.iz, xxBL);
+  #else
+  coco_N(geom.xxvec,xxBL,MYCOORDS,BLCOORDS);
+  #endif
+
+  if(xxBL[1]<rhorizonBL) return 1;
+#endif
+
+#ifdef SKIPIMPLICIT_HIGHSIGMA
+  int iv;
+  ldouble pp[NV];
+ 
+  PLOOP(iv) pp[iv]=get_u(p, iv, ix, iy, iz);
+
+  ldouble ucon[4],ucov[4];
+  ldouble bcon[4],bcov[4];
+  ldouble bsq;
+  calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
+
+  ldouble sigma=bsq/pp[RHO];
+
+  if(sigma>SKIPIMPLICIT_HIGHSIGMA) return 1;
+#endif
+#endif
+  
+  return skip;
+}
 
 //**********************************************************************
 /* say if given cell is evolved or rather corrected */

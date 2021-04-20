@@ -1129,6 +1129,7 @@ int correct_polaraxis();
 int correct_polaraxis_3d();
 int is_cell_corrected_polaraxis(int ix, int iy, int iz);
 int is_cell_active(int ix, int iy, int iz);
+int skip_cell_implicit(int ix, int iy, int iz);
 
 int get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0,
 					ldouble *fxl,ldouble *fxr,

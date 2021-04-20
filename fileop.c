@@ -1044,6 +1044,7 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
       for (ie=0; ie<nvold; ie++) pp[ie] = ppold[ie]; 
 
       // initialize radiation primitives
+      //ldouble Erad=INITERAD;
       ldouble Erad=pp[UU]*INITURADFRAC;   //initial radiation energy density
       pp[EE]=Erad;
       pp[FX]=pp[VX]; //initial radiation velocity is same as fluid     
@@ -1107,7 +1108,14 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
       ldouble gamma=calc_gammaintfromTei(Te,Ti);
       set_u_scalar(gammagas,ix,iy,iz,gamma);
       #endif
-      
+
+#ifdef RESTARTFROMMHD
+#ifdef EVOLVEELECTRONS
+      pp[ENTRE]=calc_SefromrhoT(rhogas,Te,ELECTRONS);
+      pp[ENTRI]=calc_SefromrhoT(rhogas,Ti,IONS);
+#endif
+#endif
+
       p2u(pp,uu,&geom);
 
 
@@ -1273,6 +1281,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 
 #ifdef RADIATION		       
 	      // initialize radiation primitives
+	      //ldouble Erad=INITERAD;
 	      ldouble Erad=pout[ppos+UU]*INITURADFRAC;   //initial radiation energy density
 
 	      set_u(p,EE,ix,iy,iz,Erad);
@@ -1314,6 +1323,14 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 	      set_u_scalar(gammagas,ix,iy,iz,gamma);
 #endif
 
+#ifdef RESTARTFROMMHD
+#ifdef EVOLVEELECTRONS
+              Se=calc_SefromrhoT(rhogas,Te,ELECTRONS);
+	      Si=calc_SefromrhoT(rhogas,Ti,IONS);
+	      set_u(p,ENTRE,ix,iy,iz,Se);
+	      set_u(p,ENTRI,ix,iy,iz,Si);
+#endif
+#endif
 
 	      p2u(&get_u(p,0,ix,iy,iz),&get_u(u,0,ix,iy,iz),&geom);
 	      
@@ -2469,6 +2486,9 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
      fprintf(fout1,"%.5e %5d %5d %5d %.5e %.5e ",t,NX+2,NY,NZ,BHSPIN,MASS);
 #if(MYCOORDS==MKS3COORDS)
    fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e\n",MKSR0,MKSH0,MKSMY1,MKSMY2,MKSMP0);
+#endif
+#if(MYCOORDS==MKS2COORDS)
+   fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e\n",MKSR0,MKSH0,-1.,-1.,-1.);
 #endif
 #ifdef RELELECTRONS
    fprintf(fout1,"%5d %.5e %.5e\n",NRELBIN, RELGAMMAMIN, RELGAMMAMAX);
@@ -4097,9 +4117,11 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
       {
 
 	// coordinates
-        struct geometry geom,geomBL;
+        struct geometry geom,geomBL,geomBL0;
 	fill_geometry(ix,iy,iz,&geom);
+	fill_geometry_arb(ix,iy,iz,&geomBL0,OUTCOORDS);
 	fill_geometry_arb(ix,iy,iz,&geomBL,OUTCOORDS2);
+
 	ldouble r=geomBL.xx;
 	ldouble th=geomBL.yy;
 	ldouble ph=geomBL.zz;
@@ -4177,8 +4199,11 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 	{ 
           #if defined(PRECOMPUTE_MY2OUT) && (OUTCOORDS==OUTCOORDS2)
           trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
-          #else      
-          trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+          #elif defined(PRECOMPUTE_MY2OUT)
+          trans_pall_coco_my2out(pp,pp,&geom,&geomBL0); //transform to OUTCOORDS using precompute, then to OUTCOORDS2
+          trans_pall_coco(pp,pp,OUTCOORDS,OUTCOORDS2,geomBL0.xxvec,&geomBL0,&geomBL);
+          #else
+          trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS2, geom.xxvec,&geom,&geomBL);
           #endif
 
 	  rho=pp[0];

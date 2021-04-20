@@ -94,13 +94,13 @@
 #define EVOLVEPHOTONNUMBER
 #define SCALE_JACOBIAN
 
-//opacities                                                                                                                                                                        
+//opacities                                             
 #define SCATTERING
-//#define BREMSSTRAHLUNG                                                                                                                                                           
-//#define KLEINNISHINA                                                                                                                                                             
+//#define BREMSSTRAHLUNG                                 
+//#define KLEINNISHINA                                   
 #define SYNCHROTRON
 #define NO_SYNCHROTRON_BRIDGE_FUNCTIONS
-//#define COMPTONIZATION                                                                                                                                                           
+//#define COMPTONIZATION                                
 #define NO_COMPTONIZATION
 #define SKIPCOULOMBCOUPLING
 
@@ -124,32 +124,32 @@
 #define MAXDIFFTRADS 1.e3
 #define MAXDIFFTRADSNEARBH 1.e2
 
-/*                                                                                                                                                                                 
-#define RADVISCOSITY SHEARVISCOSITY                                                                                                                                                
-#define ACCELRADVISCOSITY                                                                                                                                                          
-#define RADVISCMFPSPHMAX 10.                                                                                                                                                       
-#define RADVISCMFPSPH                                                                                                                                                              
-#define RADVISCNUDAMP                                                                                                                                                              
-#define RADVISCMAXVELDAMP                                                                                                                                                          
-#define ALPHARADVISC 0.1                                                                                                                                                           
-#define MAXRADVISCVEL 0.1                                                                                                                                                          
+/*                                                       
+#define RADVISCOSITY SHEARVISCOSITY                     
+#define ACCELRADVISCOSITY                                
+#define RADVISCMFPSPHMAX 10.                             
+#define RADVISCMFPSPH                                    
+#define RADVISCNUDAMP                                   
+#define RADVISCMAXVELDAMP                                
+#define ALPHARADVISC 0.1                                
+#define MAXRADVISCVEL 0.1                               
 */
 
 #define DAMPCOMPTONIZATIONATBH
-#define ALLOWRADCEILINGINIMPLICIT                                                                                                                                                
+#define ALLOWRADCEILINGINIMPLICIT                      
 
-//#define BASICRADIMPLICIT                                                                                                                                                         
-//#define RADIMPSTOPWHENFAIL                                                                                                                                                       
-//#define RADIMP_START_WITH_BISECT                                                                                                                                                 
-//#define BALANCEENTROPYWITHRADIATION                                                                                                                                              
+//#define BASICRADIMPLICIT                               
+//#define RADIMPSTOPWHENFAIL                              
+//#define RADIMP_START_WITH_BISECT                       
+//#define BALANCEENTROPYWITHRADIATION                            
 
-//#define SKIPRADSOURCE    //advective only                                                                                                                                        
-//#define SKIPRADEVOLUTION //keeps initial values in place                                                                                                                         
-//#define SKIPHDEVOLUTION                                                                                                                                                          
-//#define SKIPEVOLUTION                                                                                                                                                            
-//#define RADIMPSTOPWHENFAIL                                                                                                                                                       
-//#define SKIPFANCYOPACITIES                                                                                                                                                       
-//#define ENFORCEENTROPY                                                                                                                                                           
+//#define SKIPRADSOURCE    //advective only             
+//#define SKIPRADEVOLUTION //keeps initial values in place          
+//#define SKIPHDEVOLUTION                               
+//#define SKIPEVOLUTION                                 
+//#define RADIMPSTOPWHENFAIL                      
+//#define SKIPFANCYOPACITIES                                                                                 
+//#define ENFORCEENTROPY                                                                        
 //#define GASRADCOUPLEDWAVESPEEDS        
 #endif
 
@@ -160,33 +160,32 @@
 
 #ifdef EVOLVEELECTRONS
 #define CONSISTENTGAMMA
-#define GAMMAINTCONSISTENTWITHCV //Ramesh's routine for inverting gamma_int                                                                                                        
+#define GAMMAINTCONSISTENTWITHCV //Ramesh's routine for inverting gamma_int                     
 
-
-//heating                                                                                                                                                                          
+//heating                                                                               
 #define HEATELECTRONS
-//#define HEATELECTRONS_HOWES                                                                                                                                                      
-//#define HEATELECTRONS_ROWAN                                                                                                                                                      
-//#define HEATELECTRONS_ROWAN2                                                                                                                                                     
-//#define HEATELECTRONS_ROWAN3                                                                                                                                                     
+//#define HEATELECTRONS_HOWES                                                                                
+//#define HEATELECTRONS_ROWAN                                                                                             
+//#define HEATELECTRONS_ROWAN2                                                                                             
+//#define HEATELECTRONS_ROWAN3                                                                                             
 #define HEATELECTRONS_ZHDANKIN
 
 #define NOHEATATBH
 
-//#define HEATELECTRONSATENDRK2                                                                                                                                                    
-//#define DISSIPATIONFROMGASONLY                                                                                                                                                   
-//#define FORCEGAMMAGASFIXED                                                                                                                                                       
+//#define HEATELECTRONSATENDRK2                                                                                 
+//#define DISSIPATIONFROMGASONLY                                                                                           
+//#define FORCEGAMMAGASFIXED
 
-//entropy mixing                                                                                                                                                                   
-//#define MIXENTROPIESPROPERLY                                                                                                                                                     
-//#define UPWINDENTROPYMIXING                                                                                                                                                      
-//#define DONOTLIMITENTRINMIXING                                                                                                                                                   
+//entropy mixing                                                                                                           
+//#define MIXENTROPIESPROPERLY                                                  
+//#define UPWINDENTROPYMIXING                                                                                         
+//#define DONOTLIMITENTRINMIXING                                                                                   
 
-//silo output                                                                                                                                                                      
-//#define PRINTVISCHEATINGTOSILO                                                                                                                                                   
-//#define PRINTCOULOMBTOSILO                                                                                                                                                       
+//silo output                                                                                  
+//#define PRINTVISCHEATINGTOSILO                                                 
+//#define PRINTCOULOMBTOSILO                                                              
 
-//floors                                                                                                                                                                           
+//floors                                                                
 #define UEUINTMINRATIO 1.e-3
 #define UIUINTMINRATIO 1.e-3
 #define TEMPEMINIMAL 1.e3
