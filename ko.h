@@ -1426,6 +1426,8 @@ ldouble calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max);
 ldouble calc_Ldot(ldouble radius);
 int calc_Bflux(ldouble radius,int type,ldouble *Bflux, ldouble* Bfluxquad);
 
+int calc_lum_tausurface(ldouble taumax,ldouble *radlum);
+
 ///////////////////////////////////////////////////////////////
 // fileop.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
