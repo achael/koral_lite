@@ -1233,8 +1233,8 @@ int calc_thetaprofiles(ldouble profiles[][NY])
   scalars[8]: scale height at some radius
   scalars[9]: MAD parameter (quadrupole)
   scalars[10]: luminosity proxy for problem 134,139
-  scalars[11]: Edot for problem 134,139
-  scalars[12]: Ldot for problem 134,139
+  scalars[11]: Edot for problem 134,139,140
+  scalars[12]: Ldot for problem 134,139,140
  
  */
 /*********************************************/
