@@ -401,9 +401,11 @@ fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5])
   {
     u1[0] = (-b - sqrt(delta)) / a;
   }
-  else
+  else //this is in ergoregion
   {
-    u1[0] = (-b + sqrt(delta)) / a;
+    //ANDREW THIS IS WRONG, should be minus sign everywhere
+    //u1[0] = (-b + sqrt(delta)) / a;
+    u1[0] = (-b - sqrt(delta)) / a;
   }
   
   return 0;
