@@ -1281,6 +1281,9 @@ int calc_scalars(ldouble *scalars,ldouble t)
   //luminosities 
   ldouble rlum=5000.;
   ldouble taulimit=2./3.;
+#if(PROBLEM==139) //MADCC
+  rlum=15.;
+#endif
 #if(PROBLEM==69) //INJDISK
   rlum=2./3.*DISKRCIR;
 #endif
@@ -1398,6 +1401,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   //total outflow (12)
   mdot=calc_mdot(rmdot,3);
   scalars[10]=mdot*mdotscale/calc_mdotEdd();
+  
   //unbound outflow (13)
   mdot=calc_mdot(rmdot,1);
   scalars[11]=-mdot*mdotscale/calc_mdotEdd();
@@ -2315,8 +2319,10 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 #else //RADIATION
 	      lum+=geomBL.gdet*uintur*dxBL[1]*dxBL[2];
 #endif
-	      //jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
-              jet+=-geomBL.gdet*rhour*(ucovgas[0]+sqrt(-geomBL.gg[0][0]))*dxBL[1]*dxBL[2];  
+	      jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
+
+	      //ANDREW -- what is this definition of jet luminosity?
+	      //jet+=-geomBL.gdet*rhour*(ucovgas[0]+sqrt(-geomBL.gg[0][0]))*dxBL[1]*dxBL[2];  
 
 	  } //snapshot
 	} //iy
