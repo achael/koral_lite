@@ -521,11 +521,11 @@ fprint_restartfile_bin(ldouble t, char* folder)
 int //parallel MPI hdf5 output
 fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
 {
-  #if defined DUMPS_WRITE_HDF5 && defined MPI
+#if defined DUMPS_WRITE_HDF5 && defined MPI
 
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
+  #ifndef FOLDER_HDF5
+  #define FOLDER_HDF5 "./dumps"
+  #endif
 
   if (PROCID == 0)
   {
@@ -759,7 +759,7 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
     iv=system(bufor);
   }
 
-  #endif  // DUMPS_WRITE_HDF5
+#endif  // DUMPS_WRITE_HDF5
 
   return 0;
 }
@@ -771,13 +771,13 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
 int //serial hdf5 output
 fprint_restartfile_serial_hdf5(ldouble t, char* folder)
 {
-  #ifdef DUMPS_WRITE_HDF5
+#ifdef DUMPS_WRITE_HDF5
 
   char bufor[250];
   
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
+  #ifndef FOLDER_HDF5
+  #define FOLDER_HDF5 "./dumps"
+  #endif
 
   printf("Entering fprint_restartfile_serial_hdf5: FOLDER_HDF5 = %s\n", FOLDER_HDF5);
 
@@ -933,7 +933,7 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
   sprintf(bufor,"ln -s res%04d.h5 %s/reslast.h5", nfout1, FOLDER_HDF5);
   iv=system(bufor);
 
-  #endif  // DUMPS_WRITE_HDF5
+#endif  // DUMPS_WRITE_HDF5
 
   return 0;
 }
@@ -1410,11 +1410,11 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 int //parallel MPI hdf5 input
 fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
 {
-  #if defined DUMPS_READ_HDF5 && defined MPI
+#if defined DUMPS_READ_HDF5 && defined MPI
 
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
+  #ifndef FOLDER_HDF5
+  #define FOLDER_HDF5 "./dumps"
+  #endif
 
   if (PROCID == 0)
   {
@@ -1676,7 +1676,7 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
     }
   }
 
-  #endif  // DUMPS_READ_HDF5
+#endif  // DUMPS_READ_HDF5
 
   return 0;
 }
