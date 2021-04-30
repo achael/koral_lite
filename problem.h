@@ -142,6 +142,7 @@
 //139 MADCC -- MAD code comparison
 //140 RADSURVEY -- radiative parameter survey
 //141 KEPINF -- INFDISK modified for injecting keplerian 
+//142 PARTIALTDE -- INFDISK modified for partial TDE binding energy distribution non-constant
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
@@ -149,6 +150,22 @@
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
 #define PROBLEM 140
+
+#if(PROBLEM==142)
+
+#define PR_DEFINE "PROBLEMS/PARTIALTDE/define.h"
+#define PR_BC "PROBLEMS/PARTIALTDE/bc.c"
+#define PR_BC_SPECIAL "PROBLEMS/PARTIALTDE/bc_special.c"
+#define PR_BC_SPECIAL_LOOP "PROBLEMS/PARTIALTDE/loop_alloc_special.c"
+#define PR_INIT "PROBLEMS/PARTIALTDE/init.c"
+//#define PR_KAPPA "PROBLEMS/KEPINF/kappa.c"
+#define PR_KAPPAES "PROBLEMS/PARTIALTDE/kappaes.c"
+#define PR_OUT2GIF_2D "PROBLEMS/PARTIALTDE/out2gif_2d.c"
+#define PR_OUT2GIF_1D "PROBLEMS/PARTIALTDE/out2gif_1d.c"
+#define PR_DUMP "PROBLEMS/PARTIALTDE/dump.c"
+#define PR_TOOLS "PROBLEMS/PARTIALTDE/tools.c"
+
+#endif
 
 #if(PROBLEM==141)
 

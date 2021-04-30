@@ -1,15 +1,10 @@
 /*KORAL - dumps2hdf5.c
  
-<<<<<<< HEAD
  Converts binary dump files to hdf5 format and saves as .h5 files in specified folder.
  
  By default the .h5 files will be created in the same directory "./dumps" where the original binary dumps are located. If the .h5 files should go into a different directory, add in define.h a command like the following:
  
       #define FOLDER_HDF5 "./hdf5"
-=======
- Converts .head and .dat dumpfiles in ./dumps folder to .h5
- files in the same folder
->>>>>>> c943c48caaba701a4ebe8cf5176ec5343f6d8b31
  
 */
 
@@ -19,17 +14,10 @@
 #include "ko.h"
 #include "hdf5.h"
 
-<<<<<<< HEAD
 #if defined(PR_WRITE_OUTPUT) && !defined(INCLUDE_WRITE_OUTPUT)
 #include PR_WRITE_OUTPUT
 #define INCLUDE_WRITE_OUTPUT
 #endif
-=======
-#ifdef FOLDER_HDF5
-#undef FOLDER_HDF5
-#endif
-#define FOLDER_HDF5 "./dumps"
->>>>>>> c943c48caaba701a4ebe8cf5176ec5343f6d8b31
 
 
 int main(int argc, char **argv)
@@ -38,7 +26,6 @@ int main(int argc, char **argv)
   printf("dumps2hdf5 does not work with MPI. Please undefine MPI and rerun\n");
   exit(1);
 #endif
-<<<<<<< HEAD
   
 #ifdef DUMPS_READ_HDF5
 #undef DUMPS_READ_HDF5
@@ -52,14 +39,6 @@ int main(int argc, char **argv)
 #define FOLDER_HDF5 "./dumps"
 #endif
 
-=======
-
-#if defined DUMPS_READ_HDF5 || !defined DUMPS_WRITE_HDF5
-  printf("Please correct define.h\nYou must undefine DUMPS_READ_HDF5 and define DUMPS_WRITE_HDF5\n");
-  exit(1);
-#endif
-  
->>>>>>> c943c48caaba701a4ebe8cf5176ec5343f6d8b31
   //initialize pointers to functions
   init_pointers();
 
@@ -94,11 +73,7 @@ int main(int argc, char **argv)
   alloc_loops(1, 0., 0.);
 
   //precalculates metric etc.
-<<<<<<< HEAD
   calc_metric();
-=======
-  //calc_metric();
->>>>>>> c943c48caaba701a4ebe8cf5176ec5343f6d8b31
 
 #ifdef RELELECTRONS
   set_relel_gammas();
@@ -110,7 +85,6 @@ int main(int argc, char **argv)
 #include PR_PREPINIT
 #endif
   
-<<<<<<< HEAD
   int ifile, itot=0, readret;
   int ret, ix, iy, iz, iv, i, ic, gix, giy, giz;
   int indices[NX*NY*NZ][3];
@@ -159,7 +133,7 @@ int main(int argc, char **argv)
     
     if (nxx != TNX || nyy != TNY || nzz != TNZ)
     {
-      printf("Array size does not match\nNX, NY, NZ = %d %d %d\nnxx, nyy, nzz = %d %d %d\n", TNX,TNY,TNZ,nxx,nyy,nzz);
+      printf("Array size does not match\nNX, NY, NZ = %d %d %d\nnxx, nyy, nzz = %d %d %d\n", TNX, TNY, TNZ, nxx, nyy, nzz);
       exit(1);
     }
     
@@ -293,7 +267,7 @@ int main(int argc, char **argv)
         primitive[ix][iy][iz] = get_u(p, iv, ix, iy, iz);
       }
       
-      sprintf(prim_name, "/PRIM%d", iv);
+      //sprintf(prim_name, "/PRIM%d", iv);
       get_prim_name(prim_name, iv);
       dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
       status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, primitive);
@@ -305,29 +279,6 @@ int main(int argc, char **argv)
     status = H5Fclose (dumps_file_id);
   }
 
-=======
-  int ifile;
-  int ret;
-  
-  ldouble t;
-
-  printf("Working on files #%04d to #%04d with %d step \n", no1, no2, nostep);
-
-  for(ifile = no1; ifile <= no2; ifile += nostep)
-  {
-    // Read in .head and binary .dat dump data
-
-    ret = fread_restartfile_bin(ifile, folder, &t);
-    printf("Finished reading file %d  ret = %d\n", ifile, ret);
-
-    // Write out .h5 dump file
-
-    nfout1 = ifile;
-    ret = fprint_restartfile_serial_hdf5(t, folder);
-    printf("Finished writing file %d  ret = %d\n", ifile, ret);
-  }
-    
->>>>>>> c943c48caaba701a4ebe8cf5176ec5343f6d8b31
   return 0;
 }
 

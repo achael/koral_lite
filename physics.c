@@ -2818,9 +2818,9 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   // and sigma = magn energy density / enthalpy
 
   #ifndef GUIDE_RATIO
-  #define GUIDE_PREF -0.069
+  #define GUIDE_PREF -0.512 //guide_ratio = 0.33
   #else
-  #define GUIDE_PREF 1.7*0.5*(tanh(0.33*GUIDE_RATIO)-0.4)
+  #define GUIDE_PREF 1.7*(tanh(0.33*GUIDE_RATIO)-0.4)
   #endif
   
   ldouble beta=0.;
