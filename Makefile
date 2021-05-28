@@ -21,9 +21,11 @@ endif
 LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt -lhdf5_serial
 
 RM=/bin/rm
-OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o 
+//OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o 
+OBJS = mpi.o problem.o finite.o metric.o frames.o relele.o u2p.o p2u.o magn.o physics.o opacities.o misc.o postproc.o fileop.o silo.o
 
-all: ko ana avg outavg phisli thsli phiavg regrid dumps2hdf5
+
+all: ko ana avg phisli thsli phiavg 
 
 ko: ko.o $(OBJS) Makefile ko.h problem.h mnemonics.h 
 	$(CC) $(CFLAGS) -o ko ko.o $(OBJS) $(LIBS)
@@ -34,9 +36,6 @@ ana: ana.o $(OBJS)  Makefile ko.h problem.h mnemonics.h
 avg: avg.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
 	$(CC) $(CFLAGS) -o avg avg.o $(OBJS) $(LIBS)
 
-outavg: outavg.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
-	$(CC) $(CFLAGS) -o outavg outavg.o $(OBJS) $(LIBS)
-
 phisli: phisli.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
 	$(CC) $(CFLAGS) -o phisli phisli.o $(OBJS) $(LIBS)
 
@@ -46,11 +45,5 @@ thsli: thsli.o $(OBJS)  Makefile ko.h problem.h mnemonics.h
 phiavg: phiavg.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
 	$(CC) $(CFLAGS) -o phiavg phiavg.o $(OBJS) $(LIBS)
 
-regrid: regrid.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
-	$(CC) $(CFLAGS) -o regrid regrid.o $(OBJS) $(LIBS)
-
-dumps2hdf5: dumps2hdf5.o $(OBJS)  Makefile ko.h problem.h mnemonics.h 
-	$(CC) $(CFLAGS) -o dumps2hdf5 dumps2hdf5.o $(OBJS) $(LIBS)
-
 clean:
-	$(RM) -f ko ana avg phiavg phisli thsli outavg regrid *~ *.o *.oo
+	$(RM) -f ko ana avg phiavg phisli thsli *~ *.o *.oo

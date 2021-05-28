@@ -1162,7 +1162,6 @@ int calc_thetaprofiles(ldouble profiles[][NY])
 	  ldouble tau1,tau2,taueff1,taueff2,Rphot,Rphoteff;
 	  tau1=tau2=taueff1=taueff2=0.;
 	  Rphot=Rphoteff=-1.;
-	  struct opacities opac;
   
 
 	  for(iix=NX-1;iix>=0;iix--)
@@ -1190,6 +1189,8 @@ int calc_thetaprofiles(ldouble profiles[][NY])
 	      ldouble rho2=get_u(p,RHO,iix,iy,iz);
               ldouble uint2=get_u(p,UU,iix,iy,iz);
               ldouble Tgas2=calc_PEQ_Tfromurho(uint2,rho2,ix,iy,iz);
+     
+	      struct opacities opac;
 	      ldouble kabsloc = calc_kappa(&get_u(p,0,iix,iy,iz),&geomBL2,&opac);
 	      ldouble kscaloc = calc_kappaes(&get_u(p,0,iix,iy,iz),&geomBL2);
 	      if(doingavg)

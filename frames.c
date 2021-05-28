@@ -1874,6 +1874,7 @@ trans22_coco_precompute(ldouble T1[][4], ldouble T2[][4], int ix, int iy, int iz
 
 int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg)
 {
+#ifdef RADIATION
   struct geometry *geom
     = (struct geometry *) ggg;
   int i,j;
@@ -1940,7 +1941,7 @@ int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg)
   #endif
 
   //print_primitives(pp2);getch();
-
+#endif 
   return 0;
 } 
 

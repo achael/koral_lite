@@ -753,8 +753,10 @@ initialize_arrays()
   
   }
 
+#ifdef RADIATION
   init_all_kappa_table();
-
+#endif
+  
   return 0;
 }
 

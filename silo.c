@@ -586,8 +586,11 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		    divB[zonalindex]=calc_divB(ix,iy,iz);
                   #endif
 
+		  #ifdef RADIATION
 		  taucoupling[zonalindex]=estimate_gas_radiation_coupling(pp,&geomout);
-		  
+		  #else
+		  taucoupling[zonalindex]=0.;
+		  #endif
 
 		  dpdr = (gdet2*gamma*get_u(p,UU,iix+1,iiy,iiz)-gdet1*gamma*get_u(p,UU,iix-1,iiy,iiz)) / (xx2[1]-xx1[1]);
 		  gracen=0.;
@@ -683,8 +686,12 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		    divB[zonalindex]=calc_divB(ix,iy,iz);
                   #endif
 
+		  #ifdef RADIATION
 		  taucoupling[zonalindex]=estimate_gas_radiation_coupling(pp,&geomout);
-
+		  #else
+		  taucoupling[zonalindex]=0.;
+		  #endif
+		  
 		  dpdr = (gdet2*GAMMA*get_uavg(pavg,UU,iix+1,iiy,iiz)-gdet1*GAMMA*get_uavg(pavg,UU,iix-1,iiy,iiz)) / (xx2[1]-xx1[1]);
 		  gracen=0.;
 		  for(i=0;i<4;i++)
