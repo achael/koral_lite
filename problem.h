@@ -153,7 +153,7 @@
 #define PR_BC "PROBLEMS/GPUTEST/bc.c"
 #define PR_INIT "PROBLEMS/GPUTEST/init.c"
 #define PR_POSTINIT "PROBLEMS/GPUTEST/postinit.c"
-#define PR_TOOLS "PROBLEMS/RADSURVEY/tools.c"
+#define PR_TOOLS "PROBLEMS/GPUTEST/tools.c"
 
 #endif
 
