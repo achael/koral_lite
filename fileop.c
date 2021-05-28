@@ -3833,8 +3833,9 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   #else
   sprintf(version,"%s","KORALv2");
   #endif
+  
   strtype=H5Tcopy(H5T_C_S1);
-  status=H5Tset_size(strtype,strlen(metric_run));		     
+  status=H5Tset_size(strtype,strlen(version));		     
   dumps_dataset_str = H5Dcreate2(dumps_file_id, "/header/version", strtype, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_str, strtype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &version); 
@@ -4115,11 +4116,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   ldouble mksmy2=MKSMY2;
   ldouble mksmp0=MKSMP0;
 
-  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/mks3/bhspin", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-		    &bhspin);
-  status = H5Dclose(dumps_dataset_double);
-
   dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/mks3/mksr0", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &mksr0);
@@ -4152,11 +4148,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   dumps_group_id3 = H5Gcreate2(dumps_file_id, "/header/geom/mks2", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   ldouble mksr0=MKSR0;
   ldouble mksh0=MKSH0;
-
-  dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/mks2/bhspin", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-		    &bhspin);
-  status = H5Dclose(dumps_dataset_double);
 
   dumps_dataset_double = H5Dcreate2(dumps_file_id, "/header/geom/mks2/mksr0", H5T_IEEE_F64BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_double, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,

@@ -143,13 +143,19 @@
 //140 RADSURVEY -- radiative parameter survey
 //141 KEPINF -- INFDISK modified for injecting keplerian 
 //142 PARTIALTDE -- INFDISK modified for partial TDE binding energy distribution non-constant
+//143 GPUTEST -- disk for gpu hackathon test problem
 
-//ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
-//If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
-//if you are using a problem older than 100 with a different kappa defined in kappa.c
-//make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
+#define PROBLEM 143
 
-#define PROBLEM 140
+#if(PROBLEM==143)
+
+#define PR_DEFINE "PROBLEMS/GPUTEST/define.h"
+#define PR_BC "PROBLEMS/GPUTEST/bc.c"
+#define PR_INIT "PROBLEMS/GPUTEST/init.c"
+#define PR_POSTINIT "PROBLEMS/GPUTEST/postinit.c"
+#define PR_TOOLS "PROBLEMS/RADSURVEY/tools.c"
+
+#endif
 
 #if(PROBLEM==142)
 
