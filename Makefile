@@ -7,11 +7,13 @@ CFLAGS=-O3 -DMPI
 else
 CC=gcc
 //CC=/usr/bin/h5cc
-CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp 
+CFLAGS = -fopenmp -O2 -L/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial  
+//CFLAGS = -fopenmp -O2 -L/home/achael/software/lib -I/home/achael/software/include
 
 endif
 
 LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt -lhdf5_serial
+//LIBS=-lm -lgsl -lgslcblas -lsilo -lfftw3 -lrt 
 
 RM=/bin/rm
 //OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o 
