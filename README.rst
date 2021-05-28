@@ -20,6 +20,7 @@ To install on Adroit (without MPI) using the default test problem make sure the 
   module load gsl/2.6
 
 Then compile:
+
 .. code-block:: bash
 
   ./mser.sh
