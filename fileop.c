@@ -445,7 +445,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
 int 
 fprint_restartfile_bin(ldouble t, char* folder)
 {
-  printf("Entering fprint_restartfile_bin\n");
+  //printf("Entering fprint_restartfile_bin\n");
   char bufor[250];
   
   //header
