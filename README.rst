@@ -24,8 +24,8 @@ I also define the following commands in .bashrc to set up interactive jobs
 
 .. code-block:: bash
 
-  alias sinter='salloc -p short --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 /bin/bash'
-  alias ginter='salloc -p gpu-short --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 --gres=gpu:1 /bin/bash'
+  alias sinter='salloc -p hackathon --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 /bin/bash'
+  alias ginter='salloc -p hackathon --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 --gres=gpu:1 /bin/bash'
   
 Start a cpu interactive session with: 
   
