@@ -18,7 +18,7 @@ To install on Adroit (without MPI) using the default test problem make sure the 
   module load hdf5/gcc/openmpi-1.10.2/1.10.0
   module load fftw/gcc/openmpi-1.10.2/3.3.4
   module load gsl/2.6
-  module load cudatoolkit
+  module load cudatoolkit/11.0
   
 I also define the following commands in .bashrc to set up interactive jobs
 
