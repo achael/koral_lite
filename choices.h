@@ -1,7 +1,7 @@
 /*! \file ko.h
  \brief default choices
 */
-//#pragma once
+#pragma once
 
 #define RESTARTGENERALINDICES
 

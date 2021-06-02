@@ -1,4 +1,4 @@
-//#pragma once
+#pragma once
 
 //KORAL - problem.h
 //choice of the problem plus some definitions

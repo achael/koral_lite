@@ -1,7 +1,7 @@
 /*! \file ko.h
  \brief constants, variables, and function definitions
 */
-//#pragma once
+#pragma once
 
 //small and big numbers
 #define SMALL 1.e-80 
@@ -666,7 +666,7 @@ struct OpTable {
 // ko.c ///////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-int main(int argc, char **argv);
+//int main(int argc, char **argv);
 
 ///////////////////////////////////////////////////////////////
 // problem.c //////////////////////////////////////////////////
@@ -1065,7 +1065,7 @@ int calc_u2p(int type,int setflags);
 int calc_wavespeeds();
 int do_correct();
 int calc_update(ldouble dtin);
-int calc_update_gpu(ldouble dtin);
+//int calc_update_gpu(ldouble dtin);
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);
