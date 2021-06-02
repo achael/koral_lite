@@ -18,8 +18,23 @@ To install on Adroit (without MPI) using the default test problem make sure the 
   module load hdf5/gcc/openmpi-1.10.2/1.10.0
   module load fftw/gcc/openmpi-1.10.2/3.3.4
   module load gsl/2.6
+  module load cudatoolkit
+  
+I also define the following commands in .bashrc to set up interactive jobs
 
-Then compile:
+.. code-block:: bash
+
+  alias sinter='salloc -p short --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 /bin/bash'
+  alias ginter='salloc -p gpu-short --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 --gres=gpu:1 /bin/bash'
+  
+Start a cpu interactive session with: 
+  
+.. code-block:: bash
+
+  source ~/.bashrc
+  sinter
+
+Then compile KORAL:
 
 .. code-block:: bash
 
