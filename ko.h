@@ -1,6 +1,7 @@
 /*! \file ko.h
  \brief constants, variables, and function definitions
 */
+//#pragma once
 
 //small and big numbers
 #define SMALL 1.e-80 

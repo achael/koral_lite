@@ -8,6 +8,7 @@
 *************************************************************************/
 
 /* C language definitions for use with Mathematica output */
+//#pragma once
 
 #define Power(x, y)	(pow((ldouble)(x), (ldouble)(y)))
 #define Sqrt(x)		(sqrt((ldouble)(x)))
