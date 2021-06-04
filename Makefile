@@ -33,8 +33,8 @@ all: ko_gpu ko ana avg phisli thsli phiavg
 
 ko_gpu: ko.o $(SRCS) finitegpu.cu Makefile ko.h problem.h mnemonics.h 
 	$(CC) $(CFLAGSGPU) -c $(SRCS)
-	nvcc -arch=sm_80 --compiler-options '$(CFLAGSGPU)' -x cu -c finitegpu.cu
-	nvcc -arch=sm_80 $(LIBS) $(OBJS) finitegpu.o -o ko_gpu ko.o
+	nvcc -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -x cu -c finitegpu.cu
+	nvcc -gencode arch=compute_80,code=sm_80 -lcudart $(LIBS) $(OBJS) finitegpu.o -o ko_gpu ko.o
 
 ko: ko.o $(SRCS) Makefile ko.h problem.h mnemonics.h
 	$(CC) $(CFLAGS) $(OMPFLAGS) -o ko ko.o $(SRCS) $(LIBS)
