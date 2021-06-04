@@ -1257,7 +1257,12 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************
   // Evolve the conserved quantities
 
+
   calc_update(dtin);
+
+#ifdef GPUKO
+  calc_update_gpu(dtin);
+#endif
   /*  
 #pragma omp barrier  
 #pragma omp parallel for private(ii,ix,iy,iz,iv) schedule (static)

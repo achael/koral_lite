@@ -1065,7 +1065,7 @@ int calc_u2p(int type,int setflags);
 int calc_wavespeeds();
 int do_correct();
 int calc_update(ldouble dtin);
-//int calc_update_gpu(ldouble dtin);
+int calc_update_gpu(ldouble dtin);
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);
