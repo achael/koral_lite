@@ -98,7 +98,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0)
 int calc_update_gpu(ldouble dtin)
 {
 
-printf("ODEDODEDODED\n");fflush(stdout);
+  printf("Test\n");fflush(stdout);
 
   int TB_SIZE = 64;   
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);

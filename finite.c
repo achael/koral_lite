@@ -1259,9 +1259,8 @@ op_explicit(ldouble t, ldouble dtin)
 
 
   calc_update(dtin);
-  printf("HI\n"); fflush(stdout);
 
-#ifdef GPU
+#ifdef GPUKO
   calc_update_gpu(dtin);
 #endif
   /*  
