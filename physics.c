@@ -969,7 +969,7 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
 }
 
 
-int f_metric_source_term(int ix, int iy, int iz,ldouble *ss)
+int f_metric_source_term(int ix, int iy, int iz, ldouble *ss)
 {
   int i;
 
@@ -980,6 +980,8 @@ int f_metric_source_term(int ix, int iy, int iz,ldouble *ss)
 
   return 0;
 }
+
+
 
 
 //**********************************************************
