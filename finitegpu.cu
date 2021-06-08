@@ -544,6 +544,103 @@ __device__ __host__ int fill_utinucon_device(ldouble *u1,double gg[][5],ldouble 
 }
 
 
+__device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+		                        		     ldouble *bcon, ldouble *bcov, ldouble *bsq)
+{
+
+  int j;
+  struct geometry *geom
+  = (struct geometry *) ggg;
+
+  // First calculate bcon0
+  bcon[0] = pr[B1]*ucov[1] + pr[B2] * ucov[2] + pr[B3] * ucov[3] ;
+  
+  // Then spatial components of bcon
+  
+#ifdef NONRELMHD
+  for(j = 1; j < 4; j++)
+    bcon[j] = pr[B1-1+j]; //b^i=B^i
+
+#else  // relativistic case
+  
+  ldouble u0inv = 1. / ucon[0];
+  for(j=1;j<4;j++)
+    bcon[j] = (pr[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
+  
+#endif //NONRELMHD
+  
+  // Convert to bcov and calculate bsq
+  indices_21_device(bcon, bcov, geom->gg);
+  *bsq = dotB(bcon, bcov); //NOTE: preprocessor macro, ok
+
+  return ;
+}
+
+__device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
+{
+  struct geometry *geom
+    = (struct geometry *) ggg;
+
+  ldouble (*gg)[5],(*GG)[5];
+  gg=geom->gg;
+  GG=geom->GG;
+
+  int iv,i,j;
+  ldouble rho=pp[RHO];
+  ldouble uu=pp[UU];
+  ldouble utcon[4],ucon[4],ucov[4];  
+  ldouble bcon[4],bcov[4],bsq=0.;
+  
+  //converts to 4-velocity
+  for(iv=1;iv<4;iv++)
+    utcon[iv]=pp[1+iv];
+  utcon[0]=0.;
+  conv_vels_both_device(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
+
+#ifdef NONRELMHD
+  ucon[0]=1.;
+  ucov[0]=-1.;
+#endif
+
+#ifdef MAGNFIELD
+  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, geom, bcon, bcov, &bsq); 
+#else
+  bcon[0]=bcon[1]=bcon[2]=bcon[3]=0.;
+  bsq=0.;
+#endif
+  
+  ldouble gamma=GAMMA;
+  #ifdef CONSISTENTGAMMA
+  //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
+  #endif
+  ldouble gammam1=gamma-1.;
+
+  ldouble p=(gamma-1.)*uu; 
+  ldouble w=rho+uu+p;
+  ldouble eta=w+bsq;
+  ldouble ptot=p+0.5*bsq;
+
+#ifndef NONRELMHD  
+  for(i=0;i<4;i++)
+    for(j=0;j<4;j++)
+      T[i][j]=eta*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
+#else
+  
+  ldouble v2=dot3nr(ucon,ucov); //TODO
+  for(i=1;i<4;i++)
+    for(j=1;j<4;j++)
+      T[i][j]=(rho)*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
+
+  T[0][0]=uu + bsq/2. + rho*v2/2.;
+  for(i=1;i<4;i++)
+    T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
+
+#endif  // ifndef NONRELMHD
+
+  return 0;
+}
+
+
 
 // fill geometry
 __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_arr, ldouble* G_arr)
@@ -611,7 +708,7 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   ldouble T[4][4];
   int ii, jj;
   //calculating stress energy tensor components
-  //calc_Tij(pp,&geom,T); // TODO
+  calc_Tij_device(pp,&geom,T); // TODO
   for(ii=0;ii<4;ii++)
     for(jj=0;jj<4;jj++)
       T[ii][jj]=0.;

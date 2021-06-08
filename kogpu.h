@@ -44,3 +44,11 @@ __device__ __host__ ldouble calc_alpgam_device(ldouble *u1, ldouble gg[][5], ldo
 __device__ __host__ int fill_utinvel3_device(ldouble *u1,double gg[][5],ldouble GG[][5]);
 __device__ __host__ int fill_utinucon_device(ldouble *u1,double gg[][5],ldouble GG[][5]);
 
+__device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
+
+///////////////////////////////////////////////////////////////
+// magn .cu  (TODO ???) ///////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+
+__device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+		                        		     ldouble *bcon, ldouble *bcov, ldouble *bsq);
