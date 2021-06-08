@@ -84,8 +84,8 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   if(ii==0)
   {
     printf("D size_x 0 %e \n", get_size_x_gpu_kernel(xb_arr,11,0));
-    printf("D size_x 1 %e \n", get_size_x_gpu_kernel(xb_arr,13,0));
-    printf("D size_x 2 %e \n", get_size_x_gpu_kernel(xb_arr,5,0));
+    printf("D size_x 1 %e \n", get_size_x_gpu_kernel(xb_arr,13,1));
+    printf("D size_x 2 %e \n", get_size_x_gpu_kernel(xb_arr,5,2));
   }
   /*
   //update all conserved according to fluxes and source terms      
@@ -170,7 +170,7 @@ int calc_update_gpu(ldouble dtin)
     h_loop0_ix[ii] = loop_0[ii][0];     
     h_loop0_iy[ii] = loop_0[ii][1];     
     h_loop0_iz[ii] = loop_0[ii][2];
-    if (ii==22222) printf("H   :  %d %d %d %d\n",ii,h_loop0_ix[ii],h_loop0_iy[ii],h_loop0+iz[ii]) ;
+    if (ii==22222) printf("H   :  %d %d %d %d\n",ii,h_loop0_ix[ii],h_loop0_iy[ii],h_loop0_iz[ii]) ;
   }
 
   err =  cudaMemcpy(d_loop0_ix, h_loop0_ix, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
@@ -184,8 +184,8 @@ int calc_update_gpu(ldouble dtin)
   // copy grid boundary data xb (global array) to device
   // NOTE: size of xb is copied from initial malloc in misc.c 
   printf("H size_x 0 %e \n", get_size_x(11,0));
-  printf("H size_x 1 %e \n", get_size_x(13,0));
-  printf("H size_x 2 %e \n", get_size_x(5,0));
+  printf("H size_x 1 %e \n", get_size_x(13,1));
+  printf("H size_x 2 %e \n", get_size_x(5,2));
   
   err =  cudaMemcpy(d_xb_arr, xb, sizeof(ldouble)*(NX+1+NY+1+NZ+1+6*NG), cudaMemcpyHostToDevice);
   
