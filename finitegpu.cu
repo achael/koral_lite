@@ -9,9 +9,41 @@ extern "C" {
 #define izTEST 8
 #define iiTEST 22222
 
-// get grid location on boundary indexed ic in dimension idim
+// get data value from array u_arr of the quantity indexed iv
+// at the cell center indexed ix,iy,iz
+// copied from get_u macro in ko.h
+// iX(ix), iY(iy), iZ(iz) are macros defined in ko.h, that return either the index or 0
+// depending on the problem dimension
+__device__ ldouble get_u_device(ldouble* u_arr,int iv,int ix,int iy,int iz)
+{
+  ldouble u_out;
+  u_out = u_arr[iv + (iX(ix)+(NGCX))*NV + \ 
+		     (iY(iy)+(NGCY))*(SX)*NV + \
+		     (iZ(iz)+(NGCZ))*(SY)*(SX)*NV];
+  return u_out;
+}
+
+// get data value from array ub_arr of quantity indexed iv
+// on the left wall of cell indexed ix,iy,iz in dimension idim
+// copied from get_ub macro in ko.h
+__device__ ldouble get_ub_device(ldouble* ub_arr, int iv, int ix, int iy, int iz, int idim)
+{
+  ldouble ub_out;
+  ub_out = (idim==0 ? ub_arr[iv + (iX(ix)+(NGCX))*NV + \
+				  (iY(iy)+(NGCY))*(SX+1)*NV + \
+				  (iZ(iz)+(NGCZ))*(SY)*(SX+1)*NV] : \
+	   (idim==1 ? ub_arr[iv + (iX(ix)+(NGCX))*NV + \
+			          (iY(iy)+(NGCY))*(SX)*NV + \
+		                  (iZ(iz)+(NGCZ))*(SY+1)*(SX)*NV] : \
+	   (idim==2 ? ub_arr[iv + (iX(ix)+(NGCX))*NV + \
+			          (iY(iy)+(NGCY))*(SX)*NV + \
+			          (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] : 0.)));
+  return ub_out;
+}
+
+// get grid coordinate on the cell wall indexed ic in dimension idim
 // copied from get_xb macro in ko.h
-__device__ ldouble get_xb_gpu_kernel(ldouble* xb_arr, int ic, int idim)
+__device__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
 {
   ldouble xb_out;
   xb_out = (idim==0 ? xb_arr[ic+NG] :		     \
@@ -23,24 +55,27 @@ __device__ ldouble get_xb_gpu_kernel(ldouble* xb_arr, int ic, int idim)
 
 // get size of cell indexed ic in dimension idim
 // copied from get_size_x in finite.c
-__device__ ldouble get_size_x_gpu_kernel(ldouble* xb_arr, int ic, int idim)
+__device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 {
   ldouble dx;
-  dx = get_xb_gpu_kernel(xb_arr, ic+1,idim) - get_xb_gpu_kernel(xb_arr, ic, idim);
+  dx = get_xb_device(xb_arr, ic+1,idim) - get_xb_device(xb_arr, ic, idim);
   return dx;
 }
 
 
 __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-				       ldouble* xb_arr)
+				       ldouble* xb_arr,
+				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
+				       ldouble* u_arr)
 {
 
   int ii;
-  //int ix,iy,iz,iv;
-  //ldouble dx,dy,dz;
-  //ldouble val,du;
-  //ldouble ms[NV];
+  int ix,iy,iz,iv;
+  ldouble dx,dy,dz;
+  ldouble flxl,flxr,flyl,flyr,flzl,flzr;
+  ldouble val,du;
+  ldouble ms[NV];
   //ldouble gs[NV]; //NOTE gs[NV] is for artifical sources, rarely used
 
   // get index for this thread
@@ -62,8 +97,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   // Source term
   // check if cell is active
   // NOTE: is_cell_active always returns 1 -- a placeholder function put in long ago
-  ldouble ms[NV];
-  //ldouble gs[NV];
+  
   if(0) //if(is_cell_active(ix,iy,iz)==0)
   {
     // Source terms applied only for active cells	  
@@ -84,66 +118,59 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   }
     
   // Get the cell size in the three directions
-  ldouble dx,dy,dz;
-  dx = get_size_x_gpu_kernel(xb_arr,ix,0); //dx=get_size_x(ix,0);
-  dy = get_size_x_gpu_kernel(xb_arr,iy,1); //dy=get_size_x(iy,1);
-  dz = get_size_x_gpu_kernel(xb_arr,iz,2); //dz=get_size_x(iz,2);
+  dx = get_size_x_device(xb_arr,ix,0); //dx=get_size_x(ix,0);
+  dy = get_size_x_device(xb_arr,iy,1); //dy=get_size_x(iy,1);
+  dz = get_size_x_device(xb_arr,iz,2); //dz=get_size_x(iz,2);
 
   // test sizes 
   if(ii==0)
   {
-    printf("D size_x 0 %e \n", get_size_x_gpu_kernel(xb_arr,ixTEST,0));
-    printf("D size_x 1 %e \n", get_size_x_gpu_kernel(xb_arr,iyTEST,1));
-    printf("D size_x 2 %e \n", get_size_x_gpu_kernel(xb_arr,izTEST,2));
+    printf("D size_x 0 %e \n", get_size_x_device(xb_arr,ixTEST,0));
+    printf("D size_x 1 %e \n", get_size_x_device(xb_arr,iyTEST,1));
+    printf("D size_x 2 %e \n", get_size_x_device(xb_arr,izTEST,2));
   }
-  /*
+  
   //update all conserved according to fluxes and source terms      
-  ldouble val, du;
   for(iv=0;iv<NV;iv++)
   {	
-	ldouble flxr,flyr,flzr,flxl,flyl,flzl;
-	  
-        // Get the fluxes on the six faces.
-	// Recall that flbx, flby, flbz are the fluxes at the left walls of cell ix, iy, iz.
-	// To get the right fluxes, we need flbx(ix+1,iy,iz), etc.
-	flxl=get_ub(flbx,iv,ix,iy,iz,0);
-	flxr=get_ub(flbx,iv,ix+1,iy,iz,0);
-	flyl=get_ub(flby,iv,ix,iy,iz,1);
-	flyr=get_ub(flby,iv,ix,iy+1,iz,1);
-	flzl=get_ub(flbz,iv,ix,iy,iz,2);
-	flzr=get_ub(flbz,iv,ix,iy,iz+1,2);
-		  
-	// Compute Delta U from the six fluxes
-	du = -(flxr-flxl)*dt/dx - (flyr-flyl)*dt/dy - (flzr-flzl)*dt/dz;
+    // Get the fluxes on the six faces.
+    // flbx, flby, flbz are the fluxes at the LEFT walls of cell ix, iy, iz.
+    // To get the RIGHT fluxes, we need flbx(ix+1,iy,iz), etc.
+    flxl=get_ub_device(flbx_arr,iv,ix,iy,iz,0);
+    flxr=get_ub_device(flbx_arr,iv,ix+1,iy,iz,0);
+    flyl=get_ub_device(flby_arr,iv,ix,iy,iz,1);
+    flyr=get_ub_device(flby_arr,iv,ix,iy+1,iz,1);
+    flzl=get_ub_device(flbz_arr,iv,ix,iy,iz,2);
+    flzr=get_ub_device(flbz_arr,iv,ix,iy,iz+1,2);
+    
+    // Compute Delta U from the six fluxes
+    du = -(flxr-flxl)*dtin/dx - (flyr-flyl)*dtin/dy - (flzr-flzl)*dtin/dz;
 
-	// Compute new conserved by adding Delta U and the source term
-	val = get_u(u,iv,ix,iy,iz) + du + ms[iv]*dt;
-	
-	
-	// Save the new conserved to memory
-	
+    // Compute the new conserved by adding Delta U and the source term
+    val = get_u_device(u_arr,iv,ix,iy,iz) + du + ms[iv]*dtin;
+
+    // Save the new conserved to memory
+    
 //#ifdef SKIPHDEVOLUTION
-//	if(iv>=NVMHD)
+//  if(iv>=NVMHD)
 //#endif
 //#ifdef RADIATION
 //#ifdef SKIPRADEVOLUTION
 //#ifdef EVOLVEPHOTONNUMBER
-//	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
+//  if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
 //#else
-//	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
+//  if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
 //#endif
-//#endif  // SKIPRADEVOLUTION
-//#endif  // RADIATION
+//#endif  
+//#endif  
 //#ifdef SKIPHDBUTENERGY
-//	if(iv>=NVMHD || iv==UU)
+//  if(iv>=NVMHD || iv==UU)
 //#endif
 	
-	
-	set_u(u,iv,ix,iy,iz,val);	 
+    u_arr[iv] = val;
+    //set_u(u,iv,ix,iy,iz,val);	 
 
-  }  // for(iv=0;iv<NV;iv++)
- */
-
+  }  
 }
 
 int calc_update_gpu(ldouble dtin)
