@@ -1264,14 +1264,16 @@ op_explicit(ldouble t, ldouble dtin)
   // Evolve the conserved quantities
 
 #ifdef GPUKO
+  push_geometry();
   calc_update_gpu(dtin);
+  free_geometry();
 #endif
 
   struct timespec temp_clock;
   ldouble start_time,stop_time;
   
   my_clock_gettime(&temp_clock);
-  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9);
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   
   calc_update(dtin);
 

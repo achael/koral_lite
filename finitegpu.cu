@@ -49,14 +49,25 @@ __device__ ldouble get_ub_device(ldouble* ub_arr, int iv, int ix, int iy, int iz
 }
 */
 
+// copied from get_xb macro in ko.h
+__device__ ldouble get_x_device(ldouble* x_arr, int ic, int idim)
+{
+  ldouble x_out;
+  x_out = (idim==0 ? x_arr[ic+NG] :		     
+           (idim==1 ? x_arr[ic+NG + NX+2*NG] :  
+	   (idim==2 ? x_arr[ic+NG + NX+2*NG + NY+2*NG ] : 0.)));
+
+  return x_out;
+}
+
 // TODO replace get_xb and get_size_x  everywhere
 // get grid coordinate on the cell wall indexed ic in dimension idim
 // copied from get_xb macro in ko.h
 __device__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
 {
   ldouble xb_out;
-  xb_out = (idim==0 ? xb_arr[ic+NG] :		     \
-           (idim==1 ? xb_arr[ic+NG + NX+2*NG + 1] :  \
+  xb_out = (idim==0 ? xb_arr[ic+NG] :		     
+           (idim==1 ? xb_arr[ic+NG + NX+2*NG + 1] :  
 	   (idim==2 ? xb_arr[ic+NG + NX+2*NG +1 + NY+2*NG +1 ] : 0.)));
 
   return xb_out;
@@ -73,45 +84,57 @@ __device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 
 
 // fill geometry
-__device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_arr, ldouble* G_arr)
+__device__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr,void* geom,ldouble* g_arr, ldouble* G_arr)
 {
+  int i,j;
 
-  /*
   struct geometry *ggg 
     = (struct geometry *) geom;
 
   ggg->par=-1;
   ggg->ifacedim = -1;
-  pick_g(ix,iy,iz,ggg->gg);
-  pick_G(ix,iy,iz,ggg->GG);
+
+  for(i=0;i<4;i++)
+  {
+    for(j=0;j<5;j++)
+    {
+      ggg->gg[i][j]=get_g(g_arr,i,j,ix,iy,iz);
+      ggg->GG[i][j]=get_g(G_arr,i,j,ix,iy,iz);
+    }
+  }
+
+  //pick_g(ix,iy,iz,ggg->gg);
+  ///pick_G(ix,iy,iz,ggg->GG);
   ggg->alpha=sqrt(-1./ggg->GG[0][0]);
   ggg->ix=ix;  ggg->iy=iy;  ggg->iz=iz;
   ggg->xxvec[0]=0.;
-  ggg->xxvec[1]=get_x(ix,0);
-  ggg->xxvec[2]=get_x(iy,1);
-  ggg->xxvec[3]=get_x(iz,2);
+  ggg->xxvec[1]=get_x_device(x_arr, ix,0);
+  ggg->xxvec[2]=get_x_device(x_arr, iy,1);
+  ggg->xxvec[3]=get_x_device(x_arr, iz,2);
   ggg->xx=ggg->xxvec[1];
   ggg->yy=ggg->xxvec[2];
   ggg->zz=ggg->xxvec[3];
   ggg->gdet=ggg->gg[3][4];
   ggg->gttpert=ggg->GG[3][4];
   ggg->coords=MYCOORDS;
-  */
     
   return 0;
   
 }
 
 // Metric source term
-__device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
-			                   ldouble* p_arr,
+//__device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
+//			                   ldouble* p_arr,
+//			                   ldouble* g_arr, ldouble* G_arr, ldouble* l_arr)
+__device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss, ldouble* x_arr,
 			                   ldouble* g_arr, ldouble* G_arr, ldouble* l_arr)
 {
-  int i;
+  //int i;
 
   struct geometry geom;
   //fill_geometry(ix,iy,iz,&geom);
-  fill_geometry_device(ix,iy,iz,&geom,g_arr,G_arr);
+  fill_geometry_device(ix,iy,iz,x_arr,&geom,g_arr,G_arr);
+  //printf("Fill geometry successful.\n");   
     
   //f_metric_source_term_arb(&get_u(p_arr,0,ix,iy,iz), &geom, ss, l_arr); // --> replace with code here, no need for two functions
 
@@ -120,9 +143,9 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 
 __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-				       ldouble* xb_arr,
+				       ldouble* x_arr, ldouble* xb_arr,
 				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				       ldouble* u_arr)
+				       ldouble* u_arr, ldouble* d_gcov, ldouble* d_gcon, ldouble* d_Kris)
 {
 
   int ii;
@@ -161,8 +184,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
   {
      // Get metric source terms ms[iv]
      // and any other source terms gs[iv] 
-
-     //f_metric_source_term(ix,iy,iz,ms);  //TODO: somewhat complicated
+     f_metric_source_term_device(ix,iy,iz,ms,x_arr,d_gcov,d_gcon,d_Kris);  //TODO: somewhat complicated
      //f_general_source_term(ix,iy,iz,gs); //NOTE: *very* rarely used, ignore for now
      for(iv=0;iv<NV;iv++)
      {
@@ -250,6 +272,7 @@ int calc_update_gpu(ldouble dtin)
 
   int *d_loop0_ix,*d_loop0_iy,*d_loop0_iz;
   int *h_loop0_ix,*h_loop0_iy,*h_loop0_iz;
+  ldouble *d_x_arr;
   ldouble *d_xb_arr;
   ldouble *d_u_arr;
   ldouble *d_flbx_arr,*d_flby_arr,*d_flbz_arr;
@@ -268,12 +291,14 @@ int calc_update_gpu(ldouble dtin)
 
   // NOTE: size of xb,flbx,flby,flbz is copied from initial malloc in misc.c
   // these need to be long long if the grid is on one tile and large (~256^3)
+  long long Nx    = (NX+NY+NZ+6*NG);
   long long Nxb    = (NX+1+NY+1+NZ+1+6*NG);
   long long Nprim  = (SX)*(SY)*(SZ)*NV;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
   
+  err = cudaMalloc(&d_x_arr,   sizeof(ldouble)*Nx);
   err = cudaMalloc(&d_xb_arr,   sizeof(ldouble)*Nxb);
   err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
   err = cudaMalloc(&d_flbx_arr, sizeof(ldouble)*NfluxX);
@@ -307,6 +332,7 @@ int calc_update_gpu(ldouble dtin)
   printf("H size_x 0 %e \n", get_size_x(ixTEST,0));
   printf("H size_x 1 %e \n", get_size_x(iyTEST,1));
   printf("H size_x 2 %e \n", get_size_x(izTEST,2));
+  err =  cudaMemcpy(d_x_arr, x, sizeof(ldouble)*Nx, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_xb_arr, xb, sizeof(ldouble)*Nxb, cudaMemcpyHostToDevice);
 
   // copy conserved quantities from u (global array) to device
@@ -333,9 +359,9 @@ int calc_update_gpu(ldouble dtin)
   cudaEventRecord(start);
   calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, 
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
-						    d_xb_arr,
+						    d_x_arr,d_xb_arr,
 						    d_flbx_arr, d_flby_arr, d_flbz_arr,
-						    d_u_arr);
+						    d_u_arr, d_gcov, d_gcon, d_Kris);
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
   cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchrotnize?
@@ -356,6 +382,7 @@ int calc_update_gpu(ldouble dtin)
   cudaFree(d_loop0_iy);
   cudaFree(d_loop0_iz);
   
+  cudaFree(d_x_arr);
   cudaFree(d_xb_arr);
   cudaFree(d_flbx_arr);
   cudaFree(d_flby_arr);
@@ -365,6 +392,33 @@ int calc_update_gpu(ldouble dtin)
 
   // set global timestep dt
   dt = dtin;
+
+  return 0;
+}
+
+int push_geometry()
+{
+  cudaError_t err = cudaSuccess;
+
+  err = cudaMalloc(&d_gcov,   sizeof(ldouble)*SX*SY*SZMET*gSIZE);
+  err = cudaMalloc(&d_gcon,   sizeof(ldouble)*SX*SY*SZMET*gSIZE);
+  err = cudaMalloc(&d_Kris,    sizeof(ldouble)*SX*SY*SZMET*64);
+
+  err = cudaMemcpy(d_gcov, g, sizeof(double)*SX*SY*SZMET*gSIZE, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing g to device failed.\n"); 
+  err = cudaMemcpy(d_gcon, G, sizeof(double)*SX*SY*SZMET*gSIZE, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing G to device failed.\n"); 
+  err = cudaMemcpy(d_Kris, gKr, sizeof(double)*(SX)*(SY)*(SZMET)*64, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing gKr to device failed.\n"); 
+  
+  return 0;
+}
+
+int free_geometry()
+{
+  cudaFree(d_gcov);
+  cudaFree(d_gcon);
+  cudaFree(d_Kris);
 
   return 0;
 }

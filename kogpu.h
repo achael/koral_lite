@@ -11,4 +11,8 @@ __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,
 __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 			                   ldouble* p_arr,
 			                   ldouble* g_arr, ldouble* G_arr, ldouble* l_arr);
-
+			                   
+//Defining metric and Krystoffels for device			                   
+ldouble *d_gcov;//[SX*SY*SZMET*sizeof(ldouble)];
+ldouble *d_gcon;//[SX*SY*SZMET*sizeof(ldouble)];
+ldouble *d_Kris;//[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
