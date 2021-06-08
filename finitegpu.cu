@@ -581,6 +581,7 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
   struct geometry *geom
     = (struct geometry *) ggg;
 
+  //printf("hi from calc_Tij_device\n");
   ldouble (*gg)[5],(*GG)[5];
   gg=geom->gg;
   GG=geom->GG;
