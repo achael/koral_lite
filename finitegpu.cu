@@ -69,8 +69,7 @@ __device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 
 
 // fill geometry
-int
-fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_arr, ldouble* G_arr)
+__device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_arr, ldouble* G_arr)
 {
 
   /*
