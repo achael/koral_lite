@@ -75,9 +75,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
        //ms[iv]+=gs[iv];
      }
   }
-
-  
-      
+    
   // Get the cell size in the three directions
   dx = get_size_x_gpu_kernel(xb_arr,ix,0); //dx=get_size_x(ix,0);
   dy = get_size_x_gpu_kernel(xb_arr,iy,1); //dy=get_size_x(iy,1);
@@ -172,7 +170,7 @@ int calc_update_gpu(ldouble dtin)
     h_loop0_ix[ii] = loop_0[ii][0];     
     h_loop0_iy[ii] = loop_0[ii][1];     
     h_loop0_iz[ii] = loop_0[ii][2];
-    if (ii==22222) printf("H   :  %d %d %d %d\n",ii,h_loop0_0[ii],h_loop0_1[ii],h_loop0_2[ii]) ;
+    if (ii==22222) printf("H   :  %d %d %d %d\n",ii,h_loop0_ix[ii],h_loop0_iy[ii],h_loop0+iz[ii]) ;
   }
 
   err =  cudaMemcpy(d_loop0_ix, h_loop0_ix, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
