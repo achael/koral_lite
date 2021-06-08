@@ -37,10 +37,10 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
 {
 
   int ii;
-  int ix,iy,iz,iv;
-  ldouble dx,dy,dz;
-  ldouble val,du;
-  ldouble ms[NV];
+  //int ix,iy,iz,iv;
+  //ldouble dx,dy,dz;
+  //ldouble val,du;
+  //ldouble ms[NV];
   //ldouble gs[NV]; //NOTE gs[NV] is for artifical sources, rarely used
 
   // get index for this thread
@@ -50,6 +50,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   atomicAdd(d_array, 1); // NOTE TODO: placeholder test
   
   // get indices from 1D arrays
+  int ix,iy,iz,iv;
   ix=loop_0_ix[ii];
   iy=loop_0_iy[ii];
   iz=loop_0_iz[ii]; 
@@ -61,7 +62,8 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   // Source term
   // check if cell is active
   // NOTE: is_cell_active always returns 1 -- a placeholder function put in long ago
-  
+  ldouble ms[NV];
+  //ldouble gs[NV];
   if(0) //if(is_cell_active(ix,iy,iz)==0)
   {
     // Source terms applied only for active cells	  
@@ -82,6 +84,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   }
     
   // Get the cell size in the three directions
+  ldouble dx,dy,dz;
   dx = get_size_x_gpu_kernel(xb_arr,ix,0); //dx=get_size_x(ix,0);
   dy = get_size_x_gpu_kernel(xb_arr,iy,1); //dy=get_size_x(iy,1);
   dz = get_size_x_gpu_kernel(xb_arr,iz,2); //dz=get_size_x(iz,2);
@@ -95,6 +98,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   }
   /*
   //update all conserved according to fluxes and source terms      
+  ldouble val, du;
   for(iv=0;iv<NV;iv++)
   {	
 	ldouble flxr,flyr,flzr,flxl,flyl,flzl;
