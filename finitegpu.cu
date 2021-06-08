@@ -287,7 +287,7 @@ int calc_update_gpu(ldouble dtin)
 
   printf("back from device %d\n\n",h_temp);
 
-  // TODO Copy updated u back from device?
+  // TODO Copy updated u back from device to global array u?
   //err = cudaMemcpy(&u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
   // Free Device Memory
