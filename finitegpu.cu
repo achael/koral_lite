@@ -196,7 +196,9 @@ int calc_update_gpu(ldouble dtin)
   ldouble *d_flbx_arr,*d_flby_arr,*d_flbz_arr;
   
   cudaError_t err = cudaSuccess;
-
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
   // Allocate device arrays 
   
   // printf("ERROR (error code %s)!\n", cudaGetErrorString(err));
@@ -273,20 +275,29 @@ int calc_update_gpu(ldouble dtin)
   err = cudaMemset(d_temp,0,sizeof(int));
   // printf("ERRORMEMESET (error code %s)!\n", cudaGetErrorString(err));
 
+  cudaEventRecord(start);
   calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, d_temp,
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
 						    d_xb_arr,
 						    d_flbx_arr, d_flby_arr, d_flbz_arr,
 						    d_u_arr);
+  cudaEventRecord(stop);
   err = cudaPeekAtLastError();
-  cudaDeviceSynchronize();
+  cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchrotnize?
+  
   // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
+
 
   err =  cudaMemcpy(&h_temp, d_temp, sizeof(int), cudaMemcpyDeviceToHost);
   // printf("ERROR-Memcpy (error code %s)!\n", cudaGetErrorString(err));
 
-  printf("back from device %d\n\n",h_temp);
 
+
+  cudaEventSynchronize(stop);
+  ldouble tms = 0.;
+  cudaEventElapsedTime(&tms, start,stop);
+  printf("back from device %d, time: %0.2f\n\n",h_temp,tms);
+  
   // TODO Copy updated u back from device to global array u?
   //err = cudaMemcpy(&u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
