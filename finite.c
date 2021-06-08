@@ -490,6 +490,9 @@ int calc_update(ldouble dtin)
       // Source term
       ldouble ms[NV],gs[NV],val,du;
 
+#ifdef NOSOURCES
+      PLOOP(iv) ms[iv]=0.;
+#else
       if(is_cell_active(ix,iy,iz)==0)
       {
         // Source terms applied only for active cells	
@@ -503,6 +506,7 @@ int calc_update(ldouble dtin)
 
 	PLOOP(iv) ms[iv]+=gs[iv];
       }
+#endif
       
       // Get the cell size in the three directions
       ldouble dx=get_size_x(ix,0);

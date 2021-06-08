@@ -5,6 +5,7 @@
 /************************************/
 #define BHDISK_PROBLEMTYPE
 
+#define NOSOURCES
 
 //***********************************/
 // Main problem specification
