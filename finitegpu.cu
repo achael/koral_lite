@@ -68,10 +68,41 @@ __device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 }
 
 
+// fill geometry
+int
+fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_arr, ldouble* G_arr)
+{
+
+  /*
+  struct geometry *ggg 
+    = (struct geometry *) geom;
+
+  ggg->par=-1;
+  ggg->ifacedim = -1;
+  pick_g(ix,iy,iz,ggg->gg);
+  pick_G(ix,iy,iz,ggg->GG);
+  ggg->alpha=sqrt(-1./ggg->GG[0][0]);
+  ggg->ix=ix;  ggg->iy=iy;  ggg->iz=iz;
+  ggg->xxvec[0]=0.;
+  ggg->xxvec[1]=get_x(ix,0);
+  ggg->xxvec[2]=get_x(iy,1);
+  ggg->xxvec[3]=get_x(iz,2);
+  ggg->xx=ggg->xxvec[1];
+  ggg->yy=ggg->xxvec[2];
+  ggg->zz=ggg->xxvec[3];
+  ggg->gdet=ggg->gg[3][4];
+  ggg->gttpert=ggg->GG[3][4];
+  ggg->coords=MYCOORDS;
+  */
+    
+  return 0;
+  
+}
+
 // Metric source term
-__device __ int f_metric_source_term_device(int ix, int iy, int iz, ldouble *ss,
-			 ldouble* p_arr,
-			 ldouble* g_arr, ldouble* G_arr, ldouble* l_arr)
+__device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
+			                   ldouble* p_arr,
+			                   ldouble* g_arr, ldouble* G_arr, ldouble* l_arr)
 {
   int i;
 
@@ -79,7 +110,7 @@ __device __ int f_metric_source_term_device(int ix, int iy, int iz, ldouble *ss,
   //fill_geometry(ix,iy,iz,&geom);
   fill_geometry_device(ix,iy,iz,&geom,g_arr,G_arr);
     
-  f_metric_source_term_arb_device(&get_u(p_arr,0,ix,iy,iz), &geom, ss, l_arr);
+  //f_metric_source_term_arb(&get_u(p_arr,0,ix,iy,iz), &geom, ss, l_arr); // --> replace with code here, no need for two functions
 
   return 0;
 }
