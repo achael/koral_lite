@@ -1306,7 +1306,6 @@ calc_Tij(ldouble *pp, void* ggg, ldouble T[][4])
   ucov[0]=-1.;
 #endif
 
-
 #ifdef MAGNFIELD
   calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
 #else
