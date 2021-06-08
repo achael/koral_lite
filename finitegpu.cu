@@ -8,6 +8,7 @@ extern "C" {
 #define iyTEST 21
 #define izTEST 8
 #define iiTEST 22222
+#define ivTEST 0
 
 // get data value from array u_arr of the quantity indexed iv
 // at the cell center indexed ix,iy,iz
@@ -133,6 +134,12 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   //update all conserved according to fluxes and source terms      
   for(iv=0;iv<NV;iv++)
   {	
+
+    // Get the initial value of the conserved quantity
+    val = get_u_device(u_arr,iv,ix,iy,iz);
+    if(ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
+      printf("D u: %e\n", val);
+    
     // Get the fluxes on the six faces.
     // flbx, flby, flbz are the fluxes at the LEFT walls of cell ix, iy, iz.
     // To get the RIGHT fluxes, we need flbx(ix+1,iy,iz), etc.
@@ -142,12 +149,15 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
     flyr=get_ub_device(flby_arr,iv,ix,iy+1,iz,1);
     flzl=get_ub_device(flbz_arr,iv,ix,iy,iz,2);
     flzr=get_ub_device(flbz_arr,iv,ix,iy,iz+1,2);
-    
+	   
+    if(ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
+      printf("D fluxes: %e %e %e %e %e %e\n", flxl,flxr,flyl,flyr,flzl,flzr);
+
     // Compute Delta U from the six fluxes
     du = -(flxr-flxl)*dtin/dx - (flyr-flyl)*dtin/dy - (flzr-flzl)*dtin/dz;
 
     // Compute the new conserved by adding Delta U and the source term
-    val = get_u_device(u_arr,iv,ix,iy,iz) + du + ms[iv]*dtin;
+    val += (du + ms[iv]*dtin);
 
     // Save the new conserved to memory
     
@@ -181,6 +191,8 @@ int calc_update_gpu(ldouble dtin)
   int *d_loop0_ix,*d_loop0_iy,*d_loop0_iz;
   int *h_loop0_ix,*h_loop0_iy,*h_loop0_iz;
   ldouble *d_xb_arr;
+  ldouble *d_u_arr;
+  ldouble *d_flbx_arr,*d_flby_arr;*d_flbz_arr;
   
   cudaError_t err = cudaSuccess;
 
@@ -193,7 +205,19 @@ int calc_update_gpu(ldouble dtin)
   err = cudaMalloc(&d_loop0_iy, sizeof(int)*Nloop_0);
   err = cudaMalloc(&d_loop0_iz, sizeof(int)*Nloop_0);
 
-  err = cudaMalloc(&d_xb_arr, sizeof(ldouble)*(NX+1+NY+1+NZ+1+6*NG));
+  // NOTE: size of xb,flbx,flby,flbz is copied from initial malloc in misc.c
+  // these need to be long long if the grid is on one tile and large (~256^3)
+  long long Nxb    = (NX+1+NY+1+NZ+1+6*NG);
+  long long Nprim  = (SX)*(SY)*(SZ)*NV;
+  long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
+  long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
+  long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
+  
+  err = cudaMalloc(&d_xb_arr,   sizeof(ldouble)*Nxb);
+  err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
+  err = cudaMalloc(&d_flbx_arr, sizeof(ldouble)*NfluxX);
+  err = cudaMalloc(&d_flby_arr, sizeof(ldouble)*NfluxY);
+  err = cudaMalloc(&d_flbz_arr, sizeof(ldouble)*NfluxZ);
   
   // Copy data to device arrays
   
@@ -218,14 +242,28 @@ int calc_update_gpu(ldouble dtin)
   free(h_loop0_iy);
   free(h_loop0_iz);
 
-  // copy grid boundary data xb (global array) to device
-  // NOTE: size of xb is copied from initial malloc in misc.c 
+  // copy grid boundary data from xb (global array) to device
   printf("H size_x 0 %e \n", get_size_x(ixTEST,0));
   printf("H size_x 1 %e \n", get_size_x(iyTEST,1));
   printf("H size_x 2 %e \n", get_size_x(izTEST,2));
+  err =  cudaMemcpy(d_xb_arr, xb, sizeof(ldouble)*Nxb, cudaMemcpyHostToDevice);
+
+  // copy conserved quantities from u (global array) to device
+  printf("H u: %e %e %e %e %e %e\n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
+  err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   
-  err =  cudaMemcpy(d_xb_arr, xb, sizeof(ldouble)*(NX+1+NY+1+NZ+1+6*NG), cudaMemcpyHostToDevice);
-  
+  // copy fluxes data from flbx,flby,flbz (global arrays) to device
+  printf("H fluxes: %e %e %e %e %e %e\n",
+	 get_ub(flbx,ivTEST,ixTEST,iyTEST,izTEST,0),
+	 get_ub(flbx,ivTEST,ixTEST+1,iyTEST,izTEST,0),
+         get_ub(flby,ivTEST,ixTEST,iyTEST,izTEST,1),
+	 get_ub(flby,ivTEST,ixTEST,iyTEST+1,izTEST,1),
+	 get_ub(flbz,ivTEST,ixTEST,iyTEST,izTEST,2),
+	 get_ub(flbz,ivTEST,ixTEST,iyTEST,izTEST+1,2));
+  err =  cudaMemcpy(d_flbx_arr, flbx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_flby_arr, flby, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_flbz_arr, flbz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
+
   // Launch calc_update_gpu_kernel
 
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
@@ -236,7 +274,9 @@ int calc_update_gpu(ldouble dtin)
 
   calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, d_temp,
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
-						    d_xb_arr);
+						    d_xb_arr,
+						    d_flbx_arr, d_flby_arr, d_flbz_arr,
+						    d_u_arr);
   err = cudaPeekAtLastError();
   cudaDeviceSynchronize();
   // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
@@ -246,11 +286,19 @@ int calc_update_gpu(ldouble dtin)
 
   printf("back from device %d\n\n",h_temp);
 
+  // TODO Copy updated u back from device?
+  //err = cudaMemcpy(&u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  
   // Free Device Memory
   cudaFree(d_loop0_ix);
   cudaFree(d_loop0_iy);
   cudaFree(d_loop0_iz);
+  
   cudaFree(d_xb_arr);
+  cudaFree(d_flbx_arr);
+  cudaFree(d_flby_arr);
+  cudaFree(d_flbz_arr);
+  cudaFree(d_u_arr);
   
   cudaFree(d_temp);
 
