@@ -4,6 +4,11 @@ extern "C" {
 
 }
 
+#define ixTEST 13
+#define iyTEST 21
+#define izTEST 8
+#define iiTEST 22222
+
 // get grid location on boundary indexed ic in dimension idim
 // copied from get_xb macro in ko.h
 __device__ ldouble get_xb_gpu_kernel(ldouble* xb_arr, int ic, int idim)
@@ -49,7 +54,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   iy=loop_0_iy[ii];
   iz=loop_0_iz[ii]; 
 
-  if(ii==22222){
+  if(ii==iiTEST){
     printf("D   : %d %d %d %d\n",ii, ix,iy,iz);
   }
 
@@ -81,11 +86,12 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   dy = get_size_x_gpu_kernel(xb_arr,iy,1); //dy=get_size_x(iy,1);
   dz = get_size_x_gpu_kernel(xb_arr,iz,2); //dz=get_size_x(iz,2);
 
+  // test sizes 
   if(ii==0)
   {
-    printf("D size_x 0 %e \n", get_size_x_gpu_kernel(xb_arr,11,0));
-    printf("D size_x 1 %e \n", get_size_x_gpu_kernel(xb_arr,13,1));
-    printf("D size_x 2 %e \n", get_size_x_gpu_kernel(xb_arr,5,2));
+    printf("D size_x 0 %e \n", get_size_x_gpu_kernel(xb_arr,ixTEST,0));
+    printf("D size_x 1 %e \n", get_size_x_gpu_kernel(xb_arr,iyTEST,1));
+    printf("D size_x 2 %e \n", get_size_x_gpu_kernel(xb_arr,izTEST,2));
   }
   /*
   //update all conserved according to fluxes and source terms      
@@ -170,7 +176,7 @@ int calc_update_gpu(ldouble dtin)
     h_loop0_ix[ii] = loop_0[ii][0];     
     h_loop0_iy[ii] = loop_0[ii][1];     
     h_loop0_iz[ii] = loop_0[ii][2];
-    if (ii==22222) printf("H   :  %d %d %d %d\n",ii,h_loop0_ix[ii],h_loop0_iy[ii],h_loop0_iz[ii]) ;
+    if (ii==iiTEST) printf("H   :  %d %d %d %d\n",ii,h_loop0_ix[ii],h_loop0_iy[ii],h_loop0_iz[ii]) ;
   }
 
   err =  cudaMemcpy(d_loop0_ix, h_loop0_ix, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
@@ -183,9 +189,9 @@ int calc_update_gpu(ldouble dtin)
 
   // copy grid boundary data xb (global array) to device
   // NOTE: size of xb is copied from initial malloc in misc.c 
-  printf("H size_x 0 %e \n", get_size_x(11,0));
-  printf("H size_x 1 %e \n", get_size_x(13,1));
-  printf("H size_x 2 %e \n", get_size_x(5,2));
+  printf("H size_x 0 %e \n", get_size_x(ixTEST,0));
+  printf("H size_x 1 %e \n", get_size_x(iyTEST,1));
+  printf("H size_x 2 %e \n", get_size_x(izTEST,2));
   
   err =  cudaMemcpy(d_xb_arr, xb, sizeof(ldouble)*(NX+1+NY+1+NZ+1+6*NG), cudaMemcpyHostToDevice);
   
