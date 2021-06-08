@@ -6,7 +6,7 @@ extern "C" {
 
 // get grid location on boundary indexed ic in dimension idim
 // copied from get_xb macro in ko.h
-__global__ ldouble get_xb_gpu_kernel(ldouble* xb_arr, int ic, int idim)
+__device__ ldouble get_xb_gpu_kernel(ldouble* xb_arr, int ic, int idim)
 {
   ldouble xb_out;
   xb_out = (idim==0 ? xb_arr[ic+NG] :		     \
@@ -18,7 +18,7 @@ __global__ ldouble get_xb_gpu_kernel(ldouble* xb_arr, int ic, int idim)
 
 // get size of cell indexed ic in dimension idim
 // copied from get_size_x in finite.c
-__global__ ldouble get_size_x_gpu_kernel(int ic, int idim)
+__device__ ldouble get_size_x_gpu_kernel(ldouble* xb_arr, int ic, int idim)
 {
   ldouble dx;
   dx = get_xb_gpu_kernel(xb_arr, ic+1,idim) - get_xb_gpu_kernel(xb_arr, ic, idim);
