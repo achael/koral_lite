@@ -11,6 +11,8 @@ extern "C" {
 #define iiTEST 22222
 #define ivTEST 0
 
+// TODO get_u_device and get_ub_device unnecessary, replace with get_u and get_ub again?
+/*
 // get data value from array u_arr of the quantity indexed iv
 // at the cell center indexed ix,iy,iz
 // copied from get_u macro in ko.h
@@ -42,6 +44,7 @@ __device__ ldouble get_ub_device(ldouble* ub_arr, int iv, int ix, int iy, int iz
 			          (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] : 0.)));
   return ub_out;
 }
+*/
 
 // get grid coordinate on the cell wall indexed ic in dimension idim
 // copied from get_xb macro in ko.h
@@ -64,6 +67,22 @@ __device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
   return dx;
 }
 
+
+// Metric source term
+__device __ int f_metric_source_term_device(int ix, int iy, int iz, ldouble *ss,
+			 ldouble* p_arr,
+			 ldouble* g_arr, ldouble* G_arr, ldouble* l_arr)
+{
+  int i;
+
+  struct geometry geom;
+  //fill_geometry(ix,iy,iz,&geom);
+  fill_geometry_device(ix,iy,iz,&geom,g_arr,G_arr);
+    
+  f_metric_source_term_arb_device(&get_u(p_arr,0,ix,iy,iz), &geom, ss, l_arr);
+
+  return 0;
+}
 
 __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
@@ -110,7 +129,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
      // and any other source terms gs[iv] 
 
      //f_metric_source_term(ix,iy,iz,ms);  //TODO: somewhat complicated
-     //f_general_source_term(ix,iy,iz,gs); //NOTE: *very* rarely used,ignore for now
+     //f_general_source_term(ix,iy,iz,gs); //NOTE: *very* rarely used, ignore for now
      for(iv=0;iv<NV;iv++)
      {
        ms[iv] = 0; // TODO: placeholder metric term of 0
@@ -136,20 +155,29 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
   {	
 
     // Get the initial value of the conserved quantity
-    val = get_u_device(u_arr,iv,ix,iy,iz);
+    //val = get_u_device(u_arr,iv,ix,iy,iz);
+    val = get_u(u_arr,iv,ix,iy,iz);
+    
     if(ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
       printf("D u: %e\n", val);
     
     // Get the fluxes on the six faces.
     // flbx, flby, flbz are the fluxes at the LEFT walls of cell ix, iy, iz.
     // To get the RIGHT fluxes, we need flbx(ix+1,iy,iz), etc.
-    flxl=get_ub_device(flbx_arr,iv,ix,iy,iz,0);
-    flxr=get_ub_device(flbx_arr,iv,ix+1,iy,iz,0);
-    flyl=get_ub_device(flby_arr,iv,ix,iy,iz,1);
-    flyr=get_ub_device(flby_arr,iv,ix,iy+1,iz,1);
-    flzl=get_ub_device(flbz_arr,iv,ix,iy,iz,2);
-    flzr=get_ub_device(flbz_arr,iv,ix,iy,iz+1,2);
-	   
+    //flxl=get_ub_device(flbx_arr,iv,ix,iy,iz,0);
+    //flxr=get_ub_device(flbx_arr,iv,ix+1,iy,iz,0);
+    //flyl=get_ub_device(flby_arr,iv,ix,iy,iz,1);
+    //flyr=get_ub_device(flby_arr,iv,ix,iy+1,iz,1);
+    //flzl=get_ub_device(flbz_arr,iv,ix,iy,iz,2);
+    //flzr=get_ub_device(flbz_arr,iv,ix,iy,iz+1,2);
+    flxl=get_u(flbx_arr,iv,ix,iy,iz,0);
+    flxr=get_u(flbx_arr,iv,ix+1,iy,iz,0);
+    flyl=get_u(flby_arr,iv,ix,iy,iz,1);
+    flyr=get_u(flby_arr,iv,ix,iy+1,iz,1);
+    flzl=get_u(flbz_arr,iv,ix,iy,iz,2);
+    flzr=get_u(flbz_arr,iv,ix,iy,iz+1,2);
+
+    
     if(ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
       printf("D fluxes: %e %e %e %e %e %e\n", flxl,flxr,flyl,flyr,flzl,flzr);
 
@@ -283,10 +311,11 @@ int calc_update_gpu(ldouble dtin)
   cudaEventSynchronize(stop);
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
-  printf("back from device %d, time: %e\n\n",tms);
+  printf("gpu time: %0.2f \n\n",tms);
   
   // TODO Copy updated u back from device to global array u?
-  //err = cudaMemcpy(&u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  //ldouble *u_tmp;
+  //err = cudaMemcpy(&u_tmp, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
   // Free Device Memory
   cudaFree(d_loop0_ix);
