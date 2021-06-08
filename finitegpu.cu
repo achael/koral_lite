@@ -341,7 +341,7 @@ int calc_update_gpu(ldouble dtin)
   cudaEventSynchronize(stop);
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
-  printf("gpu time: %0.2f \n\n",tms);
+  printf("gpu update time: %0.2f \n",tms);
   
   // TODO Copy updated u back from device to global array u?
   //ldouble *u_tmp;
