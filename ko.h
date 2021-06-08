@@ -1066,6 +1066,8 @@ int calc_wavespeeds();
 int do_correct();
 int calc_update(ldouble dtin);
 int calc_update_gpu(ldouble dtin);
+int push_geometry();
+int free_geometry();		
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);
