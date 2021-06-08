@@ -52,7 +52,7 @@ __device__ ldouble get_ub_device(ldouble* ub_arr, int iv, int ix, int iy, int iz
 // TODO replace get_xb and get_size_x  everywhere
 // get grid coordinate on the cell wall indexed ic in dimension idim
 // copied from get_xb macro in ko.h
-__global__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
+__device__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
 {
   ldouble xb_out;
   xb_out = (idim==0 ? xb_arr[ic+NG] :		     \
@@ -62,7 +62,7 @@ __global__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
   return xb_out;
 }
 
-__global__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
+__device__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 				  int ix, int iy, int iz)
 {
   ldouble gKr_out = gKr_arr[i*4*4+j*4+k + (iX(ix)+(NGCX))*64 + \
@@ -112,7 +112,7 @@ __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_a
 }
 
 
-__global__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
+__device__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
 {
   int i,j,k,l;
   ldouble Tt[4][4];
