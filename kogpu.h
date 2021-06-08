@@ -11,6 +11,7 @@ __device__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 __device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim);
 
 __device__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5]);
+__device__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5]);
 
 __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,
 				    ldouble* g_arr, ldouble* G_arr);

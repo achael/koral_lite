@@ -143,6 +143,46 @@ __device__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][
   return 0;
 }
 
+
+__device__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
+{
+  int i;
+  ldouble Tt[4][4];
+
+  for(i=0;i<4;i++)
+  {
+    int j;
+      for(j=0;j<4;j++)
+    {
+      Tt[i][j]=0.;
+    }
+  }
+
+  for(i=0;i<4;i++)
+  {
+    int j;
+    for(j=0;j<4;j++)
+    {
+      int k;
+      for(k=0;k<4;k++)
+      {
+        Tt[i][j]+=T1[i][k]*gg[k][j];
+      }
+    }
+  }
+
+  for(i=0;i<4;i++)
+  {
+    int j;
+    for(j=0;j<4;j++)
+    {
+      T2[i][j]=Tt[i][j];
+    }
+  }
+
+  return 0;
+}
+
 // Metric source term
 // TODO: deleted RADIATION and SHEARINGBOX parts
 __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
@@ -179,15 +219,17 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
   
   ldouble T[4][4];
+  int ii, jj;
   //calculating stress energy tensor components
   //calc_Tij(pp,&geom,T); // TODO
   for(ii=0;ii<4;ii++)
     for(jj=0;jj<4;jj++)
       T[ii][jj]=0.;
   
-  indices_2221(T,T,gg);
+  indices_2221_device(T,T,gg);
 
-  int ii, jj;
+
+  /*
   for(ii=0;ii<4;ii++)
     for(jj=0;jj<4;jj++)
       {
@@ -197,7 +239,7 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 	    my_err("nan in metric_source_terms\n");
 	  }
       }
- 
+  */
   
   //converting to 4-velocity
   ldouble vcon[4],ucon[4];
