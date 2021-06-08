@@ -38,7 +38,7 @@ __device__ __host__ int indices_21_device(ldouble A1[4],ldouble A2[4],ldouble gg
   return 0;
 }
 
-__device__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
+__device__ __host__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
 {
   int i,j,k,l;
   ldouble Tt[4][4];
@@ -70,7 +70,7 @@ __device__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][
 }
 
 
-__device__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
+__device__ __host__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
 {
   int i;
   ldouble Tt[4][4];
