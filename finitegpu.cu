@@ -87,8 +87,8 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   {
     printf("D size_x 0 %e \n", get_size_x_gpu_kernel(xb_arr,11,0));
     printf("D size_x 1 %e \n", get_size_x_gpu_kernel(xb_arr,13,0));
-    printf("D size_x 2 %e \n", get_size_x_gpu_kernel(xb_arr5,0));
-     
+    printf("D size_x 2 %e \n", get_size_x_gpu_kernel(xb_arr,5,0));
+  }
   /*
   //update all conserved according to fluxes and source terms      
   for(iv=0;iv<NV;iv++)
