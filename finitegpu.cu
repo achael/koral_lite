@@ -18,7 +18,7 @@ extern "C" {
 __device__ ldouble get_u_device(ldouble* u_arr,int iv,int ix,int iy,int iz)
 {
   ldouble u_out;
-  u_out = u_arr[iv + (iX(ix)+(NGCX))*NV + \ 
+  u_out = u_arr[iv + (iX(ix)+(NGCX))*NV + \
 		     (iY(iy)+(NGCY))*(SX)*NV + \
 		     (iZ(iz)+(NGCZ))*(SY)*(SX)*NV];
   return u_out;
@@ -86,7 +86,6 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   atomicAdd(d_array, 1); // NOTE TODO: placeholder test
   
   // get indices from 1D arrays
-  int ix,iy,iz,iv;
   ix=loop_0_ix[ii];
   iy=loop_0_iy[ii];
   iz=loop_0_iz[ii]; 
@@ -192,7 +191,7 @@ int calc_update_gpu(ldouble dtin)
   int *h_loop0_ix,*h_loop0_iy,*h_loop0_iz;
   ldouble *d_xb_arr;
   ldouble *d_u_arr;
-  ldouble *d_flbx_arr,*d_flby_arr;*d_flbz_arr;
+  ldouble *d_flbx_arr,*d_flby_arr,*d_flbz_arr;
   
   cudaError_t err = cudaSuccess;
 
@@ -249,7 +248,7 @@ int calc_update_gpu(ldouble dtin)
   err =  cudaMemcpy(d_xb_arr, xb, sizeof(ldouble)*Nxb, cudaMemcpyHostToDevice);
 
   // copy conserved quantities from u (global array) to device
-  printf("H u: %e %e %e %e %e %e\n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
+  printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   
   // copy fluxes data from flbx,flby,flbz (global arrays) to device
