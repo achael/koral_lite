@@ -446,7 +446,7 @@
 //output
 /************************************/
 //#define DTAVG .1  //how frequently to compute quantities included in avg
-#define DTOUT1 10   //res
+#define DTOUT1 1   //res
 #define DTOUT2 1000  //avg
 #define DTOUT3 1000 //box,var
 

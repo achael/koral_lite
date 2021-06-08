@@ -1267,12 +1267,13 @@ op_explicit(ldouble t, ldouble dtin)
   ldouble start_time,stop_time;
   
   my_clock_gettime(&temp_clock);
-  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9);
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   
   calc_update(dtin);
 
+  my_clock_gettime(&temp_clock);
   stop_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu update time: %0.2lf \n", (stop_time-start_time)*1.e6);
+  printf("cpu update time: %0.2lf \n", (stop_time-start_time)*1.e3);
 
    /************************************************************************/
    /********* explicit *** RADIATION COUPLING  *****************************/
