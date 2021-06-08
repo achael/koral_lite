@@ -257,9 +257,9 @@
 //resolution
 /************************************/
 //total resolution
-#define TNX 72 //320 //336//256//32//128//312 
-#define TNY 48 //192 //256 //192//192//32//128//200 
-#define TNZ 36 //192 //192
+#define TNX 128 //72 //320 //336//256//32//128//312 
+#define TNY 128 //48 //192 //256 //192//192//32//128//200 
+#define TNZ 128 //36 //192 //192
 
 #define SILO2D_XZPLANE
 
@@ -447,7 +447,7 @@
 //output
 /************************************/
 //#define DTAVG .1  //how frequently to compute quantities included in avg
-#define DTOUT1 10   //res
+#define DTOUT1 1   //res
 #define DTOUT2 1000  //avg
 #define DTOUT3 1000 //box,var
 
