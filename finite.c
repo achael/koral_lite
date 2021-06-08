@@ -1264,6 +1264,7 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
   struct timespec temp_clock;
+  ldouble start_time,stop_time;
   
   my_clock_gettime(&temp_clock);
   start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9);
