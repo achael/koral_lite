@@ -786,8 +786,6 @@ calc_wavespeeds_lr_core(ldouble *ucon, ldouble GG[][5], ldouble *aret,
 }
 
 
-
-
 //*************************************************************
 //returns geometrical source terms for all conserved quantities
 //*************************************************************

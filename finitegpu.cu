@@ -80,6 +80,8 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   //ldouble gs[NV]; //NOTE gs[NV] is for artifical sources, rarely used
 
   // get index for this thread
+  // Nloop_0 is number of cells to update;
+  // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
   ii = blockIdx.x * blockDim.x + threadIdx.x;
   if(ii >= Nloop_0) return;
   
