@@ -170,12 +170,12 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
     //flyr=get_ub_device(flby_arr,iv,ix,iy+1,iz,1);
     //flzl=get_ub_device(flbz_arr,iv,ix,iy,iz,2);
     //flzr=get_ub_device(flbz_arr,iv,ix,iy,iz+1,2);
-    flxl=get_u(flbx_arr,iv,ix,iy,iz,0);
-    flxr=get_u(flbx_arr,iv,ix+1,iy,iz,0);
-    flyl=get_u(flby_arr,iv,ix,iy,iz,1);
-    flyr=get_u(flby_arr,iv,ix,iy+1,iz,1);
-    flzl=get_u(flbz_arr,iv,ix,iy,iz,2);
-    flzr=get_u(flbz_arr,iv,ix,iy,iz+1,2);
+    flxl=get_ub(flbx_arr,iv,ix,iy,iz,0);
+    flxr=get_ub(flbx_arr,iv,ix+1,iy,iz,0);
+    flyl=get_ub(flby_arr,iv,ix,iy,iz,1);
+    flyr=get_ub(flby_arr,iv,ix,iy+1,iz,1);
+    flzl=get_ub(flbz_arr,iv,ix,iy,iz,2);
+    flzr=get_ub(flbz_arr,iv,ix,iy,iz+1,2);
 
     
     if(ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
