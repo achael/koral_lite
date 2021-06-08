@@ -707,7 +707,6 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   fill_geometry_device(ix,iy,iz,x_arr,&geom,g_arr,G_arr);
   //printf("Fill geometry successful.\n");   
     
->>>>>>> 68be025be25483ebfe432b10579cf9c234b80cde
   //f_metric_source_term_arb(&get_u(p_arr,0,ix,iy,iz), &geom, ss, l_arr); // --> replace with code here, no need for two functions
   //struct geometry *geom = (struct geometry *) ggg;
   
