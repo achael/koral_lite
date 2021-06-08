@@ -112,77 +112,6 @@ __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_a
 }
 
 
-__device__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
-{
-  int i,j,k,l;
-  ldouble Tt[4][4];
-
-  for(i=0;i<4;i++)
-    {
-      for(j=0;j<4;j++)
-	{
-	  Tt[i][j]=0.;
-	  for(k=0;k<4;k++)
-	    {
-	      for(l=0;l<4;l++)
-		{
-		  Tt[i][j]+=T1[k][l]*gg[i][k]*gg[j][l];
-		}	  
-	    }
-	}
-    }
-
-   for(i=0;i<4;i++)
-    {
-      for(j=0;j<4;j++)
-	{
-	  T2[i][j]=Tt[i][j];
-	}
-    }
-
-  return 0;
-}
-
-
-__device__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
-{
-  int i;
-  ldouble Tt[4][4];
-
-  for(i=0;i<4;i++)
-  {
-    int j;
-      for(j=0;j<4;j++)
-    {
-      Tt[i][j]=0.;
-    }
-  }
-
-  for(i=0;i<4;i++)
-  {
-    int j;
-    for(j=0;j<4;j++)
-    {
-      int k;
-      for(k=0;k<4;k++)
-      {
-        Tt[i][j]+=T1[i][k]*gg[k][j];
-      }
-    }
-  }
-
-  for(i=0;i<4;i++)
-  {
-    int j;
-    for(j=0;j<4;j++)
-    {
-      T2[i][j]=Tt[i][j];
-    }
-  }
-
-  return 0;
-}
-
 // Metric source term
 // TODO: deleted RADIATION and SHEARINGBOX parts
 __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
@@ -201,9 +130,6 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   ldouble (*gg)[5],(*GG)[5],gdetu;
   ldouble *pp = &get_u(p_arr,0,ix,iy,iz);
   
-  //ix=geom->ix;
-  //iy=geom->iy;
-  //iz=geom->iz;
   gg=geom.gg;
   GG=geom.GG;
 
@@ -247,8 +173,8 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   vcon[2]=pp[3];
   vcon[3]=pp[4];
   
-  //conv_vels(vcon,ucon,VELPRIM,VEL4,gg,GG); //TODO
-  ucon[0]=1.; ucon[1]=0.; ucon[2]=0.; ucon[2]=0.; //TODO 
+  conv_vels_device(vcon,ucon,VELPRIM,VEL4,gg,GG); //TODO
+  //ucon[0]=1.; ucon[1]=0.; ucon[2]=0.; ucon[2]=0.; //TODO 
   
   int k,l,iv;
   for(iv=0;iv<NV;iv++)
