@@ -1265,7 +1265,9 @@ op_explicit(ldouble t, ldouble dtin)
   // Evolve the conserved quantities
 
 #ifdef GPUKO
+  push_geometry();
   calc_update_gpu(dtin);
+  free_geometry();
 #endif
 
   struct timespec temp_clock;

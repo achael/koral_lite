@@ -3,6 +3,10 @@
 ///////////////////////////////////////////////////////////////
 // finitegpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
+//Defining metric and Krystoffels for device			                   
+ldouble *d_gcov;//[SX*SY*SZMET*sizeof(ldouble)];
+ldouble *d_gcon;//[SX*SY*SZMET*sizeof(ldouble)];
+ldouble *d_Kris;//[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
 
 __device__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
 __device__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
@@ -16,14 +20,16 @@ __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,
 __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 			                   ldouble* p_arr,
 			                   ldouble* g_arr, ldouble* G_arr, ldouble* l_arr);
+			                   
 
 
 // kernels below
 __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-				       ldouble* xb_arr,
-				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				       ldouble* u_arr);
+				                               ldouble* xb_arr,
+				                               ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
+ 				                               ldouble* u_arr, ldouble* p_arr,
+                                       ldouble* d_gcov, ldouble* d_gcon, ldouble* d_Kris);
 
 
 ///////////////////////////////////////////////////////////////
@@ -51,4 +57,4 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
 ///////////////////////////////////////////////////////////////
 
 __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
-		                        		     ldouble *bcon, ldouble *bcov, ldouble *bsq);
+		                        		                             ldouble *bcon, ldouble *bcov, ldouble *bsq);
