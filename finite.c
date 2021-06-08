@@ -3,6 +3,7 @@
 */
 
 #include "ko.h"
+#include "kogpu.h"
 
 //**********************************************************************
 /*! \fn int reduce_order_check(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *pp2,int ix,int iy,int iz)
@@ -1916,6 +1917,9 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
   iy2=NY+0;
   iz1=-0;
   iz2=NZ+0;
+
+  //TEST
+  ldouble test = get_xb_device(xb,33,0);
   
   //x
   for(i1=ix1-NG;i1<=ix2+NG;i1++)

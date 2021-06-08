@@ -52,7 +52,7 @@ __device__ ldouble get_ub_device(ldouble* ub_arr, int iv, int ix, int iy, int iz
 // TODO replace get_xb and get_size_x  everywhere
 // get grid coordinate on the cell wall indexed ic in dimension idim
 // copied from get_xb macro in ko.h
-__device__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
+__global__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
 {
   ldouble xb_out;
   xb_out = (idim==0 ? xb_arr[ic+NG] :		     \
@@ -103,6 +103,7 @@ __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_a
 }
 
 // Metric source term
+// TODO: deleted RADIATION and SHEARINGBOX parts
 __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 			                   ldouble* p_arr,
 			                   ldouble* g_arr, ldouble* G_arr, ldouble* l_arr)
@@ -114,7 +115,83 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   fill_geometry_device(ix,iy,iz,&geom,g_arr,G_arr);
     
   //f_metric_source_term_arb(&get_u(p_arr,0,ix,iy,iz), &geom, ss, l_arr); // --> replace with code here, no need for two functions
+  //struct geometry *geom = (struct geometry *) ggg;
+  
+  ldouble (*gg)[5],(*GG)[5],gdetu;
+  ldouble *pp = &get_u(p_arr,0,ix,iy,iz);
+  
+  int ix,iy,iz;
+  ix=geom->ix;
+  iy=geom->iy;
+  iz=geom->iz;
+  gg=geom->gg;
+  GG=geom->GG;
 
+  #if (GDETIN==0) //no metric determinant inside derivatives
+  gdetu=1.;
+  #else
+  gdetu=geom->gdet;
+  #endif
+
+  ldouble dlgdet[3];
+  dlgdet[0]=gg[0][4]; //D[gdet,x1]/gdet
+  dlgdet[1]=gg[1][4]; //D[gdet,x2]/gdet
+  dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
+  
+  ldouble T[4][4];
+  //calculating stress energy tensor components
+  calc_Tij(pp,geom,T);
+  indices_2221(T,T,gg);
+
+  int ii, jj;
+  for(ii=0;ii<4;ii++)
+    for(jj=0;jj<4;jj++)
+      {
+	if(isnan(T[ii][jj])) 
+	  {
+	    printf("%d %d %e\n",ii,jj,T[ii][jj]);
+	    my_err("nan in metric_source_terms\n");
+	  }
+      }
+ 
+  ldouble rho=pp[RHO];
+  ldouble u=pp[UU];
+  ldouble vcon[4],ucon[4];
+  vcon[1]=pp[2];
+  vcon[2]=pp[3];
+  vcon[3]=pp[4];
+  ldouble S=pp[5];
+
+  //converting to 4-velocity
+  conv_vels(vcon,ucon,VELPRIM,VEL4,gg,GG);
+  
+  int k,l,iv;
+  for(iv=0;iv<NV;iv++)
+    ss[iv]=0.;  // zero out all source terms initially
+
+  //terms with Christoffels
+  for(k=0;k<4;k++)
+    for(l=0;l<4;l++)
+      {
+	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
+	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
+	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
+	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
+      }
+
+  //terms with dloggdet  
+#if (GDETIN==0)
+  for(l=1;l<4;l++)
+    {
+      ss[0]+=-dlgdet[l-1]*rho*ucon[l];
+      ss[1]+=-dlgdet[l-1]*(T[l][0]+rho*ucon[l]);
+      ss[2]+=-dlgdet[l-1]*(T[l][1]);
+      ss[3]+=-dlgdet[l-1]*(T[l][2]);
+      ss[4]+=-dlgdet[l-1]*(T[l][3]);
+      ss[5]+=-dlgdet[l-1]*S*ucon[l];
+    }   
+#endif
+  
   return 0;
 }
 
