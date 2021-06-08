@@ -62,6 +62,15 @@ __global__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
   return xb_out;
 }
 
+__global__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
+				  int ix, int iy, int iz)
+{
+  ldouble gKr_out = gKr_arr[i*4*4+j*4+k + (iX(ix)+(NGCX))*64 + \
+				          (iY(iy)+(NGCY))*(SX)*64 + \
+			                  (iZMET(iz)+(NGCZMET))*(SY)*(SX)*64];
+  return gKr_out;
+}
+
 // get size of cell indexed ic in dimension idim
 // copied from get_size_x in finite.c
 __device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
@@ -102,11 +111,43 @@ __device__ int fill_geometry_device(int ix,int iy,int iz,void* geom,ldouble* g_a
   
 }
 
+
+__global__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
+{
+  int i,j,k,l;
+  ldouble Tt[4][4];
+
+  for(i=0;i<4;i++)
+    {
+      for(j=0;j<4;j++)
+	{
+	  Tt[i][j]=0.;
+	  for(k=0;k<4;k++)
+	    {
+	      for(l=0;l<4;l++)
+		{
+		  Tt[i][j]+=T1[k][l]*gg[i][k]*gg[j][l];
+		}	  
+	    }
+	}
+    }
+
+   for(i=0;i<4;i++)
+    {
+      for(j=0;j<4;j++)
+	{
+	  T2[i][j]=Tt[i][j];
+	}
+    }
+
+  return 0;
+}
+
 // Metric source term
 // TODO: deleted RADIATION and SHEARINGBOX parts
 __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 			                   ldouble* p_arr,
-			                   ldouble* g_arr, ldouble* G_arr, ldouble* l_arr)
+			                   ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr)
 {
   int i;
 
@@ -140,7 +181,11 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   
   ldouble T[4][4];
   //calculating stress energy tensor components
-  calc_Tij(pp,geom,T);
+  //calc_Tij(pp,geom,T); // TODO
+  for(ii=0;ii<4;ii++)
+    for(jj=0;jj<4;jj++)
+      T[ii][jj]=0.;
+  
   indices_2221(T,T,gg);
 
   int ii, jj;
@@ -154,16 +199,15 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 	  }
       }
  
-  ldouble rho=pp[RHO];
-  ldouble u=pp[UU];
+  
+  //converting to 4-velocity
   ldouble vcon[4],ucon[4];
   vcon[1]=pp[2];
   vcon[2]=pp[3];
   vcon[3]=pp[4];
-  ldouble S=pp[5];
-
-  //converting to 4-velocity
-  conv_vels(vcon,ucon,VELPRIM,VEL4,gg,GG);
+  
+  //conv_vels(vcon,ucon,VELPRIM,VEL4,gg,GG); //TODO
+  ucon[0]=1.; ucon[1]=0.; ucon[2]=0.; ucon[2]=0.; //TODO 
   
   int k,l,iv;
   for(iv=0;iv<NV;iv++)
@@ -173,22 +217,22 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   for(k=0;k<4;k++)
     for(l=0;l<4;l++)
       {
-	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
+	ss[1]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,0,k,ix,iy,iz);
+	ss[2]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,1,k,ix,iy,iz);
+	ss[3]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,2,k,ix,iy,iz);
+	ss[4]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,3,k,ix,iy,iz);
       }
 
   //terms with dloggdet  
 #if (GDETIN==0)
   for(l=1;l<4;l++)
     {
-      ss[0]+=-dlgdet[l-1]*rho*ucon[l];
-      ss[1]+=-dlgdet[l-1]*(T[l][0]+rho*ucon[l]);
+      ss[0]+=-dlgdet[l-1]*pp[RHO]*ucon[l];
+      ss[1]+=-dlgdet[l-1]*(T[l][0]+pp[RHO]*ucon[l]);
       ss[2]+=-dlgdet[l-1]*(T[l][1]);
       ss[3]+=-dlgdet[l-1]*(T[l][2]);
       ss[4]+=-dlgdet[l-1]*(T[l][3]);
-      ss[5]+=-dlgdet[l-1]*S*ucon[l];
+      ss[5]+=-dlgdet[l-1]*pp[ENTR]*ucon[l];
     }   
 #endif
   
@@ -199,7 +243,8 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
 				       ldouble* xb_arr,
 				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				       ldouble* u_arr)
+				       ldouble* u_arr, ldouble* p_arr,
+				       ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr)
 {
 
   int ii;
@@ -239,7 +284,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
      // Get metric source terms ms[iv]
      // and any other source terms gs[iv] 
 
-     //f_metric_source_term(ix,iy,iz,ms);  //TODO: somewhat complicated
+     f_metric_source_term_device(ix,iy,iz,ms, p_arr, g_arr, G_arr, gKr_arr);  //TODO: somewhat complicated
      //f_general_source_term(ix,iy,iz,gs); //NOTE: *very* rarely used, ignore for now
      for(iv=0;iv<NV;iv++)
      {
@@ -328,7 +373,8 @@ int calc_update_gpu(ldouble dtin)
   int *d_loop0_ix,*d_loop0_iy,*d_loop0_iz;
   int *h_loop0_ix,*h_loop0_iy,*h_loop0_iz;
   ldouble *d_xb_arr;
-  ldouble *d_u_arr;
+  ldouble *d_u_arr, *d_p_arr;
+  ldouble *d_g_arr, *d_G_arr, *d_gKr_arr;
   ldouble *d_flbx_arr,*d_flby_arr,*d_flbz_arr;
   
   cudaError_t err = cudaSuccess;
@@ -350,12 +396,18 @@ int calc_update_gpu(ldouble dtin)
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
+  long long Nmet   = (SX)*(SY)*(SZMET)*gSIZE;
+  long long Nkris=(SX)*(SY)*(SZMET)*64;
   
   err = cudaMalloc(&d_xb_arr,   sizeof(ldouble)*Nxb);
+  err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);
   err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
   err = cudaMalloc(&d_flbx_arr, sizeof(ldouble)*NfluxX);
   err = cudaMalloc(&d_flby_arr, sizeof(ldouble)*NfluxY);
   err = cudaMalloc(&d_flbz_arr, sizeof(ldouble)*NfluxZ);
+  err = cudaMalloc(&d_g_arr,    sizeof(ldouble)*Nmet);
+  err = cudaMalloc(&d_G_arr,    sizeof(ldouble)*Nmet);
+  err = cudaMalloc(&d_gKr_arr,  sizeof(ldouble)*Nkris);
   
   // Copy data to device arrays
   
@@ -389,6 +441,12 @@ int calc_update_gpu(ldouble dtin)
   // copy conserved quantities from u (global array) to device
   printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
+
+  // copy metric and Christoffels
+  err = cudaMemcpy(d_g_arr, g, sizeof(ldouble)*Nmet, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_G_arr, G, sizeof(ldouble)*Nmet, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_gKr_arr, gKr, sizeof(ldouble)*Nkris, cudaMemcpyHostToDevice);
   
   // copy fluxes data from flbx,flby,flbz (global arrays) to device
   printf("H fluxes: %e %e %e %e %e %e\n",
@@ -412,7 +470,8 @@ int calc_update_gpu(ldouble dtin)
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
 						    d_xb_arr,
 						    d_flbx_arr, d_flby_arr, d_flbz_arr,
-						    d_u_arr);
+						    d_u_arr, d_p_arr,
+				                    d_g_arr, d_G_arr, d_gKr_arr);
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
   cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchrotnize?
@@ -438,7 +497,10 @@ int calc_update_gpu(ldouble dtin)
   cudaFree(d_flby_arr);
   cudaFree(d_flbz_arr);
   cudaFree(d_u_arr);
-  
+  cudaFree(d_p_arr);
+  cudaFree(d_g_arr);
+  cudaFree(d_G_arr);
+  cudaFree(d_gKr_arr);
 
   // set global timestep dt
   dt = dtin;
