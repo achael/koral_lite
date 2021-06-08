@@ -294,7 +294,7 @@ int calc_update_gpu(ldouble dtin)
 
 
   cudaEventSynchronize(stop);
-  ldouble tms = 0.;
+  float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
   printf("back from device %d, time: %0.2f\n\n",h_temp,tms);
   
