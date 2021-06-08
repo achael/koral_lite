@@ -161,17 +161,16 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   ldouble (*gg)[5],(*GG)[5],gdetu;
   ldouble *pp = &get_u(p_arr,0,ix,iy,iz);
   
-  int ix,iy,iz;
-  ix=geom->ix;
-  iy=geom->iy;
-  iz=geom->iz;
-  gg=geom->gg;
-  GG=geom->GG;
+  //ix=geom->ix;
+  //iy=geom->iy;
+  //iz=geom->iz;
+  gg=geom.gg;
+  GG=geom.GG;
 
   #if (GDETIN==0) //no metric determinant inside derivatives
   gdetu=1.;
   #else
-  gdetu=geom->gdet;
+  gdetu=geom.gdet;
   #endif
 
   ldouble dlgdet[3];
@@ -181,7 +180,7 @@ __device__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
   
   ldouble T[4][4];
   //calculating stress energy tensor components
-  //calc_Tij(pp,geom,T); // TODO
+  //calc_Tij(pp,&geom,T); // TODO
   for(ii=0;ii<4;ii++)
     for(jj=0;jj<4;jj++)
       T[ii][jj]=0.;
