@@ -4,6 +4,8 @@ extern "C" {
 
 }
 
+#include "kogpu.h"
+
 #define TB_SIZE 64
 #define ixTEST 13
 #define iyTEST 21
@@ -11,7 +13,8 @@ extern "C" {
 #define iiTEST 22222
 #define ivTEST 0
 
-// TODO get_u_device and get_ub_device unnecessary, replace with get_u and get_ub again?
+// TODO get_u_device and get_ub_device are unnecessary, replace with get_u and get_ub 
+
 /*
 // get data value from array u_arr of the quantity indexed iv
 // at the cell center indexed ix,iy,iz
@@ -46,6 +49,7 @@ __device__ ldouble get_ub_device(ldouble* ub_arr, int iv, int ix, int iy, int iz
 }
 */
 
+// TODO replace get_xb and get_size_x  everywhere
 // get grid coordinate on the cell wall indexed ic in dimension idim
 // copied from get_xb macro in ko.h
 __device__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
@@ -341,7 +345,7 @@ int calc_update_gpu(ldouble dtin)
   cudaEventSynchronize(stop);
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
-  printf("gpu time: %0.2f \n\n",tms);
+  printf("gpu update time: %0.2f \n",tms);
   
   // TODO Copy updated u back from device to global array u?
   //ldouble *u_tmp;
