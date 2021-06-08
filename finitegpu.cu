@@ -198,7 +198,8 @@ int calc_update_gpu(ldouble dtin)
   // printf("ERRORMEMESET (error code %s)!\n", cudaGetErrorString(err));
 
   calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, d_temp,
-						    d_loop0_ix, d_loop0_iy, d_loop0_iz);
+						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
+						    d_xb_arr);
   err = cudaPeekAtLastError();
   cudaDeviceSynchronize();
   // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
