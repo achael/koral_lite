@@ -266,7 +266,7 @@ int calc_update_gpu(ldouble dtin)
   // Launch calc_update_gpu_kernel
 
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
-  printf("Test %d\n", threadblocks); fflush(stdout);
+  printf("\nTest %d\n", threadblocks); fflush(stdout);
 
   err = cudaMemset(d_temp,0,sizeof(int));
   // printf("ERRORMEMESET (error code %s)!\n", cudaGetErrorString(err));
