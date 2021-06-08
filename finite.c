@@ -375,92 +375,6 @@ calc_wavespeeds()
   return 0;
 }
 
-
-int calc_update(ldouble dtin)
-{
-
-  int ii,ix,iy,iz,iv;
-  //#pragma omp barrier  
-  //#pragma omp parallel for private(ii,ix,iy,iz,iv) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain 
-  {
-    
-      ix=loop_0[ii][0];
-      iy=loop_0[ii][1];
-      iz=loop_0[ii][2]; 
-
-      // Source term
-      ldouble ms[NV],gs[NV],val,du;
-
-      if(is_cell_active(ix,iy,iz)==0)
-      {
-        // Source terms applied only for active cells	
-	PLOOP(iv) ms[iv]=0.; 
-      }
-      else
-      {
-        // Get metric source terms ms[iv] and any other source terms gs[iv], and save combined source terms in ms[iv]
-	f_metric_source_term(ix,iy,iz,ms);
-	f_general_source_term(ix,iy,iz,gs);
-
-	PLOOP(iv) ms[iv]+=gs[iv];
-      }
-      
-      // Get the cell size in the three directions
-      ldouble dx=get_size_x(ix,0);
-      ldouble dy=get_size_x(iy,1);
-      ldouble dz=get_size_x(iz,2);
-
-      int doxl,doxr,doyl,doyr,dozl,dozr;
-      doxl=doxr=doyl=doyr=dozl=dozr=1;
-
-      //timestep
-      dt=dtin;  // dtin is an input parameter to op_explicit
-      
-      //update all conserved according to fluxes and source terms
-      for(iv=0;iv<NV;iv++)
-      {
-	ldouble flxr,flyr,flzr,flxl,flyl,flzl;
-	  
-        // Get the fluxes on the six faces.
-	// Recall that flbx, flby, flbz are the fluxes at the left walls of cell ix, iy, iz.
-	// To get the right fluxes, we need flbx(ix+1,iy,iz), etc.
-	flxl=get_ub(flbx,iv,ix,iy,iz,0);
-	flxr=get_ub(flbx,iv,ix+1,iy,iz,0);
-	flyl=get_ub(flby,iv,ix,iy,iz,1);
-	flyr=get_ub(flby,iv,ix,iy+1,iz,1);
-	flzl=get_ub(flbz,iv,ix,iy,iz,2);
-	flzr=get_ub(flbz,iv,ix,iy,iz+1,2);
-		  
-	// Compute Delta U from the six fluxes
-	du = -(flxr-flxl)*dt/dx - (flyr-flyl)*dt/dy - (flzr-flzl)*dt/dz;
-
-	// Compute new conserved by adding Delta U and the source term
-	val = get_u(u,iv,ix,iy,iz) + du + ms[iv]*dt;
-
-	// Save the new conserved to memory
-#ifdef SKIPHDEVOLUTION
-	if(iv>=NVMHD)
-#endif
-#ifdef RADIATION
-#ifdef SKIPRADEVOLUTION
-#ifdef EVOLVEPHOTONNUMBER
-	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
-#else
-	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
-#endif
-#endif  // SKIPRADEVOLUTION
-#endif  // RADIATION
-#ifdef SKIPHDBUTENERGY
-	if(iv>=NVMHD || iv==UU)
-#endif
-	  set_u(u,iv,ix,iy,iz,val);	 
-
-      }  // for(iv=0;iv<NV;iv++)
-
-  }  // for(ii=0;ii<Nloop_0;ii++)
-}
-
 //**********************************************************************
 /*! \fn int save_wavespeeds(int ix, int iy, int iz, ldouble *aaa)
  \brief saves characteristic wavespeeds from aaa[] to the global arrays. Also compute timesteps. 
@@ -558,6 +472,91 @@ save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
     }
   return 0;
 }
+
+
+int calc_update(ldouble dtin)
+{
+
+  int ii,ix,iy,iz,iv;
+  //#pragma omp barrier  
+  //#pragma omp parallel for private(ii,ix,iy,iz,iv) schedule (static)
+  for(ii=0;ii<Nloop_0;ii++) //domain 
+  {
+    
+      ix=loop_0[ii][0];
+      iy=loop_0[ii][1];
+      iz=loop_0[ii][2]; 
+
+      // Source term
+      ldouble ms[NV],gs[NV],val,du;
+
+      if(is_cell_active(ix,iy,iz)==0)
+      {
+        // Source terms applied only for active cells	
+	PLOOP(iv) ms[iv]=0.; 
+      }
+      else
+      {
+        // Get metric source terms ms[iv] and any other source terms gs[iv], and save combined source terms in ms[iv]
+	f_metric_source_term(ix,iy,iz,ms);
+	f_general_source_term(ix,iy,iz,gs);
+
+	PLOOP(iv) ms[iv]+=gs[iv];
+      }
+      
+      // Get the cell size in the three directions
+      ldouble dx=get_size_x(ix,0);
+      ldouble dy=get_size_x(iy,1);
+      ldouble dz=get_size_x(iz,2);
+
+      //timestep
+      dt=dtin;  // dtin is an input parameter to op_explicit
+      
+      //update all conserved according to fluxes and source terms
+      for(iv=0;iv<NV;iv++)
+      {
+	ldouble flxr,flyr,flzr,flxl,flyl,flzl;
+	  
+        // Get the fluxes on the six faces.
+	// Recall that flbx, flby, flbz are the fluxes at the left walls of cell ix, iy, iz.
+	// To get the right fluxes, we need flbx(ix+1,iy,iz), etc.
+	flxl=get_ub(flbx,iv,ix,iy,iz,0);
+	flxr=get_ub(flbx,iv,ix+1,iy,iz,0);
+	flyl=get_ub(flby,iv,ix,iy,iz,1);
+	flyr=get_ub(flby,iv,ix,iy+1,iz,1);
+	flzl=get_ub(flbz,iv,ix,iy,iz,2);
+	flzr=get_ub(flbz,iv,ix,iy,iz+1,2);
+		  
+	// Compute Delta U from the six fluxes
+	du = -(flxr-flxl)*dt/dx - (flyr-flyl)*dt/dy - (flzr-flzl)*dt/dz;
+
+	// Compute new conserved by adding Delta U and the source term
+	val = get_u(u,iv,ix,iy,iz) + du + ms[iv]*dt;
+
+	// Save the new conserved to memory
+#ifdef SKIPHDEVOLUTION
+	if(iv>=NVMHD)
+#endif
+#ifdef RADIATION
+#ifdef SKIPRADEVOLUTION
+#ifdef EVOLVEPHOTONNUMBER
+	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
+#else
+	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
+#endif
+#endif  // SKIPRADEVOLUTION
+#endif  // RADIATION
+#ifdef SKIPHDBUTENERGY
+	if(iv>=NVMHD || iv==UU)
+#endif
+	  set_u(u,iv,ix,iy,iz,val);	 
+
+      }  // for(iv=0;iv<NV;iv++)
+
+  }  // for(ii=0;ii<Nloop_0;ii++)
+}
+
+
 
 //**********************************************************************
 /*! \fn int save_timesteps
@@ -733,6 +732,9 @@ op_explicit(ldouble t, ldouble dtin)
 
   //**********************************************************************
   // Next interpolate to the cell walls and calculate left and right-biased fluxes
+  //calc_interp();
+  
+#pragma omp barrier
 #pragma omp parallel for private(ii,ix,iy,iz,iv)  schedule (static)
   for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
@@ -1257,92 +1259,19 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************
   // Evolve the conserved quantities
 
-
-  calc_update(dtin);
-
 #ifdef GPUKO
   calc_update_gpu(dtin);
 #endif
-  /*  
-#pragma omp barrier  
-#pragma omp parallel for private(ii,ix,iy,iz,iv) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain 
-  {
-      ix=loop_0[ii][0];
-      iy=loop_0[ii][1];
-      iz=loop_0[ii][2]; 
 
-      // Source term
-      ldouble ms[NV],gs[NV],val,du;
+  struct timespec temp_clock;
+  
+  my_clock_gettime(&temp_clock);
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9);
+  
+  calc_update(dtin);
 
-      if(is_cell_active(ix,iy,iz)==0)
-      {
-        // Source terms applied only for active cells	
-	PLOOP(iv) ms[iv]=0.; 
-      }
-      else
-      {
-        // Get metric source terms ms[iv] and any other source terms gs[iv], and save combined source terms in ms[iv]
-	f_metric_source_term(ix,iy,iz,ms);
-	f_general_source_term(ix,iy,iz,gs);
-
-	PLOOP(iv) ms[iv]+=gs[iv];
-      }
-      
-      // Get the cell size in the three directions
-      ldouble dx=get_size_x(ix,0);
-      ldouble dy=get_size_x(iy,1);
-      ldouble dz=get_size_x(iz,2);
-
-      int doxl,doxr,doyl,doyr,dozl,dozr;
-      doxl=doxr=doyl=doyr=dozl=dozr=1;
-
-      //timestep
-      dt=dtin;  // dtin is an input parameter to op_explicit
-      
-      //update all conserved according to fluxes and source terms
-      for(iv=0;iv<NV;iv++)
-      {
-	ldouble flxr,flyr,flzr,flxl,flyl,flzl;
-	  
-        // Get the fluxes on the six faces.
-	// Recall that flbx, flby, flbz are the fluxes at the left walls of cell ix, iy, iz.
-	// To get the right fluxes, we need flbx(ix+1,iy,iz), etc.
-	flxl=get_ub(flbx,iv,ix,iy,iz,0);
-	flxr=get_ub(flbx,iv,ix+1,iy,iz,0);
-	flyl=get_ub(flby,iv,ix,iy,iz,1);
-	flyr=get_ub(flby,iv,ix,iy+1,iz,1);
-	flzl=get_ub(flbz,iv,ix,iy,iz,2);
-	flzr=get_ub(flbz,iv,ix,iy,iz+1,2);
-		  
-	// Compute Delta U from the six fluxes
-	du = -(flxr-flxl)*dt/dx - (flyr-flyl)*dt/dy - (flzr-flzl)*dt/dz;
-
-	// Compute new conserved by adding Delta U and the source term
-	val = get_u(u,iv,ix,iy,iz) + du + ms[iv]*dt;
-
-	// Save the new conserved to memory
-#ifdef SKIPHDEVOLUTION
-	if(iv>=NVMHD)
-#endif
-#ifdef RADIATION
-#ifdef SKIPRADEVOLUTION
-#ifdef EVOLVEPHOTONNUMBER
-	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
-#else
-	if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
-#endif
-#endif  // SKIPRADEVOLUTION
-#endif  // RADIATION
-#ifdef SKIPHDBUTENERGY
-	if(iv>=NVMHD || iv==UU)
-#endif
-	  set_u(u,iv,ix,iy,iz,val);	 
-
-      }  // for(iv=0;iv<NV;iv++)
-
-  }  // for(ii=0;ii<Nloop_0;ii++)
-  */
+  stop_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("cpu update time: %0.2lf \n", (stop_time-start_time)*1.e6);
 
    /************************************************************************/
    /********* explicit *** RADIATION COUPLING  *****************************/
@@ -1379,6 +1308,7 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************  
   // Compute postexplicit primitives and count entropy inversions
   calc_u2p(1,1);
+
   //**********************************************************************
 	    
   // Entropy Mixing

@@ -4,6 +4,7 @@ extern "C" {
 
 }
 
+#define TB_SIZE 64
 #define ixTEST 13
 #define iyTEST 21
 #define izTEST 8
@@ -64,7 +65,7 @@ __device__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 }
 
 
-__global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array, 
+__global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
 				       ldouble* xb_arr,
 				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
@@ -84,9 +85,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
   ii = blockIdx.x * blockDim.x + threadIdx.x;
   if(ii >= Nloop_0) return;
-  
-  atomicAdd(d_array, 1); // NOTE TODO: placeholder test
-  
+    
   // get indices from 1D arrays
   ix=loop_0_ix[ii];
   iy=loop_0_iy[ii];
@@ -125,7 +124,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
   dz = get_size_x_device(xb_arr,iz,2); //dz=get_size_x(iz,2);
 
   // test sizes 
-  if(ii==0)
+  if(ii==iiTEST)
   {
     printf("D size_x 0 %e \n", get_size_x_device(xb_arr,ixTEST,0));
     printf("D size_x 1 %e \n", get_size_x_device(xb_arr,iyTEST,1));
@@ -187,8 +186,6 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, int* d_array,
 int calc_update_gpu(ldouble dtin)
 {
 
-  int TB_SIZE = 64;   
-  int *d_temp, h_temp=0;
   int *d_loop0_ix,*d_loop0_iy,*d_loop0_iz;
   int *h_loop0_ix,*h_loop0_iy,*h_loop0_iz;
   ldouble *d_xb_arr;
@@ -202,7 +199,6 @@ int calc_update_gpu(ldouble dtin)
   // Allocate device arrays 
   
   // printf("ERROR (error code %s)!\n", cudaGetErrorString(err));
-  err = cudaMalloc(&d_temp, sizeof(int));
 
   err = cudaMalloc(&d_loop0_ix, sizeof(int)*Nloop_0);
   err = cudaMalloc(&d_loop0_iy, sizeof(int)*Nloop_0);
@@ -272,11 +268,8 @@ int calc_update_gpu(ldouble dtin)
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
   printf("\nTest %d\n", threadblocks); fflush(stdout);
 
-  err = cudaMemset(d_temp,0,sizeof(int));
-  // printf("ERRORMEMESET (error code %s)!\n", cudaGetErrorString(err));
-
   cudaEventRecord(start);
-  calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, d_temp,
+  calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, 
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
 						    d_xb_arr,
 						    d_flbx_arr, d_flby_arr, d_flbz_arr,
@@ -287,16 +280,10 @@ int calc_update_gpu(ldouble dtin)
   
   // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
 
-
-  err =  cudaMemcpy(&h_temp, d_temp, sizeof(int), cudaMemcpyDeviceToHost);
-  // printf("ERROR-Memcpy (error code %s)!\n", cudaGetErrorString(err));
-
-
-
   cudaEventSynchronize(stop);
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
-  printf("back from device %d, time: %0.2f\n\n",h_temp,tms);
+  printf("back from device %d, time: %e\n\n",tms);
   
   // TODO Copy updated u back from device to global array u?
   //err = cudaMemcpy(&u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
@@ -312,7 +299,6 @@ int calc_update_gpu(ldouble dtin)
   cudaFree(d_flbz_arr);
   cudaFree(d_u_arr);
   
-  cudaFree(d_temp);
 
   // set global timestep dt
   dt = dtin;
