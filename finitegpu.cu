@@ -25,22 +25,24 @@ ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
 
 __device__ __host__ int is_cell_active_device (int ix, int iy, int iz)
 {
-  //by default ALWAYS active -- this may change
+  //NOTE: by default ALWAYS active -- this may change
   return 1;
 }
 
-// copied from get_xb macro in ko.h
+// TODO replace get_x, get_xb, and get_gKr   everywhere
+
+// get grid coordinate at the cell center indexed ic in dimeinsion idim
+// copied from get_x macro in ko.h
 __device__ __host__ ldouble get_x_device(ldouble* x_arr, int ic, int idim)
 {
   ldouble x_out;
   x_out = (idim==0 ? x_arr[ic+NG] :		     
-           (idim==1 ? x_arr[ic+NG + NX+2*NG] :  
-	   (idim==2 ? x_arr[ic+NG + NX+2*NG + NY+2*NG ] : 0.)));
+          (idim==1 ? x_arr[ic+NG + NX+2*NG] :  
+	  (idim==2 ? x_arr[ic+NG + NX+2*NG + NY+2*NG ] : 0.)));
 
   return x_out;
 }
 
-// TODO replace get_xb and get_size_x  everywhere
 // get grid coordinate on the cell wall indexed ic in dimension idim
 // copied from get_xb macro in ko.h
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
@@ -362,7 +364,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
 //  if(iv>=NVMHD || iv==UU)
 //#endif
 	
-    //set_u(u,iv,ix,iy,iz,val);	 
+    //set_u(u_arr,iv,ix,iy,iz,val);	 
 
   }  
 }

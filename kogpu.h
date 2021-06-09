@@ -63,3 +63,13 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
 
 __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
 		                        		     ldouble *bcon, ldouble *bcov, ldouble *bsq);
+
+///////////////////////////////////////////////////////////////
+// u2pgpu.cu  /////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+
+
+// kernel
+__global__ void calc_primitives_kernel(int Nloop_0, int setflags,
+				       ldouble *u_arr, ldouble *p_arr,
+				       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr)
