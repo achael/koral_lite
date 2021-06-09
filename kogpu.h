@@ -69,7 +69,7 @@ __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldoubl
 ///////////////////////////////////////////////////////////////
 // u2pgpu.cu  /////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-
+__device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2]);
 
 // kernel
 __global__ void calc_primitives_kernel(int Nloop_0, int setflags,

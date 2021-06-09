@@ -70,10 +70,10 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   //{
   //  u2p_solver_Bonly(uu,pp,&geom); // invert only the magnetic field, the rest will be overwritten
   //}
-  else
-  {
+  //else
+  //{
     u2p_device(uu,pp,&geom,corrected,fixups); // regular inversion
-  }
+    //}
 
     //TODO
   /*
