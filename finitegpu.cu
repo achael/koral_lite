@@ -167,7 +167,6 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 			                            ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr)
 {
 
-  if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST) printf("in metric source term\n");
      
   struct geometry geom;
   fill_geometry_device(ix,iy,iz,x_arr,&geom,g_arr,G_arr);
@@ -214,21 +213,15 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
   //terms with Christoffels
   for(int k=0;k<4;k++)
+  {
     for(int l=0;l<4;l++)
-      {
-	ss[1]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,3,k,ix,iy,iz);
-
-	
- if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST)
-   {
-     printf("T%d%d: %e \n",k,l,T[k][l]);
-     //printf("gKr%d%d: %e %e %e %e\n",k,l,get_gKr_device(gKr_arr,l,0,k,ix,iy,iz),get_gKr_device(gKr_arr,l,1,k,ix,iy,iz),get_gKr_device(gKr_arr,l,2,k,ix,iy,iz),get_gKr_device(gKr_arr,l,3,k,ix,iy,iz));
-   }
-       
-      }
+    {
+      ss[1]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,0,k,ix,iy,iz);
+      ss[2]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,1,k,ix,iy,iz);
+      ss[3]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,2,k,ix,iy,iz);
+      ss[4]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,3,k,ix,iy,iz);       
+    }
+  }
 
 
 #if (GDETIN==0)
@@ -241,14 +234,14 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
   //terms with dloggdet  
   for(int l=1;l<4;l++)
-    {
-      ss[0]+=-dlgdet[l-1]*pp[RHO]*ucon[l];
-      ss[1]+=-dlgdet[l-1]*(T[l][0]+pp[RHO]*ucon[l]);
-      ss[2]+=-dlgdet[l-1]*(T[l][1]);
-      ss[3]+=-dlgdet[l-1]*(T[l][2]);
-      ss[4]+=-dlgdet[l-1]*(T[l][3]);
-      ss[5]+=-dlgdet[l-1]*pp[ENTR]*ucon[l];
-    }   
+  {
+    ss[0]+=-dlgdet[l-1]*pp[RHO]*ucon[l];
+    ss[1]+=-dlgdet[l-1]*(T[l][0]+pp[RHO]*ucon[l]);
+    ss[2]+=-dlgdet[l-1]*(T[l][1]);
+    ss[3]+=-dlgdet[l-1]*(T[l][2]);
+    ss[4]+=-dlgdet[l-1]*(T[l][3]);
+    ss[5]+=-dlgdet[l-1]*pp[ENTR]*ucon[l];
+  }   
 #endif
   
   return 0;
