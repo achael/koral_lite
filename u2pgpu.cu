@@ -365,8 +365,7 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
     corrected[1]=1;
 
 
-  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-     printf("End of u2p_device\n");
+  //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("End of u2p_device\n");
   
   return ret;
 } 
@@ -418,8 +417,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   struct geometry *geom
   = (struct geometry *) ggg;
 
-  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-    printf("In u2p_solver_W_device!\n");
+  //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("In u2p_solver_W_device!\n");
   
   ldouble rho,uint,w,W,alpha,D,Sc;
   ldouble ucon[4],ucov[4],utcon[4],utcov[4],ncov[4],ncon[4];
@@ -632,8 +630,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   int iter=0, fu2pret;
   do
   {
-    if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-      printf("Hello from Newton-Raphson loop\n");
+    //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("Hello from Newton-Raphson loop\n");
     
     ldouble Wprev=W;
     iter++;
@@ -807,8 +804,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   if(verbose>0)
     printf("u2p_solver returns 0\n");
 
-  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-     printf("End of u2p_solver_W_device\n");
+  //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("End of u2p_solver_W_device\n");
   
   return 0; 
 }
