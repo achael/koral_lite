@@ -1080,15 +1080,20 @@ int calc_u2p_gpu(int setflags)
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu u2p time: %0.2f \n",tms);
 
+  
   ldouble* p_tmp;
-  if((p_tmp=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
+  if((p_tmp=(ldouble*)malloc(Nprim*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  /*
   err = cudaMemcpy(&p_tmp, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy of d_p_arr to p_tmp\n");
   printf("gpu u2p pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(p_tmp, iv, ixTEST, iyTEST, izTEST));
   printf("\n");
+  */
   free(p_tmp);
-    
+  
+  
   // TODO Copy updated p back from device to global array p?
   //err = cudaMemcpy(&p, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
