@@ -356,6 +356,10 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
     corrected[0]=1;
   if(radcor>0)
     corrected[1]=1;
+
+
+  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
+     printf("End of u2p_device\n");
   
   return ret;
 } 
@@ -795,6 +799,9 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   if(verbose>0)
     printf("u2p_solver returns 0\n");
+
+  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
+     printf("End of u2p_solver_W_device\n");
   
   return 0; 
 }
