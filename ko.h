@@ -1036,6 +1036,7 @@ int calc_u2p(int type,int setflags);
 int calc_wavespeeds();
 int do_correct();
 int calc_interp();
+int calc_fluxes();
 int calc_update(ldouble dtin);
 int calc_update_gpu(ldouble dtin);
 int push_geometry();

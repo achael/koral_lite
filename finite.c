@@ -487,7 +487,6 @@ int calc_interp()
   #endif
   int perform_sweep = 1; //Brandon - Added for special conditions where a sweep should not be performed under SPECIAL_BC_CHECK
   
-#pragma omp barrier
 #pragma omp parallel for private(ii,ix,iy,iz,iv)  schedule (static)
   for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
@@ -995,8 +994,8 @@ int calc_update(ldouble dtin)
 {
 
   int ii,ix,iy,iz,iv;
-  //#pragma omp barrier  
-  //#pragma omp parallel for private(ii,ix,iy,iz,iv) schedule (static)
+
+#pragma omp parallel for private(ii,ix,iy,iz,iv) schedule (static)
   for(ii=0;ii<Nloop_0;ii++) //domain 
   {
     
@@ -1248,520 +1247,16 @@ op_explicit(ldouble t, ldouble dtin)
 
   //**********************************************************************
   // Next interpolate to the cell walls and calculate left and right-biased fluxes
+#pragma omp barrier
   calc_interp();
 
-  /*
-  
-  int perform_sweep = 1; //Brandon - Added for special conditions where a sweep should not be performed under SPECIAL_BC_CHECK
-  #ifdef SPECIAL_BC_CHECK
-  int giix,giiy,giiz;
-  #endif
-
-#pragma omp barrier
-#pragma omp parallel for private(ii,ix,iy,iz,iv)  schedule (static)
-  for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
-  {
-      ix=loop_1[ii][0];
-      iy=loop_1[ii][1];
-      iz=loop_1[ii][2];
-
-      #ifdef SPECIAL_BC_CHECK
-      giix = ix + TOI;
-      giiy = iy + TOJ;
-      giiz = iz + TOK;
-      #endif
-
-      #ifndef MPI4CORNERS
-      if(if_outsidegc(ix,iy,iz)==1) continue; //avoid corners
-      #endif
-     
-      #ifdef SPECIAL_BC_CHECK
-      #include PR_BC_SPECIAL_LOOP
-      if(ret_val == 4) 
-      {
-        continue; //Exclude 'corners' in stream region
-      }
-      #endif
-
-      //create arrays for interpolating conserved quantities
-      struct geometry geom;
-      //ldouble x0[3],x0l[3],x0r[3],xm1[3],xp1[3];
-      ldouble fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
-      ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV];
-      ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
-      ldouble fd_s0[NV],fd_sp1[NV],fd_sp2[NV],fd_sm1[NV],fd_sm2[NV];
-      ldouble fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
-      ldouble fd_pLr[NV],fd_pLl[NV],fd_pRl[NV],fd_pRr[NV];
-      ldouble fd_pr[NV],fd_pl[NV];
-      ldouble fd_sLr[NV],fd_sLl[NV],fd_sRl[NV],fd_sRr[NV];
-      ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-      ldouble a0[2],am1[2],ap1[2],al,ar,amax,dx;  
-      ldouble ffRl[NV],ffRr[NV],ffLl[NV],ffLr[NV];
-      ldouble ffl[NV],ffr[NV]; 
-      ldouble dx0, dxm2, dxm1, dxp1, dxp2;
-      ldouble minmod_theta=MINMOD_THETA;
-      int reconstrpar;
-      int i,dol,dor;
-
-
-
-      //**********************************************************************
-      // x 'sweep'
-      //**********************************************************************
-
-      perform_sweep = 1;
-
-#ifdef MPI4CORNERS
-      if(NX>1 && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1 && perform_sweep == 1) //needed to calculate face fluxes for flux-CT divB enforcement
-#else
-      if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ && perform_sweep == 1)
-#endif
-      {
-		dol=dor=1;
-		if(ix<0) dol=0;
-		if(ix>=NX) dor=0;
-
-                #ifdef SPECIAL_BC_CHECK //Don't do l/r fluxes when at GC - Brandon
-                #ifndef SEARCH_STREAM_BOUNDARY
-                if(TNY>1 && TNZ==1)
-                {
-                  if(giiy >= STREAM_IYT && giiy <= STREAM_IYB)
-                  {
-                    if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3)) dor=0;
-                  }
-                }
-                else if(TNY==1 && TNZ>1)
-                {
-                  if(giiz >= STREAM_IZT && giiz <= STREAM_IZB)
-                  {
-                    if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3)) dor=0;
-                  }
-                }
-                else if(TNY>1 && TNZ>1)
-                {
-                  #ifndef STREAM_RING
-                  if(giiy >= STREAM_IYT && giiy <= STREAM_IYB && giiz >= STREAM_IZT && giiz <= STREAM_IZB)
-                  #else
-                  if(giiy >= STREAM_IYT && giiy <= STREAM_IYB)
-                  #endif
-                  {
-                    if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3)) dor=0;
-                  }
-                }
-                #endif
-                #endif
-
-                // is_cell_active is currently always 1
-		// skip flux calculation if not needed
-		if((ix==0 && is_cell_active(ix,iy,iz)==0) || (ix>0 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix-1,iy,iz)==0))
-		  dol=0;
-		if((ix==NX-1 && is_cell_active(ix,iy,iz)==0) || (ix<NX-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix+1,iy,iz)==0))
-		  dor=0;
-		
-                // x0[0] is x of current cell        
-		//x0[0]=get_x(ix,0);
-
-                // xm1[0], xp1[0] are x of left and right cell centers. Are these quantities used anywhere?
-		//xm1[0]=get_x(ix-1,0);
-	        //xp1[0]=get_x(ix+1,0);
-		
-                // x0l[0,1,2] are x, y, z of left x-wall, x0r[0,1,2] are x, y, z of right x-wall,
-		//x0l[0]=get_xb(ix,0);
-		//x0l[1]=xm1[1]=get_x(iy,1); 
-		//x0l[2]=xm1[2]=get_x(iz,2);
-
-		//x0r[0]=get_xb(ix+1,0);
-		//x0r[1]=xp1[1]=get_x(iy,1);
-		//x0r[2]=xp1[2]=get_x(iz,2);
-	      
-                // dx0, dxm1, dxp1 are x-sizes (wall to wall) of cells ix, ix-1, ix+1, dxm2m, dxp2 are sizes of cells ix-2, ix+2		
-		dx0=get_size_x(ix,0);    
-		dxm1=get_size_x(ix-1,0);    
-		dxp1=get_size_x(ix+1,0);    
-	  
-		if(INT_ORDER>1)
-		{
-		  dxm2=get_size_x(ix-2,0);    
-		  dxp2=get_size_x(ix+2,0);    
-		}
-	  
-		for(i=0;i<NV;i++)
-		{
-		  //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		  fd_p0[i] =get_u(p,i,ix,iy,iz);
-		  fd_pp1[i]=get_u(p,i,ix+1,iy,iz);
-		  fd_pm1[i]=get_u(p,i,ix-1,iy,iz);
-            
-		  if(INT_ORDER>1)
-		  {
-		    fd_pm2[i]=get_u(p,i,ix-2,iy,iz);
-		    fd_pp2[i]=get_u(p,i,ix+2,iy,iz);
-		  }
-		}
-
-		reconstrpar=0;
-
-#ifdef REDUCEORDERWHENNEEDED
-		reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-		minmod_theta=MINMOD_THETA;
-#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
-		minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-
-                // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
-		avg2point(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);   
-
-		// if(ix>0)
-		if(dol) //no need to calculate at left face of first GC if dol=0
-		{
-                  // Left wall of current cell: compute fluxes and save in array ffl[NV]
- 		  fill_geometry_face(ix,iy,iz,0,&geom);
-		  check_floors_mhd(fd_pl,VELPRIM,&geom);
-		  f_flux_prime(fd_pl,0,ix,iy,iz,ffl,1);
-		}
-
-		// if(ix<NX)
-		if(dor) //no need to calculate at right face of first GC if dor=0
-		{
-                  // Right wall of current cell: compute fluxes and save in array ffr[NV]
-		  fill_geometry_face(ix+1,iy,iz,0,&geom);
-		  check_floors_mhd(fd_pr,VELPRIM,&geom);
-		  f_flux_prime(fd_pr,0,ix+1,iy,iz,ffr,0);
-		}
-
-		//save interpolated values to memory
-                //Note that l and r of a given cell ix are the left and right wall of that cell
-		//whereas L and R of given ix are quantities to the left and right of wall ix
-		for(i=0;i<NV;i++)
-		{
-                  // Save fd_pl in array pbRx (Primitive_R) of wall ix
-                  // Save fd_pr in array pbLx (Primitive_L) of wall ix+1
-		  set_ubx(pbRx,i,ix,iy,iz,fd_pl[i]);
-		  set_ubx(pbLx,i,ix+1,iy,iz,fd_pr[i]);
-		    
-		  if(dol)
-                  // Save ffl in array flRx (F_R) of wall ix
-		  set_ubx(flRx,i,ix,iy,iz,ffl[i]);
-		  if(dor)
-                  // Save ffr in array flLx (F_L) of wall ix+1 
-		  set_ubx(flLx,i,ix+1,iy,iz,ffr[i]);
-		} 
-       }  // if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
-      
-      //**********************************************************************
-      //y 'sweep'
-      //**********************************************************************
-  
-      perform_sweep = 1;
-#ifdef SPECIAL_BC_CHECK
-      //if(giix > STREAM_IX)
-      //if(giix > STREAM_IX && giix <= (STREAM_IX+1))
-      if(giix > STREAM_IX && giix <= (STREAM_IX+3))
-      {
-#ifdef MPI4CORNERS
-        if(TNY>1 && TNZ==1)
-        {
-          if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
-        }
-        else if(TNY>1 && TNZ>1)
-        {
-          #ifndef STREAM_RING
-          if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB-1))
-          { 
-            if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
-          }
-          #else
-          if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
-          #endif
-        }
-#else
-        if(TNY>1 && TNZ==1)
-        {
-          if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
-        }
-        else if(TNY>1 && TNZ>1)
-        {
-          #ifndef STREAM_RING
-          if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB-1))
-          { 
-            if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
-          }
-          #else
-          if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
-          #endif
-        }
-#endif
-      }
-#endif
-
-#ifdef MPI4CORNERS
-      if(NY>1 && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1 && perform_sweep == 1)
-#else
-      if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ && perform_sweep == 1)
-#endif
-      {
-		dol=dor=1;
-		if(iy<0) dol=0;
-		if(iy>=NY) dor=0;
-
-                // is_cell_active is currently always 1
-                // skip flux calculation if not needed
-		if((iy==0 && is_cell_active(ix,iy,iz)==0) || (iy>0 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy-1,iz)==0))
-		  dol=0;
-             
-		if((iy==NY-1 && is_cell_active(ix,iy,iz)==0) || (iy<NY-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy+1,iz)==0))
-		  dor=0;
-        
-                // x0[1] is y of current cell        
-	        //x0[1]=get_x(iy,1);
-
-                // xm1[1], xp1[1] are y of left and right cell centers. Are these quantities used anywhere?
-		//xm1[1]=get_x(iy-1,1);
-                //xp1[1]=get_x(iy+1,1);
-		
-                // x0l[0,1,2] are x, y, z of left y-wall, x0r[0,1,2] are x, y, z of right y-wall,		
-	 	//x0l[1]=get_xb(iy,1);
-		//x0l[0]=xm1[0]=get_x(ix,0); 
-		//x0l[2]=xm1[2]=get_x(iz,2);
-
-		//x0r[1]=get_xb(iy+1,1);
-		//x0r[0]=xp1[0]=get_x(ix,0);
-		//x0r[2]=xp1[2]=get_x(iz,2);
-
-                // dx0, dxm1, dxp1 are y-sizes (wall to wall) of cells iy, iy-1, iy+1, dxm2m, dxp2 are sizes of cells iy-2, iy+2
-		dx0=get_size_x(iy,1);    
-		dxm1=get_size_x(iy-1,1);    
-		dxp1=get_size_x(iy+1,1);    
-	
-		if(INT_ORDER>1)
-		{
-		  dxm2=get_size_x(iy-2,1);  
-		  dxp2=get_size_x(iy+2,1);
-		}    
-		  
-		for(i=0;i<NV;i++)
-		{
-                  //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		  fd_p0[i]=get_u(p,i,ix,iy,iz);
-		  fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
-		  fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
-		  if(INT_ORDER>1)
-		  {
-		    fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
-		    fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
-		  }
-		}
-	  
-		reconstrpar=0;
-#ifdef REDUCEORDERWHENNEEDED
-		reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-
-		minmod_theta=MINMOD_THETA;
-#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
-		minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-
-                // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
-                avg2point(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
-
-		//iy>0
-		if(dol) //no need to calculate at left face of first GC if dol=0
-		{
-                  // Left wall of current cell: compute fluxes and save in array ffl[NV]
-		  fill_geometry_face(ix,iy,iz,1,&geom);
-		  check_floors_mhd(fd_pl,VELPRIM,&geom);
-		  f_flux_prime(fd_pl,1,ix,iy,iz,ffl,1);
-		}
-
-		//iy<NY
-		if(dor) //no need to calculate at right face of first GC if dor=0
-		{
-                  // Right wall of current cell: compute fluxes and save in array ffr[NV]
-		  fill_geometry_face(ix,iy+1,iz,1,&geom);
-		  check_floors_mhd(fd_pr,VELPRIM,&geom);
-		  f_flux_prime(fd_pr,1,ix,iy+1,iz,ffr,0);   	          
-		}
-
-                //save interpolated values to memory
-                //Note that l and r of a given cell iy are the left and right wall of that cell,
-		//whereas L and R of given iy are quantities to the left and right of wall iy
-		for(i=0;i<NV;i++)
-		{
-                  // Save fd_pl in array pbRy (Primitive_R) of wall iy
-                  // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
-		  set_uby(pbRy,i,ix,iy,iz,fd_pl[i]);
-		  set_uby(pbLy,i,ix,iy+1,iz,fd_pr[i]);
-
-		  if(dol)
-                  // Save ffl in array flRy (F_R) of wall iy
-		  set_uby(flRy,i,ix,iy,iz,ffl[i]);
-		  if(dor)
-                  // Save ffr in array flLy (F_R) of wall iy+1
-		  set_uby(flLy,i,ix,iy+1,iz,ffr[i]);
-		}
-      }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
-
-      //**********************************************************************
-      //z 'sweep'
-      //**********************************************************************
-	      
-      perform_sweep = 1;
-
-#ifdef SPECIAL_BC_CHECK
-      if(giix > STREAM_IX && giix <= (STREAM_IX+3))
-      {
-#ifdef MPI4CORNERS
-        if(TNY==1 && TNZ>1)
-        {
-          if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB+1)) perform_sweep = 0;
-        }
-        else if(TNY>1 && TNZ>1)
-        {
-          #ifndef STREAM_RING
-          if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB-1))
-          { 
-            if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
-          }
-          #else
-          if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
-          #endif
-        }
-#else
-        if(TNY==1 && TNZ>1)
-        {
-          if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB+1)) perform_sweep = 0;
-        }
-        else if(TNY>1 && TNZ>1)
-        {
-          #ifndef STREAM_RING
-          if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB-1))
-          { 
-            if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
-          }
-          #else
-          if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
-          #endif
-        }
-#endif
-      }
-#endif
-
-#ifdef MPI4CORNERS
-      if(NZ>1 && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1 && perform_sweep == 1)
-#else
-      if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY && perform_sweep == 1)
-#endif
-      {
-	        dol=dor=1;
-                if(iz<0) dol=0;
-                if(iz>=NZ) dor=0;
-         
-                // is_cell_active is currently always 1
-                // skip flux calculation if not needed
-                if((iz==0 && is_cell_active(ix,iy,iz)==0) || (iz>0 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy,iz-1)==0))
-                  dol=0;
-                if((iz==NZ-1 && is_cell_active(ix,iy,iz)==0) || (iz<NZ-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy,iz+1)==0))
-                  dor=0;
-         
-                // x0[2] is z of current cell        
-	        //x0[2]=get_x(iz,2);
-
-                // xm1[2], xp1[2] are z of left and right cell centers. Are these quantities used anywhere?
-		//xm1[2]=get_x(iz-1,2);
-                //xp1[2]=get_x(iz+1,2);
-
-                // x0l[0,1,2] are x, y, z of left z-wall, x0r[0,1,2] are x, y, z of right z-wall,		
-                //x0l[2]=get_xb(iz,2);
-                //x0l[0]=xm1[0]=get_x(ix,0);
-                //x0l[1]=xm1[1]=get_x(iy,1);
-         
-                //x0r[2]=get_xb(iz+1,2);
-                //x0r[0]=xp1[0]=get_x(ix,0);
-                //x0r[1]=xp1[1]=get_x(iy,1);
-         
-                // dx0, dxm1, dxp1 are z-sizes (wall to wall) of cells iz, iz-1, iz+1, dxm2m, dxp2 are sizes of cells iz-2, iz+2
-                dx0=get_size_x(iz,2);
-                dxm1=get_size_x(iz-1,2);
-                dxp1=get_size_x(iz+1,2);
-         
-                if(INT_ORDER>1)
-                {
-                  dxm2=get_size_x(iz-2,2);
-                  dxp2=get_size_x(iz+2,2);
-                }
-         
-                for(i=0;i<NV;i++)
-                {
-                  //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-                  fd_p0[i]=get_u(p,i,ix,iy,iz);
-                  fd_pp1[i]=get_u(p,i,ix,iy,iz+1);
-                  fd_pm1[i]=get_u(p,i,ix,iy,iz-1);
-           
-                  if(INT_ORDER>1)
-                  {
-                    fd_pm2[i]=get_u(p,i,ix,iy,iz-2);
-                    fd_pp2[i]=get_u(p,i,ix,iy,iz+2);
-                  }
-                }
-         
-                reconstrpar=0;
-#ifdef REDUCEORDERWHENNEEDED
-                reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-         
-                minmod_theta=MINMOD_THETA;
-#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
-                minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-         
-                // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
-                avg2point(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
-
-		//iz>0
-                if(dol) //no need to calculate at left face of first GC if dol=0
-                {
-                  // Left wall of current cell: compute fluxes and save in array ffl[NV]
-                  fill_geometry_face(ix,iy,iz,2,&geom);
-                  check_floors_mhd(fd_pl,VELPRIM,&geom);
-                  f_flux_prime(fd_pl,2,ix,iy,iz,ffl,0);
-                }
-
-		//iz<NZ
-                if(dor) //no need to calculate at right face of first GC if dor=0
-                {
-                  // Right wall of current cell: compute fluxes and save in array ffr[NV]
-                  fill_geometry_face(ix,iy,iz+1,2,&geom);
-                  check_floors_mhd(fd_pr,VELPRIM,&geom);
-                  f_flux_prime(fd_pr,2,ix,iy,iz+1,ffr,1);
-                }
-         
-                //save interpolated values to memory
-                //Note that l and r of a given cell iy are the left and right wall of that cell,
-                //whereas L and R of given iy are quantities to the left and right of wall iy
-                for(i=0;i<NV;i++)
-                {
-                  // Save fd_pl in array pbRz (Primitive_R) of wall iz
-                  // Save fd_pr in array pbLz (Primitive_L) of wall iz+1
-                  set_ubz(pbRz,i,ix,iy,iz,fd_pl[i]);
-                  set_ubz(pbLz,i,ix,iy,iz+1,fd_pr[i]);
-           
-                  if(dol)
-                  // Save ffl in array flRz (F_R) of wall iz
-                  set_ubz(flRz,i,ix,iy,iz,ffl[i]);
-                  if(dor)
-                  // Save ffr in array flLz (F_R) of wall iz+1
-                  set_ubz(flLz,i,ix,iy,iz+1,ffr[i]);   
-                }
-      }  // if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY...)
-	     
-  }  // for(ii=0;ii<Nloop_1;ii++)
-*/	    
   //**********************************************************************
   // Compute fluxes at the six walls of all cells using the selected approximation of the Riemann problem
   
 #pragma omp barrier
+  calc_fluxes();
+
+  /*
 #pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
   for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
@@ -1770,7 +1265,8 @@ op_explicit(ldouble t, ldouble dtin)
     iz=loop_1[ii][2];
     f_calc_fluxes_at_faces(ix,iy,iz);
   }
-
+  */
+  
   //**********************************************************************
   // Constrained transport to preserve div.B=0
 
@@ -1834,6 +1330,7 @@ op_explicit(ldouble t, ldouble dtin)
 
   //**********************************************************************  
   // Compute postexplicit primitives and count entropy inversions
+
   calc_u2p(1,1);
 
   //**********************************************************************
@@ -1961,10 +1458,8 @@ op_implicit(ldouble t, ldouble dtin)
 
 
 //************************************************************************
-/*! \fn ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
+/*! \fn inc calc_fluxes()
  \brief Calculates fluxes at cell faces
- 
- \param[in] ix, iy, iz Indices of the three cell faces under consideration
  
  Uses the selected approximate Riemann solver to estimate the fluxes on the six faces of the cell (ix, iy, iz)\n
  The fluxes are saved in global arrays flbx, flby, flbz\n
@@ -1972,37 +1467,47 @@ op_implicit(ldouble t, ldouble dtin)
  
 */
 //************************************************************************
-
-ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
+int calc_fluxes()
 {
-  int i;
-  struct geometry geom;
-   
-  ldouble a0[2],am1[2],ap1[2],ag,al,ar,amax,cmin,cmax,csLl[2],csLr[2],csRl[2],csRr[2];
-  ldouble am1l[2],am1r[2],ap1l[2],ap1r[2];
-  ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV],fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
-  ldouble fd_pLl[NV], fd_pRl[NV], fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
-  ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-  ldouble gdet,gg[4][5],GG[4][5];
-  //ldouble eup[4][4],elo[4][4];
-
-  // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
-  for(i=0;i<NV;i++) 
+  int ii,ix,iy,iz;
+#pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
+  for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
-    set_ubx(flbx,i,ix,iy,iz,0.);
-    set_uby(flby,i,ix,iy,iz,0.);
-    set_ubz(flbz,i,ix,iy,iz,0.);
-  }
+    ix=loop_1[ii][0];
+    iy=loop_1[ii][1];
+    iz=loop_1[ii][2];
+
+
+    //ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
+    
+    int i;
+    struct geometry geom;
+   
+    ldouble a0[2],am1[2],ap1[2],ag,al,ar,amax,cmin,cmax,csLl[2],csLr[2],csRl[2],csRr[2];
+    ldouble am1l[2],am1r[2],ap1l[2],ap1r[2];
+    ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV],fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
+    ldouble fd_pLl[NV], fd_pRl[NV], fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
+    ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
+    ldouble gdet,gg[4][5],GG[4][5];
+    //ldouble eup[4][4],elo[4][4];
+
+    // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
+    for(i=0;i<NV;i++) 
+    {
+      set_ubx(flbx,i,ix,iy,iz,0.);
+      set_uby(flby,i,ix,iy,iz,0.);
+      set_ubz(flbz,i,ix,iy,iz,0.);
+    }
 
   //**********************************************************************
   //Work on the x-face at ix, iy, iz, which lies in between cells ix-1,iy,iz and ix,iy,iz
  
 #ifdef MPI4CORNERS
-  if(NX>1 && ix>=0 && ix<=NX && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1)
+    if(NX>1 && ix>=0 && ix<=NX && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1)
 #else
-  if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ)
+    if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ)
 #endif
-  {
+    {
 	// Characteristic wave speeds in the two adjoining cells of the current face,
         // which are used for combining the left-biased and right-biased fluxes at the face
         // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
@@ -2127,17 +1632,17 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
           } 
         }  // for(i=0;i<NV;i++)
 	
-  }  // if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
+    }  // if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
 
   
-  //**********************************************************************
-  //Work on the y-face at ix, iy, iz, which lies in between cells ix,iy-1,iz and ix,iy,iz  
+    //**********************************************************************
+    //Work on the y-face at ix, iy, iz, which lies in between cells ix,iy-1,iz and ix,iy,iz  
 #ifdef MPI4CORNERS
-  if(NY>1 && iy>=0 && iy<=NY && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1)
+    if(NY>1 && iy>=0 && iy<=NY && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1)
 #else
-  if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ)
+    if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ)
 #endif
-  {
+    {
         // Characteristic wave speeds in the two adjoining cells of the current face,
         // which are used for combining the left-biased and right-biased fluxes at the face
         // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
@@ -2259,17 +1764,17 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
               set_uby(flby,i,ix,iy,iz,fd_fstarl[i]);
             } 
 	}  // for(i=0;i<NV;i++)
-  }  // if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
+    }  // if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
 
   
-  //**********************************************************************
-  // Work on the z-face at ix, iy, iz, which lies in between cells ix,iy,iz-1 and ix,iy,iz  
+    //**********************************************************************
+    // Work on the z-face at ix, iy, iz, which lies in between cells ix,iy,iz-1 and ix,iy,iz  
 #ifdef MPI4CORNERS
-  if(NZ>1 && iz>=0 && iz<=NZ && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1)
+    if(NZ>1 && iz>=0 && iz<=NZ && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1)
 #else
-  if(NZ>1 && iz>=0 && iz<=NZ && ix>=0 && ix<NX && iy>=0 && iy<NY)
+    if(NZ>1 && iz>=0 && iz<=NZ && ix>=0 && ix<NX && iy>=0 && iy<NY)
 #endif
-  {
+    {
         // Characteristic wave speeds in the two adjoining cells of the current face,
         // which are used for combining the left-biased and right-biased fluxes at the face
         // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
@@ -2390,8 +1895,8 @@ ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
               set_ubz(flbz,i,ix,iy,iz,fd_fstarl[i]);
             } 
 	}  // for(i=0;i<NV;i++)
-  }  // if(NZ>1 && iz>=0 && iz<=NZ && ix>=0 && ix<NX && iy>=0 && iy<NY...)
-	
+     }  // if(NZ>1 && iz>=0 && iz<=NZ && ix>=0 && ix<NX && iy>=0 && iy<NY...)
+  } // for(ii=0;ii<Nloop_1;ii++) 
   
   return 0;
 }
