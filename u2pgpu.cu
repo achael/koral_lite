@@ -153,37 +153,37 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 
 //**********************************************************************
 //high-level u2p solver
-// type: not used
 //**********************************************************************
-/*
+
 __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2])
 {
+  int verbose=0;
+  
+  int ret=0;
+  int u2pret=-1;
+  int hdcorr=0;
+  int radcor=0;
+  corrected[0]=corrected[1]=corrected[2]=0;
+  fixups[0]=fixups[1]=0;
+
   struct geometry *geom
   = (struct geometry *) ggg;
-  
-  ldouble uu[NV];
-  int iv;
-  PLOOP(iv) uu[iv]=uu0[iv];
-  
-  ldouble (*gg)[5], (*GG)[5], gdet, gdetu, gdetu_inv;
-  gg=geom->gg;
-  GG=geom->GG;
-  gdet=geom->gdet;gdetu=gdet;
+
+  ldouble gdetu, gdetu_inv;
+  gdetu=geom->gdet;
   #if (GDETIN==0) //gdet out of derivatives
   gdetu=1.;
   #endif
   gdetu_inv = 1. / gdetu;
   
-  int verbose=0;
-  int hdcorr=0;
-  int radcor=0;
-  corrected[0]=corrected[1]=0;
-  fixups[0]=fixups[1]=0;
-  
-  int u2pret,u2pentrret,ret;
+  ldouble uu[NV];
+
+  for(int iv=0;iv<NV;iv++)
+    uu[iv]=uu0[iv];
+    
   ldouble ppbak[NV];
-  for(u2pret=0;u2pret<NV;u2pret++)
-    ppbak[u2pret]=pp[u2pret];
+  for(int iv=0;iv<NV;iv++)
+    ppbak[iv]=pp[iv];
 
   //************************************
   //magneto-hydro part
@@ -192,24 +192,20 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
   
   //************************************
   //hot hydro - conserving energy
-  ret=0;
-  u2pret=-1;
   
-  //test
-  ldouble ppold[NV];
-  ldouble ppentr[NV];
-  PLOOP(iv)
-  {
-    ppold[iv]=pp[iv];
-    ppentr[iv]=-1.; // negative value indicates that entropy inversion not yet calculated
-  }
   
   //negative uu[0] = rho u^t
   if(uu[0] * gdetu_inv < 0.)
   {
-    int gix,giy,giz;
-    mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
-    if(verbose) printf("%4d > %4d %4d %4d > NEGUU  > neg uu[0] - requesting fixup\n",PROCID,gix,giy,giz);
+    //TODO
+    /*
+    if verbose
+    {
+	int gix,giy,giz;
+	mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
+	printf("%4d > %4d %4d %4d > NEGUU  > neg uu[0] - requesting fixup\n",PROCID,gix,giy,giz);
+    }
+    */
     pp[0]=RHOFLOOR; //used when not fixing up
     uu[0]=RHOFLOOR*gdetu;
     ret=-2;    //to request fixup
@@ -218,22 +214,27 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
     u2pret=-1; // indicates that inversion is needed
     
 #ifndef SWAPPAPC
-    global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  //but count as fixup
+    //TODO -- global array
+    //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  //but count as fixup
 #endif
   }
-    
+
   if(u2pret!=0)  // u2pret=-1 at this stage, so this is always satisfied
   {
 #ifdef ENFORCEENTROPY  
     u2pret=-1;  //skip hot energy-conserving inversion and go to entropy inversion
 #else
-    u2pret = u2p_solver(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
+    //TODO
+    //u2pret = u2p_solver_device(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
 #endif //ENFORCEENTROPY
   }
-  
-  if(ALLOWENTROPYU2P)  // Inversion with entropy equation -- on by default (see choices.h)
+
+  //************************************
+  //entropy solver - conserving entropy
+ 
+  if(ALLOWENTROPYU2P)  // allow entropy equation inversion -- on by default (see choices.h)
   {
-    if(u2pret<0)  // true if energy equation failed, or if energy equation was not required (because ENFORCEENTROPY is defined)
+    if(u2pret<0)  // true if energy equation failed, or if ENFORCEENTROPY is defined
     {
       ret=-1;
       
@@ -242,12 +243,8 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
         printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
       }
       
-      //************************************
-      //entropy solver - conserving entropy
-      if(ppentr[RHO]<0.) //if not yet calculated
-      {
-        u2pret=u2p_solver(uu,pp,ggg,U2P_ENTROPY,0);  // invert using entropy equation
-      }
+      //TODO
+      //u2pret=u2p_solver_device(uu,pp,ggg,U2P_ENTROPY,0);  // invert using entropy equation
       
       if(u2pret<0)
       {
@@ -255,20 +252,26 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
         
         if(verbose>1)
         {
-          printf("u2p_entr err No. %4d > %e %e %e > %e %e > %4d %4d %4d\n",u2pret,uu[0],uu[1],uu[5],pp[0],pp[1],geom->ix,geom->iy,geom->iz);
+          printf("u2p_entr err No. %4d > %e %e %e > %e %e > %4d %4d %4d\n",
+		 u2pret,uu[0],uu[1],uu[5],pp[0],pp[1],geom->ix,geom->iy,geom->iz);
         }
 	
       } // if(u2pret<0) // second time -- entropy eqn
     } // if(u2pret<0) // first time -- energy eqn
   }  // if(ALLOWENTROPYU2P)
-  
-  if(u2pret<0)  // entropy equation also failed
+
+
+  //************************************
+  // both energy and entropy inversion failed
+
+  if(u2pret<0)
   {
  
     //leaving primitives unchanged - should not happen
     if(verbose>1 || 1)
     {
-      printf("%4d > %4d %4d %4d > MHDU2PFAIL > u2p prim. unchanged > %d \n",PROCID,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,u2pret);
+      printf("%4d > %4d %4d %4d > MHDU2PFAIL > u2p prim. unchanged > %d \n",
+	     PROCID,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,u2pret);
     }
     ret=-3;
     for(u2pret=0;u2pret<NV;u2pret++)
@@ -286,8 +289,7 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
   //radiation part
   //************************************
   
-  corrected[2]=0;
-  
+  /*
 #ifdef RADIATION  
 #ifdef BALANCEENTROPYWITHRADIATION
   
@@ -325,7 +327,8 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
   u2p_rad(uu,pp,geom,&radcor);
 
 #endif // RADIATION
-
+  */
+  
   //************************************  
   //output
   //************************************
@@ -336,10 +339,12 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
   else
     fixups[1]=0;
     
-  if(hdcorr>0) corrected[0]=1;
-  if(radcor>0) corrected[1]=1;
+  if(hdcorr>0)
+    corrected[0]=1;
+  if(radcor>0)
+    corrected[1]=1;
   
   return ret;
 } 
-*/
+
 
