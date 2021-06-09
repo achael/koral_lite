@@ -1134,14 +1134,13 @@ save_timesteps()
 
 
 //**********************************************************************
-/*! \fn int calc_u2p(int type, int setflags)
+/*! \fn int calc_u2p(int setflags)
  \brief Calculates all primitives from global u
- \param[in] type, not currently used
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p(int type, int setflags)
+calc_u2p(int setflags)
 {
   int ii;
 
@@ -1163,7 +1162,7 @@ calc_u2p(int type, int setflags)
     if(!is_cell_active(ix,iy,iz))
       continue;
     
-    calc_primitives(ix,iy,iz,type,setflags);
+    calc_primitives(ix,iy,iz,setflags);
   }
   
   //fixup here hd and rad after inversions
@@ -1230,6 +1229,12 @@ do_correct()
 int
 op_explicit(ldouble t, ldouble dtin) 
 {
+
+#ifdef GPUKO
+  // TODO move this outside of the loop
+  push_geometry_gpu();
+#endif 
+
   int ix,iy,iz,iv,ii;
   ldouble dt;
 
@@ -1268,9 +1273,7 @@ op_explicit(ldouble t, ldouble dtin)
   // Evolve the conserved quantities
 
 #ifdef GPUKO
-  push_geometry();
   calc_update_gpu(dtin);
-  free_geometry();
 #endif
 
   struct timespec temp_clock;
@@ -1320,7 +1323,11 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************  
   // Compute postexplicit primitives and count entropy inversions
 
-  calc_u2p(1,1);
+#ifdef GPUKO
+  calc_u2p_gpu(1);
+#endif
+
+  calc_u2p(1);
 
   //**********************************************************************
 	    
@@ -1328,6 +1335,11 @@ op_explicit(ldouble t, ldouble dtin)
   
 #ifdef MIXENTROPIESPROPERLY
   mix_entropies(dt);
+#endif
+
+#ifdef GPUKO
+  // TODO move this outside of loop
+  free_geometry_gpu();
 #endif
 
   return GSL_SUCCESS;
