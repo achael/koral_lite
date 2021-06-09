@@ -344,7 +344,7 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
 */
 
 
-int calc_u2p_gpu(int type, int setflags)
+int calc_u2p_gpu(int setflags)
 {
 
   ldouble *d_u_arr, *d_p_arr;

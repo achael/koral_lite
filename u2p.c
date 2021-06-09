@@ -17,12 +17,11 @@ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldo
 
 //**********************************************************************
 //calculates primitives in given cell basing on global array u[]
-// type: not used
 // int setflags -- is always set to 1 in the current code
 //**********************************************************************
 
 int
-calc_primitives(int ix,int iy,int iz,int type,int setflags)
+calc_primitives(int ix,int iy,int iz,int setflags)
 {
   int verbose=0;
   int iv,u2pret,u2pretav;
@@ -60,7 +59,7 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
   }
   else
   {
-    u2p(uu,pp,&geom,corrected,fixups,type); // regular inversion
+    u2p(uu,pp,&geom,corrected,fixups); // regular inversion
   }
 
   //set flags for entropy solver
@@ -133,11 +132,10 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
 
 //**********************************************************************
 //high-level u2p solver
-// type: not used
 //**********************************************************************
 
 int
-u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int type)
+u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2])
 {
   struct geometry *geom
   = (struct geometry *) ggg;

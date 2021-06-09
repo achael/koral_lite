@@ -458,7 +458,7 @@ int calc_update_gpu(ldouble dtin)
   return 0;
 }
 
-int push_geometry()
+int push_geometry_gpu()
 {
   cudaError_t err = cudaSuccess;
 
@@ -520,7 +520,7 @@ int push_geometry()
   return 0;
 }
 
-int free_geometry()
+int free_geometry_gpu()
 {
   cudaFree(d_loop0_ix);
   cudaFree(d_loop0_iy);

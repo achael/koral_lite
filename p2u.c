@@ -661,7 +661,7 @@ test_maginv()
   
   int aa[3],bb[2],ret;
   pp[UU]*=1.1;
-  ret=u2p(uu,pp,&geom,aa,bb,0);
+  ret=u2p(uu,pp,&geom,aa,bb);
   printf("u2p ret: %d\n",ret);
   print_NVvector(pp);
   
