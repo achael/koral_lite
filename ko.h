@@ -4,10 +4,10 @@
 #pragma once
 
 // for testing
-#define doTEST 0
-#define ixTEST 13
-#define iyTEST 21
-#define izTEST 8
+#define doTEST 1
+#define ixTEST 22
+#define iyTEST 17
+#define izTEST 31
 #define iiTEST 22222
 #define ivTEST 0
 

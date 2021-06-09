@@ -167,9 +167,11 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 			                            ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr)
 {
 
+  if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST) printf("in metric source term\n");
+     
   struct geometry geom;
   fill_geometry_device(ix,iy,iz,x_arr,&geom,g_arr,G_arr);
-  //printf("Fill geometry successful.\n");   
+
       
   ldouble (*gg)[5],(*GG)[5],gdetu;
   ldouble *pp = &get_u(p_arr,0,ix,iy,iz);
@@ -191,32 +193,21 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   ldouble T[4][4];
   //calculating stress energy tensor components
   calc_Tij_device(pp,&geom,T); 
-  for(int i=0;i<4;i++)
-    for(int j=0;j<4;j++)
-      T[i][j]=0.;
-  
   indices_2221_device(T,T,gg);
 
-  //TODO 
-  /*
   for(int i=0;i<4;i++)
+  {
     for(int j=0;j<4;j++)
-      {
+    {
 	if(isnan(T[i][j])) 
-	  {
+	{
 	    printf("%d %d %e\n",i,j,T[i][j]);
-	    my_err("nan in metric_source_terms\n");
-	  }
-      }
-  */
+	    printf("nan in metric_source_terms\n");
+	    //my_err("nan in metric_source_terms\n");//TODO
+	}
+    }
+  }
   
-  //converting to 4-velocity
-  ldouble vcon[4],ucon[4];
-  vcon[1]=pp[2];
-  vcon[2]=pp[3];
-  vcon[3]=pp[4];  
-  conv_vels_device(vcon,ucon,VELPRIM,VEL4,gg,GG); 
-
   // zero out all source terms initially
   for(int iv=0;iv<NV;iv++)
     ss[iv]=0.;  
@@ -229,9 +220,25 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 	ss[2]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,1,k,ix,iy,iz);
 	ss[3]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,2,k,ix,iy,iz);
 	ss[4]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,3,k,ix,iy,iz);
+
+	
+ if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST)
+   {
+     printf("T%d%d: %e \n",k,l,T[k][l]);
+     //printf("gKr%d%d: %e %e %e %e\n",k,l,get_gKr_device(gKr_arr,l,0,k,ix,iy,iz),get_gKr_device(gKr_arr,l,1,k,ix,iy,iz),get_gKr_device(gKr_arr,l,2,k,ix,iy,iz),get_gKr_device(gKr_arr,l,3,k,ix,iy,iz));
+   }
+       
       }
 
+
 #if (GDETIN==0)
+  //get 4-velocity
+  ldouble vcon[4],ucon[4];
+  vcon[1]=pp[2];
+  vcon[2]=pp[3];
+  vcon[3]=pp[4];  
+  conv_vels_device(vcon,ucon,VELPRIM,VEL4,gg,GG); 
+
   //terms with dloggdet  
   for(int l=1;l<4;l++)
     {

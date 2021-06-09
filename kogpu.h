@@ -6,6 +6,7 @@
 ///////////////////////////////////////////////////////////////
 // metricgpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
+
 //Declaring constant geometrical arrays for device
 extern int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz;
 extern ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
@@ -16,6 +17,7 @@ extern ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)]
 
 
 ///////////////////////////////////////////////////////////////
+// finitegpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
 __device__ __host__ int is_cell_active_device (int ix, int iy, int iz);
@@ -29,7 +31,7 @@ __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 __device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr, void* geom,
 				             ldouble* g_arr, ldouble* G_arr);
 __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
-			                            ldouble* p_arr,
+			                            ldouble* p_arr, ldouble* x_arr,
 			                            ldouble* g_arr, ldouble* G_arr, ldouble* l_arr);
 			                   
 
