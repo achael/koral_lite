@@ -225,7 +225,7 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
     u2pret=-1;  //skip hot energy-conserving inversion and go to entropy inversion
 #else
     //TODO
-    //u2pret = u2p_solver_device(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
+    u2pret = u2p_solver_device(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
 #endif //ENFORCEENTROPY
   }
 
@@ -245,7 +245,7 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
       }
       
       //TODO
-      //u2pret=u2p_solver_device(uu,pp,ggg,U2P_ENTROPY,0);  // invert using entropy equation
+      u2pret=u2p_solver_device(uu,pp,ggg,U2P_ENTROPY,0);  // invert using entropy equation
       
       if(u2pret<0)
       {
