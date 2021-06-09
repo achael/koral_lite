@@ -6,15 +6,6 @@ extern "C" {
 
 #include "kogpu.h"
 
-
-//global arrays
-int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz; 
-ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
-ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
-ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
-ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
-ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
-
 __device__ __host__ int is_cell_active_device (int ix, int iy, int iz)
 {
   //NOTE: by default ALWAYS active -- this may change
