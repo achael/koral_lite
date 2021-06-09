@@ -391,6 +391,13 @@ __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,in
 
 __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
+  //prepare geometry
+  struct geometry *geom
+  = (struct geometry *) ggg;
+
+  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
+    printf("In u2p_solver_W_device!\n");
+  
   /*
   int i,j,k;
   ldouble rho,uint,w,W,alpha,D,Sc;
@@ -399,9 +406,6 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   ldouble QdotB,QdotBsq,Bcon[4],Bcov[4],Bsq;
   
   
-  //prepare geometry
-  struct geometry *geom
-  = (struct geometry *) ggg;
   
   ldouble pgamma=GAMMA;
 #ifdef CONSISTENTGAMMA

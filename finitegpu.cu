@@ -6,13 +6,6 @@ extern "C" {
 
 #include "kogpu.h"
 
-#define doTEST 1
-#define ixTEST 13
-#define iyTEST 21
-#define izTEST 8
-#define iiTEST 22222
-#define ivTEST 0
-
 //global arrays
 int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz; 
 ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
