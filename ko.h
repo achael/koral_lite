@@ -3,6 +3,14 @@
 */
 #pragma once
 
+// for testing
+#define doTEST 1
+#define ixTEST 13
+#define iyTEST 21
+#define izTEST 8
+#define iiTEST 22222
+#define ivTEST 0
+
 //small and big numbers
 #define SMALL 1.e-80 
 #define BIG (1./SMALL) 

@@ -33,6 +33,7 @@ __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int
    cellflag_arr[iflag + (iX(ix)+(NGCX))*NFLAGS +  \
 			(iY(iy)+(NGCY))*(SX)*NFLAGS + \
 		        (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val;
+   return 0;
 }
 
 // todo deleted type
