@@ -1327,7 +1327,13 @@ op_explicit(ldouble t, ldouble dtin)
   calc_u2p_gpu(1);
 #endif
 
+  // TODO: timing functionality. reuse timer from above
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   calc_u2p(1);
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("cpu u2p time: %0.2lf \n\n", (tstop-tstart)*1.e3);
 
   //**********************************************************************
 	    

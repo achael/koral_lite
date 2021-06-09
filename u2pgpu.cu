@@ -388,7 +388,7 @@ int calc_u2p_gpu(int setflags)
   cudaEventSynchronize(stop);
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
-  printf("gpu update time: %0.2f \n",tms);
+  printf("gpu u2p time: %0.2f \n",tms);
 
   // ======= TODO
   // Free Device Memory
