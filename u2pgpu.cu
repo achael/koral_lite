@@ -343,3 +343,55 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
 } 
 */
 
+
+int calc_u2p_gpu(int type, int setflags)
+{
+
+  ldouble *d_u_arr, *d_p_arr;
+
+  cudaError_t err = cudaSuccess;
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  // NOTE: size of xb is copied from initial malloc in misc.c
+  // these need to be long long if the grid is on one tile and large (~256^3)
+  long long Nprim  = (SX)*(SY)*(SZ)*NV;
+
+  // allocate and sync prims and cons to device 
+  err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);  
+  err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
+
+  err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);  // is this used to seed?
+  err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
+  
+
+  // launch calc_primitives_kernel
+
+  int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
+
+  cudaEventRecord(start);
+  calc_primitives_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, setflags, 
+                                                    d_loop0_ix, d_loop0_iy, d_loop0_iz,
+                                                    d_u_arr, d_p_arr,
+                                                    d_x, d_gcov, d_gcon);
+
+  cudaEventRecord(stop);
+  err = cudaPeekAtLastError();
+  cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchronize?
+
+  cudaEventSynchronize(stop);
+  float tms = 0.;
+  cudaEventElapsedTime(&tms, start,stop);
+  printf("gpu update time: %0.2f \n",tms);
+
+  // ======= TODO
+  // Free Device Memory
+  cudaFree(d_u_arr);
+  cudaFree(d_p_arr);
+
+  return 0;
+}
+
+
+

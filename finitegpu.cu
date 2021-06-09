@@ -6,8 +6,6 @@ extern "C" {
 
 #include "kogpu.h"
 
-#define TB_SIZE 64
-
 #define doTEST 1
 #define ixTEST 13
 #define iyTEST 21
