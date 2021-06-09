@@ -899,7 +899,7 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 __device__ __host__ static ldouble compute_specificentropy_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma)
 {
   ldouble insideentropy,specificentropy;
-  ldouble pressure,indexn,insideentropy;
+  ldouble pressure,indexn;
 
   pressure=((gamma-1.)/gamma)*wmrho0;
   indexn=1.0/(gamma-1.);  
@@ -944,8 +944,6 @@ __device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble 
   ldouble Sc=cons[5];
  
   ldouble W=Wp+D;
-
-  ldouble W3,X3; 
   ldouble X = Bsq + W;
   ldouble Wsq = W*W;
   ldouble W3 = Wsq*W ;
