@@ -38,7 +38,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   
   //skip if cell is passive
   if(!is_cell_active_device(ix,iy,iz))
-    continue;
+    return;
   
   struct geometry geom;
   //fill_geometry(ix,iy,iz,&geom);

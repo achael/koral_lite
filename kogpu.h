@@ -19,7 +19,7 @@ __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim);
 
 
-__device__ __host__ int fill_geometry_device(int ix,int iy,int iz,void* geom,
+__device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr, void* geom,
 				             ldouble* g_arr, ldouble* G_arr);
 __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 			                            ldouble* p_arr,
