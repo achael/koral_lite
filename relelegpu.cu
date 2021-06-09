@@ -11,6 +11,25 @@ extern "C" {
 #include "kogpu.h"
 
 
+__device__ __host__ int indices_12_device(ldouble A1[4],ldouble A2[4],ldouble GG[][5])
+{
+
+  for(int i = 0; i < 4; i++)
+  {
+    A2[i] = 0.;
+  }
+
+  for(int i = 0; i < 4; i++)
+  {
+    for(int k = 0; k < 4; k++)
+    {
+      A2[i] += A1[k] * GG[i][k];
+    }
+  }
+
+  return 0;
+}
+
 __device__ __host__ int indices_21_device(ldouble A1[4],ldouble A2[4],ldouble gg[][5])
 {
   

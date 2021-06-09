@@ -398,50 +398,53 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
     printf("In u2p_solver_W_device!\n");
   
-  /*
+  
   int i,j,k;
   ldouble rho,uint,w,W,alpha,D,Sc;
   ldouble ucon[4],ucov[4],utcon[4],utcov[4],ncov[4],ncon[4];
-  ldouble Qcon[4],Qcov[4],Qconp[4],Qcovp[4],jmunu[4][4],Qtcon[4],Qtcov[4],Qt2,Qn;
+  ldouble Qcon[4],Qcov[4],Qconp[4],Qcovp[4],jmunu[4][4],Qtcon[4],Qtcov[4],Qtsq,Qn;
   ldouble QdotB,QdotBsq,Bcon[4],Bcov[4],Bsq;
   
   
-  
   ldouble pgamma=GAMMA;
-#ifdef CONSISTENTGAMMA
-  pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
-#endif
-  ldouble pgammam1=pgamma-1.;
+  //TODO
+  //#ifdef CONSISTENTGAMMA
+  //pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
+  //#endif
   
-  ldouble (*gg)[5], (*GG)[5], gdet, gdetu, gdetu_inv;
+  ldouble (*gg)[5], (*GG)[5];
+  ldouble gdetu, gdetu_inv;
   gg=geom->gg; GG=geom->GG;
-  gdet=geom->gdet; gdetu=gdet;
+  gdetu=geom->gdet; 
 #if (GDETIN==0) //gdet out of derivatives
   gdetu=1.;
 #endif
   gdetu_inv = 1. / gdetu;
-  
-  
+
+  //TODO -- add f_u2p equations
   //equations choice
+  /*
   int (*f_u2p)(ldouble,ldouble*,ldouble*,ldouble*,ldouble*,ldouble);
   if(Etype==U2P_HOT)
     f_u2p=&f_u2p_hot;
   if(Etype==U2P_ENTROPY)
     f_u2p=&f_u2p_entropy;
+  */
   
-  
+  //TODO -- print statements
+  /*
   if(verbose>1)
   {
     printf("********************\n");
     print_conserved(uu);
     print_primitives(pp);
   }
+  */
   
   //conserved quantities etc
   
   //alpha
-  //alpha=sqrt(-1./GG[0][0]);
-  alpha = geom->alpha;
+  alpha = geom->alpha; //alpha=sqrt(-1./GG[0][0]);
   
   //D
   D = uu[0] * gdetu_inv * alpha; //uu[0]=gdetu rho ut
@@ -462,10 +465,10 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   Qcovp[3] = uu[4] * gdetu_inv *alpha;
   
   //Qp^mu
-  indices_12(Qcovp,Qconp,GG);
+  indices_12_device(Qcovp,Qconp,GG);
   
   //Q^mu
-  indices_12(Qcov,Qcon,GG);
+  indices_12_device(Qcov,Qcon,GG);
   
 #ifdef MAGNFIELD
   //curly B^mu
@@ -475,9 +478,9 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   Bcon[3]=uu[B3] * gdetu_inv * alpha;
   
   //B_mu
-  indices_21(Bcon,Bcov,gg);
+  indices_21_device(Bcon,Bcov,gg);
   
-  Bsq = dot(Bcon,Bcov);
+  Bsq = dot(Bcon,Bcov);  //NOTE: dot() is a macro
   QdotB = dot(Qcov,Bcon);
   QdotBsq = QdotB*QdotB;
 
@@ -492,40 +495,39 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   ncov[1]=ncov[2]=ncov[3]=0.;
   
   //n^mu
-  indices_12(ncov,ncon,GG);
+  indices_12_device(ncov,ncon,GG);
   
   //Q_mu n^mu = Q^mu n_mu = -alpha*Q^t
   Qn = Qcon[0] * ncov[0];
   
   //j^mu_nu = delta^mu_nu +n^mu n_nu
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
+  for(int i=0;i<4;i++)
+  {
+    for(int j=0;j<4;j++)
+    {
       jmunu[i][j] = delta(i,j) + ncon[i]*ncov[j];
-  
+    }
+  }
   //Qtilda^nu = j^nu_mu Q^mu
-  for(i=0;i<4;i++)
+  for(int i=0;i<4;i++)
   {
     Qtcon[i]=0.;
-#ifdef APPLY_OMP_SIMD
-    //#pragma omp simd
-#endif
-    for(j=0;j<4;j++)
+    for(int j=0;j<4;j++)
+    {
       Qtcon[i]+=jmunu[i][j]*Qcon[j];
+    }
   }
   
   //Qtilda_nu
-  indices_21(Qtcon,Qtcov,gg);
+  indices_21_device(Qtcon,Qtcov,gg);
   
-  //Qt2=Qtilda^mu Qtilda_mu
-  Qt2=dot(Qtcon,Qtcov);
-  FTYPE Qtsq = Qt2;
+  //Qtsq=Qtilda^mu Qtilda_mu
+  Qtsq=dot(Qtcon,Qtcov);
   
   //\beta^i \beta_i / \alpha^2 = g^{ti} g_{ti}
   ldouble betasqoalphasq=gg[0][1]*GG[0][1] + gg[0][2]*GG[0][2] + gg[0][3]*GG[0][3];
   ldouble alphasq=alpha*alpha;
+  
   //Qdotnp=-E'=-E+D
   ldouble Dfactor = (-geom->gttpert + alphasq*betasqoalphasq)/(alphasq+alpha);
   ldouble Qdotnp = Qconp[0]*ncov[0] + D*(Dfactor) ; // -Qdotn - W = -Qdotnp-Wp
@@ -540,33 +542,36 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   if (VELPRIM != VELR)
   {
-    conv_vels(utcon,utcon,VELPRIM,VELR,gg,GG);
+    conv_vels_device(utcon,utcon,VELPRIM,VELR,gg,GG);
   }
   
   ldouble qsq=0.;
-  for(i=1;i<4;i++)
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
-    for(j=1;j<4;j++)
+  for(int i=1;i<4;i++)
+  {
+    for(int j=1;j<4;j++)
+    {
       qsq+=utcon[i]*utcon[j]*gg[i][j];
+    }
+  }
+
   ldouble gamma2=1.+qsq;
   ldouble gamma=sqrt(gamma2);
   
   //W
   W=(rho+pgamma*uint)*gamma2;
   
-  if(verbose>1) printf("initial W:%e\n",W);
+  if(verbose>1)
+    printf("initial W:%e\n",W);
   
   // test if does not provide reasonable gamma2
   // Make sure that W is large enough so that v^2 < 1 :
   int i_increase = 0;
   ldouble f0,f1,dfdW,err;
-  ldouble CONV=U2PCONV;
   ldouble EPS=1.e-4;
   ldouble Wprev=W;
-  ldouble cons[7]={Qn,Qt2,D,QdotBsq,Bsq,Sc,Qdotnp};
-  
+  ldouble cons[7]={Qn,Qtsq,D,QdotBsq,Bsq,Sc,Qdotnp};
+
+  /*
   do
   {
     f0=dfdW=0.;
@@ -613,7 +618,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     if(verbose>1) printf("%d %e %e %e %e\n",iter,W,f0,dfdW,err);
     
     //convergence test
-    if(err<CONV)
+    if(err<U2PCONV)
       break;
     
     if(dfdW==0.) {W*=1.1; continue;}
@@ -661,7 +666,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
       return -103;
     }
     
-    if(fabs((W-Wprev)/Wprev)<CONV && err<1.e-1) break;
+    if(fabs((W-Wprev)/Wprev)<U2PCONV && err<1.e-1) break;
     //if(fabs((W-Wprev)/Wprev)<CONV && err<sqrt(CONV)) break;
   }
   while(iter<50);
@@ -763,6 +768,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   if(verbose>0) printf("u2p_solver returns 0\n");
   */
+  
   return 0; //ok
 }
 

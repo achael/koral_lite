@@ -55,6 +55,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
 // relelegpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
+__device__ __host__ int indices_12_device(ldouble A1[4],ldouble A2[4],ldouble GG[][5]);
 __device__ __host__ int indices_21_device(ldouble A1[4],ldouble A2[4],ldouble gg[][5]);
 __device__ __host__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5]);
 __device__ __host__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5]);
