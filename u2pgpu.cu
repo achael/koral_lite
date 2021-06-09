@@ -13,7 +13,8 @@ extern "C" {
 #define ERRCONV 1.e-1
 
 // reminder of default settings
-//#define U2PCONV 1.e-10
+//#define U2PCONV 1.e-1039
+
 //#define U2P_EQS U2P_EQS_NOBLE
 //#define U2P_SOLVER U2P_SOLVER_W
 
@@ -21,8 +22,6 @@ __device__ __host__ static ldouble dpdWp_calc_vsq(ldouble Wp, ldouble D, ldouble
 __device__ __host__ static ldouble compute_idwmrho0dp(ldouble wmrho0,ldouble gamma);
 __device__ __host__ static ldouble compute_idrho0dp(ldouble wmrho0);
 __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble pgamma);
-__device__ __host__ static ldouble pressure_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma);
-__device__ __host__ static ldouble compute_inside_entropy_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma);
 __device__ __host__ static ldouble compute_specificentropy_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma);
 __device__ __host__ static ldouble compute_dspecificSdwmrho0_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma);
 __device__ __host__ static ldouble compute_dspecificSdrho_wmrho0_idealgas(ldouble rho0, ldouble wmrho0, ldouble gamma);
@@ -832,22 +831,18 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 
   //printf("hi from f_u2p_hot\n");
   ldouble Qn=cons[0];
-  ldouble Qt2=cons[1];
+  ldouble Qtsq=cons[1];
   ldouble D=cons[2];
   ldouble QdotBsq=cons[3];
   ldouble Bsq=cons[4];
   ldouble Qdotnp=cons[6];
   
   ldouble W=Wp+D;
-
-  ldouble W3,X3,Wsq,X,X2,Xsq; 
-  ldouble Qtsq = Qt2;
-  X = Bsq + W;
-  Wsq = W*W;
-  W3 = Wsq*W ;
-  X2 = X*X;
-  Xsq = X2;
-  X3 = X2*X;
+  ldouble X = Bsq + W;
+  ldouble Wsq = W*W;
+  ldouble W3 = Wsq*W ;
+  ldouble Xsq = X*X;
+  ldouble X3 = Xsq*X;
 
   ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
   ldouble gamma2 = 1./(1.-v2);
@@ -865,8 +860,8 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 
   //JONS:
 #if (U2P_EQS==U2P_EQS_JON)
-   *f = Qdotnp + Wp - p + 0.5*Bsq + (Bsq*Qtsq - QdotBsq)/X2;
- *err = fabs(*f) / (fabs(Qdotnp) + fabs(Wp) + fabs(p) + fabs(0.5*Bsq) + fabs((Bsq*Qtsq - QdotBsq)/X2));
+   *f = Qdotnp + Wp - p + 0.5*Bsq + (Bsq*Qtsq - QdotBsq)/Xsq;
+ *err = fabs(*f) / (fabs(Qdotnp) + fabs(Wp) + fabs(p) + fabs(0.5*Bsq) + fabs((Bsq*Qtsq - QdotBsq)/Xsq));
 #endif
 
   // dp/dWp = dp/dW + dP/dv^2 dv^2/dW  
@@ -875,10 +870,8 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 
   ldouble idwmrho0dp=compute_idwmrho0dp(wmrho0,pgamma);
   ldouble dwmrho0dvsq = (D*(gamma*0.5-1.0) - Wp);
-
   ldouble drho0dvsq = -D*gamma*0.5; // because \rho = D/\gamma
   ldouble idrho0dp = compute_idrho0dp(wmrho0);
-
   ldouble dp2 =   drho0dvsq *idrho0dp  +   dwmrho0dvsq *idwmrho0dp;
 
   ldouble dpdW = dp1  + dp2*dvsq; // dp/dW = dp/dWp
@@ -900,35 +893,17 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 //Harm u2p_entropy
 //********************************************
 
-
-// p(rho0, w-rho0 = u+p)
-__device__ __host__ static ldouble pressure_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma)
-{
-  ldouble igammar = (gamma-1.)/gamma;
-  return(igammar*wmrho0) ;
-}
-
-// local aux function
-__device__ __host__ static ldouble compute_inside_entropy_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma)
-{
-  ldouble pressure,indexn,insideentropy;
-
-  pressure=pressure_wmrho0_idealgas(rho0,wmrho0,gamma);
-  indexn=1.0/(gamma-1.);  
-  insideentropy=pow(pressure,indexn)/pow(rho0,indexn+1.0);
-
-  return(insideentropy);
-}
-
-
 // specific entropy as function of rho0 and internal energy (u)
 // Ss(rho0,\chi=u+p)
 // specific entropy = \ln( p^n/\rho^{n+1} )
 __device__ __host__ static ldouble compute_specificentropy_wmrho0_idealgas(ldouble rho0, ldouble wmrho0,ldouble gamma)
 {
   ldouble insideentropy,specificentropy;
+  ldouble pressure,indexn,insideentropy;
 
-  insideentropy=compute_inside_entropy_wmrho0_idealgas(rho0, wmrho0,gamma);
+  pressure=((gamma-1.)/gamma)*wmrho0;
+  indexn=1.0/(gamma-1.);  
+  insideentropy=pow(pressure,indexn)/pow(rho0,indexn+1.0);
   specificentropy=log(insideentropy);
 
   return(specificentropy);
@@ -942,7 +917,6 @@ __device__ __host__ static ldouble compute_dspecificSdwmrho0_wmrho0_idealgas(ldo
   ldouble dSdchi;
 
   dSdchi = 1.0/((gamma-1.)*wmrho0);
-  // Again, GAMMA->1 means dSdchi->\infty unless \chi->0 or rho0->0
 
   return(dSdchi);
 
@@ -963,7 +937,7 @@ __device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble 
 					     ldouble *err,ldouble pgamma)
 {
   //ldouble Qn=cons[0]; //not used
-  ldouble Qt2=cons[1];
+  ldouble Qtsq=cons[1];
   ldouble D=cons[2];
   ldouble QdotBsq=cons[3];
   ldouble Bsq=cons[4];
@@ -971,14 +945,12 @@ __device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble 
  
   ldouble W=Wp+D;
 
-  ldouble W3,X3,Wsq,X,X2,Xsq; 
-  ldouble Qtsq = Qt2;
-  X = Bsq + W;
-  Wsq = W*W;
-  W3 = Wsq*W ;
-  X2 = X*X;
-  Xsq = X2;
-  X3 = X2*X;
+  ldouble W3,X3; 
+  ldouble X = Bsq + W;
+  ldouble Wsq = W*W;
+  ldouble W3 = Wsq*W ;
+  ldouble Xsq = X*X;
+  ldouble X3 = Xsq*X;
 
   ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
   ldouble gamma2 = 1./(1.-v2);

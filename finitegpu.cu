@@ -183,11 +183,6 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   #else
   gdetu=geom.gdet;
   #endif
-
-  ldouble dlgdet[3];
-  dlgdet[0]=gg[0][4]; //D[gdet,x1]/gdet
-  dlgdet[1]=gg[1][4]; //D[gdet,x2]/gdet
-  dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
   
   ldouble T[4][4];
   //calculating stress energy tensor components
@@ -225,6 +220,12 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
 
 #if (GDETIN==0)
+  //gdet derivatives
+  ldouble dlgdet[3];
+  dlgdet[0]=gg[0][4]; //D[gdet,x1]/gdet
+  dlgdet[1]=gg[1][4]; //D[gdet,x2]/gdet
+  dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
+
   //get 4-velocity
   ldouble vcon[4],ucon[4];
   vcon[1]=pp[2];
