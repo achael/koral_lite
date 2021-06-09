@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=ko            # create a short name for your job
-#SBATCH -p hackathon
+#SBATCH --reservation=hackathon2
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks=1               # how many instances of your command are run, total, across all nodes
 #SBATCH --cpus-per-task=4        # cpu-cores per task (>1 if multi-threaded tasks)
@@ -11,4 +11,4 @@
 
 #export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-./kogpu > kogpu_out
+srun -n 1 ./ko_gpu > kogpu.out

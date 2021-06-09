@@ -136,86 +136,8 @@
 #endif
 
 #define ldouble double
-//#define int long long int
 #define FTYPE ldouble
 #define gSIZE 20 //size of metric arrays = 16 + 1 (gdet) + 3 (dlgdet)
-
-/***** global variables ******/
-
-//physical constants
-ldouble tempcgs2gu, tempgu2cgs, lencgs2gu, lengu2cgs, numdenscgs2gu, numdensgu2cgs,
-  timecgs2gu, timegu2cgs, velcgs2gu, velgu2cgs, rhocgs2gu, rhogu2cgs, surfdenscgs2gu,
-  surfdensgu2cgs, masscgs2gu, massgu2cgs, kappacgs2gu, kappagu2cgs, endencgs2gu, endengu2cgs,
-  heatcoolcgs2gu, heatcoolgu2cgs, fluxcgs2gu, fluxgu2cgs, ergcgs2gu, erggu2cgs, chargecgs2gu,
-  chargegu2cgs, crosscgs2gu, crossgu2cgs,
-  k_boltz_cgs, k_boltz_cgs_inv, k_boltz, k_boltz_inv, m_proton_cgs, m_proton,
-  m_electr_cgs, m_electr, mpe_ratio, sigma_rad_cgs, sigma_rad, h_cgs, sigmath_cgs,
-  a_rad, z_ratio, e_charge, sigma_thomson,
-  fourpi, fourmpi, per_volume_per_time_cgs2gu, sigma_rad_over_pi, four_sigmarad,
-  one_over_four_sigmarad, k_over_mecsq, mugas_mp_over_kB, kB_over_mugas_mp, kB_over_mp,
-  kB_over_me, one_over_kB_2p70118, one_over_mugas_mp, one_over_mui_mp, one_over_mue_mp,
-  kB_over_mui_mp, kB_over_mue_mp,mui_over_mue,
-  four_third, five_third, one_third, two_third, log_2p6, one_over_log_2p6;
-
-ldouble global_double1,global_double2; //for general use
-
-//time stepping
-ldouble global_time;
-ldouble global_dt;
-ldouble global_expdt, global_impdt,global_expdt2;
-ldouble global_tstepdenmax,global_tstepdenmin;
-ldouble start_time, end_time, mid1_time, mid2_time, maxmp_time;
-ldouble max_u2ptime,  min_u2ptime, start_u2ptime, end_u2ptime;
-int max_u2ptime_loc,min_u2ptime_loc;
-ldouble avgtime,dt;
-ldouble *avgselftime;
-int nstep;
-int global_int_slot[NGLOBALINTSLOT];
-ldouble max_ws[3],max_dt,ttm1,ttm2,max_ws_ph;
-ldouble tstepdenmax,tstepdenmin;
-ldouble min_dx,min_dy,min_dz;
-
-//precalculated metric parameters
-ldouble rhorizonBL,rISCOBL,rmboundBL,rphotonBL,etaNT;
-
-// jet coordinate specific
-#if (MYCOORDS==JETCOORDS)
-ldouble hypx1in,hypx1out,hypx1brk;
-#endif
-#ifdef CYLINDRIFY
-ldouble thetaCYL;
-ldouble thetaAX;
-ldouble x2cyl;
-ldouble sinthetaCYL;
-ldouble sinthetaAX;
-ldouble rmidcyl;
-#endif
-
-//tile specific
-int TI,TJ,TK; //tile order
-int TOI,TOJ,TOK; //indices of the tile origin
-int PROCID;
-int NPROCS;
-
-//relativistic electron bins
-#ifdef RELELECTRONS
-ldouble log10binspace; 
-ldouble logbinspace, logbinspace_inv;
-ldouble binspace, binspace_inv;
-ldouble relel_gammas[NRELBIN];
-ldouble relel_gammas_e[NRELBIN+1];
-ldouble relel_gammas_inv[NRELBIN];
-ldouble relel_gammas_e_inv[NRELBIN+1];
-
-#if defined(RELEL_HEAT_FIX_FRAC) && defined(RELEL_HEAT_FIX_INDEX)
-ldouble gamma_inj_fixed_ratio;
-#endif
-
-#if defined(RELEL_HEAT_FIX_LIMITS) && defined(RELEL_HEAT_FIX_INDEX)
-ldouble relel_injpow[NRELBIN];
-ldouble xx_relel_inj;
-#endif
-#endif
 
 /***** mpi-spec ******/
 
@@ -320,69 +242,122 @@ ldouble xx_relel_inj;
 #define iZMET(iz) (0)
 #endif
 
-/*****  arrays   *****/
+/***** global variables ******/
 
-ldouble **msgbufs;
-ldouble *scent, *savg;
-ldouble *u,*x,*ucent,*xb,*xout, *xbout_xface, *xbout_yface, *xbout_zface,
-  *du,*ut1,*ut2,*ut3,*ut4,*ut0,*u_bak_fixup,*p_bak_fixup,
-  *u_step1,*u_step2,*gammagas,
-  *vischeating,*vischeatingnegebalance,*vischeatingnegibalance,*vischeatingtimesdeltae,
-  *u_step3,*u_step4,*ahdx,*ahdy,*ahdz,
-  *aradx,*arady,*aradz,
-  *cell_tstepden,*cell_dt,
-  *dut0,*dut1,*dut2,*uforget,*drt0,*drt1,*drt2,
-  *ahdxl,*ahdyl,*ahdzl,*aradxl,
-  *aradyl,*aradzl,  *ahdxr,*ahdyr,*ahdzr,*aradxr,*aradyr,*aradzr,
-  *p,*pinit,*pproblem1,*pproblem2,*emf,*ptemp1,*pvecpot,*ppostimplicit,
-  *ppreexplicit,*upreexplicit,
-  *ptm1,*pt0,*px,*py,*pz,*s,*pavg,
-  *dxdx_my2out,*dxdx_out2my,
-  *g,*gbx,*gby,*gbz,
-  *G,*Gbx,*Gby,*Gbz,
-  *a_array, *ax_array, *ay_array, *az_array,
-  *pbLx,*pbRx,*pbLy,*pbRy,*pbLz,*pbRz,*sbLx,*sbRx,*sbLy,*sbRy,*sbLz,*sbRz,
-  *flbx,*flby,*flbz,*flLx,*flRx,*flLy,*flRy,*flLz,*flRz,
-  *flbx2,*flby2,*flbz2,*flLx2,*flRx2,*flLy2,*flRy2,*flLz2,*flRz2,
-  *gKr;
-  //*emuup,*emulo,*emuupbx,*emulobx,*emuupby,*emuloby,*emuupbz,*emulobz,
-  //*emuup2,*emulo2,*emuupbx2,*emulobx2,*emuupby2,*emuloby2,*emuupbz2,*emulobz2,
-  //*tmuup,*tmulo,*tmuupbx,*tmulobx,*tmuupby,*tmuloby,*tmuupbz,*tmulobz,
-  //*tmuup2,*tmulo2,*tmuupbx2,*tmulobx2,*tmuupby2,*tmuloby2,*tmuupbz2,*tmulobz2;
+//physical constants
+extern ldouble tempcgs2gu, tempgu2cgs, lencgs2gu, lengu2cgs, numdenscgs2gu, numdensgu2cgs;
+extern ldouble timecgs2gu, timegu2cgs, velcgs2gu, velgu2cgs, rhocgs2gu, rhogu2cgs;
+extern ldouble surfdenscgs2gu, surfdensgu2cgs, masscgs2gu, massgu2cgs, kappacgs2gu, kappagu2cgs;
+extern ldouble endencgs2gu, endengu2cgs, heatcoolcgs2gu, heatcoolgu2cgs, fluxcgs2gu, fluxgu2cgs;
+extern ldouble ergcgs2gu, erggu2cgs, chargecgs2gu, chargegu2cgs, crosscgs2gu, crossgu2cgs;
 
-int *cellflag;
+extern ldouble k_boltz_cgs, k_boltz_cgs_inv, k_boltz, k_boltz_inv, m_proton_cgs, m_proton;
+extern ldouble m_electr_cgs, m_electr, mpe_ratio, sigma_rad_cgs, sigma_rad, h_cgs, sigmath_cgs;
+extern ldouble a_rad, z_ratio, e_charge, sigma_thomson, fourpi, fourmpi, per_volume_per_time_cgs2gu;
+extern ldouble sigma_rad_over_pi, four_sigmarad, one_over_four_sigmarad, k_over_mecsq;
+extern ldouble mugas_mp_over_kB, kB_over_mugas_mp, kB_over_mp, kB_over_me, one_over_kB_2p70118;
+extern ldouble one_over_mugas_mp, one_over_mui_mp, one_over_mue_mp, kB_over_mui_mp, kB_over_mue_mp;
+extern ldouble mui_over_mue, four_third, five_third, one_third, two_third, log_2p6;
+extern ldouble one_over_log_2p6;
+//extern ldouble global_double1,global_double2; //for general use
+// jet coordinate specific
+#if (MYCOORDS==JETCOORDS)
+extern ldouble hypx1in,hypx1out,hypx1brk;
+#endif
+#ifdef CYLINDRIFY
+extern ldouble thetaCYL,thetaAX,x2cyl,sinthetaCYL,sinthetaAX,rmidcyl;
+#endif
 
-//rad-viscosity specific
-#ifdef RADIATION
-#if (RADVISCOSITY==SHEARVISCOSITY)
-ldouble *Rijviscprev,*radvisclasttime,*Rijviscglobal;
+//time stepping
+extern ldouble global_time,start_time, end_time;
+extern ldouble global_dt;
+extern ldouble global_expdt, global_impdt;
+extern ldouble global_tstepdenmax,global_tstepdenmin,mid1_time, mid2_time, maxmp_time;
+extern ldouble max_u2ptime,  min_u2ptime, start_u2ptime, end_u2ptime;
+extern int max_u2ptime_loc,min_u2ptime_loc;
+extern ldouble avgtime;
+extern ldouble dt;
+extern int nstep;
+extern int global_int_slot[NGLOBALINTSLOT];
+extern ldouble max_ws[3];
+extern ldouble tstepdenmax,tstepdenmin;
+extern ldouble min_dx,min_dy,min_dz,max_dt;
+
+//precalculated metric parameters
+extern ldouble rhorizonBL,rISCOBL,rmboundBL,rphotonBL,etaNT;
+
+//tile specific
+extern int TI,TJ,TK; //tile order
+extern int TOI,TOJ,TOK; //indices of the tile origin
+extern int PROCID, NPROCS;
+
+//relativistic electron bins
+#ifdef RELELECTRONS
+extern ldouble log10binspace, logbinspace, logbinspace_inv,binspace, binspace_inv;
+extern ldouble relel_gammas[NRELBIN],relel_gammas_e[NRELBIN+1];
+extern ldouble relel_gammas_inv[NRELBIN],relel_gammas_e_inv[NRELBIN+1];
+
+#if defined(RELEL_HEAT_FIX_FRAC) && defined(RELEL_HEAT_FIX_INDEX)
+extern ldouble gamma_inj_fixed_ratio;
+#endif
+
+#if defined(RELEL_HEAT_FIX_LIMITS) && defined(RELEL_HEAT_FIX_INDEX)
+extern ldouble relel_injpow[NRELBIN];
+extern ldouble xx_relel_inj;
 #endif
 #endif
 
 //arrays for on the go averaging throughout the domain
-ldouble sigma_otg[TNX];
-ldouble sigma_otg_temp[TNX];
-ldouble scaleth_otg[TNX];
-ldouble scaleth_otg_temp[TNX];
-ldouble axis1_primplus[NV+2][TNX];
-ldouble axis2_primplus[NV+2][TNX];
-ldouble axis1_primplus_temp[NV+2][TNX];
-ldouble axis2_primplus_temp[NV+2][TNX];
+extern ldouble sigma_otg[TNX];
+extern ldouble sigma_otg_temp[TNX];
+extern ldouble scaleth_otg[TNX];
+extern ldouble scaleth_otg_temp[TNX];
+extern ldouble axis1_primplus[NV+2][TNX];
+extern ldouble axis2_primplus[NV+2][TNX];
+extern ldouble axis1_primplus_temp[NV+2][TNX];
+extern ldouble axis2_primplus_temp[NV+2][TNX];
 
-ldouble scalars[NSCALARS];
-int doingavg;
-int doingpostproc;
-int doingpostproc_avg;
-ldouble Kr_tmp[4][4][4],g_tmp[4][4];
-ldouble inputarg[10];
-int **gcidx;
-FILE *fout1,*fout_scalars,*fout_radprofiles,*fout_fail,*fhandle_problem1;
-int nfout1,nfout2;
+extern ldouble scalars[NSCALARS];
+extern int doingavg,doingpostproc,doingpostproc_avg;
+extern ldouble inputarg[10];
+extern int nfout1,nfout2;
+extern FILE *fout1,*fout_scalars,*fout_radprofiles,*fout_fail,*fhandle_problem1;
+
+/*****  arrays   *****/
+
+extern ldouble **msgbufs;
+extern ldouble *u,*x,*xb,*xout, *xbout_xface, *xbout_yface, *xbout_zface,
+  *du,*ut1,*ut2,*ut3,*ut0,*u_bak_fixup,*p_bak_fixup,
+  *gammagas,
+  *vischeating,*vischeatingnegebalance,*vischeatingnegibalance,*vischeatingtimesdeltae,
+  *ahdx,*ahdy,*ahdz,
+  *aradx,*arady,*aradz,
+  *cell_tstepden,*cell_dt,
+  *dut1,*dut2,*uforget,*drt1,*drt2,
+  *ahdxl,*ahdyl,*ahdzl,*aradxl,
+  *aradyl,*aradzl,  *ahdxr,*ahdyr,*ahdzr,*aradxr,*aradyr,*aradzr,
+  *p,*pinit,*emf,*ptemp1,*pvecpot,*ppostimplicit,
+  *ppreexplicit,*upreexplicit,
+  *ptm1,*s,*pavg,
+  *dxdx_my2out,*dxdx_out2my,
+  *g,*gbx,*gby,*gbz,
+  *G,*Gbx,*Gby,*Gbz,
+  *pbLx,*pbRx,*pbLy,*pbRy,*pbLz,*pbRz,
+  *flbx,*flby,*flbz,*flLx,*flRx,*flLy,*flRy,*flLz,*flRz,
+  *gKr,*avgselftime;
+
+extern int *cellflag;
+
+//rad-viscosity specific
+#ifdef RADIATION
+#if (RADVISCOSITY==SHEARVISCOSITY)
+extern ldouble *Rijviscprev,*radvisclasttime,*Rijviscglobal; // TODO add defn to rad.c
+#endif
+#endif
 
 /*****  loops   ******/
-
-int Nloop_0,Nloop_1,Nloop_2,Nloop_02,Nloop_3,Nloop_4,Nloop_5,Nloop_6;
-int **loop_0,**loop_02,**loop_1,**loop_2,**loop_3,**loop_4,**loop_5,**loop_6;
+extern int Nloop_0,Nloop_1,Nloop_2,Nloop_02,Nloop_3,Nloop_4,Nloop_5,Nloop_6;
+extern int **loop_0,**loop_02,**loop_1,**loop_2,**loop_3,**loop_4,**loop_5,**loop_6;
 
 /* loop over all primitives */
 #define PLOOP(j) for(j=0;j<NV;j++)
@@ -424,10 +399,6 @@ struct geometry
   ldouble GG[4][5];
   ldouble gdet;
   ldouble alpha;
-  //ldouble tlo[4][4];
-  //ldouble tup[4][4];
-  //ldouble elo[4][4];
-  //ldouble eup[4][4];
   int par; //some parameter to be used by user	
   ldouble gttpert; //perturbed part of g_tt
 };
@@ -723,11 +694,11 @@ int convert_out2gif_2d(char *fname,char *fname2,int niter,ldouble t);
 int convert_out2gif_1d(char *fname,char *fname2,int niter,ldouble t);
 
 // pointers in misc.c which point to functions in physics.c
-ldouble (*calc_SefromrhoT)(ldouble rho, ldouble temp,int type);
-ldouble (*calc_Sefromrhou)(ldouble rho, ldouble temp,int type);
-ldouble (*calc_Sefromrhop)(ldouble rho, ldouble p,int type);
-ldouble (*calc_TfromSerho)(ldouble S2,ldouble rho,int type,int,int,int);
-ldouble (*calc_ufromSerho)(ldouble S2,ldouble rho,int type,int,int,int);
+extern ldouble (*calc_SefromrhoT)(ldouble rho, ldouble temp,int type);
+extern ldouble (*calc_Sefromrhou)(ldouble rho, ldouble temp,int type);
+extern ldouble (*calc_Sefromrhop)(ldouble rho, ldouble p,int type);
+extern ldouble (*calc_TfromSerho)(ldouble S2,ldouble rho,int type,int,int,int);
+extern ldouble (*calc_ufromSerho)(ldouble S2,ldouble rho,int type,int,int,int);
 
 ///////////////////////////////////////////////////////////////
 // mpi.c //////////////////////////////////////////////////////

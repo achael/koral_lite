@@ -4,6 +4,22 @@
 
 #include "ko.h"
 
+int TI,TJ,TK; //tile order
+int TOI,TOJ,TOK; //indices of the tile origin
+int PROCID;
+int NPROCS;
+ldouble global_tstepdenmax,global_tstepdenmin,mid1_time, mid2_time, maxmp_time;
+ldouble max_u2ptime,  min_u2ptime;
+int max_u2ptime_loc,min_u2ptime_loc;
+ldouble sigma_otg[TNX];
+ldouble sigma_otg_temp[TNX];
+ldouble scaleth_otg[TNX];
+ldouble scaleth_otg_temp[TNX];
+ldouble axis1_primplus[NV+2][TNX];
+ldouble axis2_primplus[NV+2][TNX];
+ldouble axis1_primplus_temp[NV+2][TNX];
+ldouble axis2_primplus_temp[NV+2][TNX];
+
 int
 mpi_exchangedata()
 {

@@ -9,8 +9,59 @@
  \brief Set constants to be used throughout
 */
 //**********************************************************************
+
+//physical constants
+ldouble tempcgs2gu, tempgu2cgs, lencgs2gu, lengu2cgs, numdenscgs2gu, numdensgu2cgs,
+  timecgs2gu, timegu2cgs, velcgs2gu, velgu2cgs, rhocgs2gu, rhogu2cgs, surfdenscgs2gu,
+  surfdensgu2cgs, masscgs2gu, massgu2cgs, kappacgs2gu, kappagu2cgs, endencgs2gu, endengu2cgs,
+  heatcoolcgs2gu, heatcoolgu2cgs, fluxcgs2gu, fluxgu2cgs, ergcgs2gu, erggu2cgs, chargecgs2gu,
+  chargegu2cgs, crosscgs2gu, crossgu2cgs,
+  k_boltz_cgs, k_boltz_cgs_inv, k_boltz, k_boltz_inv, m_proton_cgs, m_proton,
+  m_electr_cgs, m_electr, mpe_ratio, sigma_rad_cgs, sigma_rad, h_cgs, sigmath_cgs,
+  a_rad, z_ratio, e_charge, sigma_thomson,
+  fourpi, fourmpi, per_volume_per_time_cgs2gu, sigma_rad_over_pi, four_sigmarad,
+  one_over_four_sigmarad, k_over_mecsq, mugas_mp_over_kB, kB_over_mugas_mp, kB_over_mp,
+  kB_over_me, one_over_kB_2p70118, one_over_mugas_mp, one_over_mui_mp, one_over_mue_mp,
+  kB_over_mui_mp, kB_over_mue_mp,mui_over_mue,
+  four_third, five_third, one_third, two_third, log_2p6, one_over_log_2p6;
+#if (MYCOORDS==JETCOORDS)
+ldouble hypx1in,hypx1out,hypx1brk;
+#endif
+
+//arrays
+ldouble **msgbufs;
+ldouble *u,*x,*xb,*xout, *xbout_xface, *xbout_yface, *xbout_zface,
+  *du,*ut1,*ut2,*ut3,*ut0,*u_bak_fixup,*p_bak_fixup,
+  *gammagas,
+  *vischeating,*vischeatingnegebalance,*vischeatingnegibalance,*vischeatingtimesdeltae,
+  *ahdx,*ahdy,*ahdz,
+  *aradx,*arady,*aradz,
+  *cell_tstepden,*cell_dt,
+  *dut1,*dut2,*uforget,*drt1,*drt2,
+  *ahdxl,*ahdyl,*ahdzl,*aradxl,
+  *aradyl,*aradzl,  *ahdxr,*ahdyr,*ahdzr,*aradxr,*aradyr,*aradzr,
+  *p,*pinit,*emf,*ptemp1,*pvecpot,*ppostimplicit,
+  *ppreexplicit,*upreexplicit,
+  *ptm1,*s,*pavg,
+  *dxdx_my2out,*dxdx_out2my,
+  *g,*gbx,*gby,*gbz,
+  *G,*Gbx,*Gby,*Gbz,
+  *pbLx,*pbRx,*pbLy,*pbRy,*pbLz,*pbRz,
+  *flbx,*flby,*flbz,*flLx,*flRx,*flLy,*flRy,*flLz,*flRz,
+  *gKr,*avgselftime;
+
+int *cellflag;
+
+//funcetion pointers
+ldouble (*calc_SefromrhoT)(ldouble rho, ldouble temp,int type);
+ldouble (*calc_Sefromrhou)(ldouble rho, ldouble temp,int type);
+ldouble (*calc_Sefromrhop)(ldouble rho, ldouble p,int type);
+ldouble (*calc_TfromSerho)(ldouble S2,ldouble rho,int type,int,int,int);
+ldouble (*calc_ufromSerho)(ldouble S2,ldouble rho,int type,int,int,int);
+
 void initialize_constants()
 {
+  
   // Conversion Factors  
   tempcgs2gu = 1.;
   tempgu2cgs = 1.;
@@ -96,6 +147,7 @@ void initialize_constants()
   printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
   exit(-1);
   */
+  
   // Coordinate specific factors
   #if (MYCOORDS==JETCOORDS)
   //printf("Finding hypx1out\n");
@@ -592,12 +644,12 @@ initialize_arrays()
   if((ppostimplicit=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
 
   //arrays for temporary use (e.g., vector potential, mimic_dynamo)
-  if((pproblem1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
+  
   if((ptemp1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
   if((pvecpot=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
 
   //arrays for avg time
-  if((avgselftime=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");  
+  if((avgselftime=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
 
   //arrays for radiation tensor
 #ifdef RADIATION
@@ -657,14 +709,6 @@ initialize_arrays()
      //metric at cell z-faces
      if((gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
      if((Gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
-      
-     //LNRF basis one-forms and vectors
-     //if((emuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-     //if((emulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-
-     //tetrad one-forms and vectors
-     //if((tmuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-     //if((tmulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
 
      //Fluxes and wavespeeds
      long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
@@ -724,16 +768,14 @@ initialize_arrays()
      if((flRz=(ldouble*)malloc(fluxZSize))==NULL) my_err("malloc err.\n");
 
      //auxiliary primitive arrays
-     if((pproblem2=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
+     
      if((ptm1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((ut0=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((ut1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((ut2=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((ut3=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
-     if((dut0=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((dut1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((dut2=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
-     if((drt0=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((drt1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((drt2=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((uforget=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
@@ -775,8 +817,7 @@ free_arrays()
   free(upreexplicit);
   free(ppreexplicit);
   free(ppostimplicit);
-  free(pproblem1);
-  free(pproblem2);
+ 
   free(avgselftime);
   free(vischeating);
   free(vischeatingnegebalance);
@@ -791,6 +832,7 @@ free_arrays()
   free(radvisclasttime);
 #endif
 #endif  
+
 #ifdef MAGNFIELD
   free(emf);
 #endif
@@ -803,29 +845,10 @@ free_arrays()
   free(msgbufs);
 #endif
   
-  free(px);
-  free(py);
-  free(pz);
   free(u);
   free(g);
   free(G);
   free(gKr);
-  //free(emuup);
-  //free(emulo);
-  //free(emuupbx);
-  //free(emulobx);
-  //free(emuupby);
-  //free(emuloby);
-  //free(emuupbz);
-  //free(emulobz);
-  //free(tmuup);
-  //free(tmulo);
-  //free(tmuupbx);
-  //free(tmulobx);
-  //free(tmuupby);
-  //free(tmuloby);
-  //free(tmuupbz);
-  //free(tmulobz);
 
   free(pbLx);
   free(pbRx);
@@ -856,10 +879,9 @@ free_arrays()
   free(ut1);
   free(ut2);
   free(ut3);
-  free(dut0);
+  
   free(dut1);
   free(dut2);
-  free(drt0);
   free(drt1);
   free(drt2);
   free(uforget);
@@ -898,10 +920,6 @@ free_arrays()
     free(ChiantiISMTable[idx]);
   free(ChiantiISMTable);
   #endif
-  //#ifdef SUTHERLAND_DOPITA_LAMBDA
-  //free(temperaturelog);
-  //free(Lambdalog);
-  //#endif
   
   return 0;
 }

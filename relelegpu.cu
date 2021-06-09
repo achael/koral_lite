@@ -210,7 +210,7 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
 					      ldouble gg[][5],ldouble GG[][5],int utknown)
 {
   
-  int i,j;
+  int i;//,j;
   ldouble u2con[4];
   int verbose=0;
   if(verbose)
@@ -471,5 +471,37 @@ __device__ __host__ int fill_utinucon_device(ldouble *u1,double gg[][5],ldouble 
   }
   
   return 0;
+}
+
+__device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+		                        		     ldouble *bcon, ldouble *bcov, ldouble *bsq)
+{
+
+  int j;
+  struct geometry *geom
+  = (struct geometry *) ggg;
+
+  // First calculate bcon0
+  bcon[0] = pr[B1]*ucov[1] + pr[B2] * ucov[2] + pr[B3] * ucov[3] ;
+  
+  // Then spatial components of bcon
+  
+#ifdef NONRELMHD
+  for(j = 1; j < 4; j++)
+    bcon[j] = pr[B1-1+j]; //b^i=B^i
+
+#else  // relativistic case
+  
+  ldouble u0inv = 1. / ucon[0];
+  for(j=1;j<4;j++)
+    bcon[j] = (pr[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
+  
+#endif //NONRELMHD
+  
+  // Convert to bcov and calculate bsq
+  indices_21_device(bcon, bcov, geom->gg);
+  *bsq = dotB(bcon, bcov); //NOTE: preprocessor macro, ok
+
+  return ;
 }
 

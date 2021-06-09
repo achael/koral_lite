@@ -3,6 +3,7 @@
  */
 
 #include "ko.h"
+ldouble scalars[NSCALARS];
 
 /*********************************************/
 //int calc_radialprofiles(ldouble profiles[][NX])

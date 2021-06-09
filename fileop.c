@@ -8,6 +8,9 @@
 /*  adds up current quantities to the pavg array */
 /*************************************************/
 
+int nfout1,nfout2;
+FILE *fout1,*fout_scalars,*fout_radprofiles,*fout_fail,*fhandle_problem1;
+
 int
 save_avg(ldouble dtin)
 {

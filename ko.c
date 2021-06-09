@@ -7,6 +7,15 @@
 
 #include "ko.h"
 
+//defined in problem.c
+/*
+ldouble global_time,start_time, end_time;
+ldouble avgtime;
+ldouble min_dx,min_dy,min_dz,max_dt;
+int doingavg,doingpostproc,doingpostproc_avg;
+ldouble inputarg[10];
+*/
+
 int
 main(int argc, char **argv)
 {

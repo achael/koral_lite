@@ -4,6 +4,21 @@
 
  #include "ko.h"
 
+ldouble dt;
+ldouble global_dt;
+ldouble global_expdt, global_impdt;
+int nstep;
+ldouble max_ws[3];
+ldouble tstepdenmax,tstepdenmin;
+
+// these are first set in ko.c, ana.c, etc, put here to be common to all
+ldouble global_time,start_time, end_time;
+ldouble avgtime;
+ldouble min_dx,min_dy,min_dz,max_dt;
+int doingavg,doingpostproc,doingpostproc_avg;
+ldouble inputarg[10];
+
+
 /******************************************************/
 /***************** time integration ********************/
 /******************************************************/
@@ -862,7 +877,7 @@ solve_the_problem(ldouble tstart, char* folder)
       
 	  //zero out avg values over domain
 
-    long long Navg = (long long) SX*SY*SZ*(NV+NAVGVARS); // RN: Apr 2, 2019
+          long long Navg = (long long) SX*SY*SZ*(NV+NAVGVARS); // RN: Apr 2, 2019
 	  copy_u_core(0., pavg, pavg, Navg);
 	  avgtime=0.;
 	  

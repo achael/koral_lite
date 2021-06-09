@@ -6,6 +6,11 @@
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_deriv.h>
 
+ldouble rhorizonBL,rISCOBL,rmboundBL,rphotonBL,etaNT;
+#ifdef CYLINDRIFY
+ldouble thetaCYL,thetaAX,x2cyl,sinthetaCYL,sinthetaAX,rmidcyl;
+#endif
+
 //**********************************************************************
 /*! \fn int calc_metric()
  \brief Calculates and saves metric and Christoffels at all cell centers and cell faces within the domain as well as ghost cells and corners

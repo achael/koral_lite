@@ -3,7 +3,11 @@
 */
 
 #include "ko.h"
-//#include "kogpu.h"
+
+ldouble start_u2ptime, end_u2ptime;
+int global_int_slot[NGLOBALINTSLOT];
+int Nloop_0,Nloop_1,Nloop_2,Nloop_02,Nloop_3,Nloop_4,Nloop_5,Nloop_6;
+int **loop_0,**loop_02,**loop_1,**loop_2,**loop_3,**loop_4,**loop_5,**loop_6;
 
 //**********************************************************************
 /*! \fn int reduce_order_check(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *pp2,int ix,int iy,int iz)
@@ -1271,16 +1275,16 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
   struct timespec temp_clock;
-  ldouble start_time,stop_time;
+  ldouble tstart,tstop;
   
   my_clock_gettime(&temp_clock);
-  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   
   calc_update(dtin);
 
   my_clock_gettime(&temp_clock);
-  stop_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu update time: %0.2lf \n", (stop_time-start_time)*1.e3);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
 
    /************************************************************************/
    /********* explicit *** RADIATION COUPLING  *****************************/
