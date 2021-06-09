@@ -71,6 +71,7 @@ __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldoubl
 ///////////////////////////////////////////////////////////////
 __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2]);
 
+__device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 // kernel
 __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
