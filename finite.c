@@ -1273,17 +1273,17 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************
   // Evolve the conserved quantities
 
-#ifdef GPUKO
-  calc_update_gpu(dtin);
-#endif
-
   struct timespec temp_clock;
   ldouble tstart,tstop;
   
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   
+#ifndef GPUKO
   calc_update(dtin);
+#else
+  calc_update_gpu(dtin);
+#endif
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
