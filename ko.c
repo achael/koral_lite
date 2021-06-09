@@ -19,6 +19,8 @@ ldouble inputarg[10];
 int
 main(int argc, char **argv)
 {
+
+  fprintf(stderr, "does gpuko work? %d\n", GPUKO);
   
   int i,j;
   int ix,iy,iz;

@@ -4,7 +4,7 @@
 #pragma once
 
 // for testing
-#define doTEST 1
+#define doTEST 0
 #define ixTEST 13
 #define iyTEST 21
 #define izTEST 8

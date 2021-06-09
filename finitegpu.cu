@@ -426,8 +426,18 @@ int calc_update_gpu(ldouble dtin)
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu update time: %0.2f \n",tms);
   
+  ldouble* u_tmp;
+  if((u_tmp=(ldouble*)malloc(Nprim*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(u_tmp, d_u_arr, Nprim*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy of d_p_arr to p_tmp\n");
+  printf("gpu update uu[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(u_tmp, iv, ixTEST, iyTEST, izTEST));
+  printf("\n");
+  free(u_tmp);
+  
   // TODO Copy updated u back from device to global array u?
-  err = cudaMemcpy(u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  //err = cudaMemcpy(u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
   // Free Device Memory
   cudaFree(d_flbx_arr);

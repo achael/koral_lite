@@ -1268,21 +1268,27 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************
   // Evolve the conserved quantities
 
+  //TODO add extra flag
+#ifdef GPUKO
+  calc_update_gpu(dtin);
+#endif
+  
   struct timespec temp_clock;
   ldouble tstart,tstop;
   
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
-#ifndef GPUKO
+
   calc_update(dtin);
-#else
-  calc_update_gpu(dtin);
-#endif
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu update time: %0.2lf \n\n", (tstop-tstart)*1.e3);
+  printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
+
+  printf("cpu update uu[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(u, iv, ixTEST, iyTEST, izTEST));
+  printf("\n\n");
 
   //************************************************************************
   // Explicit RADIATION COUPLING  
@@ -1325,15 +1331,16 @@ op_explicit(ldouble t, ldouble dtin)
   // TODO: timing functionality. reuse timer from above
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
   calc_u2p(1);
+
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu u2p time: %0.2lf \n\n", (tstop-tstart)*1.e3);
-
+  printf("cpu u2p time: %0.2lf \n", (tstop-tstart)*1.e3);
   printf("cpu u2p pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
-  printf("\n");
+  printf("\n\n");
 
   //**********************************************************************	    
   // Entropy Mixing
