@@ -434,9 +434,9 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   //equations choice
   int (*f_u2p)(ldouble,ldouble*,ldouble*,ldouble*,ldouble*,ldouble);
   if(Etype==U2P_HOT)
-    f_u2p=&f_u2p_hot_device;
+    f_u2p=&f_u2p_hot;
   if(Etype==U2P_ENTROPY)
-    f_u2p=&f_u2p_entropy_device;
+    f_u2p=&f_u2p_entropy;
   
   
   //TODO -- print statements
