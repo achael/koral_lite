@@ -35,13 +35,14 @@ On Adroit/Della, we also define the following commands in .bashrc to set up inte
 .. code-block:: bash
 
   alias sinter='salloc -p gpu --reservation=hackathon --nodes=1 --ntasks=1 --mem=32G --time=04:00:00 /bin/bash'
-  
+  alias sinter='galloc -p gpu --reservation=hackathon --nodes=1 --ntasks=1 --mem=32G --time=04:00:00 --gres=gpu:1 /bin/bash'
+
 and then start a gpu interactive session with: 
   
 .. code-block:: bash
 
   source ~/.bashrc
-  binter
+  ginter
 
 Then compile KORAL:
 
