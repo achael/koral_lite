@@ -701,7 +701,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     if(verbose>0) printf("iter exceeded in u2p_solver with Etype: %d\n",Etype); 
     return -102;
   }
-  /*
+  
   if(!isfinite(W))
   {
     if(verbose) printf("nan/inf W in u2p_solver with Etype: %d\n",Etype);
@@ -732,7 +732,8 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   utcon[3]=gamma/(W+Bsq)*(Qtcon[3]+QdotB*Bcon[3]/W);
 
   if(verbose>1)
-    printf("end2: %e %e %e %e %e %e\n",W,D,pgamma,gamma2,rho,uint);  
+    printf("end2: %e %e %e %e %e %e\n",W,D,pgamma,gamma2,rho,uint);
+  
   if(!isfinite(utcon[1]))
   {
     return -120;
@@ -740,14 +741,15 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   if(uint<0. || gamma2<0. || isnan(W) || !isfinite(W))
   {
-    if(verbose>0) printf("neg u in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);//getchar();
+    if(verbose>0)
+      printf("neg u in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);
     return -104;
   }
   
   //converting to VELPRIM
   if (VELR != VELPRIM)
   {
-    conv_vels(utcon,utcon,VELR,VELPRIM,gg,GG);
+    conv_vels_device(utcon,utcon,VELR,VELPRIM,gg,GG);
   }
   
   //returning new primitives
@@ -759,14 +761,14 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   if(rho<0.)
   {
-    if(verbose>0) printf("neg rho in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);
-    //getchar();
+    if(verbose>0)
+      printf("neg rho in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);
     return -105;
   }
   
   //entropy based on Etype  
   //pure entropy evolution - updated only in the end of RK2
-  pp[ENTR]=entr;
+  pp[ENTR]=entr; // TODO why is this entr instead of Sc * gdetu_inv / utcon[0]? 
   
 #ifdef MAGNFIELD
   //magnetic conserved=primitives
@@ -776,25 +778,25 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
 #endif
   
 #ifdef EVOLVEELECTRONS
-  conv_vels(utcon,utcon,VELPRIM,VEL4,gg,GG);
+  conv_vels_device(utcon,utcon,VELPRIM,VEL4,gg,GG);
   ldouble Se=uu[ENTRE] * gdetu_inv / utcon[0];
   pp[ENTRE]=Se;
   ldouble Si=uu[ENTRI] * gdetu_inv / utcon[0];
   pp[ENTRI]=Si;
   
 #ifdef RELELECTRONS
-  int ib;
-  for(ib=0;ib<NRELBIN;ib++)
+  for(int ib=0;ib<NRELBIN;ib++)
     pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv / utcon[0];
 #endif
 #endif
+
+  //TODO
+  //if(verbose) print_primitives(pp);
   
-  if(verbose) print_primitives(pp);
+  if(verbose>0)
+    printf("u2p_solver returns 0\n");
   
-  if(verbose>0) printf("u2p_solver returns 0\n");
-  */
-  
-  return 0; //ok
+  return 0; 
 }
 
 
