@@ -106,11 +106,8 @@ main(int argc, char **argv)
   //precalculates metric, Christoffels, etc.
   calc_metric();
 
-  fprintf(stderr, ">>>> are we pushing??\n");
   #ifdef GPUKO
-  fprintf(stderr, ">>>> are we pushing B??\n");
   push_geometry_gpu();
-  fprintf(stderr, ">>>> are we pushing C??\n");
   #endif
   
   //save coordinate file

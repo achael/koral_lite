@@ -12,7 +12,7 @@ CC=gcc
 //CFLAGS = -fopenmp -O2 -I/usr/include/hdf5/serial
 //CFLAGS = -O3 -fPIC -I/home/achael/software/include
 
-CFLAGS = -O3 -fPIC 
+CFLAGS = -O3 -fPIC -DGPUKO
 CFLAGSGPU = -O3 -fPIC -DGPUKO
 
 OMPFLAGS = -fopenmp
@@ -30,9 +30,9 @@ SRCS = mpi.c problem.c finite.c metric.c frames.c relele.c u2p.c p2u.c magn.c ph
 SRCSGPU = u2pgpu.cu relelegpu.cu finitegpu.cu metricgpu.cu
 OBJSGPU = u2pgpu.cu relelegpu.o finitegpu.o metricgpu.o
 
-all: ko_gpu ko ana avg phisli thsli phiavg
+all: ko_gpu ko.o
 
-
+allold: ko_gpu ko.o ana avg phisli thsli phiavg
 
 ko_gpu: ko.o $(SRCS) $(SRCSGPU) Makefile ko.h kogpu.h problem.h mnemonics.h 
 	$(CC) $(CFLAGSGPU) -c $(SRCS)

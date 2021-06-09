@@ -1230,11 +1230,6 @@ int
 op_explicit(ldouble t, ldouble dtin) 
 {
 
-#ifdef GPUKO
-  // TODO move this outside of the loop
-  push_geometry_gpu();
-#endif 
-
   int ix,iy,iz,iv,ii;
   ldouble dt;
 
@@ -1339,11 +1334,6 @@ op_explicit(ldouble t, ldouble dtin)
   
 #ifdef MIXENTROPIESPROPERLY
   mix_entropies(dt);
-#endif
-
-#ifdef GPUKO
-  // TODO move this outside of loop
-  //free_geometry_gpu();
 #endif
 
   return GSL_SUCCESS;

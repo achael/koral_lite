@@ -19,12 +19,9 @@ int GEOMETRY_HAS_BEEN_ALLOCED = 0;
 
 int push_geometry_gpu()
 {
- 
   if (GEOMETRY_HAS_BEEN_ALLOCED == 1) {
-    fprintf(stderr, "geom already alloced\n");
     return 0;
   }
-  fprintf(stderr, "geom being alloced\n");
 
   cudaError_t err = cudaSuccess;
 
@@ -93,10 +90,8 @@ int push_geometry_gpu()
 int free_geometry_gpu()
 {
   if (GEOMETRY_HAS_BEEN_ALLOCED == 0) {
-    fprintf(stderr, "can't free what we don't have\n");
     return 0;
   }
-  fprintf(stderr, "freeing geometry\n");
 
   cudaFree(d_loop0_ix);
   cudaFree(d_loop0_iy);
