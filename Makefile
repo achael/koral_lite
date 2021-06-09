@@ -25,17 +25,19 @@ LIBS=-lm -lgsl -lgslcblas -lfftw3 -lrt
 //OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o
 //OBJS = mpi.o problem.o finite.o metric.o frames.o relele.o u2p.o p2u.o magn.o physics.o opacities.o misc.o postproc.o fileop.o silo.o
 OBJS = mpi.o problem.o finite.o metric.o frames.o relele.o u2p.o p2u.o magn.o physics.o opacities.o misc.o postproc.o fileop.o 
-OBJSGPU = relelegpu.o finitegpu.o
 SRCS = mpi.c problem.c finite.c metric.c frames.c relele.c u2p.c p2u.c magn.c physics.c opacities.c misc.c postproc.c fileop.c 
+
+SRCSGPU = relelegpu.cu finitegpu.cu
+OBJSGPU = relelegpu.o finitegpu.o
 
 all: ko_gpu ko ana avg phisli thsli phiavg
 
 
 
-ko_gpu: ko.o $(SRCS) relelegpu.cu finitegpu.cu Makefile ko.h kogpu.h problem.h mnemonics.h 
+ko_gpu: ko.o $(SRCS) $(SRCSGPU) Makefile ko.h kogpu.h problem.h mnemonics.h 
 	$(CC) $(CFLAGSGPU) -c $(SRCS)
-	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -x cu -dc relelegpu.cu finitegpu.cu
-	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 -lcudart $(LIBS) $(OBJS) relelegpu.cu finitegpu.cu -o ko_gpu ko.o
+	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -x cu -dc $(SRCSGPU)
+	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 -lcudart $(LIBS) $(OBJS) $(OBJSGPU) -o ko_gpu ko.o
 
 ko: ko.o $(SRCS) Makefile ko.h problem.h mnemonics.h
 	$(CC) $(CFLAGS) $(OMPFLAGS) -o ko ko.o $(SRCS) $(LIBS)

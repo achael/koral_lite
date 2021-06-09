@@ -1284,7 +1284,7 @@ op_explicit(ldouble t, ldouble dtin)
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
+  printf("cpu update time: %0.2lf \n\n", (tstop-tstart)*1.e3);
 
    /************************************************************************/
    /********* explicit *** RADIATION COUPLING  *****************************/

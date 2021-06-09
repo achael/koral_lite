@@ -257,16 +257,16 @@
 //resolution
 /************************************/
 //total resolution
-#define TNX 64//128 //72 //320 //336//256//32//128//312 
-#define TNY 64//128 //48 //192 //256 //192//192//32//128//200 
-#define TNZ 64//128 //36 //192 //192
+#define TNX 256 //72 //320 //336//256//32//128//312 
+#define TNY 256 //48 //192 //256 //192//192//32//128//200 
+#define TNZ 256 //36 //192 //192
 
 #define SILO2D_XZPLANE
 
 //number of tiles
-#define NTX 6 //24 //28
-#define NTY 4 //16 //16
-#define NTZ 2 //12 //8 //16
+#define NTX 1 //24 //28
+#define NTY 1 //16 //16
+#define NTZ 1 //12 //8 //16
 
 /************************************/
 //coordinates
