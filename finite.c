@@ -1164,7 +1164,18 @@ calc_u2p(int setflags)
     
     calc_primitives(ix,iy,iz,setflags);
   }
+
   
+  //timer stop
+  my_clock_gettime(&temp_clock);
+  end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+
+  printf("cpu u2p pp[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+  printf("\n");
+  	   
   //fixup here hd and rad after inversions
   cell_fixup(FIXUP_U2PMHD);
 #ifdef RADIATION
@@ -1173,11 +1184,7 @@ calc_u2p(int setflags)
 
   //re-set boundary conditions
   set_bc(global_time,0);
-  
-  //timer stop
-  my_clock_gettime(&temp_clock);
-  end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
+
   return 0;
 } 
 

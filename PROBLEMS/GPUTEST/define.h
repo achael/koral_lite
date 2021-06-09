@@ -6,6 +6,7 @@
 #define BHDISK_PROBLEMTYPE
 
 //#define NOSOURCES
+#define NOFLOORS
 
 //***********************************/
 // Main problem specification

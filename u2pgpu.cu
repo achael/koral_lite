@@ -28,10 +28,17 @@ __device__ __host__ static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE
 __device__ __host__ static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
 __device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
 
+__device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int iy,int iz, int val)
+{
+   cellflag_arr[iflag + (iX(ix)+(NGCX))*NFLAGS +  \
+			(iY(iy)+(NGCY))*(SX)*NFLAGS + \
+		        (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val;
+}
+
 // todo deleted type
 __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-				       ldouble *u_arr, ldouble *p_arr,
+				       ldouble *u_arr, ldouble *p_arr, int* cellflag_arr,
 				       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr)
 {
 
@@ -53,10 +60,8 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
     return;
   
   struct geometry geom;
-  //fill_geometry(ix,iy,iz,&geom);
   fill_geometry_device(ix,iy,iz, x_arr,&geom,g_arr, G_arr);
 
-   
   int u2pret,u2pretav;
   ldouble uu[NV],pp[NV];
   
@@ -68,13 +73,13 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   }
 
   //TODO -- put in flags
-  /*
+  
   if(setflags)
   {
-    set_cflag(ENTROPYFLAG,ix,iy,iz,0);
-    set_cflag(ENTROPYFLAG2,ix,iy,iz,0);
+    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,0);
+    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,0);
   }
-  */
+  
 
   //TODO -- put in check for corrected_polaraxis
   //u to p inversion is done here
@@ -85,21 +90,21 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   //else
   //{
     u2p_device(uu,pp,&geom,corrected,fixups); // regular inversion
-    //}
-
-    //TODO
-  /*
+  //}
+  
   //set flags for entropy solver
   if(corrected[0]==1 && setflags) //hd correction - entropy solver
   {
-    set_cflag(ENTROPYFLAG,ix,iy,iz,1);
+    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,1);
   }
   
   if(corrected[2]==1 && setflags) //borrowing energy from radiation didn't work
   {  
-    set_cflag(ENTROPYFLAG2,ix,iy,iz,1);
+    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,1);
   }
-  
+
+#ifndef NOFLOORS
+  /*
   //check hd floors
   int floorret=0;
   
@@ -128,7 +133,8 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   }
 #endif
   */
-    
+#endif
+  
   //set new primitives and conserved
   for(int iv=0;iv<NV;iv++)
   { 
@@ -136,27 +142,27 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   }
 
   //TODO
-  /*
+  
   //set flags for fixups of unsuccessful cells
   if(setflags)
   {
     if(fixups[0]>0)
     {
-      set_cflag(HDFIXUPFLAG,ix,iy,iz,1);
-      global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;
+      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
+      //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;
     }
     else
-      set_cflag(HDFIXUPFLAG,ix,iy,iz,0);
+      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
     
     if(fixups[1]>0)
     {
-      set_cflag(RADFIXUPFLAG,ix,iy,iz,-1);
-      global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
+      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
+      //global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
     }
     else
-      set_cflag(RADFIXUPFLAG,ix,iy,iz,0); 
+      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,0); 
   }
-    */
+    
 
 } 
 
@@ -1032,7 +1038,8 @@ int calc_u2p_gpu(int setflags)
 {
 
   ldouble *d_u_arr, *d_p_arr;
-
+  int *d_cellflag_arr;
+  
   cudaError_t err = cudaSuccess;
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
@@ -1040,14 +1047,17 @@ int calc_u2p_gpu(int setflags)
 
   // NOTE: size of xb is copied from initial malloc in misc.c
   // these need to be long long if the grid is on one tile and large (~256^3)
-  long long Nprim  = (SX)*(SY)*(SZ)*NV;
+  long long Ncellflag = (SX)*(SY)*(SZ)*NFLAGS;
+  long long Nprim     = (SX)*(SY)*(SZ)*NV;
 
   // allocate and sync prims and cons to device 
   err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);  
   err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
-
+  err = cudaMalloc(&d_cellflag_arr,    sizeof(int)*Ncellflag);
+  
   err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);  // is this used to seed?
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_cellflag_arr, cellflag, sizeof(int)*Ncellflag, cudaMemcpyHostToDevice);
   
 
   // launch calc_primitives_kernel
@@ -1057,7 +1067,7 @@ int calc_u2p_gpu(int setflags)
   cudaEventRecord(start);
   calc_primitives_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, setflags, 
                                                     d_loop0_ix, d_loop0_iy, d_loop0_iz,
-                                                    d_u_arr, d_p_arr,
+                                                    d_u_arr, d_p_arr, d_cellflag_arr,
                                                     d_x, d_gcov, d_gcon);
 
   cudaEventRecord(stop);
@@ -1069,11 +1079,21 @@ int calc_u2p_gpu(int setflags)
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu u2p time: %0.2f \n",tms);
 
+
+  printf("gpu u2p pp[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(d_p_arr, iv, ixTEST, iyTEST, izTEST));
+  printf("\n");
+	 
+  // TODO Copy updated p back from device to global array p?
+  //err = cudaMemcpy(&p, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  
   // ======= TODO
   // Free Device Memory
   cudaFree(d_u_arr);
   cudaFree(d_p_arr);
-
+  cudaFree(d_cellflag_arr);
+  
   return 0;
 }
 

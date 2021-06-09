@@ -72,7 +72,8 @@ calc_primitives(int ix,int iy,int iz,int setflags)
   {  
     set_cflag(ENTROPYFLAG2,ix,iy,iz,1);
   }
-  
+
+#ifndef NOFLOORS
   //check hd floors
   int floorret=0;
   
@@ -98,6 +99,7 @@ calc_primitives(int ix,int iy,int iz,int setflags)
   {
     corrected[1]=1;
   }
+#endif
 #endif
   
   //set new primitives and conserved
