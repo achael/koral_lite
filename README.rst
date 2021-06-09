@@ -30,19 +30,18 @@ To install on **Della** make sure the following are in your .bashrc
   module load cudatoolkit/11.1
   module load gsl/2.6
 
-On Adroit also define the following commands in .bashrc to set up interactive jobs
+On Adroit/Della, we also define the following commands in .bashrc to set up interactive jobs 
 
 .. code-block:: bash
 
-  alias sinter='salloc -p hackathon --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 /bin/bash'
-  alias ginter='salloc -p hackathon --nodes=1 --ntasks=1 --mem=4G --time=04:00:00 --gres=gpu:1 /bin/bash'
+  alias sinter='salloc -p gpu --reservation=hackathon --nodes=1 --ntasks=1 --mem=32G --time=04:00:00 /bin/bash'
   
-and I start a cpu interactive session with: 
+and then start a gpu interactive session with: 
   
 .. code-block:: bash
 
   source ~/.bashrc
-  sinter
+  binter
 
 Then compile KORAL:
 
@@ -50,9 +49,21 @@ Then compile KORAL:
 
   ./mser.sh
 
-To run the test problem:
-
+Make sure you create a dumps directory, otherwise you will get a segmentation fault. The test problem will start at t=0 every time (reading dumps0000.dat if available). Empty this directory if you change the problem size. 
 .. code-block:: bash
 
   mkdir dumps
+
+To run the test problem on the cpu:
+
+.. code-block:: bash
+
   ./ko
+  
+
+To run the test problem on the gpu:
+
+.. code-block:: bash
+
+  srun -n 1 ./ko_gpu
+
