@@ -207,7 +207,7 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   //calculating stress energy tensor components
   calc_Tij_device(pp,&geom,T); 
   for(int i=0;i<4;i++)
-    for(int j=0;j<4;xj++)
+    for(int j=0;j<4;j++)
       T[i][j]=0.;
   
   indices_2221_device(T,T,gg);
