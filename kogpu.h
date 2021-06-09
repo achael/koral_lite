@@ -2,16 +2,21 @@
 
 #define TB_SIZE 64
 
+
 ///////////////////////////////////////////////////////////////
-// finitegpu.cu ///////////////////////////////////////////////
+// metricgpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-//Declaring constant geometrical arrays for device			                   
-extern int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz; 
+//Declaring constant geometrical arrays for device
+extern int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz;
 extern ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
 extern ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
 extern ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
 extern ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
 extern ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)]
+
+
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
 
 __device__ __host__ int is_cell_active_device (int ix, int iy, int iz);
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
