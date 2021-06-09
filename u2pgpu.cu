@@ -240,7 +240,8 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
       
       if(verbose>2 )
       {
-        printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
+	//TODO -- need to pass in mpi variables TOI,TOJ
+        //printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
       }
       
       //TODO
@@ -270,8 +271,8 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
     //leaving primitives unchanged - should not happen
     if(verbose>1 || 1)
     {
-      printf("%4d > %4d %4d %4d > MHDU2PFAIL > u2p prim. unchanged > %d \n",
-	     PROCID,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,u2pret);
+      //TODO need to pass TOI, TOJ, TOK, PROCID
+      //printf("%4d > %4d %4d %4d > MHDU2PFAIL > u2p prim. unchanged > %d \n",PROCID,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,u2pret);
     }
     ret=-3;
     for(u2pret=0;u2pret<NV;u2pret++)
