@@ -207,7 +207,7 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   //calculating stress energy tensor components
   calc_Tij_device(pp,&geom,T); 
   for(int i=0;i<4;i++)
-    for(int j=0;j<4;j++)
+    for(int j=0;j<4;xj++)
       T[i][j]=0.;
   
   indices_2221_device(T,T,gg);
@@ -265,8 +265,10 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
 				       ldouble* x_arr, ldouble* xb_arr,
+                                       ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
 				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				       ldouble* u_arr, ldouble* p_arr, ldouble* d_gcov, ldouble* d_gcon, ldouble* d_Kris)
+				       ldouble* u_arr, ldouble* p_arr)
+				       
 
 {
 
@@ -302,7 +304,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
   {
      // Get metric source terms ms[iv]
      // and any other source terms gs[iv] 
-     f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,d_gcov,d_gcon,d_Kris);
+     f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,gcov_arr,gcon_arr,gKr_arr);
      //f_general_source_term(ix,iy,iz,gs); //NOTE: *very* rarely used, ignore for now
      //for(int iv=0;iv<NV;iv++) ms[iv]+=gs[iv];
   }
@@ -424,9 +426,9 @@ int calc_update_gpu(ldouble dtin)
   cudaEventRecord(start);
   calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, 
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
-						    d_x, d_xb,
+						    d_x, d_xb,d_gcov, d_gcon, d_Kris,
 						    d_flbx_arr, d_flby_arr, d_flbz_arr,
-						    d_u_arr, d_p_arr, d_gcov, d_gcon, d_Kris);
+						    d_u_arr, d_p_arr);
   
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
