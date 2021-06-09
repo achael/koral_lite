@@ -1023,7 +1023,11 @@ int calc_update(ldouble dtin)
 	PLOOP(iv) ms[iv]+=gs[iv];
       }
 #endif
+
       
+      if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST)
+          printf("H ms[NV]: %e %e %e %e %e %e %e %e %e\n", ms[0],ms[1],ms[2],ms[3],ms[4],ms[5],ms[6],ms[7],ms[8]);
+
       // Get the cell size in the three directions
       ldouble dx=get_size_x(ix,0);
       ldouble dy=get_size_x(iy,1);
@@ -1401,7 +1405,7 @@ apply_dynamo(ldouble t, ldouble dt)
   mimic_dynamo(dt); 
 
   //update primitives
-  calc_u2p(0,0);
+  calc_u2p(0);
 
 #endif
 
@@ -1950,9 +1954,6 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
   iy2=NY+0;
   iz1=-0;
   iz2=NZ+0;
-
-  //TEST
-  //ldouble test = get_xb_device(xb,33,0);
   
   //x
   for(i1=ix1-NG;i1<=ix2+NG;i1++)

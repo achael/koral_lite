@@ -294,6 +294,10 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
      //for(int iv=0;iv<NV;iv++) ms[iv]+=gs[iv];
   }
 #endif
+
+
+ if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST)
+   printf("D ms[NV]: %e %e %e %e %e %e %e %e %e\n", ms[0],ms[1],ms[2],ms[3],ms[4],ms[5],ms[6],ms[7],ms[8]);
   
   // Get the cell size in the three directions
   dx = get_size_x_device(xb_arr,ix,0); 

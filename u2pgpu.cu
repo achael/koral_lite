@@ -365,8 +365,7 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
     corrected[1]=1;
 
 
-  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-     printf("End of u2p_device\n");
+  //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("End of u2p_device\n");
   
   return ret;
 } 
@@ -418,8 +417,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   struct geometry *geom
   = (struct geometry *) ggg;
 
-  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-    printf("In u2p_solver_W_device!\n");
+  //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("In u2p_solver_W_device!\n");
   
   ldouble rho,uint,w,W,alpha,D,Sc;
   ldouble ucon[4],ucov[4],utcon[4],utcov[4],ncov[4],ncon[4];
@@ -632,8 +630,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   int iter=0, fu2pret;
   do
   {
-    if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-      printf("Hello from Newton-Raphson loop\n");
+    //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("Hello from Newton-Raphson loop\n");
     
     ldouble Wprev=W;
     iter++;
@@ -807,8 +804,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   if(verbose>0)
     printf("u2p_solver returns 0\n");
 
-  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
-     printf("End of u2p_solver_W_device\n");
+  //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("End of u2p_solver_W_device\n");
   
   return 0; 
 }
@@ -1082,15 +1078,14 @@ int calc_u2p_gpu(int setflags)
 
   
   ldouble* p_tmp;
-  if((p_tmp=(ldouble*)malloc(Nprim*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(p_tmp, d_p_arr, Nprim*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if((p_tmp=(ldouble*)malloc(sizeof(ldouble)*Nprim))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(p_tmp, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   if(err != cudaSuccess) printf("failed cudaMemcpy of d_p_arr to p_tmp\n");
   printf("gpu u2p pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(p_tmp, iv, ixTEST, iyTEST, izTEST));
   printf("\n");
   free(p_tmp);
-  
   
   // TODO Copy updated p back from device to global array p?
   //err = cudaMemcpy(p, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
