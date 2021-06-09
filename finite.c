@@ -1395,7 +1395,7 @@ apply_dynamo(ldouble t, ldouble dt)
   mimic_dynamo(dt); 
 
   //update primitives
-  calc_u2p(0,0);
+  calc_u2p(0);
 
 #endif
 

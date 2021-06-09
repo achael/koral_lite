@@ -1081,7 +1081,7 @@ int calc_u2p_gpu(int setflags)
   printf("gpu u2p time: %0.2f \n",tms);
 
   ldouble* p_tmp;
-  if((p_tmp=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
+  if((p_tmp=(ldouble*)malloc(Nprim*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
   err = cudaMemcpy(&p_tmp, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   printf("gpu u2p pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
