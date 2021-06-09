@@ -398,7 +398,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   ldouble Qcon[4],Qcov[4],Qconp[4],Qcovp[4],jmunu[4][4],Qtcon[4],Qtcov[4],Qt2,Qn;
   ldouble QdotB,QdotBsq,Bcon[4],Bcov[4],Bsq;
   
-  /*******************************************************/
+  
   //prepare geometry
   struct geometry *geom
   = (struct geometry *) ggg;
@@ -417,14 +417,14 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
 #endif
   gdetu_inv = 1. / gdetu;
   
-  /****************************/
+  
   //equations choice
   int (*f_u2p)(ldouble,ldouble*,ldouble*,ldouble*,ldouble*,ldouble);
   if(Etype==U2P_HOT)
     f_u2p=&f_u2p_hot;
   if(Etype==U2P_ENTROPY)
     f_u2p=&f_u2p_entropy;
-  /****************************/
+  
   
   if(verbose>1)
   {
