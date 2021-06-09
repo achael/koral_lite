@@ -1047,7 +1047,7 @@ int op_intermediate(ldouble t, ldouble dt);
 int apply_dynamo(ldouble t, ldouble dt);
 int op_implicit(ldouble t, ldouble dtin);
 
-ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz);
+//ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz);
 
 int set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac);
 int set_grid_outcoords();

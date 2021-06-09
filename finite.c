@@ -1255,17 +1255,6 @@ op_explicit(ldouble t, ldouble dtin)
   
 #pragma omp barrier
   calc_fluxes();
-
-  /*
-#pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
-  for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
-  {
-    ix=loop_1[ii][0];
-    iy=loop_1[ii][1];
-    iz=loop_1[ii][2];
-    f_calc_fluxes_at_faces(ix,iy,iz);
-  }
-  */
   
   //**********************************************************************
   // Constrained transport to preserve div.B=0
@@ -1478,7 +1467,7 @@ int calc_fluxes()
     iz=loop_1[ii][2];
 
 
-    //ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz)
+    //ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz) // --> moved code directly below
     
     int i;
     struct geometry geom;
