@@ -577,7 +577,6 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   // Make sure that W is large enough so that v^2 < 1 :
   
   ldouble f0,f1,dfdW,err;
-  ldouble Wprev=W;
   ldouble cons[7]={Qn,Qtsq,D,QdotBsq,Bsq,Sc,Qdotnp};
 
 
@@ -617,44 +616,55 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     return -150;
   }
 
-  /*  
+    
   //1d Newton solver
   int iter=0, fu2pret;
   do
   {
-    Wprev=W;
+    if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
+      printf("Hello from Newton-Raphson loop\n");
+    
+    ldouble Wprev=W;
     iter++;
 
     fu2pret=(*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
     
     if(verbose>1) printf("%d %e %e %e %e\n",iter,W,f0,dfdW,err);
     
-    //convergence test
+    // convergence test
     if(err<U2PCONV)
       break;
-    
-    if(dfdW==0.) {W*=1.1; continue;}
-    
+
+    // nudge if at local max/min
+    if(dfdW==0.)
+    {
+      W*=1.1;
+      continue;
+    }
+
+    // apply update
     ldouble Wnew = W-f0/dfdW;
-    int idump=0;
-    ldouble dumpfac=1.;
     
-    //test if goes out of bounds and damp solution if so
+    
+    // test if goes out of bounds and damp solution if so
+    int idamp=0;
+    ldouble dampfac=1.;
     do
     {
       ldouble f0tmp,dfdWtmp,errtmp;
       f0tmp=dfdWtmp=0.;
       (*f_u2p)(Wnew-D,cons,&f0tmp,&dfdWtmp,&errtmp,pgamma);
-      if(verbose>1) printf("sub (%d) :%d %e %e %e %e\n",idump,iter,Wnew,f0tmp,dfdWtmp,errtmp);
+      if(verbose>1)
+	printf("sub (%d) :%d %e %e %e %e\n",idamp,iter,Wnew,f0tmp,dfdWtmp,errtmp);
       if( ((( Wnew*Wnew*Wnew * ( Wnew + 2.*Bsq )
              - QdotBsq*(2.*Wnew + Bsq) ) <= Wnew*Wnew*(Qtsq-Bsq*Bsq))
            || !isfinite(f0tmp) || !isfinite(f0tmp)
            || !isfinite(dfdWtmp) || !isfinite(dfdWtmp))
-         && (idump<100))
+         && (idamp<100))
       {
-        idump++;
-        dumpfac/=2.;
-        Wnew=W-dumpfac*f0/dfdW;
+        idamp++;
+        dampfac/=2.;
+        Wnew=W-dampfac*f0/dfdW; // damp to bring in bounds
         continue;
       }
       else
@@ -662,14 +672,16 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     }
     while(1);
     
-    if(idump>=100)
+    if(idamp>=100)
     {
       if(verbose>0) printf("damped unsuccessfuly\n");
       return -101;
     }
-    
+
+    // apply update after damping
     W=Wnew;
-    
+
+    // check if W is too large
     if(fabs(W)>BIG)
     {
       //TODO
@@ -677,16 +689,19 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
       return -103;
     }
 
-    if(fabs((W-Wprev)/Wprev)<U2PCONV && err<ERRCONV) break;
+    // check for convergence
+    if(fabs((W-Wprev)/Wprev)<U2PCONV && err<ERRCONV)
+      break;
   }
   while(iter<50);
   
+  
   if(iter>=50)
   {
-    if(verbose>0) printf("iter exceeded in u2p_solver with Etype: %d\n",Etype); //getchar();
+    if(verbose>0) printf("iter exceeded in u2p_solver with Etype: %d\n",Etype); 
     return -102;
   }
-  
+  /*
   if(!isfinite(W))
   {
     if(verbose) printf("nan/inf W in u2p_solver with Etype: %d\n",Etype);
