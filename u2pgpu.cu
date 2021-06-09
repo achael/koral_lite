@@ -573,19 +573,18 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   // test if does not provide reasonable gamma2
   // Make sure that W is large enough so that v^2 < 1 :
-  int i_increase = 0;
+  
   ldouble f0,f1,dfdW,err;
-  ldouble EPS=1.e-4;
   ldouble Wprev=W;
   ldouble cons[7]={Qn,Qtsq,D,QdotBsq,Bsq,Sc,Qdotnp};
 
-  /*
+
+  // check initial guess of W
+  int i_increase = 0;
   do
   {
     f0=dfdW=0.;
     
-    //if(Etype!=U2P_HOT) //entropy-like solvers require this additional check
-    //now invoked for all solvers:
     (*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
     
     if( ((( W*W*W * ( W + 2.*Bsq )
@@ -594,7 +593,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
          || !isfinite(dfdW) || !isfinite(dfdW))
        && (i_increase < 50))
     {
-      if(verbose>0) printf("init W : %e -> %e (%e %e)\n",W,100.*W,f0,dfdW);
+      if(verbose>0) printf("init W : %e -> %e (%e %e)\n",W,10.*W,f0,dfdW);
       W *= 10.;
       i_increase++;
       continue;
@@ -604,6 +603,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   }
   while(1);
   
+  /*
   if(i_increase>=50)
   {
     return -150;
