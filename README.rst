@@ -51,6 +51,7 @@ Then compile KORAL:
   ./mser.sh
 
 Make sure you create a dumps directory, otherwise you will get a segmentation fault. The test problem will start at t=0 every time (reading dumps0000.dat if available). Empty this directory if you change the problem size. 
+
 .. code-block:: bash
 
   mkdir dumps
