@@ -617,7 +617,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     return -150;
   }
 
-  
+  /*  
   //1d Newton solver
   int iter=0, fu2pret;
   do
@@ -672,7 +672,8 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     
     if(fabs(W)>BIG)
     {
-      if(verbose>1) printf("W has gone out of bounds at %d,%d,%d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz);
+      //TODO
+      //if(verbose>1) printf("W has gone out of bounds at %d,%d,%d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz);
       return -103;
     }
 
@@ -809,7 +810,7 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 					 ldouble *err,ldouble pgamma)
 {
 
-  printf("hi from f_u2p_hot\n");
+  //printf("hi from f_u2p_hot\n");
   ldouble Qn=cons[0];
   ldouble Qt2=cons[1];
   ldouble D=cons[2];
