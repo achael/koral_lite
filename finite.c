@@ -1170,11 +1170,6 @@ calc_u2p(int setflags)
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
-  printf("cpu u2p pp[NV]: ");
-  for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
-  printf("\n");
-  	   
   //fixup here hd and rad after inversions
   cell_fixup(FIXUP_U2PMHD);
 #ifdef RADIATION
@@ -1334,6 +1329,11 @@ op_explicit(ldouble t, ldouble dtin)
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   printf("cpu u2p time: %0.2lf \n\n", (tstop-tstart)*1.e3);
+
+  printf("cpu u2p pp[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+  printf("\n");
 
   //**********************************************************************	    
   // Entropy Mixing
