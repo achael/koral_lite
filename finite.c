@@ -1288,9 +1288,8 @@ op_explicit(ldouble t, ldouble dtin)
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   printf("cpu update time: %0.2lf \n\n", (tstop-tstart)*1.e3);
 
-   /************************************************************************/
-   /********* explicit *** RADIATION COUPLING  *****************************/
-   /************************************************************************/
+  //************************************************************************
+  // Explicit RADIATION COUPLING  
   
 #ifdef RADIATION
 #ifndef SKIPRADSOURCE
@@ -1335,8 +1334,7 @@ op_explicit(ldouble t, ldouble dtin)
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   printf("cpu u2p time: %0.2lf \n\n", (tstop-tstart)*1.e3);
 
-  //**********************************************************************
-	    
+  //**********************************************************************	    
   // Entropy Mixing
   
 #ifdef MIXENTROPIESPROPERLY

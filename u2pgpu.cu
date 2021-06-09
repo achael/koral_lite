@@ -10,6 +10,8 @@ extern "C" {
 
 #include "kogpu.h"
 
+#define ERRCONV 1.e-1
+
 // reminder of default settings
 //#define U2PCONV 1.e-10
 //#define U2P_EQS U2P_EQS_NOBLE
@@ -603,16 +605,18 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   }
   while(1);
   
-  /*
+  
   if(i_increase>=50)
   {
-    return -150;
+    
     printf("failed to find initial W for Etype: %d\n",Etype);
-    printf("at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
-    print_NVvector(uu);
-    print_NVvector(pp);
-    //getchar();
+    //TODO
+    //printf("at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
+    //print_NVvector(uu);
+    //print_NVvector(pp);
+    return -150;
   }
+
   
   //1d Newton solver
   int iter=0, fu2pret;
@@ -640,8 +644,6 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     {
       ldouble f0tmp,dfdWtmp,errtmp;
       f0tmp=dfdWtmp=0.;
-      //now for all solvers
-      //if(Etype!=U2P_HOT) //entropy-like solvers require this additional check
       (*f_u2p)(Wnew-D,cons,&f0tmp,&dfdWtmp,&errtmp,pgamma);
       if(verbose>1) printf("sub (%d) :%d %e %e %e %e\n",idump,iter,Wnew,f0tmp,dfdWtmp,errtmp);
       if( ((( Wnew*Wnew*Wnew * ( Wnew + 2.*Bsq )
@@ -673,9 +675,8 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
       if(verbose>1) printf("W has gone out of bounds at %d,%d,%d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz);
       return -103;
     }
-    
-    if(fabs((W-Wprev)/Wprev)<U2PCONV && err<1.e-1) break;
-    //if(fabs((W-Wprev)/Wprev)<CONV && err<sqrt(CONV)) break;
+
+    if(fabs((W-Wprev)/Wprev)<U2PCONV && err<ERRCONV) break;
   }
   while(iter<50);
   
@@ -808,6 +809,7 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 					 ldouble *err,ldouble pgamma)
 {
 
+  printf("hi from f_u2p_hot\n");
   ldouble Qn=cons[0];
   ldouble Qt2=cons[1];
   ldouble D=cons[2];
