@@ -13,9 +13,13 @@ extern "C" {
 #define iiTEST 22222
 #define ivTEST 0
 
-ldouble *d_gcov;//[SX*SY*SZMET*sizeof(ldouble)];
-ldouble *d_gcon;//[SX*SY*SZMET*sizeof(ldouble)];
-ldouble *d_Kris;//[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
+//global arrays
+int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz; 
+ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
+ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
+ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
+ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
+ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
 
 // copied from get_xb macro in ko.h
 __device__ __host__ ldouble get_x_device(ldouble* x_arr, int ic, int idim)
@@ -386,12 +390,8 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
 int calc_update_gpu(ldouble dtin)
 {
 
-  int *d_loop0_ix,*d_loop0_iy,*d_loop0_iz;
-  int *h_loop0_ix,*h_loop0_iy,*h_loop0_iz;
-  ldouble *d_x_arr;
-  ldouble *d_xb_arr;
+  
   ldouble *d_u_arr, *d_p_arr;
-  //ldouble *d_g_arr, *d_G_arr, *d_gKr_arr;
   ldouble *d_flbx_arr,*d_flby_arr,*d_flbz_arr;
   
   cudaError_t err = cudaSuccess;
@@ -402,72 +402,27 @@ int calc_update_gpu(ldouble dtin)
   
   // printf("ERROR (error code %s)!\n", cudaGetErrorString(err));
 
-  err = cudaMalloc(&d_loop0_ix, sizeof(int)*Nloop_0);
-  err = cudaMalloc(&d_loop0_iy, sizeof(int)*Nloop_0);
-  err = cudaMalloc(&d_loop0_iz, sizeof(int)*Nloop_0);
-
   // NOTE: size of xb,flbx,flby,flbz is copied from initial malloc in misc.c
   // these need to be long long if the grid is on one tile and large (~256^3)
-  long long Nx    = (NX+NY+NZ+6*NG);
-  long long Nxb    = (NX+1+NY+1+NZ+1+6*NG);
   long long Nprim  = (SX)*(SY)*(SZ)*NV;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
-  long long Nmet   = (SX)*(SY)*(SZMET)*gSIZE;
-  long long Nkris=(SX)*(SY)*(SZMET)*64;
-  
-  err = cudaMalloc(&d_x_arr,   sizeof(ldouble)*Nx);
-  err = cudaMalloc(&d_xb_arr,   sizeof(ldouble)*Nxb);
+
   err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);
   err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
   err = cudaMalloc(&d_flbx_arr, sizeof(ldouble)*NfluxX);
   err = cudaMalloc(&d_flby_arr, sizeof(ldouble)*NfluxY);
   err = cudaMalloc(&d_flbz_arr, sizeof(ldouble)*NfluxZ);
-  
-  //err = cudaMalloc(&d_g_arr,    sizeof(ldouble)*Nmet);
-  //err = cudaMalloc(&d_G_arr,    sizeof(ldouble)*Nmet);
-  //err = cudaMalloc(&d_gKr_arr,  sizeof(ldouble)*Nkris);
-  
+    
   // Copy data to device arrays
   
   // NOTE: when we add more functions to device, most of these should only be copied once
-  // Make 1D arrays of ix,iy,iz indicies and copy to device
-  h_loop0_ix = (int*)malloc(sizeof(int)*Nloop_0);
-  h_loop0_iy = (int*)malloc(sizeof(int)*Nloop_0);
-  h_loop0_iz = (int*)malloc(sizeof(int)*Nloop_0);
-
-  for(int ii=0; ii<Nloop_0; ii++){
-    h_loop0_ix[ii] = loop_0[ii][0];     
-    h_loop0_iy[ii] = loop_0[ii][1];     
-    h_loop0_iz[ii] = loop_0[ii][2];
-    if (ii==iiTEST) printf("H   :  %d %d %d %d\n",ii,h_loop0_ix[ii],h_loop0_iy[ii],h_loop0_iz[ii]) ;
-  }
-
-  err =  cudaMemcpy(d_loop0_ix, h_loop0_ix, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
-  err =  cudaMemcpy(d_loop0_iy, h_loop0_iy, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
-  err =  cudaMemcpy(d_loop0_iz, h_loop0_iz, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
-
-  free(h_loop0_ix);
-  free(h_loop0_iy);
-  free(h_loop0_iz);
-
-  // copy grid boundary data from xb (global array) to device
-  printf("H size_x 0 %e \n", get_size_x(ixTEST,0));
-  printf("H size_x 1 %e \n", get_size_x(iyTEST,1));
-  printf("H size_x 2 %e \n", get_size_x(izTEST,2));
-  err =  cudaMemcpy(d_x_arr, x, sizeof(ldouble)*Nx, cudaMemcpyHostToDevice);
-  err =  cudaMemcpy(d_xb_arr, xb, sizeof(ldouble)*Nxb, cudaMemcpyHostToDevice);
 
   // copy conserved quantities from u (global array) to device
   printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
-
-  // copy metric and Christoffels
-  //err = cudaMemcpy(d_g_arr, g, sizeof(ldouble)*Nmet, cudaMemcpyHostToDevice);
-  //err = cudaMemcpy(d_G_arr, G, sizeof(ldouble)*Nmet, cudaMemcpyHostToDevice);
-  //err = cudaMemcpy(d_gKr_arr, gKr, sizeof(ldouble)*Nkris, cudaMemcpyHostToDevice);
   
   // copy fluxes data from flbx,flby,flbz (global arrays) to device
   printf("H fluxes: %e %e %e %e %e %e\n",
@@ -489,7 +444,7 @@ int calc_update_gpu(ldouble dtin)
   cudaEventRecord(start);
   calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, 
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
-						    d_x_arr,d_xb_arr,
+						    d_x, d_xb,
 						    d_flbx_arr, d_flby_arr, d_flbz_arr,
 						    d_u_arr, d_p_arr, d_gcov, d_gcon, d_Kris);
   
@@ -509,20 +464,12 @@ int calc_update_gpu(ldouble dtin)
   //err = cudaMemcpy(&u_tmp, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
   // Free Device Memory
-  cudaFree(d_loop0_ix);
-  cudaFree(d_loop0_iy);
-  cudaFree(d_loop0_iz);
   
-  cudaFree(d_x_arr);
-  cudaFree(d_xb_arr);
   cudaFree(d_flbx_arr);
   cudaFree(d_flby_arr);
   cudaFree(d_flbz_arr);
   cudaFree(d_u_arr);
   cudaFree(d_p_arr);
-  //cudaFree(d_g_arr);
-  //cudaFree(d_G_arr);
-  //cudaFree(d_gKr_arr);
 
   // set global timestep dt
   dt = dtin;
@@ -534,22 +481,73 @@ int push_geometry()
 {
   cudaError_t err = cudaSuccess;
 
-  err = cudaMalloc(&d_gcov,   sizeof(ldouble)*SX*SY*SZMET*gSIZE);
-  err = cudaMalloc(&d_gcon,   sizeof(ldouble)*SX*SY*SZMET*gSIZE);
-  err = cudaMalloc(&d_Kris,    sizeof(ldouble)*SX*SY*SZMET*64);
+  // array sizes
+  long long Nx     = (NX+NY+NZ+6*NG);
+  long long Nxb    = (NX+1+NY+1+NZ+1+6*NG);
+  long long Nmet   = (SX)*(SY)*(SZMET)*gSIZE;
+  long long Nkris  = (SX)*(SY)*(SZMET)*64;
 
-  err = cudaMemcpy(d_gcov, g, sizeof(double)*SX*SY*SZMET*gSIZE, cudaMemcpyHostToDevice);
-  if(err != cudaSuccess) printf("Passing g to device failed.\n"); 
-  err = cudaMemcpy(d_gcon, G, sizeof(double)*SX*SY*SZMET*gSIZE, cudaMemcpyHostToDevice);
-  if(err != cudaSuccess) printf("Passing G to device failed.\n"); 
-  err = cudaMemcpy(d_Kris, gKr, sizeof(double)*(SX)*(SY)*(SZMET)*64, cudaMemcpyHostToDevice);
-  if(err != cudaSuccess) printf("Passing gKr to device failed.\n"); 
+  // allocate device arrays 
+  err = cudaMalloc(&d_loop0_ix, sizeof(int)*Nloop_0);
+  err = cudaMalloc(&d_loop0_iy, sizeof(int)*Nloop_0);
+  err = cudaMalloc(&d_loop0_iz, sizeof(int)*Nloop_0);
+
+  err = cudaMalloc(&d_x,        sizeof(ldouble)*Nx);
+  err = cudaMalloc(&d_xb,       sizeof(ldouble)*Nxb);
+
+  err = cudaMalloc(&d_gcov,     sizeof(ldouble)*Nmet);
+  err = cudaMalloc(&d_gcon,     sizeof(ldouble)*Nmet);
+  err = cudaMalloc(&d_Kris,     sizeof(ldouble)*Nkris);
+
+  // Make 1D arrays of ix,iy,iz indicies for easier copy to device
+  int *h_loop0_ix = (int*)malloc(sizeof(int)*Nloop_0);
+  int *h_loop0_iy = (int*)malloc(sizeof(int)*Nloop_0);
+  int *h_loop0_iz = (int*)malloc(sizeof(int)*Nloop_0);
+
+  for(int ii=0; ii<Nloop_0; ii++){
+    h_loop0_ix[ii] = loop_0[ii][0];     
+    h_loop0_iy[ii] = loop_0[ii][1];     
+    h_loop0_iz[ii] = loop_0[ii][2];
+  }
+
+  // copy index arrays
+  err =  cudaMemcpy(d_loop0_ix, h_loop0_ix, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing d_loop0_ix to device failed.\n");   
+  err =  cudaMemcpy(d_loop0_iy, h_loop0_iy, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing d_loop0_iy to device failed.\n");     
+  err =  cudaMemcpy(d_loop0_iz, h_loop0_iz, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing d_loop0_iz to device failed.\n");
   
+  free(h_loop0_ix);
+  free(h_loop0_iy);
+  free(h_loop0_iz);
+
+  // copy coordinate arrays
+  err =  cudaMemcpy(d_x, x, sizeof(ldouble)*Nx, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing x to device failed.\n");   
+  err =  cudaMemcpy(d_xb, xb, sizeof(ldouble)*Nxb, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing xb to device failed.\n"); 
+
+  // copy metric/Christoffel arrays
+  err = cudaMemcpy(d_gcov, g, sizeof(double)*Nmet, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing g to device failed.\n"); 
+  err = cudaMemcpy(d_gcon, G, sizeof(double)*Nmet, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing G to device failed.\n"); 
+  err = cudaMemcpy(d_Kris, gKr, sizeof(double)*Nkris, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing gKr to device failed.\n"); 
+
   return 0;
 }
 
 int free_geometry()
 {
+  cudaFree(d_loop0_ix);
+  cudaFree(d_loop0_iy);
+  cudaFree(d_loop0_iz);
+
+  cudaFree(d_x);
+  cudaFree(d_xb);
+
   cudaFree(d_gcov);
   cudaFree(d_gcon);
   cudaFree(d_Kris);
