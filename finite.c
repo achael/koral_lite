@@ -1345,7 +1345,7 @@ op_explicit(ldouble t, ldouble dtin)
 
 #ifdef GPUKO
   // TODO move this outside of loop
-  free_geometry_gpu();
+  //free_geometry_gpu();
 #endif
 
   return GSL_SUCCESS;
