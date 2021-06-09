@@ -6407,7 +6407,6 @@ int
 is_cell_active(int ix, int iy, int iz)
 {
   //by default ALWAYS active
-  //ANDREW TODO: use for AMR? 
   return 1;
 }
 //**********************************************************************

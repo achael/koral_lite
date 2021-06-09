@@ -7,6 +7,8 @@ extern "C" {
 #include "kogpu.h"
 
 #define TB_SIZE 64
+
+#define doTEST
 #define ixTEST 13
 #define iyTEST 21
 #define izTEST 8
@@ -20,6 +22,12 @@ ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
 ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
 ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
 ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
+
+__device__ __host__ int is_cell_active_device (int ix, int iy, int iz)
+{
+  //by default ALWAYS active -- this may change
+  return 1;
+}
 
 // copied from get_xb macro in ko.h
 __device__ __host__ ldouble get_x_device(ldouble* x_arr, int ic, int idim)
@@ -68,21 +76,17 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
   struct geometry *geom
     = (struct geometry *) ggg;
 
-  //printf("hi from calc_Tij_device\n");
   ldouble (*gg)[5],(*GG)[5];
   gg=geom->gg;
   GG=geom->GG;
 
-  int iv,i,j;
-  ldouble rho=pp[RHO];
-  ldouble uu=pp[UU];
   ldouble utcon[4],ucon[4],ucov[4];  
   ldouble bcon[4],bcov[4],bsq=0.;
   
   //converts to 4-velocity
-  for(iv=1;iv<4;iv++)
-    utcon[iv]=pp[1+iv];
   utcon[0]=0.;
+  for(int iv=1;iv<4;iv++)
+    utcon[iv]=pp[1+iv];
   conv_vels_both_device(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 
 #ifdef NONRELMHD
@@ -103,24 +107,26 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
   #endif
   ldouble gammam1=gamma-1.;
 
+  ldouble rho=pp[RHO];
+  ldouble uu=pp[UU];  
   ldouble p=(gamma-1.)*uu; 
   ldouble w=rho+uu+p;
   ldouble eta=w+bsq;
   ldouble ptot=p+0.5*bsq;
 
 #ifndef NONRELMHD  
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
       T[i][j]=eta*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
 #else
   
   ldouble v2=dot3nr(ucon,ucov); //TODO
-  for(i=1;i<4;i++)
-    for(j=1;j<4;j++)
+  for(int i=1;i<4;i++)
+    for(int j=1;j<4;j++)
       T[i][j]=(rho)*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
 
   T[0][0]=uu + bsq/2. + rho*v2/2.;
-  for(i=1;i<4;i++)
+  for(int i=1;i<4;i++)
     T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
 
 #endif  // ifndef NONRELMHD
@@ -133,7 +139,6 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
 // fill geometry
 __device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr,void* geom,ldouble* g_arr, ldouble* G_arr)
 {
-  int i,j;
 
   struct geometry *ggg 
     = (struct geometry *) geom;
@@ -141,17 +146,17 @@ __device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_ar
   ggg->par=-1;
   ggg->ifacedim = -1;
 
-  for(i=0;i<4;i++)
+  //pick_g(ix,iy,iz,ggg->gg);
+  //pick_G(ix,iy,iz,ggg->GG);
+  for(int i=0;i<4;i++)
   {
-    for(j=0;j<5;j++)
+    for(int j=0;j<5;j++)
     {
       ggg->gg[i][j]=get_g(g_arr,i,j,ix,iy,iz);
       ggg->GG[i][j]=get_g(G_arr,i,j,ix,iy,iz);
     }
   }
 
-  //pick_g(ix,iy,iz,ggg->gg);
-  ///pick_G(ix,iy,iz,ggg->GG);
   ggg->alpha=sqrt(-1./ggg->GG[0][0]);
   ggg->ix=ix;  ggg->iy=iy;  ggg->iz=iz;
   ggg->xxvec[0]=0.;
@@ -171,21 +176,16 @@ __device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_ar
 
 
 // Metric source term
-
 // TODO: deleted RADIATION and SHEARINGBOX parts
 __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 		      	                            ldouble* p_arr, ldouble* x_arr,
 			                            ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr)
 {
-  //int i;
 
   struct geometry geom;
   fill_geometry_device(ix,iy,iz,x_arr,&geom,g_arr,G_arr);
   //printf("Fill geometry successful.\n");   
-    
-  //f_metric_source_term_arb(&get_u(p_arr,0,ix,iy,iz), &geom, ss, l_arr); // --> replace with code here, no need for two functions
-  //struct geometry *geom = (struct geometry *) ggg;
-  
+      
   ldouble (*gg)[5],(*GG)[5],gdetu;
   ldouble *pp = &get_u(p_arr,0,ix,iy,iz);
   
@@ -204,23 +204,22 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
   
   ldouble T[4][4];
-  int ii, jj;
   //calculating stress energy tensor components
-  calc_Tij_device(pp,&geom,T); // TODO
-  for(ii=0;ii<4;ii++)
-    for(jj=0;jj<4;jj++)
-      T[ii][jj]=0.;
+  calc_Tij_device(pp,&geom,T); 
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;jj++)
+      T[i][j]=0.;
   
   indices_2221_device(T,T,gg);
 
-
+  //TODO 
   /*
-  for(ii=0;ii<4;ii++)
-    for(jj=0;jj<4;jj++)
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
       {
-	if(isnan(T[ii][jj])) 
+	if(isnan(T[i][j])) 
 	  {
-	    printf("%d %d %e\n",ii,jj,T[ii][jj]);
+	    printf("%d %d %e\n",i,j,T[i][j]);
 	    my_err("nan in metric_source_terms\n");
 	  }
       }
@@ -230,18 +229,16 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   ldouble vcon[4],ucon[4];
   vcon[1]=pp[2];
   vcon[2]=pp[3];
-  vcon[3]=pp[4];
-  
-  conv_vels_device(vcon,ucon,VELPRIM,VEL4,gg,GG); //TODO
-  //ucon[0]=1.; ucon[1]=0.; ucon[2]=0.; ucon[2]=0.; //TODO 
-  
-  int k,l,iv;
-  for(iv=0;iv<NV;iv++)
-    ss[iv]=0.;  // zero out all source terms initially
+  vcon[3]=pp[4];  
+  conv_vels_device(vcon,ucon,VELPRIM,VEL4,gg,GG); 
+
+  // zero out all source terms initially
+  for(int iv=0;iv<NV;iv++)
+    ss[iv]=0.;  
 
   //terms with Christoffels
-  for(k=0;k<4;k++)
-    for(l=0;l<4;l++)
+  for(int k=0;k<4;k++)
+    for(int l=0;l<4;l++)
       {
 	ss[1]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,0,k,ix,iy,iz);
 	ss[2]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,1,k,ix,iy,iz);
@@ -249,9 +246,9 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 	ss[4]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,3,k,ix,iy,iz);
       }
 
-  //terms with dloggdet  
 #if (GDETIN==0)
-  for(l=1;l<4;l++)
+  //terms with dloggdet  
+  for(int l=1;l<4;l++)
     {
       ss[0]+=-dlgdet[l-1]*pp[RHO]*ucon[l];
       ss[1]+=-dlgdet[l-1]*(T[l][0]+pp[RHO]*ucon[l]);
@@ -292,55 +289,38 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
   iy=loop_0_iy[ii];
   iz=loop_0_iz[ii]; 
 
-  if(ii==iiTEST){
-    printf("D   : %d %d %d %d\n",ii, ix,iy,iz);
-  }
-
   // Source term
-  // check if cell is active
-  // NOTE: is_cell_active always returns 1 -- a placeholder function put in long ago
-  
-  if(0) //if(is_cell_active(ix,iy,iz)==0)
+#ifdef NOSOURCES
+  for(int iv=0;iv<NV;iv++) ms[iv]=0.;
+#else
+  if(is_cell_active_device(ix,iy,iz)==0) // NOTE: is_cell_active currently always returns 1 
   {
-    // Source terms applied only for active cells	  
-    for(iv=0;iv<NV;iv++) ms[iv]=0.; 
+     // Source terms applied only for active cells	  
+     for(int iv=0;iv<NV;iv++) ms[iv]=0.; 
   }
   else
   {
      // Get metric source terms ms[iv]
      // and any other source terms gs[iv] 
-
-     f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,d_gcov,d_gcon,d_Kris);  //TODO: somewhat complicated
-
+     f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,d_gcov,d_gcon,d_Kris);
      //f_general_source_term(ix,iy,iz,gs); //NOTE: *very* rarely used, ignore for now
-     for(iv=0;iv<NV;iv++)
-     {
-       ms[iv] = 0; // TODO: placeholder metric term of 0
-       //ms[iv]+=gs[iv];
-     }
+     //for(int iv=0;iv<NV;iv++) ms[iv]+=gs[iv];
   }
-    
+#endif
+  
   // Get the cell size in the three directions
-  dx = get_size_x_device(xb_arr,ix,0); //dx=get_size_x(ix,0);
-  dy = get_size_x_device(xb_arr,iy,1); //dy=get_size_x(iy,1);
-  dz = get_size_x_device(xb_arr,iz,2); //dz=get_size_x(iz,2);
-
-  // test sizes 
-  if(ii==iiTEST)
-  {
-    printf("D size_x 0 %e \n", get_size_x_device(xb_arr,ixTEST,0));
-    printf("D size_x 1 %e \n", get_size_x_device(xb_arr,iyTEST,1));
-    printf("D size_x 2 %e \n", get_size_x_device(xb_arr,izTEST,2));
-  }
+  dx = get_size_x_device(xb_arr,ix,0); 
+  dy = get_size_x_device(xb_arr,iy,1); 
+  dz = get_size_x_device(xb_arr,iz,2); 
   
   //update all conserved according to fluxes and source terms      
-  for(iv=0;iv<NV;iv++)
+  for(int iv=0;iv<NV;iv++)
   {	
 
     // Get the initial value of the conserved quantity
     val = get_u(u_arr,iv,ix,iy,iz);
     
-    if(ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
+    if(doTEST && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
       printf("D u: %e\n", val);
     
     // Get the fluxes on the six faces.
@@ -353,8 +333,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
     flzl=get_ub(flbz_arr,iv,ix,iy,iz,2);
     flzr=get_ub(flbz_arr,iv,ix,iy,iz+1,2);
 
-    
-    if(ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
+    if(doTEST && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
       printf("D fluxes: %e %e %e %e %e %e\n", flxl,flxr,flyl,flyr,flzl,flzr);
 
     // Compute Delta U from the six fluxes
@@ -381,7 +360,6 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
 //  if(iv>=NVMHD || iv==UU)
 //#endif
 	
-    u_arr[iv] = val;
     //set_u(u,iv,ix,iy,iz,val);	 
 
   }  
@@ -420,18 +398,20 @@ int calc_update_gpu(ldouble dtin)
   // NOTE: when we add more functions to device, most of these should only be copied once
 
   // copy conserved quantities from u (global array) to device
-  printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
+  if(doTEST) printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   
   // copy fluxes data from flbx,flby,flbz (global arrays) to device
-  printf("H fluxes: %e %e %e %e %e %e\n",
+  if(doTEST)
+    printf("H fluxes: %e %e %e %e %e %e\n",
 	 get_ub(flbx,ivTEST,ixTEST,iyTEST,izTEST,0),
 	 get_ub(flbx,ivTEST,ixTEST+1,iyTEST,izTEST,0),
          get_ub(flby,ivTEST,ixTEST,iyTEST,izTEST,1),
 	 get_ub(flby,ivTEST,ixTEST,iyTEST+1,izTEST,1),
 	 get_ub(flbz,ivTEST,ixTEST,iyTEST,izTEST,2),
 	 get_ub(flbz,ivTEST,ixTEST,iyTEST,izTEST+1,2));
+
   err =  cudaMemcpy(d_flbx_arr, flbx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_flby_arr, flby, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_flbz_arr, flbz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
@@ -450,7 +430,7 @@ int calc_update_gpu(ldouble dtin)
   
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
-  cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchrotnize?
+  cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchronize?
   
   // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
 
@@ -464,7 +444,6 @@ int calc_update_gpu(ldouble dtin)
   //err = cudaMemcpy(&u_tmp, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
   // Free Device Memory
-  
   cudaFree(d_flbx_arr);
   cudaFree(d_flby_arr);
   cudaFree(d_flbz_arr);

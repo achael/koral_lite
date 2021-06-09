@@ -11,6 +11,7 @@ extern ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
 extern ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
 extern ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)]
 
+__device__ __host__ int is_cell_active_device (int ix, int iy, int iz);
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
 __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 				  int ix, int iy, int iz);

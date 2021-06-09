@@ -13,24 +13,23 @@ extern "C" {
 
 __device__ __host__ int indices_21_device(ldouble A1[4],ldouble A2[4],ldouble gg[][5])
 {
-  int i;
+  
   ldouble At[4];
 
-  for(i=0;i<4;i++)
+  for(int i=0;i<4;i++)
   {
     At[i]=0.;
   }
 
-  for(i=0;i<4;i++)
+  for(int i=0;i<4;i++)
   {
-    int j;
-    for(j = 0; j < 4; j++)
+    for(int j = 0; j < 4; j++)
     {
       At[i] += A1[j] * gg[i][j];
     }
   }
 
-  for (i=0; i<4; i++)
+  for(int i=0; i<4; i++)
   {
     A2[i] = At[i];
   }
@@ -40,31 +39,31 @@ __device__ __host__ int indices_21_device(ldouble A1[4],ldouble A2[4],ldouble gg
 
 __device__ __host__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
 {
-  int i,j,k,l;
+
   ldouble Tt[4][4];
 
-  for(i=0;i<4;i++)
-    {
-      for(j=0;j<4;j++)
-	{
-	  Tt[i][j]=0.;
-	  for(k=0;k<4;k++)
-	    {
-	      for(l=0;l<4;l++)
-		{
-		  Tt[i][j]+=T1[k][l]*gg[i][k]*gg[j][l];
-		}	  
-	    }
-	}
+  for(int i=0;i<4;i++)
+  {
+     for(int j=0;j<4;j++)
+     {
+       Tt[i][j]=0.;
+       for(int k=0;k<4;k++)
+       {
+	 for(int l=0;l<4;l++)
+	 {
+	   Tt[i][j]+=T1[k][l]*gg[i][k]*gg[j][l];
+	 }	  
+       }
     }
+  }
 
-   for(i=0;i<4;i++)
+  for(int i=0;i<4;i++)
+  {
+    for(int j=0;j<4;j++)
     {
-      for(j=0;j<4;j++)
-	{
-	  T2[i][j]=Tt[i][j];
-	}
+      T2[i][j]=Tt[i][j];
     }
+  }
 
   return 0;
 }
@@ -72,35 +71,31 @@ __device__ __host__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldou
 
 __device__ __host__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
 {
-  int i;
+ 
   ldouble Tt[4][4];
 
-  for(i=0;i<4;i++)
+  for(int i=0;i<4;i++)
   {
-    int j;
-      for(j=0;j<4;j++)
+    for(int j=0;j<4;j++)
     {
       Tt[i][j]=0.;
     }
   }
 
-  for(i=0;i<4;i++)
+  for(int i=0;i<4;i++)
   {
-    int j;
-    for(j=0;j<4;j++)
+    for(int j=0;j<4;j++)
     {
-      int k;
-      for(k=0;k<4;k++)
+      for(int k=0;k<4;k++)
       {
         Tt[i][j]+=T1[i][k]*gg[k][j];
       }
     }
   }
 
-  for(i=0;i<4;i++)
+  for(int i=0;i<4;i++)
   {
-    int j;
-    for(j=0;j<4;j++)
+    for(int j=0;j<4;j++)
     {
       T2[i][j]=Tt[i][j];
     }
@@ -126,10 +121,12 @@ __device__ __host__ int calc_ucon_ucov_from_prims_device(ldouble *pr, void *ggg,
 #ifdef NONRELMHD //only three-velocity used;
   fill_utinucon_device(ucon,geom->gg,geom->GG); 
   indices_21_device(ucon,ucov,geom->gg);
-  return 0;
-#endif
+  
+#else
   
   conv_vels_both_device(ucon,ucon,ucov,VELPRIM,VEL4,geom->gg,geom->GG);
+
+#endif
   
   return 0;
 }
@@ -145,11 +142,12 @@ __device__ __host__ int conv_vels_device(ldouble *u1,ldouble *u2,int which1,int 
 #ifdef NONRELMHD //only three-velocity used;
   u2[1]=u1[1];u2[2]=u1[2];u2[3]=u1[3];
   fill_utinucon_device(u2,gg,GG); 
-  return 0;
-#endif
+
+#else
 
   conv_vels_core_device(u1,u2,which1,which2,gg,GG,0);  // 0 means u^t is not yet known
-  
+
+#endif
   return 0;
 }
 
@@ -164,10 +162,12 @@ __device__ __host__ int conv_vels_ut_device(ldouble *u1,ldouble *u2,int which1,i
 #ifdef NONRELMHD //only three-velocity used;
   u2[1]=u1[1];u2[2]=u1[2];u2[3]=u1[3];
   fill_utinucon_device(u2,gg,GG); 
-  return 0;
-#endif
+
+#else
   
   conv_vels_core_device(u1,u2,which1,which2,gg,GG,1);  // 1 means u^t is known
+
+#endif
   
   return 0;
 }
@@ -184,8 +184,8 @@ __device__ __host__ int conv_vels_both_device (ldouble *u1,ldouble *u2con,ldoubl
   u2con[1]=u1[1];u2con[2]=u1[2];u2con[3]=u1[3];
   fill_utinucon_device(u2con,gg,GG); 
   indices_21_device(u2con,u2cov,gg);
-  return 0;
-#endif
+
+#else
 
   if(which2!=VEL4)
   {
@@ -196,6 +196,7 @@ __device__ __host__ int conv_vels_both_device (ldouble *u1,ldouble *u2con,ldoubl
   conv_vels_core_device(u1,u2con,which1,which2,gg,GG,0); //0 means u^t is not yet known
   indices_21_device(u2con,u2cov,gg);
 
+#endif
   return 0;
 }
 
@@ -210,8 +211,8 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
 					      ldouble gg[][5],ldouble GG[][5],int utknown)
 {
   
-  int i;//,j;
   ldouble u2con[4];
+
   int verbose=0;
   if(verbose)
   {
@@ -222,7 +223,10 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
   /*************** VEL3 -> VEL3 ***************/
   if(which1==VEL3 && which2==VEL3)
   {
-    for(i=0;i<4;i++) u2con[i]=u1[i];
+    for(int i=0;i<4;i++)
+    {
+      u2con[i]=u1[i];
+    }
   }
   
   /*************** VEL4 -> VEL4 ***************/
@@ -233,7 +237,7 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
       fill_utinucon_device(u1, gg, GG);
     }
     
-    for(i=0;i<4;i++)
+    for(int i=0;i<4;i++)
     {
       u2con[i]=u1[i];
     }
@@ -242,7 +246,7 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
   /*************** VELR -> VELR ***************/
   else if(which1==VELR && which2==VELR)
   {
-    for(i=0;i<4;i++)
+    for(int i=0;i<4;i++)
     {
       u2con[i]=u1[i];
     }
@@ -256,7 +260,7 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
       fill_utinucon_device(u1, gg, GG);
     }
     
-    for(i=0;i<4;i++)
+    for(int i=0;i<4;i++)
     {
       u2con[i]=u1[i]/u1[0];
     }
@@ -270,7 +274,8 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
     
     if(u2con[0] < 1. || isnan(u2con[0]))
     {
-      printf("ut.nan in conv_vels(%d,%d) VEL3->VEL4 - returning error\n",which1,which2); //getchar();
+      printf("ut.nan in conv_vels(%d,%d) VEL3->VEL4 - returning error\n",which1,which2);
+      //getchar();
       return -1;  
     }
     
@@ -287,7 +292,8 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
     
     if(u2con[0] < 1. || isnan(u2con[0]))
     {
-      printf("ut.nan in conv_vels(%d,%d) VEL3->VELR - returning error\n",which1,which2); //getchar();
+      printf("ut.nan in conv_vels(%d,%d) VEL3->VELR - returning error\n",which1,which2);
+      //getchar();
       return -1;
     }
     
@@ -297,32 +303,35 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
     u2con[3] = u1[3] * u2con[0];
     
     //to relative velocity
-    for(i = 1; i < 4; i++)
+    for(int i=1; i<4; i++)
     {
       u2con[i] = u2con[i] - u2con[0] * GG[0][i] / GG[0][0];
     }
   }
   
   /*************** VEL4 -> VELR ***************/
-  else if (which1==VEL4 && which2==VELR)
+  else if(which1==VEL4 && which2==VELR)
   {
     if(utknown==0)  // u^t is not known
     {
       fill_utinucon_device(u1, gg, GG);
     }
     u2con[0] = u1[0];
-    
-    for(i = 1; i < 4; i++)
+
+    // to relative velocity
+    for(int i=1; i<4; i++)
+    {
       u2con[i] = u1[i] - u2con[0] * GG[0][i] / GG[0][0];
+    }
   }
 
   /*************** VELR -> VEL4 ***************/
-  else if (which1==VELR && which2==VEL4)
+  else if(which1==VELR && which2==VEL4)
   {
     ldouble alpgam = calc_alpgam_device(u1, gg, GG);
     
     u2con[0]=-alpgam*GG[0][0];
-    if(u2con[0]<0)
+    if(u2con[0]<0) // TODO warning? 
       u2con[0] = fabs(u2con[0]);
           
     u2con[1]=u1[1]-alpgam*GG[0][1];
@@ -331,7 +340,7 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
   }
   
   /*************** VELR -> VEL3 ***************/
-  else if (which1==VELR && which2==VEL3)
+  else if(which1==VELR && which2==VEL3)
   {
     ldouble alpgam = calc_alpgam_device(u1, gg, GG);
 
@@ -352,14 +361,14 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
     return -1;
   }
 
-  for (i = 0; i < 4; i++)
+  for(int i=0; i<4; i++)
   {
     u2conout[i] = u2con[i];
   }
 
   if(verbose)
   {
-    //print_4vector(u2con);
+    //print_4vector(u2con); //TODO 
     printf("conv_vels done %d %d\n",which1,which2);
   }
   
@@ -373,12 +382,12 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
 
 __device__ __host__ ldouble calc_alpgam_device(ldouble *u1, ldouble gg[][5], ldouble GG[][5])
 {
-  int i, j;
-  ldouble qsq=0.;
 
-  for(i=1;i<4;i++)
+  ldouble qsq=0.;
+  
+  for(int i=1;i<4;i++)
   {
-    for(j=1;j<4;j++)
+    for(int j=1;j<4;j++)
     {
       qsq+=u1[i]*u1[j]*gg[i][j];
     }
@@ -387,10 +396,12 @@ __device__ __host__ ldouble calc_alpgam_device(ldouble *u1, ldouble gg[][5], ldo
   ldouble gamma2=(1. + qsq);
   ldouble alpha2=(-1./GG[0][0]);
   ldouble alpgam2=alpha2*gamma2;
-  if(alpgam2<0.) {
+  if(alpgam2<0.)
+  {
     //printf("alpgam2.lt.0 in VELR->VEL4\n");
     return 1.;
   }
+
   ldouble alpgam=sqrt(alpgam2);
   
   return alpgam;
@@ -405,16 +416,16 @@ __device__ __host__ ldouble calc_alpgam_device(ldouble *u1, ldouble gg[][5], ldo
 
 __device__ __host__ int fill_utinvel3_device(ldouble *u1,double gg[][5],ldouble GG[][5])
 {
-  int i, j;
+
   ldouble a, b, c;
   a = gg[0][0];
   b = c = 0.;
   
-  for(i = 1; i < 4; i++)
+  for(int i=1; i<4; i++)
   {
     b += u1[i] * gg[0][i];
     
-    for(j=1;j<4;j++)
+    for(int j=1;j<4;j++)
     {
       c += u1[i] * u1[j] * gg[i][j];
     }
@@ -435,38 +446,37 @@ __device__ __host__ int fill_utinvel3_device(ldouble *u1,double gg[][5],ldouble 
 //**********************************************************************
 __device__ __host__ int fill_utinucon_device(ldouble *u1,double gg[][5],ldouble GG[][5])
 {
+
   ldouble a, b, c, delta;
-  int i, j;
   
   a = gg[0][0];
   b = 0.;
   c = 1.;
   
-  for(i = 1; i < 4; i++)
+  for(int i=1; i<4; i++)
   {
     b += u1[i] * gg[0][i];
     
-    for(j = 1; j < 4; j++)
+    for(int j=1; j<4; j++)
     {
       c += u1[i] * u1[j] * gg[i][j];
     }
   }
   
   delta = b * b - a * c;  // Note: b here is half the usual value
-  if (delta < 0.)
+  if(delta < 0.)
   {
     printf("delta.lt.0 in fill_utinucon\n");
     //my_err("delta.lt.0 in fill_utinucon\n");
   }
   
-  if (a < 0.)
+  if(a < 0.)
   {
     u1[0] = (-b - sqrt(delta)) / a;
   }
   else //this is in ergoregion
   {
-    //ANDREW THIS IS WRONG, should be minus sign everywhere
-    //u1[0] = (-b + sqrt(delta)) / a;
+    //u1[0] = (-b + sqrt(delta)) / a; //ANDREW THIS WAS WRONG, should be minus sign everywhere
     u1[0] = (-b - sqrt(delta)) / a;
   }
   
@@ -477,25 +487,25 @@ __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldoubl
 		                        		     ldouble *bcon, ldouble *bcov, ldouble *bsq)
 {
 
-  int j;
   struct geometry *geom
-  = (struct geometry *) ggg;
+    = (struct geometry *) ggg;
 
   // First calculate bcon0
   bcon[0] = pr[B1]*ucov[1] + pr[B2] * ucov[2] + pr[B3] * ucov[3] ;
   
   // Then spatial components of bcon
-  
 #ifdef NONRELMHD
-  for(j = 1; j < 4; j++)
+  for(int j = 1; j < 4; j++)
+  {
     bcon[j] = pr[B1-1+j]; //b^i=B^i
-
+  }
 #else  // relativistic case
   
   ldouble u0inv = 1. / ucon[0];
-  for(j=1;j<4;j++)
+  for(int j=1;j<4;j++)
+  {
     bcon[j] = (pr[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
-  
+  }
 #endif //NONRELMHD
   
   // Convert to bcov and calculate bsq
