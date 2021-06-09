@@ -347,7 +347,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
 //  if(iv>=NVMHD || iv==UU)
 //#endif
 	
-    //set_u(u_arr,iv,ix,iy,iz,val);	 
+    set_u(u_arr,iv,ix,iy,iz,val);	 
 
   }  
 }
@@ -427,8 +427,7 @@ int calc_update_gpu(ldouble dtin)
   printf("gpu update time: %0.2f \n",tms);
   
   // TODO Copy updated u back from device to global array u?
-  //ldouble *u_tmp;
-  //err = cudaMemcpy(&u_tmp, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  err = cudaMemcpy(u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
   // Free Device Memory
   cudaFree(d_flbx_arr);
