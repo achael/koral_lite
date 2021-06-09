@@ -8,7 +8,7 @@ extern "C" {
 
 #define TB_SIZE 64
 
-#define doTEST
+#define doTEST 1
 #define ixTEST 13
 #define iyTEST 21
 #define izTEST 8
@@ -271,7 +271,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
 {
 
   int ii;
-  int ix,iy,iz,iv;
+  int ix,iy,iz;
   ldouble dx,dy,dz;
   ldouble flxl,flxr,flyl,flyr,flzl,flzr;
   ldouble val,du;
@@ -320,7 +320,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
     // Get the initial value of the conserved quantity
     val = get_u(u_arr,iv,ix,iy,iz);
     
-    if(doTEST && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
+    if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
       printf("D u: %e\n", val);
     
     // Get the fluxes on the six faces.
@@ -333,7 +333,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
     flzl=get_ub(flbz_arr,iv,ix,iy,iz,2);
     flzr=get_ub(flbz_arr,iv,ix,iy,iz+1,2);
 
-    if(doTEST && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
+    if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
       printf("D fluxes: %e %e %e %e %e %e\n", flxl,flxr,flyl,flyr,flzl,flzr);
 
     // Compute Delta U from the six fluxes
@@ -398,12 +398,12 @@ int calc_update_gpu(ldouble dtin)
   // NOTE: when we add more functions to device, most of these should only be copied once
 
   // copy conserved quantities from u (global array) to device
-  if(doTEST) printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
+  if(doTEST==1) printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   
   // copy fluxes data from flbx,flby,flbz (global arrays) to device
-  if(doTEST)
+  if(doTEST==1)
     printf("H fluxes: %e %e %e %e %e %e\n",
 	 get_ub(flbx,ivTEST,ixTEST,iyTEST,izTEST,0),
 	 get_ub(flbx,ivTEST,ixTEST+1,iyTEST,izTEST,0),
