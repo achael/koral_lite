@@ -15,6 +15,16 @@ extern "C" {
 //#define U2P_EQS U2P_EQS_NOBLE
 //#define U2P_SOLVER U2P_SOLVER_W
 
+__device__ __host__ static FTYPE dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq,FTYPE gamma);
+__device__ __host__ static FTYPE compute_idwmrho0dp(FTYPE wmrho0,FTYPE gamma);
+__device__ __host__ static FTYPE compute_idrho0dp(FTYPE wmrho0);
+__device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble pgamma);
+__device__ __host__ static FTYPE pressure_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+__device__ __host__ static FTYPE compute_inside_entropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+__device__ __host__ static FTYPE compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+__device__ __host__ static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
+__device__ __host__ static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
+__device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
 
 // todo deleted type
 __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
@@ -398,12 +408,11 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST)
     printf("In u2p_solver_W_device!\n");
   
-  
-  int i,j,k;
   ldouble rho,uint,w,W,alpha,D,Sc;
   ldouble ucon[4],ucov[4],utcon[4],utcov[4],ncov[4],ncon[4];
-  ldouble Qcon[4],Qcov[4],Qconp[4],Qcovp[4],jmunu[4][4],Qtcon[4],Qtcov[4],Qtsq,Qn;
-  ldouble QdotB,QdotBsq,Bcon[4],Bcov[4],Bsq;
+  ldouble Qcon[4],Qcov[4],Qconp[4],Qcovp[4],Qtcon[4],Qtcov[4],Bcon[4],Bcov[4];
+  ldouble jmunu[4][4];
+  ldouble Qtsq,Qn,QdotB,QdotBsq,Bsq;
   
   
   ldouble pgamma=GAMMA;
@@ -421,15 +430,14 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
 #endif
   gdetu_inv = 1. / gdetu;
 
-  //TODO -- add f_u2p equations
+  
   //equations choice
-  /*
   int (*f_u2p)(ldouble,ldouble*,ldouble*,ldouble*,ldouble*,ldouble);
   if(Etype==U2P_HOT)
-    f_u2p=&f_u2p_hot;
+    f_u2p=&f_u2p_hot_device;
   if(Etype==U2P_ENTROPY)
-    f_u2p=&f_u2p_entropy;
-  */
+    f_u2p=&f_u2p_entropy_device;
+  
   
   //TODO -- print statements
   /*
@@ -772,6 +780,222 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   return 0; //ok
 }
 
+
+//********************************************
+//Harm u2p_hot
+//********************************************
+
+__device__ __host__ static FTYPE dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq, FTYPE gamma)
+{
+  FTYPE W=Wp+D;
+  return( (gamma - 1.) * (1. - vsq) /  gamma ) ;
+}
+
+// 1 / (d(u+p)/dp)
+__device__ __host__ static FTYPE compute_idwmrho0dp(FTYPE wmrho0, FTYPE gamma)
+{
+  return((gamma-1.)/gamma);
+}
+
+
+// 1 / (drho0/dp) holding wmrho0 fixed
+__device__ __host__ static FTYPE compute_idrho0dp(FTYPE wmrho0)
+{
+  return(0.0);
+}
+
+__device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,
+					 ldouble *err,ldouble pgamma)
+{
+
+  ldouble Qn=cons[0];
+  ldouble Qt2=cons[1];
+  ldouble D=cons[2];
+  ldouble QdotBsq=cons[3];
+  ldouble Bsq=cons[4];
+  ldouble Qdotnp=cons[6];
+  
+  ldouble W=Wp+D;
+
+  FTYPE W3,X3,Ssq,Wsq,X,X2,Xsq; 
+  FTYPE Qtsq = Qt2;
+  X = Bsq + W;
+  Wsq = W*W;
+  W3 = Wsq*W ;
+  X2 = X*X;
+  Xsq = X2;
+  X3 = X2*X;
+
+  ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
+  ldouble gamma2 = 1./(1.-v2);
+  ldouble gamma = sqrt(gamma2);
+  ldouble rho0 = D/gamma;
+  ldouble wmrho0 = Wp/gamma2 - D*v2/(1.+gamma);
+  ldouble u = wmrho0 / pgamma;
+  ldouble p = (pgamma-1)*u;
+
+  //original:
+#if (U2P_EQS==U2P_EQS_NOBLE)
+   *f = Qn + W - p + 0.5*Bsq*(1.+v2) - QdotBsq/2./Wsq;
+ *err = fabs(*f) / (fabs(Qn) + fabs(W) + fabs(p) + fabs(0.5*Bsq*(1.+v2)) + fabs(QdotBsq/2./Wsq));
+#endif
+
+  //JONS:
+#if (U2P_EQS==U2P_EQS_JON)
+   *f = Qdotnp + Wp - p + 0.5*Bsq + (Bsq*Qtsq - QdotBsq)/X2;
+ *err = fabs(*f) / (fabs(Qdotnp) + fabs(Wp) + fabs(p) + fabs(0.5*Bsq) + fabs((Bsq*Qtsq - QdotBsq)/X2));
+#endif
+
+  // dp/dWp = dp/dW + dP/dv^2 dv^2/dW  
+  ldouble dvsq=(-2.0/X3 * ( Qtsq  +  QdotBsq * (3.0*W*X + Bsq*Bsq)/W3));
+  ldouble dp1 = dpdWp_calc_vsq(Wp, D, v2 ,pgamma); // vsq can be unphysical
+
+  ldouble idwmrho0dp=compute_idwmrho0dp(wmrho0,pgamma);
+  ldouble dwmrho0dvsq = (D*(gamma*0.5-1.0) - Wp);
+
+  ldouble drho0dvsq = -D*gamma*0.5; // because \rho = D/\gamma
+  ldouble idrho0dp = compute_idrho0dp(wmrho0);
+
+  ldouble dp2 =   drho0dvsq *idrho0dp  +   dwmrho0dvsq *idwmrho0dp;
+
+  ldouble dpdW = dp1  + dp2*dvsq; // dp/dW = dp/dWp
+
+  //original:
+  #if (U2P_EQS==U2P_EQS_NOBLE)
+  *df=1.-dpdW + QdotBsq/(Wsq*W) + 0.5*Bsq*dvsq;
+  #endif
+
+  //JONS:
+  #if (U2P_EQS==U2P_EQS_JON)
+  *df=1. -dpdW + (Bsq*Qtsq - QdotBsq)/X3*(-2.0);
+  #endif
+
+  return 0;  
+}
+
+//********************************************
+//Harm u2p_entropy
+//********************************************
+
+
+// p(rho0, w-rho0 = u+p)
+__device__ __host__ static FTYPE pressure_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  ldouble igammar = (gamma-1.)/gamma;
+  return(igammar*wmrho0) ;
+}
+
+// local aux function
+__device__ __host__ static FTYPE compute_inside_entropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  FTYPE pressure,indexn,insideentropy;
+
+  pressure=pressure_wmrho0_idealgas(rho0,wmrho0,gamma);
+  indexn=1.0/(gamma-1.);  
+  insideentropy=pow(pressure,indexn)/pow(rho0,indexn+1.0);
+
+  return(insideentropy);
+}
+
+
+// specific entropy as function of rho0 and internal energy (u)
+// Ss(rho0,\chi=u+p)
+// specific entropy = \ln( p^n/\rho^{n+1} )
+__device__ __host__ static FTYPE compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  FTYPE insideentropy,specificentropy;
+
+  insideentropy=compute_inside_entropy_wmrho0_idealgas(rho0, wmrho0,gamma);
+  specificentropy=log(insideentropy);
+
+  return(specificentropy);
+
+}
+
+// used for utoprim_jon when doing entropy evolution
+// dSspecific/d\chi
+__device__ __host__ static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  FTYPE dSdchi;
+
+  dSdchi = 1.0/((gamma-1.)*wmrho0);
+  // Again, GAMMA->1 means dSdchi->\infty unless \chi->0 or rho0->0
+
+  return(dSdchi);
+
+}
+
+// dSspecific/drho0
+__device__ __host__ static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma)
+{
+  FTYPE dSdrho;
+  
+  dSdrho=gamma/((1.0-gamma)*rho0);
+
+  return(dSdrho);
+}
+
+
+__device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df,
+					     ldouble *err,ldouble pgamma)
+{
+  ldouble Qn=cons[0];
+  ldouble Qt2=cons[1];
+  ldouble D=cons[2];
+  ldouble QdotBsq=cons[3];
+  ldouble Bsq=cons[4];
+  ldouble Sc=cons[5];
+ 
+  ldouble W=Wp+D;
+
+  FTYPE W3,X3,Ssq,Wsq,X,X2,Xsq; 
+  FTYPE Qtsq = Qt2;
+  X = Bsq + W;
+  Wsq = W*W;
+  W3 = Wsq*W ;
+  X2 = X*X;
+  Xsq = X2;
+  X3 = X2*X;
+
+  ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
+  ldouble gamma2 = 1./(1.-v2);
+  ldouble gamma = sqrt(gamma2);
+  ldouble rho0 = D/gamma;
+  ldouble wmrho0 = Wp/gamma2 - D*v2/(1.+gamma);
+  ldouble u = wmrho0 / pgamma;
+  ldouble p = (pgamma-1)*u;
+
+  ldouble Ssofchi=compute_specificentropy_wmrho0_idealgas(rho0,wmrho0,pgamma);
+
+  *f= -Sc + D*Ssofchi;
+
+  *err = fabs(*f) / (fabs(Sc) + fabs(D*Ssofchi));
+
+  FTYPE dSsdW,dSsdvsq,dSsdWp,dScprimedWp,dSsdrho,dSsdchi;
+  FTYPE dvsq,dwmrho0dW,drho0dW;
+  FTYPE dwmrho0dvsq,drho0dvsq;
+
+  dSsdrho=compute_dspecificSdrho_wmrho0_idealgas(rho0,wmrho0,pgamma);
+  dSsdchi=compute_dspecificSdwmrho0_wmrho0_idealgas(rho0,wmrho0,pgamma);
+
+  dwmrho0dW = 1.0/gamma; // holding utsq fixed
+  drho0dW = 0.0; // because \rho=D/\gamma and holding utsq fixed
+  dwmrho0dvsq = (D*(gamma*0.5-1.0) - Wp); // holding Wp fixed
+  drho0dvsq = -D*gamma*0.5; // because \rho=D/\gamma and holding Wp fixed
+
+  dvsq=(-2.0/X3 * ( Qtsq  +  QdotBsq * (3.0*W*X + Bsq*Bsq)/W3));
+
+  dSsdW =   drho0dW   *dSsdrho +   dwmrho0dW   *dSsdchi; // dSs/dW' holding utsq fixed
+  dSsdvsq = drho0dvsq *dSsdrho +   dwmrho0dvsq *dSsdchi;
+  dSsdWp = dSsdW  + dSsdvsq*dvsq; // dSs/dW = dSs/dWp [total derivative]
+
+  dScprimedWp = D*dSsdWp;
+
+  *df = dScprimedWp;
+  
+  return 0;
+ 
+}
 
 //**********************************************************************
 //Call the kernel
