@@ -71,5 +71,6 @@ __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldoubl
 
 // kernel
 __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
+				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
 				       ldouble *u_arr, ldouble *p_arr,
-				       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr)
+				       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr);
