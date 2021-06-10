@@ -72,7 +72,7 @@ __device__ __host__ int calc_normalobs_ncon_device(ldouble GG[][5], ldouble alph
 ///////////////////////////////////////////////////////////////
 
 __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
-__device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz)
+__device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz);
   
 ///////////////////////////////////////////////////////////////
 // magn.cu  (TODO ???) ///////////////////////////////////////////////
@@ -96,7 +96,7 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
 __device__ __host__ int u2p_solver_Bonly_device(ldouble *uu, ldouble *pp, void *ggg);
 __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-__device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *ggg)
+__device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *ggg);
   
 // kernel
 __global__ void calc_primitives_kernel(int Nloop_0, int setflags,

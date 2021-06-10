@@ -61,7 +61,7 @@ __device__ __host__ int p2u_mhd_device(ldouble *pp, ldouble *uu, void *ggg)
   #endif
 
   ldouble rho = pp[0];
-  ldouble uu  = pp[1];
+  ldouble uint= pp[1];
   ldouble S   = pp[5];
   
   ldouble vcon[4],ucon[4],ucov[4];
@@ -89,9 +89,9 @@ __device__ __host__ int p2u_mhd_device(ldouble *pp, ldouble *uu, void *ggg)
   //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
   #endif
  
-  ldouble pre=(gamma-1.)*uu; 
-  ldouble eta  = rho+uu+pre+bsq;
-  ldouble etap = uu+pre+bsq; //eta-rho
+  ldouble pre=(gamma-1.)*uint; 
+  ldouble eta  = rho+uint+pre+bsq;
+  ldouble etap = uint+pre+bsq; //eta-rho
   ldouble ptot = pre+0.5*bsq;
   
   //this computes utp1=1+u_t
@@ -110,23 +110,23 @@ __device__ __host__ int p2u_mhd_device(ldouble *pp, ldouble *uu, void *ggg)
   uu[5]=gdetu*Sut;
 
 #ifdef EVOLVEELECTRONS
-  u[ENTRE]= gdetu*pp[ENTRE]*ut;
-  u[ENTRI]= gdetu*pp[ENTRI]*ut;
+  uu[ENTRE]= gdetu*pp[ENTRE]*ut;
+  uu[ENTRI]= gdetu*pp[ENTRI]*ut;
 #endif
 
 #ifdef RELELECTRONS
   int ib;
   for(int ib=0;ib<NRELBIN;ib++)
-    u[NEREL(ib)]=gdetu*pp[NEREL(ib)]*ut;    
+    uu[NEREL(ib)]=gdetu*pp[NEREL(ib)]*ut;    
 #endif
 
   //************************************
   //magnetic part
   //************************************ 
 #ifdef MAGNFIELD
-  u[B1]=gdetu*pp[B1];
-  u[B2]=gdetu*pp[B2];
-  u[B3]=gdetu*pp[B3];
+  uu[B1]=gdetu*pp[B1];
+  uu[B2]=gdetu*pp[B2];
+  uu[B3]=gdetu*pp[B3];
 #endif
 
   return 0.;
