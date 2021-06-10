@@ -44,7 +44,7 @@ __device__ __host__ int p2u_mhd_device(ldouble *pp, ldouble *uu, void *ggg)
 {
 
 #ifdef NONRELMHD
-  //p2u_mhd_nonrel(p,u,ggg); //TODO norel
+  //p2u_mhd_nonrel(p,u,ggg); //TODO nonrel
   return 0;
 #endif
 
@@ -288,7 +288,7 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
       
       if(verbose>2 )
       {
-	//TODO -- need to pass in mpi variables TOI,TOJ
+	//TODO -- print with mpi variables
         //printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
       }
       
@@ -318,7 +318,7 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
     //leaving primitives unchanged - should not happen
     if(verbose>1 || 1)
     {
-      //TODO need to pass TOI, TOJ, TOK, PROCID
+      //TODO print with mpi variables
       //printf("%4d > %4d %4d %4d > MHDU2PFAIL > u2p prim. unchanged > %d \n",PROCID,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,u2pret);
     }
     ret=-3;
@@ -433,13 +433,10 @@ __device__ __host__ int u2p_solver_Bonly_device(ldouble *uu, ldouble *pp, void *
 __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
 
-  //TODO -- u2p_solver nonrel
-  /*
 #ifdef NONRELMHD
-  return u2p_solver_nonrel_device(uu,pp,ggg,Etype,verbose);
+  //return u2p_solver_nonrel_device(uu,pp,ggg,Etype,verbose); //TODO -- u2p_solver nonrel
 #endif
-  */
-  
+    
   int (*solver)(ldouble*,ldouble*,void*,int,int);
     
 #if (U2P_SOLVER==U2P_SOLVER_W)  // this is the default
@@ -448,7 +445,7 @@ __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,in
 
   /*
 #if (U2P_SOLVER==U2P_SOLVER_WP)
-  solver = & u2p_solver_Wp_device;
+  solver = & u2p_solver_Wp_device; 
 #endif
   */
   
@@ -479,9 +476,8 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   
   ldouble pgamma=GAMMA;
-  //TODO -- pick_gammagas
   //#ifdef CONSISTENTGAMMA
-  //pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
+  //pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
   //#endif
   
   ldouble (*gg)[5], (*GG)[5];
@@ -850,7 +846,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
 #endif
 #endif
 
-  //TODO -- print
+  //TODO -- print statement
   //if(verbose) print_primitives(pp);
   
   if(verbose>0)
@@ -1182,10 +1178,10 @@ __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *
       // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
       for(int iv=0;iv<NVMHD;iv++)
          pp[iv]=pporg[iv];
-      pp[RHO]*=f; // inject energy and density (TODO right?) 
+      pp[RHO]*=f; // inject both energy and density (TODO is this correct?)
       pp[UU]*=f;
 #else
-      //TODO print
+      //TODO print statement
       //print_primitives(pp);
       exit(-1);
 #endif
@@ -1320,7 +1316,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 
   if(is_cell_active_device(ix,iy,iz) && !is_cell_corrected_polaraxis_device(ix,iy,iz))
   {
-    floorret=check_floors_mhd_device(pp,VELPRIM,&geom); //TODO -- put in floors
+    floorret=check_floors_mhd_device(pp,VELPRIM,&geom);
   }
   
   if(floorret<0.)
@@ -1328,6 +1324,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
     corrected[0]=1;
   }
 
+  //TODO 
   /*
   //check rad floors
 #ifdef RADIATION
