@@ -1138,13 +1138,67 @@ save_timesteps()
 
 
 //**********************************************************************
-/*! \fn int calc_u2p(int setflags)
- \brief Calculates all primitives from global u
+/*! \fn int calc_u2p_fixup_and_Bc(int setflags)
+ \brief Calculates all primitives from global u, applies fixups and bcs
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p(int setflags)
+calc_u2p_fixup_and_bc(int setflags)
+{
+  /*
+  int ii;
+
+  //timer start
+  struct timespec temp_clock;
+  my_clock_gettime(&temp_clock);
+  start_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  
+  //calculates the primitives
+#pragma omp parallel for schedule (static)
+  for(ii=0;ii<Nloop_0;ii++) //domain only
+  {
+    int ix,iy,iz;
+    ix=loop_0[ii][0];
+    iy=loop_0[ii][1];
+    iz=loop_0[ii][2];
+    
+    //skip if cell is passive
+    if(!is_cell_active(ix,iy,iz))
+      continue;
+    
+    calc_primitives(ix,iy,iz,setflags);
+  }
+
+  //timer stop
+  my_clock_gettime(&temp_clock);
+  end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  */
+
+  // perform inversion
+  calc_u2p_only(setflags)
+  
+  //fixup here hd and rad after inversions
+  cell_fixup(FIXUP_U2PMHD);
+#ifdef RADIATION
+  cell_fixup(FIXUP_U2PRAD);
+#endif
+
+  //re-set boundary conditions
+  set_bc(global_time,0);
+
+  return 0;
+} 
+
+//**********************************************************************
+/*! \fn int calc_u2p_only(int setflags)
+ \brief Calculates all primitives from global u, does NOT apply fixups and bcs
+ \param[in] setflags, should always=1 to set flags for cell fixups
+*/
+//**********************************************************************
+int
+calc_u2p_only(int setflags)
 {
   int ii;
 
@@ -1173,18 +1227,8 @@ calc_u2p(int setflags)
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
-  //fixup here hd and rad after inversions
-  cell_fixup(FIXUP_U2PMHD);
-#ifdef RADIATION
-  cell_fixup(FIXUP_U2PRAD);
-#endif
-
-  //re-set boundary conditions
-  set_bc(global_time,0);
-
   return 0;
 } 
-
 
 //**********************************************************************
 /*! \fn int do_correct()
@@ -1335,7 +1379,7 @@ op_explicit(ldouble t, ldouble dtin)
   //my_clock_gettime(&temp_clock);
   //tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
-  calc_u2p(1);
+  calc_u2p_only(1);
 
   //my_clock_gettime(&temp_clock);
   //tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
@@ -1345,6 +1389,20 @@ op_explicit(ldouble t, ldouble dtin)
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
   printf("\n\n");
+
+  //**********************************************************************  
+  // fixups and boundary conditions
+  // TODO NOTE: these were previously wrapped in calc_u2p, now in calc_u2p_fixup_and_bc
+  
+  //fixup here hd and rad after inversions
+  cell_fixup(FIXUP_U2PMHD);
+  #ifdef RADIATION
+  cell_fixup(FIXUP_U2PRAD);
+  #endif
+
+  //re-set boundary conditions
+  set_bc(global_time,0);
+
 
   //**********************************************************************	    
   // Entropy Mixing
@@ -1405,8 +1463,8 @@ apply_dynamo(ldouble t, ldouble dt)
   mimic_dynamo(dt); 
 
   //update primitives
-  calc_u2p(0);
-
+  //calc_u2p(0);
+  calc_u2p_fixup_and_bc(0);
 #endif
 
   return GSL_SUCCESS;
