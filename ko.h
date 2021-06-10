@@ -1051,8 +1051,8 @@ int calc_update(ldouble dtin);
 ///////////////////////////////////////////////////////////////
 // finitegpu.c ////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-int calc_update_gpu(ldouble dtin);
-int calc_u2p_gpu(int setflags);
+ldouble calc_update_gpu(ldouble dtin);
+ldouble calc_u2p_gpu(int setflags);
 int prealloc_arrays_gpu();
 int free_arrays_gpu();
 int push_p_u_gpu();
@@ -1060,7 +1060,7 @@ int pull_p_u_gpu();
 int push_geometry_gpu();
 int free_geometry_gpu();		
 
-int output_state_debug(const char *fname);
+int output_state_debug(const char *fname, const char *header, const char *ctimes, const char *gtimes);
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);

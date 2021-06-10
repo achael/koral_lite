@@ -82,16 +82,16 @@ int pull_p_u_gpu ()
 }
 
 // TODO this is here
-void print_double_array_at(FILE *fp, double *array, int ix, int iy, int iz)
+void print_double_array_at (FILE *fp, double *array, int ix, int iy, int iz)
 {
   int iv = 0;
-  fprintf(fp, "(%d, %d, %d), (%g", ix, iy, iz, get_u(array, iv, ix, iy, iz));
+  fprintf(fp, "[ [%d, %d, %d], [%g", ix, iy, iz, get_u(array, iv, ix, iy, iz));
 
   for (iv=1; iv<NV; iv++) {
     fprintf(fp, ", %g", get_u(array, iv, ix, iy, iz)); 
   } 
 
-  fprintf(fp, ")");
+  fprintf(fp, "] ]");
 }
 
 int output_state_debug (const char *fname, const char *header, const char *ctimes, const char *gtimes)
@@ -99,16 +99,21 @@ int output_state_debug (const char *fname, const char *header, const char *ctime
   // writes a diagnostic output file in json format
 
   FILE *fp = fopen(fname, "w");
+  fprintf(fp, "{\n");
 
   // write header and times
-  fprintf(fp, header);
-  fprintf(fp, ctimes);
-  fprintf(fp, gtimes);  
+  fprintf(fp, "%s\n", header);
+  fprintf(fp, "\"cpu_timing\": %s,\n", ctimes);
+  fprintf(fp, "\"gpu_timing\": %s,\n", gtimes);  
 
   // TODO loop over zones
+  fprintf(fp, "\"prims\":[\n");
   print_double_array_at(fp, p, ixTEST, iyTEST, izTEST);
+  fprintf(fp, "\n],\n\"cons\":[\n");
   print_double_array_at(fp, u, ixTEST, iyTEST, izTEST);
+  fprintf(fp, "\n]\n");
 
+  fprintf(fp, "}");
   fclose(fp);
 
   // TODO error checking...
@@ -518,7 +523,7 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
   }  
 }
 
-int calc_update_gpu(ldouble dtin)
+ldouble calc_update_gpu(ldouble dtin)
 {
   cudaError_t err = cudaSuccess;
   cudaEvent_t start, stop;
@@ -588,6 +593,6 @@ int calc_update_gpu(ldouble dtin)
   // set global timestep dt
   dt = dtin;
 
-  return 0;
+  return (ldouble)tms;
 }
 

@@ -1378,7 +1378,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 //Call the kernel
 //**********************************************************************
 
-int calc_u2p_gpu(int setflags)
+ldouble calc_u2p_gpu(int setflags)
 {
 
   cudaError_t err = cudaSuccess;
@@ -1427,7 +1427,7 @@ int calc_u2p_gpu(int setflags)
   free(p_tmp);
 #endif
   
-  return 0;
+  return (ldouble)tms;
 }
 
 

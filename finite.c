@@ -1315,6 +1315,13 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************
   // Evolve the conserved quantities
 
+
+  // TODO: make this better...
+  ldouble time_cpu_update = 0;
+  ldouble time_gpu_update = 0;
+  ldouble time_cpu_u2p = 0;
+  ldouble time_gpu_u2p = 0;
+
 #ifdef GPUKO
   // TODO eventually this will be moved out of op_explicit => problem.c
   push_p_u_gpu();
@@ -1322,10 +1329,10 @@ op_explicit(ldouble t, ldouble dtin)
 
   //TODO add extra flag
 #ifdef GPUKO
-  calc_update_gpu(dtin);
+  time_gpu_update = calc_update_gpu(dtin);
 #endif
 
-#if CPUKO || !defined(GPUKO)  
+#if defined(CPUKO) || !defined(GPUKO)  
   struct timespec temp_clock;
   ldouble tstart,tstop;
   
@@ -1336,7 +1343,9 @@ op_explicit(ldouble t, ldouble dtin)
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
+  //printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
+
+  time_cpu_update = (tstop-tstart)*1.e3;
 
   printf("cpu update uu[NV]: ");
   for(int iv=0;iv<NV;iv++)
@@ -1380,10 +1389,10 @@ op_explicit(ldouble t, ldouble dtin)
   // Compute postexplicit primitives and count entropy inversions
 
 #ifdef GPUKO
-  calc_u2p_gpu(1);
+  time_gpu_u2p = calc_u2p_gpu(1);
 #endif
 
-#if CPUKO || !defined(GPUKO)
+#if defined(CPUKO) || !defined(GPUKO)
   // TODO: timing functionality. reuse timer from above
   //my_clock_gettime(&temp_clock);
   //tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
@@ -1392,23 +1401,39 @@ op_explicit(ldouble t, ldouble dtin)
 
   //my_clock_gettime(&temp_clock);
   //tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu u2p time: %0.2lf \n", (end_u2ptime-start_u2ptime)*1.e3); // this only times u2p, not including fixups/bcs 
+  time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3;
+  //printf("cpu u2p time: %0.2lf \n", (end_u2ptime-start_u2ptime)*1.e3); // this only times u2p, not including fixups/bcs 
   //printf("cpu u2p time: %0.2lf \n", (tstop-tstart)*1.e3);
-  printf("cpu u2p pp[NV]: ");
-  for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+  //printf("cpu u2p pp[NV]: ");
+  //for(int iv=0;iv<NV;iv++)
+  //  printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
 #endif
 
   printf("\n\n");
 
-#if GPUKO && !defined(CPUKO)
+#if defined(GPUKO) && !defined(CPUKO)
 
   // TODO eventually this will be moved out of op_explicit => problem.c
   pull_p_u_gpu();
 
+#elif defined(GPUKO) && defined(CPUKO)
+
+  char fname[256];
+  snprintf(fname, 255, "diagnostics/step_%010d.json", nstep);
+ 
+  char header[256] = "";
+  char ctimes[256] = "";
+  char gtimes[256] = "";
+	
+  snprintf(header, 255, "\"timestep\": %d,\n\"time\": %g,", nstep, global_time);
+
+  snprintf(ctimes, 255, "{\"update\": %g, \"u2p\": %g}", time_cpu_update, time_cpu_u2p);
+  snprintf(gtimes, 255, "{\"update\": %g, \"u2p\": %g}", time_gpu_update, time_gpu_u2p);
+ 
+  output_state_debug(fname, header, ctimes, gtimes);
+
 #endif
 
-// TODO: add pull + write
   
   
   //**********************************************************************  
