@@ -1339,7 +1339,7 @@ op_explicit(ldouble t, ldouble dtin)
 
   //my_clock_gettime(&temp_clock);
   //tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu u2p time: %0.2lf \n", (stop_u2ptime-start_u2ptime)*1.e3); // this only times u2p, not including fixups/bcs 
+  printf("cpu u2p time: %0.2lf \n", (end_u2ptime-start_u2ptime)*1.e3); // this only times u2p, not including fixups/bcs 
   //printf("cpu u2p time: %0.2lf \n", (tstop-tstart)*1.e3);
   printf("cpu u2p pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
