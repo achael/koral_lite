@@ -12,7 +12,7 @@ CC=gcc
 //CFLAGS = -fopenmp -O2 -I/usr/include/hdf5/serial
 //CFLAGS = -O3 -fPIC -I/home/achael/software/include
 
-CFLAGS = -O3 -fPIC -DGPUKO -DCPUKO
+CFLAGS = -O3 -fPIC 
 CFLAGSGPU = -O3 -fPIC -DGPUKO -DCPUKO
 
 OMPFLAGS = -fopenmp
@@ -29,19 +29,28 @@ OBJS = mpi.o problem.o finite.o metric.o frames.o relele.o u2p.o p2u.o magn.o ph
 SRCS = mpi.c problem.c finite.c metric.c frames.c relele.c u2p.c p2u.c magn.c physics.c opacities.c misc.c postproc.c fileop.c 
 
 SRCSGPU = u2pgpu.cu relelegpu.cu finitegpu.cu metricgpu.cu
-OBJSGPU = u2pgpu.cu relelegpu.o finitegpu.o metricgpu.o
+OBJSGPU = $(SRCSGPU:.cu=.o)
 
-all: ko.o ko_gpu 
+# need to compile _cpu and _gpu object files for following sources
+SRCS_SWITCH = diagnostics.c ko.c
+OBJS_SWITCH_CPU=$(SRCS_SWITCH:.c=_cpu.o)
+OBJS_SWITCH_GPU=$(SRCS_SWITCH:.c=_gpu.o)
 
-allold: ko_gpu ko.o ana avg phisli thsli phiavg
+all: ko ko_gpu ana avg phisli thsli phiavg
 
-ko_gpu: ko.o $(SRCS) $(SRCSGPU) Makefile ko.h kogpu.h problem.h mnemonics.h 
+ko_gpu: $(OBJS_SWITCH_GPU) $(SRCS) $(SRCSGPU) Makefile ko.h kogpu.h problem.h mnemonics.h 
 	$(CC) $(CFLAGSGPU) -c $(SRCS)
 	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -x cu -dc $(SRCSGPU)
-	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -lcudart $(LIBS) $(OBJS) $(OBJSGPU) -o ko_gpu ko.o
+	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -lcudart $(LIBS) $(OBJS) $(OBJSGPU) -o ko_gpu ko_gpu.o
 
-ko: ko.o $(SRCS) Makefile ko.h problem.h mnemonics.h
-	$(CC) $(CFLAGS) $(OMPFLAGS) -o ko ko.o $(SRCS) $(LIBS)
+$(OBJS_SWITCH_CPU):%_cpu.o:%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJS_SWITCH_GPU):%_gpu.o:%.c
+	$(CC) $(CFLAGSGPU) -c -o $@ $<
+
+ko: $(OBJS_SWITCH_CPU) $(SRCS) Makefile ko.h problem.h mnemonics.h
+	$(CC) $(CFLAGS) $(OMPFLAGS) -o ko ko_cpu.o $(SRCS) $(LIBS)
 
 ana: ana.o $(SRCS)  Makefile ko.h problem.h mnemonics.h
 	$(CC) $(CFLAGS) $(OMPFLAGS) -o ana ana.o $(SRCS) $(LIBS)
