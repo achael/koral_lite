@@ -3,6 +3,14 @@
 */
 #pragma once
 
+// for testing
+#define doTEST 0
+#define ixTEST 22
+#define iyTEST 17
+#define izTEST 31
+#define iiTEST 22222
+#define ivTEST 0
+
 //small and big numbers
 #define SMALL 1.e-80 
 #define BIG (1./SMALL) 
@@ -991,8 +999,8 @@ int test_maginv();
 // u2p.c //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-int calc_primitives(int ix,int iy,int iz,int type,int setflags);
-int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
+int calc_primitives(int ix,int iy,int iz,int setflags);
+int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2]);
 int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
 
 int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
@@ -1032,15 +1040,16 @@ int avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 	      ldouble dxp1,ldouble dxp2,int param,ldouble theta);
 int save_wavespeeds(int ix,int iy,int iz, ldouble *aaa);
 int save_timesteps();
-int calc_u2p(int type,int setflags);
+int calc_u2p(int setflags);
 int calc_wavespeeds();
 int do_correct();
 int calc_interp();
 int calc_fluxes();
 int calc_update(ldouble dtin);
 int calc_update_gpu(ldouble dtin);
-int push_geometry();
-int free_geometry();		
+int calc_u2p_gpu(int setflags);
+int push_geometry_gpu();
+int free_geometry_gpu();		
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);

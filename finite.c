@@ -1023,7 +1023,11 @@ int calc_update(ldouble dtin)
 	PLOOP(iv) ms[iv]+=gs[iv];
       }
 #endif
+
       
+      if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST)
+          printf("H ms[NV]: %e %e %e %e %e %e %e %e %e\n", ms[0],ms[1],ms[2],ms[3],ms[4],ms[5],ms[6],ms[7],ms[8]);
+
       // Get the cell size in the three directions
       ldouble dx=get_size_x(ix,0);
       ldouble dy=get_size_x(iy,1);
@@ -1134,14 +1138,13 @@ save_timesteps()
 
 
 //**********************************************************************
-/*! \fn int calc_u2p(int type, int setflags)
+/*! \fn int calc_u2p(int setflags)
  \brief Calculates all primitives from global u
- \param[in] type, not currently used
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p(int type, int setflags)
+calc_u2p(int setflags)
 {
   int ii;
 
@@ -1163,9 +1166,13 @@ calc_u2p(int type, int setflags)
     if(!is_cell_active(ix,iy,iz))
       continue;
     
-    calc_primitives(ix,iy,iz,type,setflags);
+    calc_primitives(ix,iy,iz,setflags);
   }
-  
+
+  //timer stop
+  my_clock_gettime(&temp_clock);
+  end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
   //fixup here hd and rad after inversions
   cell_fixup(FIXUP_U2PMHD);
 #ifdef RADIATION
@@ -1174,11 +1181,7 @@ calc_u2p(int type, int setflags)
 
   //re-set boundary conditions
   set_bc(global_time,0);
-  
-  //timer stop
-  my_clock_gettime(&temp_clock);
-  end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
+
   return 0;
 } 
 
@@ -1230,6 +1233,7 @@ do_correct()
 int
 op_explicit(ldouble t, ldouble dtin) 
 {
+
   int ix,iy,iz,iv,ii;
   ldouble dt;
 
@@ -1267,27 +1271,30 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************
   // Evolve the conserved quantities
 
+  //TODO add extra flag
 #ifdef GPUKO
-  push_geometry();
   calc_update_gpu(dtin);
-  free_geometry();
 #endif
-
+  
   struct timespec temp_clock;
   ldouble tstart,tstop;
   
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
+
   calc_update(dtin);
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("cpu update time: %0.2lf \n\n", (tstop-tstart)*1.e3);
+  printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
 
-   /************************************************************************/
-   /********* explicit *** RADIATION COUPLING  *****************************/
-   /************************************************************************/
+  printf("cpu update uu[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(u, iv, ixTEST, iyTEST, izTEST));
+  printf("\n\n");
+
+  //************************************************************************
+  // Explicit RADIATION COUPLING  
   
 #ifdef RADIATION
 #ifndef SKIPRADSOURCE
@@ -1320,10 +1327,26 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************  
   // Compute postexplicit primitives and count entropy inversions
 
-  calc_u2p(1,1);
+#ifdef GPUKO
+  calc_u2p_gpu(1);
+#endif
 
-  //**********************************************************************
-	    
+  // TODO: timing functionality. reuse timer from above
+  //my_clock_gettime(&temp_clock);
+  //tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  calc_u2p(1);
+
+  //my_clock_gettime(&temp_clock);
+  //tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("cpu u2p time: %0.2lf \n", (end_u2ptime-start_u2ptime)*1.e3); // this only times u2p, not including fixups/bcs 
+  //printf("cpu u2p time: %0.2lf \n", (tstop-tstart)*1.e3);
+  printf("cpu u2p pp[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+  printf("\n\n");
+
+  //**********************************************************************	    
   // Entropy Mixing
   
 #ifdef MIXENTROPIESPROPERLY
@@ -1382,7 +1405,7 @@ apply_dynamo(ldouble t, ldouble dt)
   mimic_dynamo(dt); 
 
   //update primitives
-  calc_u2p(0,0);
+  calc_u2p(0);
 
 #endif
 
@@ -1931,9 +1954,6 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
   iy2=NY+0;
   iz1=-0;
   iz2=NZ+0;
-
-  //TEST
-  //ldouble test = get_xb_device(xb,33,0);
   
   //x
   for(i1=ix1-NG;i1<=ix2+NG;i1++)

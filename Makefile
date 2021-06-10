@@ -12,7 +12,7 @@ CC=gcc
 //CFLAGS = -fopenmp -O2 -I/usr/include/hdf5/serial
 //CFLAGS = -O3 -fPIC -I/home/achael/software/include
 
-CFLAGS = -O3 -fPIC 
+CFLAGS = -O3 -fPIC -DGPUKO
 CFLAGSGPU = -O3 -fPIC -DGPUKO
 
 OMPFLAGS = -fopenmp
@@ -24,20 +24,21 @@ LIBS=-lm -lgsl -lgslcblas -lfftw3 -lrt
 
 //OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o
 //OBJS = mpi.o problem.o finite.o metric.o frames.o relele.o u2p.o p2u.o magn.o physics.o opacities.o misc.o postproc.o fileop.o silo.o
+
 OBJS = mpi.o problem.o finite.o metric.o frames.o relele.o u2p.o p2u.o magn.o physics.o opacities.o misc.o postproc.o fileop.o 
 SRCS = mpi.c problem.c finite.c metric.c frames.c relele.c u2p.c p2u.c magn.c physics.c opacities.c misc.c postproc.c fileop.c 
 
-SRCSGPU = u2pgpu.cu relelegpu.cu finitegpu.cu 
-OBJSGPU = u2pgpu.cu relelegpu.o finitegpu.o
+SRCSGPU = u2pgpu.cu relelegpu.cu finitegpu.cu metricgpu.cu
+OBJSGPU = u2pgpu.cu relelegpu.o finitegpu.o metricgpu.o
 
-all: ko_gpu ko ana avg phisli thsli phiavg
+all: ko.o ko_gpu 
 
-
+allold: ko_gpu ko.o ana avg phisli thsli phiavg
 
 ko_gpu: ko.o $(SRCS) $(SRCSGPU) Makefile ko.h kogpu.h problem.h mnemonics.h 
 	$(CC) $(CFLAGSGPU) -c $(SRCS)
 	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -x cu -dc $(SRCSGPU)
-	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 -lcudart $(LIBS) $(OBJS) $(OBJSGPU) -o ko_gpu ko.o
+	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -lcudart $(LIBS) $(OBJS) $(OBJSGPU) -o ko_gpu ko.o
 
 ko: ko.o $(SRCS) Makefile ko.h problem.h mnemonics.h
 	$(CC) $(CFLAGS) $(OMPFLAGS) -o ko ko.o $(SRCS) $(LIBS)

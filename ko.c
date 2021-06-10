@@ -19,6 +19,8 @@ ldouble inputarg[10];
 int
 main(int argc, char **argv)
 {
+
+  fprintf(stderr, "does gpuko work? %d\n", GPUKO);
   
   int i,j;
   int ix,iy,iz;
@@ -105,6 +107,10 @@ main(int argc, char **argv)
 
   //precalculates metric, Christoffels, etc.
   calc_metric();
+
+  #ifdef GPUKO
+  push_geometry_gpu();
+  #endif
   
   //save coordinate file
   #ifdef COORDOUTPUT
@@ -497,6 +503,10 @@ main(int argc, char **argv)
   //******************************************************
   // Evolution done. Clean up and finish.
   //******************************************************
+
+  #ifdef GPUKO
+  free_geometry_gpu();
+  #endif
   
   free_arrays();
   fprint_closefiles();
