@@ -111,7 +111,7 @@ int output_state_debug (const char *fname, const char *header, const char *ctime
   print_double_array_at(fp, p, ixTEST, iyTEST, izTEST);
   fprintf(fp, "\n],\n\"cpu_cons\":[\n");
   print_double_array_at(fp, u, ixTEST, iyTEST, izTEST);
-  fprintf(fp, "\n]\n");
+  fprintf(fp, "\n],\n");
 
   // TODO, make this more modular
   {
