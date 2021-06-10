@@ -21,6 +21,7 @@ extern ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)]
 ///////////////////////////////////////////////////////////////
 
 __device__ __host__ int is_cell_active_device (int ix, int iy, int iz);
+__device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int iz);
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
 __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 				           int ix, int iy, int iz);
@@ -36,7 +37,7 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 			                   
 
 
-// kernels below
+// kernel
 
 __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
@@ -79,12 +80,16 @@ __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldoubl
 //////////////////////////////////////////////////////////////
 __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int iy,int iz, int val);
 
-__device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2]);
+__device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
+				   int corrected[3], int fixups[2], int int_slot_arr[NGLOBALINTSLOT]);
+__device__ __host__ int u2p_solver_Bonly_device(ldouble *uu, ldouble *pp, void *ggg)
 __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 
 // kernel
 __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+                                       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
 				       ldouble *u_arr, ldouble *p_arr,
-				       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr);
+				       int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT]);
+				       

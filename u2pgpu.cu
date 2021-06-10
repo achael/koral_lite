@@ -36,10 +36,12 @@ __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int
 }
 
 // todo deleted type
-__global__ void calc_primitives_kernel(int Nloop_0, int setflags,
+__global__ void calc_primitives_kernel(int Nloop_0, int setflags, 
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-				       ldouble *u_arr, ldouble *p_arr, int* cellflag_arr,
-				       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr)
+                                       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
+				       ldouble *u_arr, ldouble *p_arr,
+				       int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT])
+				       
 {
   
   // get index for this thread
@@ -80,14 +82,16 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 
   //TODO -- put in check for corrected_polaraxis
   //u to p inversion is done here
-  //if(is_cell_corrected_polaraxis(ix,iy,iz))
-  //{
-  //  u2p_solver_Bonly(uu,pp,&geom); // invert only the magnetic field, the rest will be overwritten
-  //}
-  //else
-  //{
-    u2p_device(uu,pp,&geom,corrected,fixups); // regular inversion
-  //}
+  if(is_cell_corrected_polaraxis_device(ix,iy,iz)) 
+  {
+    // invert only the magnetic field, the rest will be overwritten
+    u2p_solver_Bonly_device(uu,pp,&geom); 
+  }
+  else
+  {
+    // regular inversion
+    u2p_device(uu,pp,&geom,corrected,fixups,int_slot_arr); 
+  }
   
   //set flags for entropy solver
   if(corrected[0]==1 && setflags) //hd correction - entropy solver
@@ -101,13 +105,12 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   }
 
 #ifndef NOFLOORS
-  /*
   //check hd floors
   int floorret=0;
-  
-  if(is_cell_active(ix,iy,iz) && !is_cell_corrected_polaraxis(ix,iy,iz))
+
+  if(is_cell_active_device(ix,iy,iz) && !is_cell_corrected_polaraxis_device(ix,iy,iz))
   {
-    floorret=check_floors_mhd(pp,VELPRIM,&geom);
+    //floorret=check_floors_mhd(pp,VELPRIM,&geom); //TODO
   }
   
   if(floorret<0.)
@@ -132,13 +135,11 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   */
 #endif
   
-  //set new primitives and conserved
+  //set new primitives
   for(int iv=0;iv<NV;iv++)
   { 
     set_u(p_arr,iv,ix,iy,iz,pp[iv]);
   }
-
-  //TODO
   
   //set flags for fixups of unsuccessful cells
   if(setflags)
@@ -146,7 +147,8 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
     if(fixups[0]>0)
     {
       set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
-      //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;
+      atomicAdd(int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
+      //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++; 
     }
     else
       set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
@@ -154,6 +156,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
     if(fixups[1]>0)
     {
       set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
+      atomicAdd(int_slot_arr[GLOBALINTSLOT_NTOTALRADFIXUPS],1); //TODO right??
       //global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
     }
     else
@@ -170,7 +173,8 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 //high-level u2p solver
 //**********************************************************************
 
-__device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2])
+__device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
+				   int corrected[3], int fixups[2], int* int_slot_arr)
 {
   int verbose=0;
   
@@ -223,14 +227,12 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
     pp[0]=RHOFLOOR; //used when not fixing up
     uu[0]=RHOFLOOR*gdetu;
     ret=-2;    //to request fixup
-               //ANDREW -- but ret=-1 if energy inversion failes but entropy inversion does not!
+               //TODO what do we want here?
+               //ANDREW -- but ret goes back to -1 if energy inversion fails but entropy inversion does not!
                //ANDREW -- do we always want a fixup if we have negative uu[0] ? 
-    u2pret=-1; // indicates that inversion is needed
     
-#ifndef SWAPPAPC
-    //TODO -- global array
-    //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  //but count as fixup
-#endif
+    atomicAdd(int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
+    //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  //this counts as a fixup
   }
 
   if(u2pret!=0)  // u2pret=-1 at this stage, so this is always satisfied
@@ -359,11 +361,38 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg, int cor
   if(radcor>0)
     corrected[1]=1;
 
-
   //if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST) printf("End of u2p_device\n");
   
   return ret;
 } 
+
+
+//**********************************************************************
+// solve only for magnetic field 
+//**********************************************************************
+
+__device__ __host__ int u2p_solver_Bonly_device(ldouble *uu, ldouble *pp, void *ggg)
+{
+  //prepare geometry
+  struct geometry *geom
+  = (struct geometry *) ggg;
+  
+  ldouble gdetu, gdetu_inv;
+  gdetu=geom->gdet;
+#if (GDETIN==0) //gdet out of derivatives
+  gdetu=1.;
+#endif
+  gdetu_inv = 1. / gdetu;
+  
+#ifdef MAGNFIELD
+  //magnetic conserved=primitives
+  pp[B1]=uu[B1] * gdetu_inv;
+  pp[B2]=uu[B2] * gdetu_inv;
+  pp[B3]=uu[B3] * gdetu_inv;
+#endif
+  
+  return 0; 
+}  
 
 
 //**********************************************************************
@@ -998,7 +1027,7 @@ int calc_u2p_gpu(int setflags)
 {
 
   ldouble *d_u_arr, *d_p_arr;
-  int *d_cellflag_arr;
+  int *d_cellflag_arr, *d_int_slot_arr;
   
   cudaError_t err = cudaSuccess;
   cudaEvent_t start, stop;
@@ -1011,14 +1040,15 @@ int calc_u2p_gpu(int setflags)
   long long Nprim     = (SX)*(SY)*(SZ)*NV;
 
   // allocate and sync prims and cons to device 
-  err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);  
-  err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
-  err = cudaMalloc(&d_cellflag_arr,    sizeof(int)*Ncellflag);
+  err = cudaMalloc(&d_p_arr,  sizeof(ldouble)*Nprim);  
+  err = cudaMalloc(&d_u_arr,  sizeof(ldouble)*Nprim);
+  err = cudaMalloc(&d_cellflag_arr, sizeof(int)*Ncellflag);
+  err = cudaMalloc(&d_int_slot_arr, sizeof(int)*NGLOBALINTSLOT);
   
-  err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);  // is this used to seed?
+  err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);  
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_cellflag_arr, cellflag, sizeof(int)*Ncellflag, cudaMemcpyHostToDevice);
-  
+  err = cudaMemcpy(d_int_slot_arr, global_int_slot, sizeof(int)*NGLOBALINTSLOT, cudaMemcpyHostToDevice);
 
   // launch calc_primitives_kernel
 
@@ -1026,9 +1056,11 @@ int calc_u2p_gpu(int setflags)
 
   cudaEventRecord(start);
   calc_primitives_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, setflags, 
-                                                    d_loop0_ix, d_loop0_iy, d_loop0_iz,
-                                                    d_u_arr, d_p_arr, d_cellflag_arr,
-                                                    d_x, d_gcov, d_gcon);
+						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
+						    d_x, d_gcov, d_gcon,
+						    d_u_arr, d_p_arr,
+						    d_cellflag_arr, d_int_slot_arr);
+              
 
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
@@ -1050,14 +1082,18 @@ int calc_u2p_gpu(int setflags)
   printf("\n");
   free(p_tmp);
   
-  // TODO Copy updated p back from device to global array p?
+  // TODO Copy updated p back from device to global array p
   //err = cudaMemcpy(p, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
   
-  // ======= TODO
+  // TODO Copy updated cellflags and global_int_slots back from device to global arrays
+  //err = cudaMemcpy(cellflag, d_cellflag_arr, sizeof(int)*Ncellflag, cudaMemcpyDeviceToHost);
+  //err = cudaMemcpy(global_int_slot, d_int_slot_arr, sizeof(int)*NGLOBALINTSLOT, cudaMemcpyDeviceToHost);  
+  
   // Free Device Memory
   cudaFree(d_u_arr);
   cudaFree(d_p_arr);
   cudaFree(d_cellflag_arr);
+  cudaFree(d_int_slot_arr);
   
   return 0;
 }

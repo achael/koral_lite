@@ -12,6 +12,29 @@ __device__ __host__ int is_cell_active_device (int ix, int iy, int iz)
   return 1;
 }
 
+
+__device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int iz)
+{
+
+#if defined(CORRECT_POLARAXIS) || defined(CORRECT_POLARAXIS_3D)
+#ifdef MPI
+  if(TJ==0) //tile
+#endif
+    if(iy<NCCORRECTPOLAR) 
+      return 1;
+#ifndef HALFTHETA
+#ifdef MPI
+  if(TJ==NTY-1) //tile
+#endif   
+    if(iy>(NY-NCCORRECTPOLAR-1))
+      return 1;
+#endif
+#endif
+  
+  return 0;
+}
+
+
 // TODO replace get_x, get_xb, and get_gKr   everywhere
 
 // get grid coordinate at the cell center indexed ic in dimeinsion idim
