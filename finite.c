@@ -1177,7 +1177,7 @@ calc_u2p_fixup_and_bc(int setflags)
   */
 
   // perform inversion
-  calc_u2p_only(setflags)
+  calc_u2p_only(setflags);
   
   //fixup here hd and rad after inversions
   cell_fixup(FIXUP_U2PMHD);
