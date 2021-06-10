@@ -1271,11 +1271,17 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************
   // Evolve the conserved quantities
 
+#ifdef GPUKO
+  // TODO eventually this will be moved out of op_explicit => problem.c
+  push_p_u_gpu();
+#endif 
+
   //TODO add extra flag
 #ifdef GPUKO
   calc_update_gpu(dtin);
 #endif
-  
+
+#if CPUKO || !defined(GPUKO)  
   struct timespec temp_clock;
   ldouble tstart,tstop;
   
@@ -1291,6 +1297,8 @@ op_explicit(ldouble t, ldouble dtin)
   printf("cpu update uu[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(u, iv, ixTEST, iyTEST, izTEST));
+#endif 
+
   printf("\n\n");
 
   //************************************************************************
@@ -1331,6 +1339,7 @@ op_explicit(ldouble t, ldouble dtin)
   calc_u2p_gpu(1);
 #endif
 
+#if CPUKO || !defined(GPUKO)
   // TODO: timing functionality. reuse timer from above
   //my_clock_gettime(&temp_clock);
   //tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
@@ -1344,7 +1353,22 @@ op_explicit(ldouble t, ldouble dtin)
   printf("cpu u2p pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+#endif
+
   printf("\n\n");
+
+#if GPUKO && !defined(CPUKO)
+
+  // vvvvvvvvvvvvvv
+  // TODO: note, this doesn't deal with any fixups or boundary conditions!!!!
+  //   ... so this is explicitly incorrect.
+
+  // TODO eventually this will be moved out of op_explicit => problem.c
+  pull_p_u_gpu();
+
+#endif
+
+// TODO: add pull + write
 
   //**********************************************************************	    
   // Entropy Mixing

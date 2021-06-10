@@ -1183,7 +1183,8 @@ __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *
 #else
       //TODO print statement
       //print_primitives(pp);
-      exit(-1);
+      // TODO: note you shouldn't call __host__ exit(...) from __host__ __device__
+      //exit(-1);
 #endif
     }
     
@@ -1380,9 +1381,6 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 int calc_u2p_gpu(int setflags)
 {
 
-  ldouble *d_u_arr, *d_p_arr;
-  int *d_cellflag_arr, *d_int_slot_arr;
-  
   cudaError_t err = cudaSuccess;
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
@@ -1393,14 +1391,6 @@ int calc_u2p_gpu(int setflags)
   long long Ncellflag = (SX)*(SY)*(SZ)*NFLAGS;
   long long Nprim     = (SX)*(SY)*(SZ)*NV;
 
-  // allocate and sync prims and cons to device 
-  err = cudaMalloc(&d_p_arr,  sizeof(ldouble)*Nprim);  
-  err = cudaMalloc(&d_u_arr,  sizeof(ldouble)*Nprim);
-  err = cudaMalloc(&d_cellflag_arr, sizeof(int)*Ncellflag);
-  err = cudaMalloc(&d_int_slot_arr, sizeof(int)*NGLOBALINTSLOT);
-  
-  err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);  
-  err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_cellflag_arr, cellflag, sizeof(int)*Ncellflag, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_int_slot_arr, global_int_slot, sizeof(int)*NGLOBALINTSLOT, cudaMemcpyHostToDevice);
 
@@ -1415,7 +1405,6 @@ int calc_u2p_gpu(int setflags)
 						    d_u_arr, d_p_arr,
 						    d_cellflag_arr, d_int_slot_arr);
               
-
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
   cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchronize?
@@ -1425,6 +1414,7 @@ int calc_u2p_gpu(int setflags)
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu u2p time: %0.2f \n",tms);
 
+#ifdef CPUKO
   // print results
   ldouble* p_tmp;
   if((p_tmp=(ldouble*)malloc(sizeof(ldouble)*Nprim))==NULL) my_err("malloc err.\n");
@@ -1435,19 +1425,7 @@ int calc_u2p_gpu(int setflags)
     printf("%e ", get_u(p_tmp, iv, ixTEST, iyTEST, izTEST));
   printf("\n");
   free(p_tmp);
-  
-  // TODO Copy updated p back from device to global array p
-  //err = cudaMemcpy(p, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
-  
-  // TODO Copy updated cellflags and global_int_slots back from device to global arrays
-  //err = cudaMemcpy(cellflag, d_cellflag_arr, sizeof(int)*Ncellflag, cudaMemcpyDeviceToHost);
-  //err = cudaMemcpy(global_int_slot, d_int_slot_arr, sizeof(int)*NGLOBALINTSLOT, cudaMemcpyDeviceToHost);  
-  
-  // Free Device Memory
-  cudaFree(d_u_arr);
-  cudaFree(d_p_arr);
-  cudaFree(d_cellflag_arr);
-  cudaFree(d_int_slot_arr);
+#endif
   
   return 0;
 }

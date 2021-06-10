@@ -20,6 +20,16 @@ extern ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)]
 // finitegpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
+extern ldouble *d_u_arr;
+extern ldouble *d_p_arr;
+
+extern ldouble *d_flbx_arr;
+extern ldouble *d_flby_arr;
+extern ldouble *d_flbz_arr;
+
+extern int *d_cellflag_arr;
+extern int *d_int_slot_arr;
+
 __device__ __host__ int is_cell_active_device (int ix, int iy, int iz);
 __device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int iz);
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
