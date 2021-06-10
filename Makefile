@@ -32,7 +32,7 @@ SRCSGPU = u2pgpu.cu relelegpu.cu finitegpu.cu metricgpu.cu
 OBJSGPU = $(SRCSGPU:.cu=.o)
 
 # need to compile _cpu and _gpu object files for following sources
-SRCS_SWITCH = diagnostics.c ko.c
+SRCS_SWITCH = ko.c
 OBJS_SWITCH_CPU=$(SRCS_SWITCH:.c=_cpu.o)
 OBJS_SWITCH_GPU=$(SRCS_SWITCH:.c=_gpu.o)
 
