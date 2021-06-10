@@ -5,6 +5,7 @@
 /************************************/
 #define BHDISK_PROBLEMTYPE
 
+// for gpu testing
 //#define NOSOURCES
 #define NOFLOORS
 

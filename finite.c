@@ -1169,7 +1169,6 @@ calc_u2p(int setflags)
     calc_primitives(ix,iy,iz,setflags);
   }
 
-  
   //timer stop
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;

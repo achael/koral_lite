@@ -35,138 +35,171 @@ __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int
    return 0;
 }
 
-// todo deleted type
-__global__ void calc_primitives_kernel(int Nloop_0, int setflags, 
-				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-                                       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
-				       ldouble *u_arr, ldouble *p_arr,
-				       int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT])
-				       
+
+//**********************************************************************
+//primitive to conserved converter -- hydro
+//**********************************************************************
+
+__device__ __host__ int p2u_mhd_device(ldouble *pp, ldouble *uu, void *ggg)
 {
-  
-  // get index for this thread
-  // Nloop_0 is number of cells to update;
-  // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
-  int ii = blockIdx.x * blockDim.x + threadIdx.x;
-  if(ii >= Nloop_0) return;
-    
-  // get indices from 1D arrays
-  int ix=loop_0_ix[ii];
-  int iy=loop_0_iy[ii];
-  int iz=loop_0_iz[ii]; 
-  
-  //skip if cell is passive
-  if(!is_cell_active_device(ix,iy,iz))
-    return;
-  
-  struct geometry geom;
-  fill_geometry_device(ix,iy,iz, x_arr,&geom,g_arr, G_arr);
 
-  ldouble uu[NV],pp[NV];
-  
-  int corrected[3]={0,0,0}, fixups[2]={0,0};
-  for(int iv=0;iv<NV;iv++)
-  {
-    uu[iv]=get_u(u_arr,iv,ix,iy,iz);
-    pp[iv]=get_u(p_arr,iv,ix,iy,iz);
-  }
-
-  //TODO -- put in flags
-  
-  if(setflags)
-  {
-    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,0);
-    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,0);
-  }
-  
-
-  //TODO -- put in check for corrected_polaraxis
-  //u to p inversion is done here
-  if(is_cell_corrected_polaraxis_device(ix,iy,iz)) 
-  {
-    // invert only the magnetic field, the rest will be overwritten
-    u2p_solver_Bonly_device(uu,pp,&geom); 
-  }
-  else
-  {
-    // regular inversion
-    u2p_device(uu,pp,&geom,corrected,fixups,int_slot_arr); 
-  }
-  
-  //set flags for entropy solver
-  if(corrected[0]==1 && setflags) //hd correction - entropy solver
-  {
-    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,1);
-  }
-  
-  if(corrected[2]==1 && setflags) //borrowing energy from radiation didn't work
-  {  
-    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,1);
-  }
-
-#ifndef NOFLOORS
-  //check hd floors
-  int floorret=0;
-
-  if(is_cell_active_device(ix,iy,iz) && !is_cell_corrected_polaraxis_device(ix,iy,iz))
-  {
-    //floorret=check_floors_mhd(pp,VELPRIM,&geom); //TODO
-  }
-  
-  if(floorret<0.)
-  {
-    corrected[0]=1;
-  }
-
-  /*
-  //check rad floors
-#ifdef RADIATION
-  floorret=0;
-  if(is_cell_active(ix,iy,iz) &&  !is_cell_corrected_polaraxis(ix,iy,iz))
-  {
-    floorret=check_floors_rad(pp,VELPRIMRAD,&geom);
-  }
-  
-  if(floorret<0.)
-  {
-    corrected[1]=1;
-  }
+#ifdef NONRELMHD
+  //p2u_mhd_nonrel(p,u,ggg); //TODO norel
+  return 0;
 #endif
-  */
+
+  struct geometry *geom
+   = (struct geometry *) ggg;
+
+  ldouble (*gg)[5],(*GG)[5],gdetu;
+  gg=geom->gg;
+  GG=geom->GG;
+  
+  gdetu=geom->gdet;
+  #if (GDETIN==0) //gdet out of derivatives
+  gdetu=1.;
+  #endif
+
+  ldouble rho = pp[0];
+  ldouble uu  = pp[1];
+  ldouble S   = pp[5];
+  
+  ldouble vcon[4],ucon[4],ucov[4];
+  vcon[0]=0.;
+  vcon[1]=pp[2];
+  vcon[2]=pp[3];
+  vcon[3]=pp[4];
+  conv_vels_both_device(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
+  
+  ldouble bcon[4]={0.,0.,0.,0.}, bcov[4]={0.,0.,0.,0.}, bsq=0.;
+#ifdef MAGNFIELD
+  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, geom, bcon, bcov, &bsq);
 #endif
+
+  //************************************
+  //hydro part
+  //************************************
+ 
+  ldouble ut=ucon[0];
+  ldouble rhout = rho*ut;
+  ldouble Sut = S*ut;
+
+  ldouble gamma=GAMMA;
+  #ifdef CONSISTENTGAMMA
+  //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
+  #endif
+ 
+  ldouble pre=(gamma-1.)*uu; 
+  ldouble eta  = rho+uu+pre+bsq;
+  ldouble etap = uu+pre+bsq; //eta-rho
+  ldouble ptot = pre+0.5*bsq;
   
-  //set new primitives
-  for(int iv=0;iv<NV;iv++)
-  { 
-    set_u(p_arr,iv,ix,iy,iz,pp[iv]);
-  }
+  //this computes utp1=1+u_t
+  ldouble utp1 = calc_utp1_device(vcon,ucon,geom); 
+
+  ldouble Tttt =etap*ucon[0]*ucov[0] + rho*ucon[0]*utp1 + ptot - bcon[0]*bcov[0];
+  ldouble Ttr  =eta *ucon[0]*ucov[1] - bcon[0]*bcov[1];
+  ldouble Ttth =eta *ucon[0]*ucov[2] - bcon[0]*bcov[2];
+  ldouble Ttph =eta *ucon[0]*ucov[3] - bcon[0]*bcov[3];
+
+  uu[0]=gdetu*rhout;
+  uu[1]=gdetu*Tttt;
+  uu[2]=gdetu*Ttr;
+  uu[3]=gdetu*Ttth;
+  uu[4]=gdetu*Ttph;
+  uu[5]=gdetu*Sut;
+
+#ifdef EVOLVEELECTRONS
+  u[ENTRE]= gdetu*pp[ENTRE]*ut;
+  u[ENTRI]= gdetu*pp[ENTRI]*ut;
+#endif
+
+#ifdef RELELECTRONS
+  int ib;
+  for(int ib=0;ib<NRELBIN;ib++)
+    u[NEREL(ib)]=gdetu*pp[NEREL(ib)]*ut;    
+#endif
+
+  //************************************
+  //magnetic part
+  //************************************ 
+#ifdef MAGNFIELD
+  u[B1]=gdetu*pp[B1];
+  u[B2]=gdetu*pp[B2];
+  u[B3]=gdetu*pp[B3];
+#endif
+
+  return 0.;
+}
+
+
+//**********************************************************************
+// Compute utp1=1+u_t , which for nonrelativistic cases is ~0.
+// if computed directly as 1+u_t, then if the residual is small there will be a large error.
+//**********************************************************************
+__device__ __host__ ldouble calc_utp1_device(ldouble *vcon, ldouble *ucon, void *ggg)
+{
+  struct geometry *geom
+   = (struct geometry *) ggg;
+
+  ldouble (*gg)[5],(*GG)[5];
+  gg=geom->gg;
+  GG=geom->GG;
   
-  //set flags for fixups of unsuccessful cells
-  if(setflags)
+  ldouble utp1;
+  if(VELPRIM==VELR) //based on VELR
   {
-    if(fixups[0]>0)
-    {
-      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
-      atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
-      //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++; 
-    }
-    else
-      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
-    
-    if(fixups[1]>0)
-    {
-      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
-      atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALRADFIXUPS],1); //TODO right??
-      //global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
-    }
-    else
-      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,0); 
+  
+    ldouble qsq=0.;
+    for(int i=1;i<4;i++)
+      for(int j=1;j<4;j++)
+	 qsq+=vcon[i]*vcon[j]*gg[i][j];
+
+    ldouble gamma2=(1.+qsq);
+    ldouble alpha = geom->alpha;
+    ldouble alphasq = alpha*alpha;
+    ldouble alpgam=sqrt(alphasq*gamma2);
+
+    //\beta^i \beta_i / \alpha^2 = g^{ti} g_{ti}
+    ldouble betasqoalphasq=gg[0][1]*GG[0][1] + gg[0][2]*GG[0][2] + gg[0][3]*GG[0][3];
+
+    // \tilde{u}_t = \tilde{u}^i g_{ti} since \tilde{u}^t=0
+    ldouble ud0tilde = 0.0;
+    for(int j=1;j<4;j++)
+      ud0tilde += vcon[j]*gg[0][j]; 
+
+    utp1= ud0tilde + (geom->gttpert - alphasq*(betasqoalphasq + qsq))/(1.0+alpgam);
   }
+  else //based on ucon[]
+  {
     
+    // 3-velocity in coordinate basis
+    ldouble vconp[4];
+    for(int j=1;j<4;j++)
+      vconp[j]=ucon[j]/ucon[0];
 
-} 
+    // 3 velcocity squared
+    ldouble vsq=geom->gttpert;
+    for(int j=1;j<4;j++)
+      vsq+=2.0*geom->gg[0][j]*vconp[j];
 
+    for(int j=1;j<4;j++)
+      for(int k=1;k<4;k++)
+	vsq+=geom->gg[j][k]*vconp[j]*vconp[k];
+  
+    ldouble alpha=0.0;
+    for(int j=1;j<4;j++)
+      alpha+=geom->gg[j][0]*ucon[j];
 
+    ldouble plus1gv00=geom->gttpert;
+    ldouble uu0 = ucon[0];
+    ldouble gvtt=geom->gg[0][0];
+
+    utp1 = alpha + ((1.0-gvtt)*plus1gv00 - uu0*uu0*vsq*gvtt*gvtt)/(1.0-gvtt*uu0);
+  }
+  
+  return utp1;
+}
 
 
 //**********************************************************************
@@ -215,7 +248,7 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
   //negative uu[0] = rho u^t
   if(uu[0] * gdetu_inv < 0.)
   {
-    //TODO
+    //TODO -- print statement with mpi data
     /*
     if verbose
     {
@@ -240,7 +273,6 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
 #ifdef ENFORCEENTROPY  
     u2pret=-1;  //skip hot energy-conserving inversion and go to entropy inversion
 #else
-    //TODO
     u2pret = u2p_solver_device(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
 #endif //ENFORCEENTROPY
   }
@@ -260,7 +292,6 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
         //printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
       }
       
-      //TODO
       u2pret=u2p_solver_device(uu,pp,ggg,U2P_ENTROPY,0);  // invert using entropy equation
       
       if(u2pret<0)
@@ -305,7 +336,7 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
   //************************************
   //radiation part
   //************************************
-  
+  //TODO
   /*
 #ifdef RADIATION  
 #ifdef BALANCEENTROPYWITHRADIATION
@@ -402,7 +433,7 @@ __device__ __host__ int u2p_solver_Bonly_device(ldouble *uu, ldouble *pp, void *
 __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
 
-  //TODO
+  //TODO -- u2p_solver nonrel
   /*
 #ifdef NONRELMHD
   return u2p_solver_nonrel_device(uu,pp,ggg,Etype,verbose);
@@ -448,7 +479,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   
   
   ldouble pgamma=GAMMA;
-  //TODO
+  //TODO -- pick_gammagas
   //#ifdef CONSISTENTGAMMA
   //pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
   //#endif
@@ -490,7 +521,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   D = uu[0] * gdetu_inv * alpha; //uu[0]=gdetu rho ut
   
   //conserved entropy "S u^t"
-  Sc = uu[5] * gdetu_inv * alpha;
+  Sc = uu[5] * gdetu_inv * alpha; //uu[5]=gdetu S ut
   
   //Q_mu=alpha T^t_mu
   Qcov[0] = (uu[1] * gdetu_inv - uu[0] * gdetu_inv) * alpha;
@@ -639,7 +670,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   {
     
     printf("failed to find initial W for Etype: %d\n",Etype);
-    //TODO
+    //TODO -- print statements
     //printf("at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
     //print_NVvector(uu);
     //print_NVvector(pp);
@@ -713,7 +744,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
     // check if W is too large
     if(fabs(W)>BIG)
     {
-      //TODO
+      //TODO -- print statement
       //if(verbose>1) printf("W has gone out of bounds at %d,%d,%d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz);
       return -103;
     }
@@ -819,7 +850,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
 #endif
 #endif
 
-  //TODO
+  //TODO -- print
   //if(verbose) print_primitives(pp);
   
   if(verbose>0)
@@ -1020,6 +1051,332 @@ __device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble 
 }
 
 //**********************************************************************
+//checks if hydro primitives make sense
+//**********************************************************************
+
+// TODO deleted some floors
+// deleted RHOFLOOR_BH, RHOFLOORINIT
+// deleted EVOLVEELECTRONS corrections in B2RHO ceiling
+// deleted EVOLVEELECTRONS, RELELECTRONS floors/ceilings
+__device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *ggg)
+{
+
+  int verbose=0;
+  int ret=0;
+
+  struct geometry *geom
+    = (struct geometry *) ggg;
+
+  ldouble (*gg)[5],(*GG)[5];
+  gg=geom->gg;
+  GG=geom->GG;
+ 
+  //**********************************************************************
+  //rho too small -- set equal to floor valu
+  if(pp[0] < RHOFLOOR) 
+  {
+
+      //TODO print with MPI
+      //if(verbose ) printf("hd_floors CASE 1 at %d %d %d | %d %d %d (%e) | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[0],TI,TJ,TK);
+
+      pp[0]=RHOFLOOR; 
+     
+      ret=-1; 
+  }
+
+  //**********************************************************************
+  //too cold -- raise gas energy to minimum density fraction
+  if(pp[1] < UURHORATIOMIN*pp[0]) 
+  {
+
+    //TODO print with MPI
+    //if(verbose) {printf("hd_floors CASE 2 at (%d,%d,%d | %d,%d,%d): %e %e | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[0],pp[1],TI,TJ,TK);}
+    
+    pp[1]=UURHORATIOMIN*pp[0]; 
+
+    ret=-1;
+  }
+
+  //**********************************************************************
+  //too hot -- lower gas energy to maximum density fraction 
+  if(pp[1]>UURHORATIOMAX*pp[0]) 
+  {
+    //TODO print with MPI
+    //if(verbose ) printf("hd_floors CASE 3 at (%d,%d,%d | %d,%d,%d): %e %e | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[0],pp[1],TI,TJ,TK);
+ 
+    pp[1]=UURHORATIOMAX*pp[0]; 
+
+    ret=-1;      
+    
+  }
+  
+  //**********************************************************************
+  //too magnetized
+  
+#ifdef MAGNFIELD
+  ldouble ucond[4],ucovd[4];
+  ldouble bcond[4],bcovd[4],bsq,magpre;
+  ldouble etacon[4],etarel[4];
+
+  // get magnetic energy
+  for(int iv=1;iv<4;iv++)
+    ucond[iv]=pp[1+iv];
+  calc_ucon_ucov_from_prims_device(pp, geom, ucond, ucovd);
+  calc_bcon_bcov_bsq_from_4vel_device(pp, ucond, ucovd, geom, bcond, bcovd, &bsq);
+  magpre = 0.5 * bsq;
+  
+  calc_normalobs_ncon_device(GG, geom->alpha, etacon);
+  conv_vels_ut_device(etacon,etarel,VEL4,VELPRIM,gg,GG);
+
+  if(magpre > B2RHORATIOMAX*pp[RHO]) 
+  {
+    //TODO -- print with MPI
+    //if(verbose) printf("mag_floor at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],magpre);
+
+    ldouble f=magpre/(B2RHORATIOMAX*pp[RHO]); //correction factor
+
+    ldouble pporg[NV];
+    for(int iv=0;iv<NVMHD;iv++)
+    {
+      pporg[iv]=pp[iv];
+    }
+
+    ldouble uu[NV];
+    p2u_mhd_device(pp,uu,ggg); 
+
+#if (B2RHOFLOORFRAME==ZAMOFRAME) // add new mass in ZAMO by default
+
+    ldouble dpp[NV],duu[NV]; 
+   
+    for(int iv=0;iv<NVMHD;iv++)
+       dpp[iv]=0.;
+
+    // compute delta p
+    dpp[RHO]=pp[RHO]*(f-1.);;
+    dpp[UU]=0.; //do not inject energy - just density
+    dpp[VX] = etarel[1]; //new mass moves at ZAMO velocity
+    dpp[VY] = etarel[2];
+    dpp[VZ] = etarel[3];
+    dpp[ENTR] = 0.;
+    dpp[B1] = dpp[B2] = dpp[B3] = 0.;
+
+    // translate to conserved and update
+    p2u_mhd_device(dpp,duu,geom); 
+    for(int iv=0;iv<NVMHD;iv++)
+    {
+      uu[iv]+=duu[iv];
+    }
+
+    // perform a u2p on the updated conserved
+    int rettemp=0;
+    rettemp=u2p_solver_device(uu,pp,geom,U2P_HOT,0); 
+    if(rettemp<0)
+       rettemp=u2p_solver_device(uu,pp,geom,U2P_ENTROPY,0); 
+      
+    if(rettemp<0) 
+    {
+      //TODO print with MPI
+      //printf("u2p failed after imposing bsq over rho floors at %d %d %d with gamma=%f\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,get_u_scalar(gammagas,geom->ix,geom->iy,geom->iz));
+
+#ifdef B2RHOFLOOR_BACKUP_FFFRAME
+      // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
+      for(int iv=0;iv<NVMHD;iv++)
+         pp[iv]=pporg[iv];
+      pp[RHO]*=f; // inject energy and density (TODO right?) 
+      pp[UU]*=f;
+#else
+      //TODO print
+      //print_primitives(pp);
+      exit(-1);
+#endif
+    }
+    
+#elif(B2RHOFLOORFRAME==FFFRAME) // add new mass in fluid frame
+    pp[RHO]*=f;
+    pp[UU]*=f;
+
+#endif //B2RHOFLOORFRAME==ZAMOFRAME
+    
+    ret=-1;      
+  } //if(magpre>B2RHORATIOMAX*pp[RHO]) 
+#endif //MAGNFIELD
+
+  //**********************************************************************
+  //too fast
+  if(VELPRIM==VELR) 
+  {
+    ldouble qsq=0.;
+      int i,j;
+    for(int i=1;i<4;i++)
+    {
+      for(int j=1;j<4;j++)
+      {
+	qsq+=pp[UU+i]*pp[UU+j]*gg[i][j];
+      }
+    }
+
+    ldouble gamma2=1.+qsq; // squared lorentz factor
+    if(gamma2>GAMMAMAXHD*GAMMAMAXHD)
+    {
+      ldouble qsqmax=GAMMAMAXHD*GAMMAMAXHD-1.;
+      ldouble A=sqrt(qsqmax/qsq);
+      for(int j=1;j<4;j++)
+        pp[UU+j]*=A;
+
+      ret=-1;
+
+      if(verbose )
+      {
+        //TODO print with MPI
+	//printf("hd_floors CASE 4 at (%d,%d,%d): %e",geom->ix+TOI,geom->iy+TOJ,geom->iz,sqrt(gamma2));
+	//ldouble qsqnew=0.;
+	//for(int i=1;i<4;i++)
+	//   for(int j=1;j<4;j++)
+        //       qsqnew+=pp[UU+i]*pp[UU+j]*gg[i][j];
+	//printf(" -> %e\n",sqrt(1+qsq));
+      }
+    }
+  }
+  
+  //TODO do we want this? Is this inconsistent with keeping entropy as a backup until the very end of time step? 
+  //updates entropy after floor corrections
+  if(ret<0)
+    pp[5] = calc_Sfromu_device(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
+
+  return ret;
+}
+
+//**********************************************************************
+// u2p kernel
+//**********************************************************************
+
+__global__ void calc_primitives_kernel(int Nloop_0, int setflags, 
+				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+                                       ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
+				       ldouble *u_arr, ldouble *p_arr,
+				       int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT])
+				       
+{
+  
+  // get index for this thread
+  // Nloop_0 is number of cells to update;
+  // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
+  int ii = blockIdx.x * blockDim.x + threadIdx.x;
+  if(ii >= Nloop_0) return;
+    
+  // get indices from 1D arrays
+  int ix=loop_0_ix[ii];
+  int iy=loop_0_iy[ii];
+  int iz=loop_0_iz[ii]; 
+  
+  //skip if cell is passive
+  if(!is_cell_active_device(ix,iy,iz))
+    return;
+  
+  struct geometry geom;
+  fill_geometry_device(ix,iy,iz, x_arr,&geom,g_arr, G_arr);
+
+  ldouble uu[NV],pp[NV];
+  
+  int corrected[3]={0,0,0}, fixups[2]={0,0};
+  for(int iv=0;iv<NV;iv++)
+  {
+    uu[iv]=get_u(u_arr,iv,ix,iy,iz);
+    pp[iv]=get_u(p_arr,iv,ix,iy,iz);
+  }
+ 
+  if(setflags)
+  {
+    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,0);
+    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,0);
+  }
+  
+  //u to p inversion is done here
+  if(is_cell_corrected_polaraxis_device(ix,iy,iz)) 
+  {
+    // invert only the magnetic field, the rest will be overwritten
+    u2p_solver_Bonly_device(uu,pp,&geom); 
+  }
+  else
+  {
+    // regular inversion
+    u2p_device(uu,pp,&geom,corrected,fixups,int_slot_arr); 
+  }
+  
+  //set flags for entropy solver
+  if(corrected[0]==1 && setflags) //hd correction - entropy solver
+  {
+    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,1);
+  }
+  
+  if(corrected[2]==1 && setflags) //borrowing energy from radiation didn't work
+  {  
+    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,1);
+  }
+
+#ifndef NOFLOORS
+  //check hd floors
+  int floorret=0;
+
+  if(is_cell_active_device(ix,iy,iz) && !is_cell_corrected_polaraxis_device(ix,iy,iz))
+  {
+    floorret=check_floors_mhd_device(pp,VELPRIM,&geom); //TODO -- put in floors
+  }
+  
+  if(floorret<0.)
+  {
+    corrected[0]=1;
+  }
+
+  /*
+  //check rad floors
+#ifdef RADIATION
+  floorret=0;
+  if(is_cell_active_device(ix,iy,iz) &&  !is_cell_corrected_polaraxis_device(ix,iy,iz))
+  {
+    floorret=check_floors_rad(pp,VELPRIMRAD,&geom);
+  }
+  
+  if(floorret<0.)
+  {
+    corrected[1]=1;
+  }
+#endif
+  */
+#endif
+  
+  //set new primitives
+  for(int iv=0;iv<NV;iv++)
+  { 
+    set_u(p_arr,iv,ix,iy,iz,pp[iv]);
+  }
+  
+  //set flags for fixups of unsuccessful cells
+  if(setflags)
+  {
+    if(fixups[0]>0)
+    {
+      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
+      atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
+      //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++; 
+    }
+    else
+      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
+    
+    if(fixups[1]>0)
+    {
+      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
+      atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALRADFIXUPS],1); //TODO right??
+      //global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
+    }
+    else
+      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,0); 
+  }
+    
+
+} 
+
+//**********************************************************************
 //Call the kernel
 //**********************************************************************
 
@@ -1071,7 +1428,7 @@ int calc_u2p_gpu(int setflags)
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu u2p time: %0.2f \n",tms);
 
-  
+  // print results
   ldouble* p_tmp;
   if((p_tmp=(ldouble*)malloc(sizeof(ldouble)*Nprim))==NULL) my_err("malloc err.\n");
   err = cudaMemcpy(p_tmp, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);

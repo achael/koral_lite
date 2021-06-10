@@ -294,7 +294,6 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
     if(u2con[0] < 1. || isnan(u2con[0]))
     {
       printf("ut.nan in conv_vels(%d,%d) VEL3->VEL4 - returning error\n",which1,which2);
-      //getchar();
       return -1;  
     }
     
@@ -312,7 +311,6 @@ __device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2conout,int 
     if(u2con[0] < 1. || isnan(u2con[0]))
     {
       printf("ut.nan in conv_vels(%d,%d) VEL3->VELR - returning error\n",which1,which2);
-      //getchar();
       return -1;
     }
     
@@ -534,3 +532,18 @@ __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldoubl
   return ;
 }
 
+//**********************************************************************
+//returns contravariant four-velocity of a normal observer, given the value of alpha
+//n_mu=(-alp,0,0,0);  nu^mu = nu_0 * GG[mu][0]
+//**********************************************************************
+
+__device__ __host__ int calc_normalobs_ncon_device(ldouble GG[][5], ldouble alpha, ldouble *ncon)
+{
+
+  for(int i=0; i<4; i++)
+  {
+    ncon[i] = -alpha * GG[i][0];
+  }
+  
+  return 0.;
+}

@@ -79,70 +79,6 @@ __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
   return dx;
 }
 
-__device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
-{
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  ldouble (*gg)[5],(*GG)[5];
-  gg=geom->gg;
-  GG=geom->GG;
-
-  ldouble utcon[4],ucon[4],ucov[4];  
-  ldouble bcon[4],bcov[4],bsq=0.;
-  
-  //converts to 4-velocity
-  utcon[0]=0.;
-  for(int iv=1;iv<4;iv++)
-    utcon[iv]=pp[1+iv];
-  conv_vels_both_device(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
-
-#ifdef NONRELMHD
-  ucon[0]=1.;
-  ucov[0]=-1.;
-#endif
-
-#ifdef MAGNFIELD
-  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, geom, bcon, bcov, &bsq); 
-#else
-  bcon[0]=bcon[1]=bcon[2]=bcon[3]=0.;
-  bsq=0.;
-#endif
-  
-  ldouble gamma=GAMMA;
-  #ifdef CONSISTENTGAMMA
-  //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
-  #endif
-  ldouble gammam1=gamma-1.;
-
-  ldouble rho=pp[RHO];
-  ldouble uu=pp[UU];  
-  ldouble p=(gamma-1.)*uu; 
-  ldouble w=rho+uu+p;
-  ldouble eta=w+bsq;
-  ldouble ptot=p+0.5*bsq;
-
-#ifndef NONRELMHD  
-  for(int i=0;i<4;i++)
-    for(int j=0;j<4;j++)
-      T[i][j]=eta*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
-#else
-  
-  ldouble v2=dot3nr(ucon,ucov); //TODO
-  for(int i=1;i<4;i++)
-    for(int j=1;j<4;j++)
-      T[i][j]=(rho)*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
-
-  T[0][0]=uu + bsq/2. + rho*v2/2.;
-  for(int i=1;i<4;i++)
-    T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
-
-#endif  // ifndef NONRELMHD
-
-  return 0;
-}
-
-
 
 // fill geometry
 __device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr,void* geom,ldouble* g_arr, ldouble* G_arr)
@@ -270,6 +206,99 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   
   return 0;
 }
+
+//**********************************************************************
+// calculate stress energy tensor
+//**********************************************************************
+__device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
+{
+  struct geometry *geom
+    = (struct geometry *) ggg;
+
+  ldouble (*gg)[5],(*GG)[5];
+  gg=geom->gg;
+  GG=geom->GG;
+
+  ldouble utcon[4],ucon[4],ucov[4];  
+  ldouble bcon[4],bcov[4],bsq=0.;
+  
+  //converts to 4-velocity
+  utcon[0]=0.;
+  for(int iv=1;iv<4;iv++)
+    utcon[iv]=pp[1+iv];
+  conv_vels_both_device(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
+
+#ifdef NONRELMHD
+  ucon[0]=1.;
+  ucov[0]=-1.;
+#endif
+
+#ifdef MAGNFIELD
+  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, geom, bcon, bcov, &bsq); 
+#else
+  bcon[0]=bcon[1]=bcon[2]=bcon[3]=0.;
+  bsq=0.;
+#endif
+  
+  ldouble gamma=GAMMA;
+  #ifdef CONSISTENTGAMMA
+  //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
+  #endif
+  ldouble gammam1=gamma-1.;
+
+  ldouble rho=pp[RHO];
+  ldouble uu=pp[UU];  
+  ldouble p=(gamma-1.)*uu; 
+  ldouble w=rho+uu+p;
+  ldouble eta=w+bsq;
+  ldouble ptot=p+0.5*bsq;
+
+#ifndef NONRELMHD  
+  for(int i=0;i<4;i++)
+    for(int j=0;j<4;j++)
+      T[i][j]=eta*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
+#else
+  
+  ldouble v2=dot3nr(ucon,ucov); //TODO
+  for(int i=1;i<4;i++)
+    for(int j=1;j<4;j++)
+      T[i][j]=(rho)*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
+
+  T[0][0]=uu + bsq/2. + rho*v2/2.;
+  for(int i=1;i<4;i++)
+    T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
+
+#endif  // ifndef NONRELMHD
+
+  return 0;
+}
+
+
+//**********************************************************************
+// calculate total gas entropy from density & energy density
+//**********************************************************************
+__device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz)
+{
+  ldouble gamma=GAMMA;
+  #ifdef CONSISTENTGAMMA
+  //gamma=pick_gammagas(ix,iy,iz); //TODO
+  #endif
+  ldouble gammam1=gamma-1.;
+  ldouble indexn=1.0/gammam1;
+  ldouble pre=gammam1*u;
+  #ifdef NOLOGINS
+  ldouble ret = rho*u / pow(rho,gamma);
+  #else
+  ldouble ret = rho*log(pow(pre,indexn)/pow(rho,indexn+1.));
+  #endif
+
+  return ret;
+}
+
+
+//**********************************************************************
+// kernels
+//**********************************************************************
 
 __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
                                        int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
