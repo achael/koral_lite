@@ -107,11 +107,37 @@ int output_state_debug (const char *fname, const char *header, const char *ctime
   fprintf(fp, "\"gpu_timing\": %s,\n", gtimes);  
 
   // TODO loop over zones
-  fprintf(fp, "\"prims\":[\n");
+  fprintf(fp, "\"cpu_prims\":[\n");
   print_double_array_at(fp, p, ixTEST, iyTEST, izTEST);
-  fprintf(fp, "\n],\n\"cons\":[\n");
+  fprintf(fp, "\n],\n\"cpu_cons\":[\n");
   print_double_array_at(fp, u, ixTEST, iyTEST, izTEST);
   fprintf(fp, "\n]\n");
+
+  // TODO, make this more modular
+  {
+  long long Nprim = (SX)*(SY)*(SZ)*NV;
+  ldouble* p_tmp, *u_tmp;
+
+  if((p_tmp=(ldouble*)malloc(sizeof(ldouble)*Nprim))==NULL) my_err("malloc err.\n");
+  if((u_tmp=(ldouble*)malloc(sizeof(ldouble)*Nprim))==NULL) my_err("malloc err.\n");
+
+  cudaError_t err = cudaSuccess;
+
+  err = cudaMemcpy(p_tmp, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy of d_p_arr to p_tmp\n");
+
+  err = cudaMemcpy(u_tmp, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy of d_u_arr to u_tmp\n");
+
+  fprintf(fp, "\"gpu_prims\":[\n");
+  print_double_array_at(fp, p_tmp, ixTEST, iyTEST, izTEST);
+  fprintf(fp, "\n],\n\"gpu_cons\":[\n");
+  print_double_array_at(fp, u_tmp, ixTEST, iyTEST, izTEST);
+  fprintf(fp, "\n]\n");
+
+  free(u_tmp);
+  free(p_tmp);
+  }
 
   fprintf(fp, "}");
   fclose(fp);
