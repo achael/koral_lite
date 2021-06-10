@@ -110,6 +110,7 @@ main(int argc, char **argv)
 
   #ifdef GPUKO
   push_geometry_gpu();
+  prealloc_arrays_gpu();
   #endif
   
   //save coordinate file
@@ -505,6 +506,7 @@ main(int argc, char **argv)
   //******************************************************
 
   #ifdef GPUKO
+  free_arrays_gpu();
   free_geometry_gpu();
   #endif
   

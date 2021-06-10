@@ -6,6 +6,81 @@ extern "C" {
 
 #include "kogpu.h"
 
+// persistent arrays, extern'd in kogpu.h
+ldouble *d_p_arr, *d_u_arr;
+ldouble *d_flbx_arr, *d_flby_arr, *d_flbz_arr;
+
+int *d_cellflag_arr;
+int *d_int_slot_arr;
+
+int prealloc_arrays_gpu()
+{
+  cudaError_t err = cudaSuccess;
+ 
+  long long Nprim  = (SX)*(SY)*(SZ)*NV;
+  long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
+  long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
+  long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
+
+  err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);
+  err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
+  err = cudaMalloc(&d_flbx_arr, sizeof(ldouble)*NfluxX);
+  err = cudaMalloc(&d_flby_arr, sizeof(ldouble)*NfluxY);
+  err = cudaMalloc(&d_flbz_arr, sizeof(ldouble)*NfluxZ);
+
+  long long Ncellflag = (SX)*(SY)*(SZ)*NFLAGS;
+
+  err = cudaMalloc(&d_cellflag_arr, sizeof(int)*Ncellflag);
+  err = cudaMalloc(&d_int_slot_arr, sizeof(int)*NGLOBALINTSLOT);
+
+  // TODO: add error checks
+  return 1;
+}
+
+int free_arrays_gpu()
+{
+  cudaFree(d_flbx_arr);
+  cudaFree(d_flby_arr);
+  cudaFree(d_flbz_arr);
+  cudaFree(d_u_arr);
+  cudaFree(d_p_arr);
+
+  cudaFree(d_cellflag_arr);
+  cudaFree(d_int_slot_arr);
+  
+  return 1;
+}
+
+int push_p_u_gpu()
+{
+  // TODO: probably don't want to do it this way...
+
+  cudaError_t err = cudaSuccess;
+  
+  if(doTEST==1) printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
+
+  // copy prims, cons from host to device
+  long long Nprim  = (SX)*(SY)*(SZ)*NV;
+  err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
+
+  // TODO: add error checks
+  return 1;
+}
+
+int pull_p_u_gpu()
+{
+  // TODO: probably only want p, maybe rename
+  cudaError_t err = cudaSuccess;
+
+  // copy prims, cons back from device to host 
+  long long Nprim  = (SX)*(SY)*(SZ)*NV;
+  err = cudaMemcpy(p, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost); 
+  err = cudaMemcpy(u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost); 
+  
+  return 1;
+}
+
 __device__ __host__ int is_cell_active_device (int ix, int iy, int iz)
 {
   //NOTE: by default ALWAYS active -- this may change
@@ -411,16 +486,10 @@ __global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0,
 
 int calc_update_gpu(ldouble dtin)
 {
-
-  
-  ldouble *d_u_arr, *d_p_arr;
-  ldouble *d_flbx_arr,*d_flby_arr,*d_flbz_arr;
-  
   cudaError_t err = cudaSuccess;
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
-  // Allocate device arrays 
   
   // printf("ERROR (error code %s)!\n", cudaGetErrorString(err));
 
@@ -430,22 +499,8 @@ int calc_update_gpu(ldouble dtin)
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
-
-  err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);
-  err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
-  err = cudaMalloc(&d_flbx_arr, sizeof(ldouble)*NfluxX);
-  err = cudaMalloc(&d_flby_arr, sizeof(ldouble)*NfluxY);
-  err = cudaMalloc(&d_flbz_arr, sizeof(ldouble)*NfluxZ);
-    
+  
   // Copy data to device arrays
-  
-  // NOTE: when we add more functions to device, most of these should only be copied once
-
-  // copy conserved quantities from u (global array) to device
-  if(doTEST==1) printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
-  err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
-  
   // copy fluxes data from flbx,flby,flbz (global arrays) to device
   if(doTEST==1)
     printf("H fluxes: %e %e %e %e %e %e\n",
@@ -456,6 +511,7 @@ int calc_update_gpu(ldouble dtin)
 	 get_ub(flbz,ivTEST,ixTEST,iyTEST,izTEST,2),
 	 get_ub(flbz,ivTEST,ixTEST,iyTEST,izTEST+1,2));
 
+  // TODO: in the future, this will be entirely internal to the GPU
   err =  cudaMemcpy(d_flbx_arr, flbx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_flby_arr, flby, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_flbz_arr, flbz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
@@ -482,7 +538,8 @@ int calc_update_gpu(ldouble dtin)
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu update time: %0.2f \n",tms);
-  
+ 
+#ifdef CPUKO 
   ldouble* u_tmp;
   if((u_tmp=(ldouble*)malloc(Nprim*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
   err = cudaMemcpy(u_tmp, d_u_arr, Nprim*sizeof(ldouble), cudaMemcpyDeviceToHost);
@@ -492,16 +549,7 @@ int calc_update_gpu(ldouble dtin)
     printf("%e ", get_u(u_tmp, iv, ixTEST, iyTEST, izTEST));
   printf("\n");
   free(u_tmp);
-  
-  // TODO Copy updated u back from device to global array u?
-  //err = cudaMemcpy(u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
-  
-  // Free Device Memory
-  cudaFree(d_flbx_arr);
-  cudaFree(d_flby_arr);
-  cudaFree(d_flbz_arr);
-  cudaFree(d_u_arr);
-  cudaFree(d_p_arr);
+#endif
 
   // set global timestep dt
   dt = dtin;

@@ -12,8 +12,8 @@ CC=gcc
 //CFLAGS = -fopenmp -O2 -I/usr/include/hdf5/serial
 //CFLAGS = -O3 -fPIC -I/home/achael/software/include
 
-CFLAGS = -O3 -fPIC -DGPUKO
-CFLAGSGPU = -O3 -fPIC -DGPUKO
+CFLAGS = -O3 -fPIC -DGPUKO -DCPUKO
+CFLAGSGPU = -O3 -fPIC -DGPUKO -DCPUKO
 
 OMPFLAGS = -fopenmp
 endif

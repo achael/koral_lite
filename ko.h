@@ -1047,8 +1047,16 @@ int do_correct();
 int calc_interp();
 int calc_fluxes();
 int calc_update(ldouble dtin);
+
+///////////////////////////////////////////////////////////////
+// finitegpu.c ////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
 int calc_update_gpu(ldouble dtin);
 int calc_u2p_gpu(int setflags);
+int prealloc_arrays_gpu();
+int free_arrays_gpu();
+int push_p_u_gpu();
+int pull_p_u_gpu();
 int push_geometry_gpu();
 int free_geometry_gpu();		
   
