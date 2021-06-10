@@ -1238,7 +1238,7 @@ determinant_44matrix(ldouble a[][4])
 //**********************************************************************
 
 int
-my_err(char *message)
+my_err(const char *message)
 {
   if(PROCID==0)
     {
@@ -1255,7 +1255,7 @@ my_err(char *message)
 //**********************************************************************
 
 int
-my_warning(char *message)
+my_warning(const char *message)
 {
   if(PROCID==0)
     {
