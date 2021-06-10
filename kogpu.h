@@ -80,9 +80,10 @@ __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldoubl
 //////////////////////////////////////////////////////////////
 __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int iy,int iz, int val);
 
-__device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
-				   int corrected[3], int fixups[2], int int_slot_arr[NGLOBALINTSLOT]);
-__device__ __host__ int u2p_solver_Bonly_device(ldouble *uu, ldouble *pp, void *ggg)
+__device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
+			  int corrected[3], int fixups[2], int int_slot_arr[NGLOBALINTSLOT]);
+
+__device__ __host__ int u2p_solver_Bonly_device(ldouble *uu, ldouble *pp, void *ggg);
 __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 

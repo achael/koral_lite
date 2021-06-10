@@ -147,7 +147,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
     if(fixups[0]>0)
     {
       set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
-      atomicAdd(int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
+      atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
       //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++; 
     }
     else
@@ -156,7 +156,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
     if(fixups[1]>0)
     {
       set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
-      atomicAdd(int_slot_arr[GLOBALINTSLOT_NTOTALRADFIXUPS],1); //TODO right??
+      atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALRADFIXUPS],1); //TODO right??
       //global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
     }
     else
@@ -173,8 +173,8 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
 //high-level u2p solver
 //**********************************************************************
 
-__device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
-				   int corrected[3], int fixups[2], int* int_slot_arr)
+__device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
+			  int corrected[3], int fixups[2], int* int_slot_arr)
 {
   int verbose=0;
   
@@ -231,7 +231,7 @@ __device__ __host__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
                //ANDREW -- but ret goes back to -1 if energy inversion fails but entropy inversion does not!
                //ANDREW -- do we always want a fixup if we have negative uu[0] ? 
     
-    atomicAdd(int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
+    atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
     //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  //this counts as a fixup
   }
 
