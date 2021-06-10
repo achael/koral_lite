@@ -1059,6 +1059,8 @@ int push_p_u_gpu();
 int pull_p_u_gpu();
 int push_geometry_gpu();
 int free_geometry_gpu();		
+
+int output_state_debug(const char *fname);
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);

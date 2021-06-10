@@ -51,7 +51,7 @@ int free_arrays_gpu()
   return 1;
 }
 
-int push_p_u_gpu()
+int push_p_u_gpu ()
 {
   // TODO: probably don't want to do it this way...
 
@@ -68,7 +68,7 @@ int push_p_u_gpu()
   return 1;
 }
 
-int pull_p_u_gpu()
+int pull_p_u_gpu ()
 {
   // TODO: probably only want p, maybe rename
   cudaError_t err = cudaSuccess;
@@ -78,6 +78,40 @@ int pull_p_u_gpu()
   err = cudaMemcpy(p, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost); 
   err = cudaMemcpy(u, d_u_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost); 
   
+  return 1;
+}
+
+// TODO this is here
+void print_double_array_at(FILE *fp, double *array, int ix, int iy, int iz)
+{
+  int iv = 0;
+  fprintf(fp, "(%d, %d, %d), (%g", ix, iy, iz, get_u(array, iv, ix, iy, iz));
+
+  for (iv=1; iv<NV; iv++) {
+    fprintf(fp, ", %g", get_u(array, iv, ix, iy, iz)); 
+  } 
+
+  fprintf(fp, ")");
+}
+
+int output_state_debug (const char *fname, const char *header, const char *ctimes, const char *gtimes)
+{ 
+  // writes a diagnostic output file in json format
+
+  FILE *fp = fopen(fname, "w");
+
+  // write header and times
+  fprintf(fp, header);
+  fprintf(fp, ctimes);
+  fprintf(fp, gtimes);  
+
+  // TODO loop over zones
+  print_double_array_at(fp, p, ixTEST, iyTEST, izTEST);
+  print_double_array_at(fp, u, ixTEST, iyTEST, izTEST);
+
+  fclose(fp);
+
+  // TODO error checking...
   return 1;
 }
 
