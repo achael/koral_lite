@@ -447,8 +447,8 @@ struct OpTable {
 			(idim==2 ? xb[ic+NG + NX+2*NG +1 + NY+2*NG +1 ] : 0.)))
 
 // emf
-#define get_emf(iv,ix,iy,iz) (emf[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3])
-#define set_emf(iv,ix,iy,iz,val) emf[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3] = val
+#define get_emf(emfarr,iv,ix,iy,iz) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3]
+#define set_emf(emfarr,iv,ix,iy,iz,val) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3] = val
 
 // flags
 #define get_cflag(cflagarr,iflag,ix,iy,iz)  cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
