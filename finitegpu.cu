@@ -175,7 +175,7 @@ __device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int i
 }
 
 
-// TODO replace get_x, get_xb, and get_gKr   everywhere
+// TODO replace get_x, get_xb, and get_gKr   everywherex
 
 // get grid coordinate at the cell center indexed ic in dimeinsion idim
 // copied from get_x macro in ko.h
@@ -200,7 +200,7 @@ __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
 
   return xb_out;
 }
-
+/*
 __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 				  int ix, int iy, int iz)
 {
@@ -209,7 +209,7 @@ __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 			                  (iZMET(iz)+(NGCZMET))*(SY)*(SX)*64];
   return gKr_out;
 }
-
+*/
 // get size of cell indexed ic in dimension idim
 // copied from get_size_x in finite.c
 __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
@@ -310,10 +310,10 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   {
     for(int l=0;l<4;l++)
     {
-      ss[1]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,0,k,ix,iy,iz);
-      ss[2]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,1,k,ix,iy,iz);
-      ss[3]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,2,k,ix,iy,iz);
-      ss[4]+=gdetu*T[k][l]*get_gKr_device(gKr_arr,l,3,k,ix,iy,iz);       
+      ss[1]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,0,k,ix,iy,iz);
+      ss[2]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,1,k,ix,iy,iz);
+      ss[3]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,2,k,ix,iy,iz);
+      ss[4]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,3,k,ix,iy,iz);       
     }
   }
 
