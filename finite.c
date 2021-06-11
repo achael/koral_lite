@@ -1348,7 +1348,7 @@ op_explicit(ldouble t, ldouble dtin)
   printf("gpu flux_ct flbx[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(flbx, iv, ixTEST, iyTEST, izTEST,0));
-  printf("\n");
+  printf("\n\n");
 #endif
 #endif
   
@@ -1411,7 +1411,7 @@ op_explicit(ldouble t, ldouble dtin)
   */
   
 #endif //SKIPEVOLUTION
-
+  
   //**********************************************************************//
   // Compute postexplicit primitives and count entropy inversions
 
@@ -1420,7 +1420,6 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)
-  // TODO: timing functionality. reuse timer from above
 
   #pragma omp_barrier
   calc_u2p_only(1);

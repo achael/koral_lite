@@ -6,7 +6,7 @@
 // for testing
 #define doTEST 0
 #define ixTEST 22
-#define iyTEST 17
+#define iyTEST 0//17
 #define izTEST 31
 #define iiTEST 22222
 #define ivTEST 0

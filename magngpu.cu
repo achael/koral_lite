@@ -273,8 +273,8 @@ __global__ void flux_ct_setemf_kernel(int Nloop_4,
     }
   }
 #
-
-#endf //MAGNFIELD
+#endif //CORRECTPOLARAXIS
+#endif //MAGNFIELD
 }
 
 __global__ void flux_ct_getemf_kernel(int Nloop_4,
