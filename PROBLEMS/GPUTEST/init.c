@@ -337,4 +337,4 @@ for(iv=0;iv<NV;iv++)
 
 //entropy
 update_entropy_cell(ix,iy,iz,0);
-set_cflag(0,ix,iy,iz,0);
+set_cflag(cellflag,0,ix,iy,iz,0);
