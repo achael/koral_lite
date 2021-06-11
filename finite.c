@@ -5378,17 +5378,17 @@ cell_fixup(int type)
       if(is_cell_corrected_polaraxis(ix,iy,iz)) continue;
 
 
-      if(((get_cflag(HDFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PMHD) ||
-	  (get_cflag(RADFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PRAD) ||
-	  (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
+      if(((get_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PMHD) ||
+	  (get_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PRAD) ||
+	  (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
 	)
 	{
 	  //ANDREW - I think maybe this should be here, to set the flag back to its default? 
 	  //this should not be here, should it?
 	  /*
-	  if(type==FIXUP_U2PMHD) set_cflag(HDFIXUPFLAG,ix,iy,iz,0); //try only once
-	  if(type==FIXUP_U2PRAD) set_cflag(RADFIXUPFLAG,ix,iy,iz,0); //try only once
-	  if(type==FIXUP_RADIMP) set_cflag(RADIMPFIXUPFLAG,ix,iy,iz,0); //try only once
+	  if(type==FIXUP_U2PMHD) set_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz,0); //try only once
+	  if(type==FIXUP_U2PRAD) set_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz,0); //try only once
+	  if(type==FIXUP_RADIMP) set_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz,0); //try only once
 	  */
 
 	  //looking around for good neighbors
@@ -5403,9 +5403,9 @@ cell_fixup(int type)
 	  in=0; //number of successful neighbors
 		  
 	  if(ix-1>=0 &&  
-	     ((get_cflag(HDFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_RADIMP)))	      
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_RADIMP)))	      
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream cell
               if(TNY>1 && TNZ==1)
@@ -5434,9 +5434,9 @@ cell_fixup(int type)
 	    }
 
 	  if(ix+1<NX &&
-	     ((get_cflag(HDFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_RADIMP)))
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
               if(TNY>1 && TNZ==1)
@@ -5465,9 +5465,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iy-1>=0 &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_RADIMP)))
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
               if(TNY>1 && TNZ==1)
@@ -5496,9 +5496,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iy+1<NY &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_RADIMP)))
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that iy+1 is not a stream ghost cell
               if(TNY>1 && TNZ==1)
@@ -5527,9 +5527,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iz-1>=0 &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_RADIMP)))
 	    {
 	      in++;
 	      for(iv=0;iv<NV;iv++)
@@ -5537,9 +5537,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iz+1<NZ  &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_RADIMP)))
 	    {
 	      in++;
 	      for(iv=0;iv<NV;iv++)

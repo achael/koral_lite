@@ -33,7 +33,7 @@ save_avg(ldouble dtin)
 	      ldouble dt=dtin;
 
 #ifdef RADIATION //if implicit failed, do not take this step into account at all for failed cells
-	      if(get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)==0)
+	      if(get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz)==0)
 #endif
 		{
 

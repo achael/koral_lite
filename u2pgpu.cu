@@ -27,6 +27,7 @@ __device__ __host__ static ldouble compute_dspecificSdwmrho0_wmrho0_idealgas(ldo
 __device__ __host__ static ldouble compute_dspecificSdrho_wmrho0_idealgas(ldouble rho0, ldouble wmrho0, ldouble gamma);
 __device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
 
+/*
 __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int iy,int iz, int val)
 {
    cellflag_arr[iflag + (iX(ix)+(NGCX))*NFLAGS +  \
@@ -34,7 +35,7 @@ __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int
 		        (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val;
    return 0;
 }
-
+*/
 
 //**********************************************************************
 //primitive to conserved converter -- hydro
@@ -1284,8 +1285,8 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
  
   if(setflags)
   {
-    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,0);
-    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,0);
+    set_cflag(cellflag_arr,ENTROPYFLAG,ix,iy,iz,0);
+    set_cflag(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,0);
   }
   
   //u to p inversion is done here
@@ -1303,12 +1304,12 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   //set flags for entropy solver
   if(corrected[0]==1 && setflags) //hd correction - entropy solver
   {
-    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,1);
+    set_cflag(cellflag_arr,ENTROPYFLAG,ix,iy,iz,1);
   }
   
   if(corrected[2]==1 && setflags) //borrowing energy from radiation didn't work
   {  
-    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,1);
+    set_cflag(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,1);
   }
 
 #ifndef NOFLOORS
@@ -1354,21 +1355,21 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   {
     if(fixups[0]>0)
     {
-      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
+      set_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
       atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
       //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++; 
     }
     else
-      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
+      set_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
     
     if(fixups[1]>0)
     {
-      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
+      set_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
       atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALRADFIXUPS],1); //TODO right??
       //global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
     }
     else
-      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,0); 
+      set_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,0); 
   }
     
 

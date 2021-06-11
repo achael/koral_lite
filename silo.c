@@ -482,7 +482,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      ldouble pregas,prerad,premag,ueloc,uiloc;
               ldouble ne,nethloc,nrelelloc,G0relelloc,G0ic_relel_loc,G0syn_relel_loc,G0ic_th_loc,urelelloc,gbrkloc;
 
-	      entropyinv[zonalindex]=get_cflag(ENTROPYFLAG3,ix,iy,iz);
+	      entropyinv[zonalindex]=get_cflag(cellflag,ENTROPYFLAG3,ix,iy,iz);
 
 	      if(doingavg==0) //using snapshot data
 		{

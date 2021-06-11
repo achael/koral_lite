@@ -451,11 +451,11 @@ struct OpTable {
 #define set_emf(iv,ix,iy,iz,val) emf[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3] = val
 
 // flags
-#define get_cflag(iflag,ix,iy,iz)  cellflag[iflag + (iX(ix)+(NGCX))*NFLAGS + \
+#define get_cflag(cflagarr,iflag,ix,iy,iz)  cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
 					            (iY(iy)+(NGCY))*(SX)*NFLAGS + \
 						    (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS]
 				  
-#define set_cflag(iflag,ix,iy,iz,val) cellflag[iflag + (iX(ix)+(NGCX))*NFLAGS + \
+#define set_cflag(cflagarr,iflag,ix,iy,iz,val) cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
 					               (iY(iy)+(NGCY))*(SX)*NFLAGS + \
 						       (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val
 
