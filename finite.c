@@ -1411,7 +1411,7 @@ op_explicit(ldouble t, ldouble dtin)
   */
   
 #endif //SKIPEVOLUTION
- 
+  
   //**********************************************************************//
   // Compute postexplicit primitives and count entropy inversions
 

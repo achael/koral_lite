@@ -104,6 +104,7 @@ __global__ void flux_ct_setemf_kernel(int Nloop_4,
 			              int* loop_4_ix, int* loop_4_iy, int* loop_4_iz,
 			              ldouble* emf_arr,
 			              ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr);
+
 __global__ void flux_ct_getemf_kernel(int Nloop_4,
 			              int* loop_4_ix, int* loop_4_iy, int* loop_4_iz,
 			              ldouble* emf_arr,
