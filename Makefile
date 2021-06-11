@@ -28,7 +28,7 @@ LIBS=-lm -lgsl -lgslcblas -lfftw3 -lrt
 OBJS = mpi.o problem.o finite.o metric.o frames.o relele.o u2p.o p2u.o magn.o physics.o opacities.o misc.o postproc.o fileop.o 
 SRCS = mpi.c problem.c finite.c metric.c frames.c relele.c u2p.c p2u.c magn.c physics.c opacities.c misc.c postproc.c fileop.c 
 
-SRCSGPU = u2pgpu.cu relelegpu.cu finitegpu.cu metricgpu.cu
+SRCSGPU = u2pgpu.cu relelegpu.cu finitegpu.cu metricgpu.cu magngpu.cu
 OBJSGPU = $(SRCSGPU:.cu=.o)
 
 # need to compile _cpu and _gpu object files for following sources

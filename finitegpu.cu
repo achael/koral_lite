@@ -285,7 +285,6 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
       
   ldouble (*gg)[5],(*GG)[5],gdetu;
   ldouble *pp = &get_u(p_arr,0,ix,iy,iz);
-  
   gg=geom.gg;
   GG=geom.GG;
 
