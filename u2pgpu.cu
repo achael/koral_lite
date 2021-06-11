@@ -1400,11 +1400,11 @@ ldouble calc_u2p_gpu(int setflags)
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
 
   cudaEventRecord(start);
-  calc_primitives_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, setflags, 
+  calc_primitives_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, 
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
 						    d_x, d_gcov, d_gcon,
 						    d_u_arr, d_p_arr,
-						    d_cellflag_arr, d_int_slot_arr);
+						    setflags, d_cellflag_arr, d_int_slot_arr);
               
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();

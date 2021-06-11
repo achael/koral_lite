@@ -1408,9 +1408,10 @@ op_explicit(ldouble t, ldouble dtin)
 #endif //EXPLICIT_LAB_RAD_SOURCE
 #endif //SKIPRADSOURCE
 #endif //RADIATION
-#endif //SKIPEVOLUTION
   */
-
+  
+#endif //SKIPEVOLUTION
+ 
   //**********************************************************************//
   // Compute postexplicit primitives and count entropy inversions
 
