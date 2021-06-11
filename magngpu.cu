@@ -343,16 +343,16 @@ ldouble flux_ct_gpu()
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  int threadblocks = (Nloop_4 / TB_SIZE) + ((Nloop_4 % TB_SIZE)? 1:0);
+  int threadblocks = (Nloop_4 / TB_SIZE) + ((Nloop_4 % TB_SIZE)? 1:0);f
   //printf("\nTest %d\n", threadblocks); fflush(stdout);
 
   cudaEventRecord(start);
 
   // set emf kernel
   flux_ct_setemf_kernel<<threadblocks, TB_SIZE>>(Nloop_4,
-			                         d_loop_4_ix, d_loop_4_iy, d_loop_4_iz,
+			                         d_loop4_ix, d_loop4_iy, d_loop4_iz,
 			                         d_emf_arr,
-			                         d_flbx_arr, d_flby_arr, d_flbz_arr)
+			                         d_flbx_arr, d_flby_arr, d_flbz_arr);
 
   // synchronize
   err = cudaPeekAtLastError();
@@ -361,9 +361,9 @@ ldouble flux_ct_gpu()
 
   // get emf kernel
   flux_ct_getemf_kernel<<threadblocks, TB_SIZE>>(Nloop_4,
-			                         d_loop_4_ix, d_loop_4_iy, d_loop_4_iz,
+			                         d_loop4_ix, d_loop4_iy, d_loop4_iz,
 			                         d_emf_arr,
-			                         d_flbx_arr, d_flby_arr, d_flbz_arr)
+			                         d_flbx_arr, d_flby_arr, d_flbz_arr);
 
       
   // synchronize
@@ -391,9 +391,6 @@ ldouble flux_ct_gpu()
   printf("\n");
   free(flbx_tmp);
 #endif
-
-  // set global timestep dt
-  dt = dtin;
 
   return (ldouble)tms;
 }
