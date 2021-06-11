@@ -446,18 +446,6 @@ struct OpTable {
 			(idim==1 ? xb[ic+NG + NX+2*NG + 1] : \
 			(idim==2 ? xb[ic+NG + NX+2*NG +1 + NY+2*NG +1 ] : 0.)))
 
-// emf
-#define get_emf(emfarr,iv,ix,iy,iz) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3]
-#define set_emf(emfarr,iv,ix,iy,iz,val) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3] = val
-
-// flags
-#define get_cflag(cflagarr,iflag,ix,iy,iz)  cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
-					            (iY(iy)+(NGCY))*(SX)*NFLAGS + \
-						    (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS]
-				  
-#define set_cflag(cflagarr,iflag,ix,iy,iz,val) cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
-					               (iY(iy)+(NGCY))*(SX)*NFLAGS + \
-						       (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val
 
 // outcoords at centers 
 //note as in get_x idim is spatial (0=x, 1=y, 2=z)
@@ -490,6 +478,18 @@ struct OpTable {
 				                              (iY(iy)+(NGCY))*(SX)*3 + \
 					                      (iZ(iz)+(NGCZ))*(SY)*(SX)*3]=val
 
+// emf
+#define get_emf(emfarr,iv,ix,iy,iz) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3]
+#define set_emf(emfarr,iv,ix,iy,iz,val) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3] = val
+
+// flags
+#define get_cflag(cflagarr,iflag,ix,iy,iz)  cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
+					            (iY(iy)+(NGCY))*(SX)*NFLAGS + \
+						    (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS]
+				  
+#define set_cflag(cflagarr,iflag,ix,iy,iz,val) cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
+					               (iY(iy)+(NGCY))*(SX)*NFLAGS + \
+						       (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val
 //primitive and flux arrays
 #define get_u(uarr,iv,ix,iy,iz) uarr[iv + (iX(ix)+(NGCX))*NV + \
 				          (iY(iy)+(NGCY))*(SX)*NV + \
@@ -499,6 +499,7 @@ struct OpTable {
 					      (iY(iy)+(NGCY))*(SX)*NV + \
 					      (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] = val
 
+//averages
 #define NVAVG ((NV+NAVGVARS))
 #define SXNVAVG ((long long)(SX*NVAVG))
 #define SXSYNVAVG ((long long)(SY*SXNVAVG))
@@ -516,7 +517,8 @@ struct OpTable {
 #define set_u_scalar(uarr,ix,iy,iz,val) uarr[iX(ix)+(NGCX) + \
 					    (iY(iy)+(NGCY))*(SX) + \
 					    (iZ(iz)+(NGCZ))*(SY)*(SX)] = val
-  
+
+//boundary terms
 #define set_ubx(uarr,iv,ix,iy,iz,val) uarr[iv + (iX(ix)+(NGCX))*NV + \
 					        (iY(iy)+(NGCY))*(SX+1)*NV + \
 					        (iZ(iz)+(NGCZ))*(SY)*(SX+1)*NV] = val
@@ -551,7 +553,6 @@ struct OpTable {
 							        (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] : \
 					  NULL)))
 //saved jacobians
-
 #define get_dxdx(dxdxarr,i,j,ix,iy,iz) dxdxarr[i*4+j + (iX(ix)+(NGCX))*16 + \
 				                   (iY(iy)+(NGCY))*(SX)*16 + \
 					           (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16]
@@ -561,7 +562,6 @@ struct OpTable {
 					               (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16] = val
 
 //metric specific
-
 #define get_g(uarr,i,j,ix,iy,iz) uarr[i*5+j + (iX(ix)+(NGCX))*gSIZE + \
 				              (iY(iy)+(NGCY))*(SX)*gSIZE + \
 					      (iZMET(iz)+(NGCZMET))*(SY)*(SX)*gSIZE]
