@@ -146,7 +146,7 @@ int output_state_debug (const char *fname, const char *header, const char *ctime
   return 1;
 }
 
-__device__ __host__ int is_cell_active_device (int ix, int iy, int iz)
+__device__ __host__ int is_cell_active_device(int ix, int iy, int iz)
 {
   //NOTE: by default ALWAYS active -- this may change
   return 1;

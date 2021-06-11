@@ -87,7 +87,7 @@ calc_metric()
 	for(i=0;i<4;i++)
 	  for(j=0;j<4;j++)
 	    for(k=0;k<4;k++)
-	      set_gKr(i,j,k,ix,iy,iz,Kr[i][j][k]);
+	      set_gKr(gKr,i,j,k,ix,iy,iz,Kr[i][j][k]);
 
 #ifdef PRECOMPUTE_MY2OUT// Jacobian matrices for MYCOORDS <-> OUTCOORDS
         ldouble dxdxloc[4][4], xx2[4];

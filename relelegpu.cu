@@ -196,7 +196,7 @@ __device__ __host__ int conv_vels_ut_device(ldouble *u1,ldouble *u2,int which1,i
 //calculates both ucon and ucov, assuming ut is unknown 
 //**********************************************************************
 
-__device__ __host__ int conv_vels_both_device (ldouble *u1,ldouble *u2con,ldouble *u2cov,int which1,int which2,ldouble gg[][5],ldouble GG[][5])
+__device__ __host__ int conv_vels_both_device(ldouble *u1,ldouble *u2con,ldouble *u2cov,int which1,int which2,ldouble gg[][5],ldouble GG[][5])
 {
   
 #ifdef NONRELMHD //only three-velocity used;

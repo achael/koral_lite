@@ -32,6 +32,7 @@ extern int *d_int_slot_arr;
 
 __device__ __host__ int is_cell_active_device(int ix, int iy, int iz);
 __device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int iz);
+__device__ __host__ ldouble get_x_device(ldouble* x_arr, int ic, int idim);
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
 __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 				           int ix, int iy, int iz);

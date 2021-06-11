@@ -860,14 +860,14 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   for(k=0;k<4;k++)
     for(l=0;l<4;l++)
       {
-	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
-	ss[EE0]+=gdetu*Rij[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[FX0]+=gdetu*Rij[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[FY0]+=gdetu*Rij[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[FZ0]+=gdetu*Rij[k][l]*get_gKr(l,3,k,ix,iy,iz);
+	ss[1]+=gdetu*T[k][l]*get_gKr(gKr,l,0,k,ix,iy,iz);
+	ss[2]+=gdetu*T[k][l]*get_gKr(gKr,l,1,k,ix,iy,iz);
+	ss[3]+=gdetu*T[k][l]*get_gKr(gKr,l,2,k,ix,iy,iz);
+	ss[4]+=gdetu*T[k][l]*get_gKr(gKr,l,3,k,ix,iy,iz);
+	ss[EE0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,0,k,ix,iy,iz);
+	ss[FX0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,1,k,ix,iy,iz);
+	ss[FY0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,2,k,ix,iy,iz);
+	ss[FZ0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,3,k,ix,iy,iz);
       }
 
 #if (GDETIN==0)   //terms with dloggdet if gdet not inside the derivatives
@@ -917,10 +917,10 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   for(k=0;k<4;k++)
     for(l=0;l<4;l++)
       {
-	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
+	ss[1]+=gdetu*T[k][l]*get_gKr(gKr,l,0,k,ix,iy,iz);
+	ss[2]+=gdetu*T[k][l]*get_gKr(gKr,l,1,k,ix,iy,iz);
+	ss[3]+=gdetu*T[k][l]*get_gKr(gKr,l,2,k,ix,iy,iz);
+	ss[4]+=gdetu*T[k][l]*get_gKr(gKr,l,3,k,ix,iy,iz);
       }
 
   //terms with dloggdet  

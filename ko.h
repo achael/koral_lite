@@ -608,11 +608,11 @@ struct OpTable {
 						               (iZMET(iz)+(NGCZMET))*(SY)*(SX)*gSIZE] : \
 				       0.)))
   
-#define get_gKr(i,j,k,ix,iy,iz) gKr[i*4*4+j*4+k + (iX(ix)+(NGCX))*64 + \
+#define get_gKr(gKrarr,i,j,k,ix,iy,iz) gKrarr[i*4*4+j*4+k + (iX(ix)+(NGCX))*64 + \
 				                  (iY(iy)+(NGCY))*(SX)*64 + \
 						  (iZMET(iz)+(NGCZMET))*(SY)*(SX)*64]
 				       
-#define set_gKr(i,j,k,ix,iy,iz,val) gKr[i*4*4+j*4+k + (iX(ix)+(NGCX))*64 + \
+#define set_gKr(gKrarr,i,j,k,ix,iy,iz,val) gKrarr[i*4*4+j*4+k + (iX(ix)+(NGCX))*64 + \
 					              (iY(iy)+(NGCY))*(SX)*64 + \
 						      (iZMET(iz)+(NGCZMET))*(SY)*(SX)*64] = val
 
