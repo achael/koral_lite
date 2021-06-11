@@ -249,7 +249,7 @@ __global__ void flux_ct_setemf_kernel(int Nloop_4,
   // Correct at corners
   // this is adjust_fluxcttoth_emfs() in magn.c
   //////////////////
-#ifdef CORRECTPOLARAXIS
+#ifdef CORRECT_POLARAXIS
 #ifdef MPI
   //if(TJ==0) //TODO MPI
 #endif
