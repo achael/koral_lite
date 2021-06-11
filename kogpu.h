@@ -9,6 +9,7 @@
 
 //Declaring constant geometrical arrays for device
 extern int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz;
+extern int *d_loop4_ix, *d_loop4_iy, *d_loop4_iz;
 extern ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
 extern ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
 extern ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
@@ -26,6 +27,7 @@ extern ldouble *d_p_arr;
 extern ldouble *d_flbx_arr;
 extern ldouble *d_flby_arr;
 extern ldouble *d_flbz_arr;
+extern ldouble *d_emf_arr;
 
 extern int *d_cellflag_arr;
 extern int *d_int_slot_arr;
@@ -50,12 +52,12 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
 // kernel
 
-__global__ void calc_update_kernel(ldouble dtin, int Nloop_0, 
+__global__ void calc_update_kernel(int Nloop_0, 
                                    int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
 		        	   ldouble* x_arr, ldouble* xb_arr,
                                    ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
 				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				   ldouble* u_arr, ldouble* p_arr);
+				   ldouble* u_arr, ldouble* p_arr, ldouble dtin);
 
 
 ///////////////////////////////////////////////////////////////
@@ -68,30 +70,44 @@ __device__ __host__ int indices_2211_device(ldouble T1[][4],ldouble T2[][4],ldou
 __device__ __host__ int indices_2221_device(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5]);
 
 __device__ __host__ int calc_ucon_ucov_from_prims_device(ldouble *pr, void *ggg, ldouble *ucon, ldouble *ucov);
-__device__ __host__ int conv_vels_device(ldouble *u1,ldouble *u2,int which1,int which2,ldouble gg[][5],ldouble GG[][5]);
-__device__ __host__ int conv_vels_ut_device(ldouble *u1,ldouble *u2,int which1,int which2,ldouble gg[][5],ldouble GG[][5]);
-__device__ __host__ int conv_vels_both_device(ldouble *u1,ldouble *u2con,ldouble *u2cov,int which1,int which2,ldouble gg[][5],ldouble GG[][5]);
-__device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2,int which1,int which2,ldouble gg[][5],ldouble GG[][5],int);
-__device__ __host__ ldouble calc_alpgam_device(ldouble *u1, ldouble gg[][5], ldouble GG[][5]);
+__device__ __host__ int conv_vels_device(ldouble *u1,ldouble *u2,
+					 int which1,int which2,ldouble gg[][5],ldouble GG[][5]);
+__device__ __host__ int conv_vels_ut_device(ldouble *u1,ldouble *u2,
+					    int which1,int which2,ldouble gg[][5],ldouble GG[][5]);
+__device__ __host__ int conv_vels_both_device(ldouble *u1,ldouble *u2con,ldouble *u2cov,
+					      int which1,int which2,ldouble gg[][5],ldouble GG[][5]);
+__device__ __host__ int conv_vels_core_device(ldouble *u1,ldouble *u2,
+					      int which1,int which2,ldouble gg[][5],ldouble GG[][5],int);
 
+__device__ __host__ ldouble calc_alpgam_device(ldouble *u1, ldouble gg[][5], ldouble GG[][5]);
 __device__ __host__ int fill_utinvel3_device(ldouble *u1,double gg[][5],ldouble GG[][5]);
 __device__ __host__ int fill_utinucon_device(ldouble *u1,double gg[][5],ldouble GG[][5]);
 __device__ __host__ int calc_normalobs_ncon_device(ldouble GG[][5], ldouble alpha, ldouble *ncon);
 
 ///////////////////////////////////////////////////////////////
-// physics.cu  (TODO ???) ///////////////////////////////////////////////
+// physics.cu  (TODO ???) /////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
 __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
 __device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz);
   
 ///////////////////////////////////////////////////////////////
-// magn.cu  (TODO ???) ///////////////////////////////////////////////
+// magngpu.cu   ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
 __device__ __host__ void calc_bcon_bcov_bsq_from_4vel_device(ldouble *pr, ldouble *ucon,
 							     ldouble *ucov, void* ggg,
 		                        		     ldouble *bcon, ldouble *bcov, ldouble *bsq);
+
+// kernels
+__global__ void flux_ct_setemf_kernel(int Nloop_4,
+			              int* loop_4_ix, int* loop_4_iy, int* loop_4_iz,
+			              ldouble* emf_arr,
+			              ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr);
+__global__ void flux_ct_getemf_kernel(int Nloop_4,
+			              int* loop_4_ix, int* loop_4_iy, int* loop_4_iz,
+			              ldouble* emf_arr,
+			              ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr)
 
 ///////////////////////////////////////////////////////////////
 // u2pgpu.cu  /////////////////////////////////////////////////
@@ -110,9 +126,9 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
 __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *ggg);
   
 // kernel
-__global__ void calc_primitives_kernel(int Nloop_0, int setflags,
+__global__ void calc_primitives_kernel(int Nloop_0,
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
                                        ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
 				       ldouble *u_arr, ldouble *p_arr,
-				       int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT]);
+				       int setflags, int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT]);
 				       

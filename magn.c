@@ -4,6 +4,19 @@
 
 #include "ko.h"
 
+static int fl_x(int i);
+static int fl_y(int i);
+static int fl_z(int i);
+static int flx_x(int i);
+static int flx_y(int i);
+static int flx_z(int i);
+static int fly_x(int i);
+static int fly_y(int i);
+static int fly_z(int i);
+static int flz_x(int i);
+static int flz_y(int i);
+static int flz_z(int i);
+
 //***********************************************************************
 /* calculate both magnetic field four-vectors and bsq knowing gas four-velocity ucov */
 //***********************************************************************
@@ -153,65 +166,65 @@ void calc_Bcon_prim(double *pp, double *bcon, double *Bcon, void* ggg)
 /* wrappers for missing cells / dimensions */
 /***********************************************************************************************/
 
-int fl_x(int i)
+static int fl_x(int i)
 {
   if(NX==1) return 0;
   return i;
 }
 
-int fl_y(int i)
+static int fl_y(int i)
 {
   if(NY==1) return 0;
   return i;
 }
 
-int fl_z(int i)
+static int fl_z(int i)
 {
   if(NZ==1) return 0;
   return i;
 }
 
-int flx_x(int i)
+static int flx_x(int i)
 {
   return i;
 }
 
-int flx_y(int i)
+static int flx_y(int i)
 {
   return fl_y(i);
 }
 
-int flx_z(int i)
+static int flx_z(int i)
 {
   return fl_z(i);
 }
 
-int fly_x(int i)
+static int fly_x(int i)
 {
   return fl_x(i);
 }
 
-int fly_y(int i)
+static int fly_y(int i)
 {
   return i;
 }
 
-int fly_z(int i)
+static int fly_z(int i)
 {
   return fl_z(i);
 }
 
-int flz_x(int i)
+static int flz_x(int i)
 {
   return fl_x(i);
 }
 
-int flz_y(int i)
+static int flz_y(int i)
 {
   return fl_y(i);
 }
 
-int flz_z(int i)
+static int flz_z(int i)
 {
   return i;
 }
@@ -280,7 +293,7 @@ flux_ct()
       ////////////////////
       
 #if((NY>1)||(NZ>1))
-      set_emf(1,ix,iy,iz,
+      set_emf(emf,1,ix,iy,iz,
 	      coefemf[1] * (
                             #if(NY>1)
 			    + get_ub(flby,B3,fly_x(ix),fly_y(iy),fly_z(iz),1) 
@@ -292,14 +305,14 @@ flux_ct()
                             #endif
 			    ));
 #else  
-      set_emf(1,ix,iy,iz,0.); // not really 0, but differences in emf will be 0
+      set_emf(emf,1,ix,iy,iz,0.); // not really 0, but differences in emf will be 0
 #endif 
       
 	////////////////////
 	// EMF2
 	////////////////////
 #if((NX>1)||(NZ>1))
-      set_emf(2,ix,iy,iz,
+      set_emf(emf,2,ix,iy,iz,
 	      coefemf[2] * (
                             #if(NZ>1)
 			    + get_ub(flbz,B1,flz_x(ix),flz_y(iy),flz_z(iz),2) 
@@ -311,14 +324,14 @@ flux_ct()
                             #endif
 			    ));
 #else  
-      set_emf(2,ix,iy,iz,0.);
+      set_emf(emf,2,ix,iy,iz,0.);
 #endif 
 
 	////////////////////
 	// EMF3
 	////////////////////
 #if((NX>1)||(NY>1))
-      set_emf(3,ix,iy,iz,
+      set_emf(emf,3,ix,iy,iz,
 	      coefemf[3] * (
                             #if(NX>1)
 			    + get_ub(flbx,B2,flx_x(ix),flx_y(iy),flx_z(iz),0) 
@@ -330,7 +343,7 @@ flux_ct()
                             #endif
 			    ));
 #else  
-      set_emf(3,ix,iy,iz,0.);
+      set_emf(emf,3,ix,iy,iz,0.);
 #endif
     }
   
@@ -351,8 +364,8 @@ flux_ct()
 	if(iy<NY && iz<NZ) //no need to fill x-face fluxes for iy=NY etc., 
 	  {
 	    set_ubx(flbx,B1,ix,iy,iz,0.);
-	    set_ubx(flbx,B2,ix,iy,iz,0.5 * (get_emf(3,ix,iy,iz) + get_emf(3,ix,iy+1,iz)));
-	    set_ubx(flbx,B3,ix,iy,iz,-0.5 * (get_emf(2,ix,iy,iz) + get_emf(2,ix,iy,iz+1)));
+	    set_ubx(flbx,B2,ix,iy,iz,0.5 * (get_emf(emf,3,ix,iy,iz) + get_emf(emf,3,ix,iy+1,iz)));
+	    set_ubx(flbx,B3,ix,iy,iz,-0.5 * (get_emf(emf,2,ix,iy,iz) + get_emf(emf,2,ix,iy,iz+1)));
 	  }
 #endif
 
@@ -362,9 +375,9 @@ flux_ct()
 #if(NY>1)
       if(ix<NX && iz<NZ)	
 	{
-	  set_uby(flby,B1,ix,iy,iz,-0.5 * (get_emf(3,ix,iy,iz) + get_emf(3,ix+1,iy,iz)));
+	  set_uby(flby,B1,ix,iy,iz,-0.5 * (get_emf(emf,3,ix,iy,iz) + get_emf(emf,3,ix+1,iy,iz)));
 	  set_uby(flby,B2,ix,iy,iz,0.);
-	  set_uby(flby,B3,ix,iy,iz,0.5 * (get_emf(1,ix,iy,iz) + get_emf(1,ix,iy,iz+1)));
+	  set_uby(flby,B3,ix,iy,iz,0.5 * (get_emf(emf,1,ix,iy,iz) + get_emf(emf,1,ix,iy,iz+1)));
 	}
 #endif
       
@@ -375,8 +388,8 @@ flux_ct()
 #if(NZ>1)
 	if(ix<NX && iy<NY)	
 	{
-	  set_ubz(flbz,B1,ix,iy,iz,0.5 * (get_emf(2,ix,iy,iz) + get_emf(2,ix+1,iy,iz)));
-	  set_ubz(flbz,B2,ix,iy,iz,-0.5 * (get_emf(1,ix,iy,iz) + get_emf(1,ix,iy+1,iz)));
+	  set_ubz(flbz,B1,ix,iy,iz,0.5 * (get_emf(emf,2,ix,iy,iz) + get_emf(emf,2,ix+1,iy,iz)));
+	  set_ubz(flbz,B2,ix,iy,iz,-0.5 * (get_emf(emf,1,ix,iy,iz) + get_emf(emf,1,ix,iy+1,iz)));
 	  set_ubz(flbz,B3,ix,iy,iz,0.);
 	}
 #endif
@@ -404,8 +417,8 @@ int adjust_fluxcttoth_emfs()
       for(ix=0;ix<=NX;ix++)
 	for(iz=0;iz<=NZ;iz++)
 	  {
-	    set_emf(1,ix,0,iz,0.);
-	    set_emf(3,ix,0,iz,0.);
+	    set_emf(emf,1,ix,0,iz,0.);
+	    set_emf(emf,3,ix,0,iz,0.);
 	  }
     }
   
@@ -417,8 +430,8 @@ int adjust_fluxcttoth_emfs()
       for(ix=0;ix<=NX;ix++)
 	for(iz=0;iz<=NZ;iz++)
 	  {
-	    set_emf(1,ix,NY,iz,0.);
-	    set_emf(3,ix,NY,iz,0.);
+	    set_emf(emf,1,ix,NY,iz,0.);
+	    set_emf(emf,3,ix,NY,iz,0.);
 	  }
     }
 

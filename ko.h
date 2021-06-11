@@ -446,18 +446,6 @@ struct OpTable {
 			(idim==1 ? xb[ic+NG + NX+2*NG + 1] : \
 			(idim==2 ? xb[ic+NG + NX+2*NG +1 + NY+2*NG +1 ] : 0.)))
 
-// emf
-#define get_emf(iv,ix,iy,iz) (emf[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3])
-#define set_emf(iv,ix,iy,iz,val) emf[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3] = val
-
-// flags
-#define get_cflag(cflagarr,iflag,ix,iy,iz)  cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
-					            (iY(iy)+(NGCY))*(SX)*NFLAGS + \
-						    (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS]
-				  
-#define set_cflag(cflagarr,iflag,ix,iy,iz,val) cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
-					               (iY(iy)+(NGCY))*(SX)*NFLAGS + \
-						       (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val
 
 // outcoords at centers 
 //note as in get_x idim is spatial (0=x, 1=y, 2=z)
@@ -490,6 +478,18 @@ struct OpTable {
 				                              (iY(iy)+(NGCY))*(SX)*3 + \
 					                      (iZ(iz)+(NGCZ))*(SY)*(SX)*3]=val
 
+// emf
+#define get_emf(emfarr,iv,ix,iy,iz) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3]
+#define set_emf(emfarr,iv,ix,iy,iz,val) emfarr[iv-1 + (ix)*3 + (iy)*((NX)+1)*3 + (iz)*((NY)+1)*((NX)+1)*3] = val
+
+// flags
+#define get_cflag(cflagarr,iflag,ix,iy,iz)  cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
+					            (iY(iy)+(NGCY))*(SX)*NFLAGS + \
+						    (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS]
+				  
+#define set_cflag(cflagarr,iflag,ix,iy,iz,val) cflagarr[iflag + (iX(ix)+(NGCX))*NFLAGS + \
+					               (iY(iy)+(NGCY))*(SX)*NFLAGS + \
+						       (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val
 //primitive and flux arrays
 #define get_u(uarr,iv,ix,iy,iz) uarr[iv + (iX(ix)+(NGCX))*NV + \
 				          (iY(iy)+(NGCY))*(SX)*NV + \
@@ -499,6 +499,7 @@ struct OpTable {
 					      (iY(iy)+(NGCY))*(SX)*NV + \
 					      (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] = val
 
+//averages
 #define NVAVG ((NV+NAVGVARS))
 #define SXNVAVG ((long long)(SX*NVAVG))
 #define SXSYNVAVG ((long long)(SY*SXNVAVG))
@@ -516,7 +517,8 @@ struct OpTable {
 #define set_u_scalar(uarr,ix,iy,iz,val) uarr[iX(ix)+(NGCX) + \
 					    (iY(iy)+(NGCY))*(SX) + \
 					    (iZ(iz)+(NGCZ))*(SY)*(SX)] = val
-  
+
+//boundary terms
 #define set_ubx(uarr,iv,ix,iy,iz,val) uarr[iv + (iX(ix)+(NGCX))*NV + \
 					        (iY(iy)+(NGCY))*(SX+1)*NV + \
 					        (iZ(iz)+(NGCZ))*(SY)*(SX+1)*NV] = val
@@ -551,7 +553,6 @@ struct OpTable {
 							        (iZ(iz)+(NGCZ))*(SY)*(SX)*NV] : \
 					  NULL)))
 //saved jacobians
-
 #define get_dxdx(dxdxarr,i,j,ix,iy,iz) dxdxarr[i*4+j + (iX(ix)+(NGCX))*16 + \
 				                   (iY(iy)+(NGCY))*(SX)*16 + \
 					           (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16]
@@ -561,7 +562,6 @@ struct OpTable {
 					               (iZMET(iz)+(NGCZMET))*(SY)*(SX)*16] = val
 
 //metric specific
-
 #define get_g(uarr,i,j,ix,iy,iz) uarr[i*5+j + (iX(ix)+(NGCX))*gSIZE + \
 				              (iY(iy)+(NGCY))*(SX)*gSIZE + \
 					      (iZMET(iz)+(NGCZMET))*(SY)*(SX)*gSIZE]
@@ -1047,20 +1047,6 @@ int do_correct();
 int calc_interp();
 int calc_fluxes();
 int calc_update(ldouble dtin);
-
-///////////////////////////////////////////////////////////////
-// finitegpu.c ////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////
-ldouble calc_update_gpu(ldouble dtin);
-ldouble calc_u2p_gpu(int setflags);
-int prealloc_arrays_gpu();
-int free_arrays_gpu();
-int push_p_u_gpu();
-int pull_p_u_gpu();
-int push_geometry_gpu();
-int free_geometry_gpu();		
-
-int output_state_debug(const char *fname, const char *header, const char *ctimes, const char *gtimes);
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);
@@ -1148,18 +1134,6 @@ void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon);
 void calc_bcon_prim(double *pp, double *bcon, void* ggg);
 void calc_Bcon_prim(double *pp, double *bcon,double *Bcon, void* ggg);
 
-int fl_x(int i);
-int fl_y(int i);
-int fl_z(int i);
-int flx_x(int i);
-int flx_y(int i);
-int flx_z(int i);
-int fly_x(int i);
-int fly_y(int i);
-int fly_z(int i);
-int flz_x(int i);
-int flz_y(int i);
-int flz_z(int i);
 int flux_ct();
 int adjust_fluxcttoth_emfs();
 
@@ -1510,3 +1484,19 @@ ldouble return_PlanckOpacity_from_table(ldouble logTin, ldouble logrhoin);
 struct OpTable RossTable;
 ldouble return_RossOpacity_from_table(ldouble logTin, ldouble logrhoin);
 #endif
+
+
+
+///////////////////////////////////////////////////////////////
+// All gpu functions called in C code /////////////////////////
+///////////////////////////////////////////////////////////////
+ldouble flux_ct_gpu()
+ldouble calc_update_gpu(ldouble dtin);
+ldouble calc_u2p_gpu(int setflags);
+int prealloc_arrays_gpu();
+int free_arrays_gpu();
+int push_pu_gpu();
+int pull_pu_gpu();
+int push_geometry_gpu();
+int free_geometry_gpu();		
+int output_state_debug(const char *fname, const char *header, const char *ctimes, const char *gtimes);
