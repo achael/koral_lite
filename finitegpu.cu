@@ -457,9 +457,7 @@ __global__ void calc_update_kernel(int Nloop_0,
 		       	           ldouble* x_arr, ldouble* xb_arr,
                                    ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
 				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				   ldouble* u_arr, ldouble* p_arr, ldouble dtin);
-				       
-
+				   ldouble* u_arr, ldouble* p_arr, ldouble dtin)
 {
 
   int ii;
