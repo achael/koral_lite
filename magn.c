@@ -4,6 +4,19 @@
 
 #include "ko.h"
 
+static int fl_x(int i);
+static int fl_y(int i);
+static int fl_z(int i);
+static int flx_x(int i);
+static int flx_y(int i);
+static int flx_z(int i);
+static int fly_x(int i);
+static int fly_y(int i);
+static int fly_z(int i);
+static int flz_x(int i);
+static int flz_y(int i);
+static int flz_z(int i);
+
 //***********************************************************************
 /* calculate both magnetic field four-vectors and bsq knowing gas four-velocity ucov */
 //***********************************************************************
@@ -153,65 +166,65 @@ void calc_Bcon_prim(double *pp, double *bcon, double *Bcon, void* ggg)
 /* wrappers for missing cells / dimensions */
 /***********************************************************************************************/
 
-int fl_x(int i)
+static int fl_x(int i)
 {
   if(NX==1) return 0;
   return i;
 }
 
-int fl_y(int i)
+static int fl_y(int i)
 {
   if(NY==1) return 0;
   return i;
 }
 
-int fl_z(int i)
+static int fl_z(int i)
 {
   if(NZ==1) return 0;
   return i;
 }
 
-int flx_x(int i)
+static int flx_x(int i)
 {
   return i;
 }
 
-int flx_y(int i)
+static int flx_y(int i)
 {
   return fl_y(i);
 }
 
-int flx_z(int i)
+static int flx_z(int i)
 {
   return fl_z(i);
 }
 
-int fly_x(int i)
+static int fly_x(int i)
 {
   return fl_x(i);
 }
 
-int fly_y(int i)
+static int fly_y(int i)
 {
   return i;
 }
 
-int fly_z(int i)
+static int fly_z(int i)
 {
   return fl_z(i);
 }
 
-int flz_x(int i)
+static int flz_x(int i)
 {
   return fl_x(i);
 }
 
-int flz_y(int i)
+static int flz_y(int i)
 {
   return fl_y(i);
 }
 
-int flz_z(int i)
+static int flz_z(int i)
 {
   return i;
 }

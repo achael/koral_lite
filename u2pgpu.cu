@@ -1248,11 +1248,11 @@ __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *
 // u2p kernel
 //**********************************************************************
 
-__global__ void calc_primitives_kernel(int Nloop_0, int setflags, 
+__global__ void calc_primitives_kernel(int Nloop_0, 
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
                                        ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
 				       ldouble *u_arr, ldouble *p_arr,
-				       int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT])
+				       int setflags, int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT])
 				       
 {
   

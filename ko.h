@@ -1047,20 +1047,6 @@ int do_correct();
 int calc_interp();
 int calc_fluxes();
 int calc_update(ldouble dtin);
-
-///////////////////////////////////////////////////////////////
-// finitegpu.c ////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////
-ldouble calc_update_gpu(ldouble dtin);
-ldouble calc_u2p_gpu(int setflags);
-int prealloc_arrays_gpu();
-int free_arrays_gpu();
-int push_p_u_gpu();
-int pull_p_u_gpu();
-int push_geometry_gpu();
-int free_geometry_gpu();		
-
-int output_state_debug(const char *fname, const char *header, const char *ctimes, const char *gtimes);
   
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);
@@ -1148,18 +1134,6 @@ void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon);
 void calc_bcon_prim(double *pp, double *bcon, void* ggg);
 void calc_Bcon_prim(double *pp, double *bcon,double *Bcon, void* ggg);
 
-int fl_x(int i);
-int fl_y(int i);
-int fl_z(int i);
-int flx_x(int i);
-int flx_y(int i);
-int flx_z(int i);
-int fly_x(int i);
-int fly_y(int i);
-int fly_z(int i);
-int flz_x(int i);
-int flz_y(int i);
-int flz_z(int i);
 int flux_ct();
 int adjust_fluxcttoth_emfs();
 
@@ -1510,3 +1484,19 @@ ldouble return_PlanckOpacity_from_table(ldouble logTin, ldouble logrhoin);
 struct OpTable RossTable;
 ldouble return_RossOpacity_from_table(ldouble logTin, ldouble logrhoin);
 #endif
+
+
+
+///////////////////////////////////////////////////////////////
+// All gpu functions called in C code /////////////////////////
+///////////////////////////////////////////////////////////////
+ldouble flux_ct_gpu()
+ldouble calc_update_gpu(ldouble dtin);
+ldouble calc_u2p_gpu(int setflags);
+int prealloc_arrays_gpu();
+int free_arrays_gpu();
+int push_pu_gpu();
+int pull_pu_gpu();
+int push_geometry_gpu();
+int free_geometry_gpu();		
+int output_state_debug(const char *fname, const char *header, const char *ctimes, const char *gtimes);

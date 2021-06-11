@@ -6,9 +6,9 @@ extern "C" {
 
 #include "kogpu.h"
 
-
 // persistent arrays
 int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz;
+int *d_loop4_ix, *d_loop4_iy, *d_loop4_iz;
 ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
 ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
 ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
@@ -35,6 +35,9 @@ int push_geometry_gpu()
   err = cudaMalloc(&d_loop0_ix, sizeof(int)*Nloop_0);
   err = cudaMalloc(&d_loop0_iy, sizeof(int)*Nloop_0);
   err = cudaMalloc(&d_loop0_iz, sizeof(int)*Nloop_0);
+  err = cudaMalloc(&d_loop4_ix, sizeof(int)*Nloop_4);
+  err = cudaMalloc(&d_loop4_iy, sizeof(int)*Nloop_4);
+  err = cudaMalloc(&d_loop4_iz, sizeof(int)*Nloop_4);
 
   err = cudaMalloc(&d_x,        sizeof(ldouble)*Nx);
   err = cudaMalloc(&d_xb,       sizeof(ldouble)*Nxb);
@@ -47,11 +50,19 @@ int push_geometry_gpu()
   int *h_loop0_ix = (int*)malloc(sizeof(int)*Nloop_0);
   int *h_loop0_iy = (int*)malloc(sizeof(int)*Nloop_0);
   int *h_loop0_iz = (int*)malloc(sizeof(int)*Nloop_0);
-
   for(int ii=0; ii<Nloop_0; ii++){
     h_loop0_ix[ii] = loop_0[ii][0];
     h_loop0_iy[ii] = loop_0[ii][1];
     h_loop0_iz[ii] = loop_0[ii][2];
+  }
+
+  int *h_loop4_ix = (int*)malloc(sizeof(int)*Nloop_4);
+  int *h_loop4_iy = (int*)malloc(sizeof(int)*Nloop_4);
+  int *h_loop4_iz = (int*)malloc(sizeof(int)*Nloop_4);
+  for(int ii=0; ii<Nloop_0; ii++){
+    h_loop4_ix[ii] = loop_4[ii][0];
+    h_loop4_iy[ii] = loop_4[ii][1];
+    h_loop4_iz[ii] = loop_4[ii][2];
   }
 
   // copy index arrays
@@ -63,9 +74,20 @@ int push_geometry_gpu()
   err =  cudaMemcpy(d_loop0_iz, h_loop0_iz, sizeof(int)*Nloop_0, cudaMemcpyHostToDevice);
   if(err != cudaSuccess) printf("Passing d_loop0_iz to device failed.\n");
 
+  err =  cudaMemcpy(d_loop4_ix, h_loop4_ix, sizeof(int)*Nloop_4, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing d_loop4_ix to device failed.\n");
+  err =  cudaMemcpy(d_loop4_iy, h_loop4_iy, sizeof(int)*Nloop_4, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing d_loop4_iy to device failed.\n");
+  err =  cudaMemcpy(d_loop4_iz, h_loop4_iz, sizeof(int)*Nloop_4, cudaMemcpyHostToDevice);
+  if(err != cudaSuccess) printf("Passing d_loop4_iz to device failed.\n");
+
   free(h_loop0_ix);
   free(h_loop0_iy);
   free(h_loop0_iz);
+
+  free(h_loop4_ix);
+  free(h_loop4_iy);
+  free(h_loop4_iz);
 
   // copy coordinate arrays, which are set in finite.c:set_grid(...) & finite.c:set_x[b](...)
   err =  cudaMemcpy(d_x, x, sizeof(ldouble)*Nx, cudaMemcpyHostToDevice);
@@ -96,6 +118,9 @@ int free_geometry_gpu()
   cudaFree(d_loop0_ix);
   cudaFree(d_loop0_iy);
   cudaFree(d_loop0_iz);
+  cudaFree(d_loop4_ix);
+  cudaFree(d_loop4_iy);
+  cudaFree(d_loop4_iz);
 
   cudaFree(d_x);
   cudaFree(d_xb);

@@ -1304,19 +1304,15 @@ op_explicit(ldouble t, ldouble dtin)
 #pragma omp barrier
   calc_fluxes();
   
-  //**********************************************************************
+  //**********************************************************************//
   // Constrained transport to preserve div.B=0
 
-#ifdef MAGNFIELD
-  #pragma omp barrier
-  flux_ct();
-#endif
 
-  //**********************************************************************
-  // Evolve the conserved quantities
-
-
+  /////////////////////////////////////////////
+  // Block for initializing GPU -- keep moving up
   // TODO: make this better...
+  ldouble time_cpu_ct = 0.;
+  ldouble time_gpu_ct = 0.;
   ldouble time_cpu_update = 0;
   ldouble time_gpu_update = 0;
   ldouble time_cpu_u2p = 0;
@@ -1324,29 +1320,58 @@ op_explicit(ldouble t, ldouble dtin)
 
 #ifdef GPUKO
   // TODO eventually this will be moved out of op_explicit => problem.c
-  push_p_u_gpu();
+  push_pu_gpu();
 #endif 
+  ////////////////////////////////////////////
+  
+#ifdef MAGNFIELD
 
-  //TODO add extra flag
+#ifdef GPUKO
+  time_gpu_ct = flux_ct_gpu();
+#endif
+
+#if defined(CPUKO) || !defined(GPUKO)
+  struct timespec temp_clock;
+  ldouble tstart,tstop;
+
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  #pragma omp barrier
+  flux_ct();
+
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_ct = (tstop-tstart)*1.e3;
+  
+  printf("cpu flux_ct time: %0.2lf \n", time_cpu_ct);
+  printf("gpu flux_ct flbx[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(flbx, iv, ixTEST, iyTEST, izTEST,0));
+  printf("\n");
+#endif
+#endif
+  
+  //**********************************************************************//
+  // Evolve the conserved quantities
+
 #ifdef GPUKO
   time_gpu_update = calc_update_gpu(dtin);
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)  
-  struct timespec temp_clock;
-  ldouble tstart,tstop;
   
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
+  #pragma omp_barrier
   calc_update(dtin);
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  //printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
-
   time_cpu_update = (tstop-tstart)*1.e3;
-
+  
+  printf("cpu update time: %0.2lf \n", time_cpu_update);
   printf("cpu update uu[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(u, iv, ixTEST, iyTEST, izTEST));
@@ -1354,9 +1379,10 @@ op_explicit(ldouble t, ldouble dtin)
 
   printf("\n\n");
 
-  //************************************************************************
+  //************************************************************************//
   // Explicit RADIATION COUPLING  
-  
+  //TODO eventually
+  /*
 #ifdef RADIATION
 #ifndef SKIPRADSOURCE
 #ifdef EXPLICIT_LAB_RAD_SOURCE
@@ -1383,9 +1409,9 @@ op_explicit(ldouble t, ldouble dtin)
 #endif //SKIPRADSOURCE
 #endif //RADIATION
 #endif //SKIPEVOLUTION
+  */
 
-
-  //**********************************************************************  
+  //**********************************************************************//
   // Compute postexplicit primitives and count entropy inversions
 
 #ifdef GPUKO
@@ -1394,27 +1420,25 @@ op_explicit(ldouble t, ldouble dtin)
 
 #if defined(CPUKO) || !defined(GPUKO)
   // TODO: timing functionality. reuse timer from above
-  //my_clock_gettime(&temp_clock);
-  //tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
+  #pragma omp_barrier
   calc_u2p_only(1);
 
-  //my_clock_gettime(&temp_clock);
-  //tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3;
-  //printf("cpu u2p time: %0.2lf \n", (end_u2ptime-start_u2ptime)*1.e3); // this only times u2p, not including fixups/bcs 
-  //printf("cpu u2p time: %0.2lf \n", (tstop-tstart)*1.e3);
-  //printf("cpu u2p pp[NV]: ");
-  //for(int iv=0;iv<NV;iv++)
-  //  printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+  time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3; // this is already defined, only times u2p, not including fixups/bcs 
+  printf("cpu u2p time: %0.2lf \n", time_cpu_u2p); 
+  printf("cpu u2p pp[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
 #endif
 
   printf("\n\n");
 
+  ///////////////////////////////////////
+  // Block for pulling from GPU -- keep moving down
+  
 #if defined(GPUKO) && !defined(CPUKO)
 
-  // TODO eventually this will be moved out of op_explicit => problem.c
-  pull_p_u_gpu();
+  pull_pu_gpu(); // TODO eventually this will be moved out of op_explicit => problem.c
 
 #elif defined(GPUKO) && defined(CPUKO)
 
@@ -1433,7 +1457,7 @@ op_explicit(ldouble t, ldouble dtin)
   output_state_debug(fname, header, ctimes, gtimes);
 
 #endif
-
+  //////////////////////////////////////
   
   
   //**********************************************************************  
