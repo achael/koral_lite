@@ -1348,7 +1348,7 @@ op_explicit(ldouble t, ldouble dtin)
   printf("gpu flux_ct flbx[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(flbx, iv, ixTEST, iyTEST, izTEST,0));
-  printf("\n");
+  printf("\n\n");
 #endif
 #endif
   
