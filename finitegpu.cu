@@ -440,12 +440,12 @@ __device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int 
 // kernels
 //**********************************************************************
 
-__global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
-                                       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-				       ldouble* x_arr, ldouble* xb_arr,
-                                       ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
-				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				       ldouble* u_arr, ldouble* p_arr)
+__global__ void calc_update_kernel(ldouble dtin, int Nloop_0, 
+                                   int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+		       	           ldouble* x_arr, ldouble* xb_arr,
+                                   ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
+				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
+				   ldouble* u_arr, ldouble* p_arr)
 				       
 
 {
@@ -581,17 +581,17 @@ ldouble calc_update_gpu(ldouble dtin)
   err =  cudaMemcpy(d_flby_arr, flby, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_flbz_arr, flbz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
 
-  // Launch calc_update_gpu_kernel
+  // Launch calc_update_kernel
 
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
   //printf("\nTest %d\n", threadblocks); fflush(stdout);
 
   cudaEventRecord(start);
-  calc_update_gpu_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, 
-						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
-						    d_x, d_xb,d_gcov, d_gcon, d_Kris,
-						    d_flbx_arr, d_flby_arr, d_flbz_arr,
-						    d_u_arr, d_p_arr);
+  calc_update_kernel<<<threadblocks, TB_SIZE>>>(dtin, Nloop_0, 
+						d_loop0_ix, d_loop0_iy, d_loop0_iz,
+						d_x, d_xb,d_gcov, d_gcon, d_Kris,
+						d_flbx_arr, d_flby_arr, d_flbz_arr,
+						d_u_arr, d_p_arr);
   
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();

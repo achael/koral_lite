@@ -30,7 +30,7 @@ extern ldouble *d_flbz_arr;
 extern int *d_cellflag_arr;
 extern int *d_int_slot_arr;
 
-__device__ __host__ int is_cell_active_device (int ix, int iy, int iz);
+__device__ __host__ int is_cell_active_device(int ix, int iy, int iz);
 __device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int iz);
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
 __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
@@ -49,12 +49,12 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
 // kernel
 
-__global__ void calc_update_gpu_kernel(ldouble dtin, int Nloop_0, 
-                                       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-				       ldouble* x_arr, ldouble* xb_arr,
-                                       ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
-				       ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				       ldouble* u_arr, ldouble* p_arr);
+__global__ void calc_update_kernel(ldouble dtin, int Nloop_0, 
+                                   int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+		        	   ldouble* x_arr, ldouble* xb_arr,
+                                   ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
+				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
+				   ldouble* u_arr, ldouble* p_arr);
 
 
 ///////////////////////////////////////////////////////////////
