@@ -892,7 +892,7 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
   ldouble D=cons[2];
   ldouble QdotBsq=cons[3];
   ldouble Bsq=cons[4];
-  ldouble Qdotnp=cons[6];
+  //ldouble Qdotnp=cons[6]; //not used unles U2P_EQS_JON
   
   ldouble W=Wp+D;
   ldouble X = Bsq + W;
@@ -917,6 +917,7 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 
   //JONS:
 #if (U2P_EQS==U2P_EQS_JON)
+ ldouble Qdotnp=cons[6];
    *f = Qdotnp + Wp - p + 0.5*Bsq + (Bsq*Qtsq - QdotBsq)/Xsq;
  *err = fabs(*f) / (fabs(Qdotnp) + fabs(Wp) + fabs(p) + fabs(0.5*Bsq) + fabs((Bsq*Qtsq - QdotBsq)/Xsq));
 #endif
@@ -1132,12 +1133,14 @@ __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *
 
     ldouble f=magpre/(B2RHORATIOMAX*pp[RHO]); //correction factor
 
+#ifdef B2RHOFLOOR_BACKUP_FFFRAME
     ldouble pporg[NV];
     for(int iv=0;iv<NVMHD;iv++)
     {
       pporg[iv]=pp[iv];
     }
-
+#endif
+    
     ldouble uu[NV];
     p2u_mhd_device(pp,uu,ggg); 
 
