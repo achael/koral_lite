@@ -38,8 +38,22 @@ __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int
 */
 
 //**********************************************************************
-//primitive to conserved converter -- hydro
+//primitive to conserved converter 
 //**********************************************************************
+
+__device__ __host__ int p2u_device(ldouble *p, ldouble *u, void *ggg)
+{
+  p2u_mhd_device(p,u,ggg);
+
+  /* //TODO 
+#ifdef RADIATION
+  p2u_rad_device(p,u,ggg);
+#endif
+  */
+  
+  return 0;
+}
+
 
 __device__ __host__ int p2u_mhd_device(ldouble *pp, ldouble *uu, void *ggg)
 {
@@ -1274,7 +1288,7 @@ __global__ void calc_primitives_kernel(int Nloop_0,
     return;
   
   struct geometry geom;
-  fill_geometry_device(ix,iy,iz, x_arr,&geom,g_arr, G_arr);
+  fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr, G_arr);
 
   ldouble uu[NV],pp[NV];
   

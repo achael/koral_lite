@@ -16,21 +16,64 @@ int *d_cellflag_arr, *d_int_slot_arr;
 int prealloc_arrays_gpu()
 {
   cudaError_t err = cudaSuccess;
- 
+
+  long long Ngrid  = (SX)*(SY)*(SZ);
   long long Nprim  = (SX)*(SY)*(SZ)*NV;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
   long long Nemf = (NX+1)*(NY+1)*(NZ+1)*3;
- 
+  long long Ncellflag = (SX)*(SY)*(SZ)*NFLAGS;
+  
   err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);
   err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
+
+  err = cudaMalloc(&d_pbLx_arr, sizeof(ldouble)*NfluxX);
+  err = cudaMalloc(&d_pbLy_arr, sizeof(ldouble)*NfluxY);
+  err = cudaMalloc(&d_pbLz_arr, sizeof(ldouble)*NfluxZ);
+
+  err = cudaMalloc(&d_pbRx_arr, sizeof(ldouble)*NfluxX);
+  err = cudaMalloc(&d_pbRy_arr, sizeof(ldouble)*NfluxY);
+  err = cudaMalloc(&d_pbRz_arr, sizeof(ldouble)*NfluxZ);
+
+  err = cudaMalloc(&d_flLx_arr, sizeof(ldouble)*NfluxX);
+  err = cudaMalloc(&d_flLy_arr, sizeof(ldouble)*NfluxY);
+  err = cudaMalloc(&d_flLz_arr, sizeof(ldouble)*NfluxZ);
+
+  err = cudaMalloc(&d_flRx_arr, sizeof(ldouble)*NfluxX);
+  err = cudaMalloc(&d_flRy_arr, sizeof(ldouble)*NfluxY);
+  err = cudaMalloc(&d_flRz_arr, sizeof(ldouble)*NfluxZ);
+  
   err = cudaMalloc(&d_flbx_arr, sizeof(ldouble)*NfluxX);
   err = cudaMalloc(&d_flby_arr, sizeof(ldouble)*NfluxY);
   err = cudaMalloc(&d_flbz_arr, sizeof(ldouble)*NfluxZ);
+
+  err = cudaMalloc(&d_ahdxl_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_ahdyl_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_ahdzl_arr, sizeof(ldouble)*Ngrid);
+
+  err = cudaMalloc(&d_ahdxr_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_ahdyr_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_ahdzr_arr, sizeof(ldouble)*Ngrid);
+
+  err = cudaMalloc(&d_ahdx_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_ahdy_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_ahdz_arr, sizeof(ldouble)*Ngrid);
+
+  err = cudaMalloc(&d_aradxl_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_aradyl_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_aradzl_arr, sizeof(ldouble)*Ngrid);
+
+  err = cudaMalloc(&d_aradxr_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_aradyr_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_aradzr_arr, sizeof(ldouble)*Ngrid);
+
+  err = cudaMalloc(&d_aradx_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_arady_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_aradz_arr, sizeof(ldouble)*Ngrid);
+  
   err = cudaMalloc(&d_emf_arr,  sizeof(ldouble)*Nemf);
   
-  long long Ncellflag = (SX)*(SY)*(SZ)*NFLAGS;
   err = cudaMalloc(&d_cellflag_arr, sizeof(int)*Ncellflag);
   err = cudaMalloc(&d_int_slot_arr, sizeof(int)*NGLOBALINTSLOT);
 
@@ -42,10 +85,51 @@ int free_arrays_gpu()
 {
   cudaFree(d_p_arr);
   cudaFree(d_u_arr);
+
+  cudaFree(d_pbLx_arr);
+  cudaFree(d_pbLy_arr);
+  cudaFree(d_pbLz_arr);
+  
+  cudaFree(d_pbRx_arr);
+  cudaFree(d_pbRy_arr);
+  cudaFree(d_pbRz_arr);
+
+  cudaFree(d_flLx_arr);
+  cudaFree(d_flLy_arr);
+  cudaFree(d_flLz_arr);
+  
+  cudaFree(d_flRx_arr);
+  cudaFree(d_flRy_arr);
+  cudaFree(d_flRz_arr);
   
   cudaFree(d_flbx_arr);
   cudaFree(d_flby_arr);
   cudaFree(d_flbz_arr);
+
+  cudaFree(d_ahdxl_arr);
+  cudaFree(d_ahdyl_arr);
+  cudaFree(d_ahdzl_arr);
+
+  cudaFree(d_ahdxr_arr);
+  cudaFree(d_ahdyr_arr);
+  cudaFree(d_ahdzr_arr);
+
+  cudaFree(d_ahdx_arr);
+  cudaFree(d_ahdy_arr);
+  cudaFree(d_ahdz_arr);
+
+  cudaFree(d_aradxl_arr);
+  cudaFree(d_aradyl_arr);
+  cudaFree(d_aradzl_arr);
+
+  cudaFree(d_aradxr_arr);
+  cudaFree(d_aradyr_arr);
+  cudaFree(d_aradzr_arr);
+
+  cudaFree(d_aradx_arr);
+  cudaFree(d_arady_arr);
+  cudaFree(d_aradz_arr);
+  
   cudaFree(d_emf_arr);
 
   cudaFree(d_cellflag_arr);
@@ -67,15 +151,57 @@ int push_pu_gpu()
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
 
-  // copy fluxes from host to device
+  // copy fluxes and wavespeeds from host to device
   // TODO: in the future, this will be entirely internal to the GPU
+  long long Ngrid  = (SX)*(SY)*(SZ);
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
-  long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;  
+  long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
+
+  err =  cudaMemcpy(d_pbLx_arr, pbLx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_pbLy_arr, pbLy, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_pbLz_arr, pbLz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
+
+  err =  cudaMemcpy(d_pbRx_arr, pbRx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_pbRy_arr, pbRy, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_pbRz_arr, pbRz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
+
+  err =  cudaMemcpy(d_flLx_arr, flLx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_flLy_arr, flLy, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_flLz_arr, flLz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
+
+  err =  cudaMemcpy(d_flRx_arr, flRx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_flRy_arr, flRy, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
+  err =  cudaMemcpy(d_flRz_arr, flRz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
+  
   err =  cudaMemcpy(d_flbx_arr, flbx, sizeof(ldouble)*NfluxX, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_flby_arr, flby, sizeof(ldouble)*NfluxY, cudaMemcpyHostToDevice);
   err =  cudaMemcpy(d_flbz_arr, flbz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
 
+  err = cudaMemcpy(d_ahdxl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdyl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdzl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+
+  err = cudaMemcpy(d_ahdxr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdyr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdzr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+
+  err = cudaMemcpy(d_ahdx_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdy_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdz_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+
+  err = cudaMemcpy(d_aradxl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradyl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradzl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+
+  err = cudaMemcpy(d_aradxr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradyr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradzr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+
+  err = cudaMemcpy(d_aradx_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_arady_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradz_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+  
   // TODO: add error checks
   return 1;
 }
@@ -232,45 +358,6 @@ __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 }
 
 
-// fill geometry
-__device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr,void* geom,ldouble* g_arr, ldouble* G_arr)
-{
-
-  struct geometry *ggg 
-    = (struct geometry *) geom;
-
-  ggg->par=-1;
-  ggg->ifacedim = -1;
-
-  //pick_g(ix,iy,iz,ggg->gg);
-  //pick_G(ix,iy,iz,ggg->GG);
-  for(int i=0;i<4;i++)
-  {
-    for(int j=0;j<5;j++)
-    {
-      ggg->gg[i][j]=get_g(g_arr,i,j,ix,iy,iz);
-      ggg->GG[i][j]=get_g(G_arr,i,j,ix,iy,iz);
-    }
-  }
-
-  ggg->alpha=sqrt(-1./ggg->GG[0][0]);
-  ggg->ix=ix;  ggg->iy=iy;  ggg->iz=iz;
-  ggg->xxvec[0]=0.;
-  ggg->xxvec[1]=get_x_device(x_arr, ix,0);
-  ggg->xxvec[2]=get_x_device(x_arr, iy,1);
-  ggg->xxvec[3]=get_x_device(x_arr, iz,2);
-  ggg->xx=ggg->xxvec[1];
-  ggg->yy=ggg->xxvec[2];
-  ggg->zz=ggg->xxvec[3];
-  ggg->gdet=ggg->gg[3][4];
-  ggg->gttpert=ggg->GG[3][4];
-  ggg->coords=MYCOORDS;
-    
-  return 0;
-  
-}
-
-
 // Metric source term
 // TODO: deleted RADIATION and SHEARINGBOX parts
 __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
@@ -280,7 +367,7 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
      
   struct geometry geom;
-  fill_geometry_device(ix,iy,iz,x_arr,&geom,g_arr,G_arr);
+  fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr,G_arr);
 
       
   ldouble (*gg)[5],(*GG)[5],gdetu;
@@ -458,27 +545,20 @@ __global__ void calc_update_kernel(int Nloop_0,
 				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
 				   ldouble* u_arr, ldouble* p_arr, ldouble dtin)
 {
-
-  int ii;
-  int ix,iy,iz;
-  ldouble dx,dy,dz;
-  ldouble flxl,flxr,flyl,flyr,flzl,flzr;
-  ldouble val,du;
-  ldouble ms[NV];
-  //ldouble gs[NV]; //NOTE gs[NV] is for artifical sources, rarely used
-
   // get index for this thread
   // Nloop_0 is number of cells to update;
   // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
-  ii = blockIdx.x * blockDim.x + threadIdx.x;
+  int ii = blockIdx.x * blockDim.x + threadIdx.x;
   if(ii >= Nloop_0) return;
     
   // get indices from 1D arrays
-  ix=loop_0_ix[ii];
-  iy=loop_0_iy[ii];
-  iz=loop_0_iz[ii]; 
+  int ix=loop_0_ix[ii];
+  int iy=loop_0_iy[ii];
+  int iz=loop_0_iz[ii]; 
 
   // Source term
+  ldouble ms[NV];
+  //ldouble gs[NV]; //NOTE gs[NV] is for artifical sources, rarely used
 #ifdef NOSOURCES
   for(int iv=0;iv<NV;iv++) ms[iv]=0.;
 #else
@@ -492,7 +572,7 @@ __global__ void calc_update_kernel(int Nloop_0,
      // Get metric source terms ms[iv]
      // and any other source terms gs[iv] 
      f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,gcov_arr,gcon_arr,gKr_arr);
-     //f_general_source_term(ix,iy,iz,gs); //NOTE: *very* rarely used, ignore for now
+     //f_general_source_term(ix,iy,iz,gs); //NOTE TODO: *very* rarely used, ignore for now
      //for(int iv=0;iv<NV;iv++) ms[iv]+=gs[iv];
   }
 #endif
@@ -502,16 +582,16 @@ __global__ void calc_update_kernel(int Nloop_0,
    printf("D ms[NV]: %e %e %e %e %e %e %e %e %e\n", ms[0],ms[1],ms[2],ms[3],ms[4],ms[5],ms[6],ms[7],ms[8]);
   
   // Get the cell size in the three directions
-  dx = get_size_x_device(xb_arr,ix,0); 
-  dy = get_size_x_device(xb_arr,iy,1); 
-  dz = get_size_x_device(xb_arr,iz,2); 
+  ldouble dx = get_size_x_device(xb_arr,ix,0); 
+  ldouble dy = get_size_x_device(xb_arr,iy,1); 
+  ldouble dz = get_size_x_device(xb_arr,iz,2); 
   
   //update all conserved according to fluxes and source terms      
   for(int iv=0;iv<NV;iv++)
   {	
 
     // Get the initial value of the conserved quantity
-    val = get_u(u_arr,iv,ix,iy,iz);
+    ldouble val = get_u(u_arr,iv,ix,iy,iz);
     
     if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
       printf("D u: %e\n", val);
@@ -519,21 +599,22 @@ __global__ void calc_update_kernel(int Nloop_0,
     // Get the fluxes on the six faces.
     // flbx, flby, flbz are the fluxes at the LEFT walls of cell ix, iy, iz.
     // To get the RIGHT fluxes, we need flbx(ix+1,iy,iz), etc.
-    flxl=get_ub(flbx_arr,iv,ix,iy,iz,0);
-    flxr=get_ub(flbx_arr,iv,ix+1,iy,iz,0);
-    flyl=get_ub(flby_arr,iv,ix,iy,iz,1);
-    flyr=get_ub(flby_arr,iv,ix,iy+1,iz,1);
-    flzl=get_ub(flbz_arr,iv,ix,iy,iz,2);
-    flzr=get_ub(flbz_arr,iv,ix,iy,iz+1,2);
+    ldouble flxl=get_ub(flbx_arr,iv,ix,iy,iz,0);
+    ldouble flxr=get_ub(flbx_arr,iv,ix+1,iy,iz,0);
+    ldouble flyl=get_ub(flby_arr,iv,ix,iy,iz,1);
+    ldouble flyr=get_ub(flby_arr,iv,ix,iy+1,iz,1);
+    ldouble flzl=get_ub(flbz_arr,iv,ix,iy,iz,2);
+    ldouble flzr=get_ub(flbz_arr,iv,ix,iy,iz+1,2);
 
     // Compute Delta U from the six fluxes
-    du = -(flxr-flxl)*dtin/dx - (flyr-flyl)*dtin/dy - (flzr-flzl)*dtin/dz;
+    ldouble du = -(flxr-flxl)*dtin/dx - (flyr-flyl)*dtin/dy - (flzr-flzl)*dtin/dz;
 
     // Compute the new conserved by adding Delta U and the source term
     val += (du + ms[iv]*dtin);
 
     // Save the new conserved to memory
-    
+
+    //TODO
 //#ifdef SKIPHDEVOLUTION
 //  if(iv>=NVMHD)
 //#endif
@@ -555,6 +636,462 @@ __global__ void calc_update_kernel(int Nloop_0,
   }  
 }
 
+
+
+//************************************************************************//
+/*! \fn __global__ void calc_fluxes_kernel()
+ \brief Calculates fluxes at cell faces
+ 
+ Uses the selected approximate Riemann solver to estimate the fluxes on the six faces of the cell (ix, iy, iz)\n
+ The fluxes are saved in global arrays flbx, flby, flbz\n
+ Note that the fluxes calculated here correspond to the three left walls of cell ix, iy, iz
+ 
+*/
+//************************************************************************//
+// TODO -- wrap up xyz wavespeeds and xyz boundary metric and xyz primitives and xyz LR fluxes in single arrays
+__global__ void calc_fluxes_kernel(int Nloop_1,
+                                   int* loop_1_ix, int* loop_0_iy, int* loop_1_iz,
+		       	           ldouble* x_arr, ldouble* xb_arr,
+				   ldouble* gbx_arr, ldouble* gby_arr, ldouble* gbz_arr,
+				   ldouble* Gbx_arr, ldouble* Gby_arr, ldouble* Gbz_arr,
+				   ldouble* pbLx_arr, ldouble* pbLy_arr, ldouble* pbLz_arr,
+				   ldouble* pbRx_arr, ldouble* pbRy_arr, ldouble* pbRz_arr,
+				   ldouble* flLx_arr, ldouble* flLy_arr, ldouble* flLz_arr,
+				   ldouble* flRx_arr, ldouble* flRy_arr, ldouble* flRz_arr,
+				   ldouble* ahdxl_arr, ldouble* ahdyl_arr, ldouble* ahdzl_arr,
+				   ldouble* ahdxr_arr, ldouble* ahdyr_arr, ldouble* ahdzr_arr,
+				   ldouble* ahdx_arr,  ldouble* ahdy_arr,  ldouble* ahdz_arr,	   
+				   ldouble* aradxl_arr, ldouble* aradyl_arr, ldouble* aradzl_arr,
+				   ldouble* aradxr_arr, ldouble* aradyr_arr, ldouble* aradzr_arr,
+				   ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,	   
+				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr)
+{
+
+  // get index for this thread
+  // Nloop_1 is number of cells to compute bcs for
+  // domain plus lim (=1 usually) ghost cells
+  int ii = blockIdx.x * blockDim.x + threadIdx.x;
+  if(ii >= Nloop_0) return;
+    
+  // get indices from 1D arrays
+  int ix=loop_1_ix[ii];
+  int iy=loop_1_iy[ii];
+  int iz=loop_1_iz[ii]; 
+
+  struct geometry geom; 
+  ldouble ag,al,ar,amax;
+  ldouble am1l[2],am1r[2],am1[2];
+  ldouble ap1l[2],ap1r[2],ap1[2];
+  ldouble fd_pL[NV], fd_pR[NV], fd_uL[NV],fd_uR[NV];
+  
+
+  // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
+  // set all to 0 to start
+  for(int iv=0;i<NV;i++) 
+  {
+    set_ubx(flbx_arr,iv,ix,iy,iz,0.);
+    set_uby(flby_arr,iv,ix,iy,iz,0.);
+    set_ubz(flbz_arr,iv,ix,iy,iz,0.);
+  }
+
+  //**********************************************************************//
+  // Work on the x-face at ix, iy, iz, which lies in between cells (ix-1,iy,iz) and (ix,iy,iz)
+#ifdef MPI4CORNERS
+  if(NX>1 && ix>=0 && ix<=NX && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1)
+#else
+  if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ)
+#endif
+  {
+
+    // fd_pL, fd_pR are the left-biased and right-biased primitives at the current cell face
+    for(int iv=0;i<NV;i++)
+    {      
+      fd_pL[iv] = get_ub(pbLx_arr,iv,ix,iy,iz,0);
+      fd_pR[iv] = get_ub(pbRx_arr,iv,ix,iy,iz,0);
+    }
+
+    // fd_uL, fd_uR are the left-biased and right-biased conserveds at the current cell face
+    fill_geometry_face_device(ix,iy,iz,0,&geom,x_arr,xb_arr,
+			      gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+    p2u_device(fd_pL,fd_uL,&geom);
+    p2u_device(fd_pR,fd_uR,&geom);
+    
+    // Characteristic wave speeds in the two adjoining cells of the current face,
+    // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
+    // l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
+    // [0], [1] correspond to hydro and radiation wave speeds      
+
+    ap1l[0] = get_u_scalar(ahdxl_arr,ix,iy,iz);
+    ap1r[0] = get_u_scalar(ahdxr_arr,ix,iy,iz);
+    ap1[0]  = get_u_scalar(ahdx_arr, ix,iy,iz);
+   
+    am1l[0] = get_u_scalar(ahdxl_arr,ix-1,iy,iz);
+    am1r[0] = get_u_scalar(ahdxr_arr,ix-1,iy,iz);
+    am1[0]  = get_u_scalar(ahdx_arr, ix-1,iy,iz);
+
+    ap1l[1] = get_u_scalar(aradxl_arr,ix,iy,iz);
+    ap1r[1] = get_u_scalar(aradxr_arr,ix,iy,iz);
+    ap1[1]  = get_u_scalar(aradx_arr, ix,iy,iz);
+    
+    am1l[1] = get_u_scalar(aradxl_arr,ix-1,iy,iz);
+    am1r[1] = get_u_scalar(aradxr_arr,ix-1,iy,iz);
+    am1[1]  = get_u_scalar(aradx_arr, ix-1,iy,iz);
+	
+    /* //TODO
+#ifdef WAVESPEEDSATFACES //re-calculate the wavespeeds directly at the face
+    ldouble aaa[24];
+    //left biased wavespeeds
+    calc_wavespeeds_lr_pure_device(fd_uL,&geom,aaa);
+    am1l[0]=aaa[0];
+    am1r[0]=aaa[1];
+    am1l[1]=aaa[6];
+    am1r[1]=aaa[7];
+	    
+    am1[0]=my_max(fabs(aaa[0]),fabs(aaa[1]));
+    am1[1]=my_max(fabs(aaa[6]),fabs(aaa[7]));
+
+    //right biased wavespeeds
+    calc_wavespeeds_lr_pure_device(fd_uR,&geom,aaa);
+    ap1l[0]=aaa[0];
+    ap1r[0]=aaa[1];
+    ap1l[1]=aaa[6];
+    ap1r[1]=aaa[7];
+
+    ap1[0]=my_max(fabs(aaa[0]),fabs(aaa[1]));
+    ap1[1]=my_max(fabs(aaa[6]),fabs(aaa[7]));
+#endif
+    */
+	
+    // Loop over variables and calculate flux using Lax-Friedrichs or HLL
+    for(int iv=0;iv<NV;iv++)
+    {
+      // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
+      // Hydro and radiation are treated as two separate systems
+#ifdef RADIATION
+      if(iv<NVMHD) //hydro characteristic speed
+      {
+        ag=my_max(ap1[0], am1[0]);
+        al=my_min(ap1l[0],am1l[0]);
+        ar=my_max(ap1r[0],am1r[0]);
+            
+#ifdef BATTERY
+        //when radiation battery on - magnetic fields are affected by radiation
+#ifdef BATTERYRADWAVESPEEDS
+#ifdef BATTERYRADWAVESPEEDSBONLY
+        if(iv>=B1 && iv<=B3)
+#endif
+        {
+          ag=my_max(ag,my_max(ap1[1], am1[1]));
+          al=my_min(al,my_min(ap1l[1],am1l[1]));
+          ar=my_max(ar,my_max(ap1r[1],am1r[1]));
+        }
+#endif
+#endif
+      }
+      else //radiative characteristic speed
+      {
+        ag=my_max(ap1[1], am1[1]);
+        al=my_min(ap1l[1],am1l[1]);
+        ar=my_max(ap1r[1],am1r[1]);
+      }
+          
+#else //no RADIATION -- hydro only
+      ag=my_max(ap1[0], am1[0]);
+      al=my_min(ap1l[0],am1l[0]);
+      ar=my_max(ap1r[0],am1r[0]);
+#endif
+
+      ldouble fd_fstar;
+      if(FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs Flux
+      {
+        //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
+        fd_fstar = 0.5*(get_ub(flRx_arr,iv,ix,iy,iz,0) + get_ub(flLx_arr,iv,ix,iy,iz,0) - ag * (fd_uR[iv] - fd_uL[iv]));     
+        set_ubx(flbx_arr,i,ix,iy,iz,fd_fstar);	    
+      } 
+      else if(FLUXMETHOD==HLL_FLUX) //HLL Flux
+      {
+        if(al>0.)
+        {
+          fd_fstar = get_ub(flLx,iv,ix,iy,iz,0);
+        }
+        else if(ar<0.)
+        {
+          fd_fstar = get_ub(flRx,iv,ix,iy,iz,0);
+        }
+        else
+        {
+          //HLL: Flux = [ar * FL - al * FR + al * ar * (UR - UL)] / (ar - al)
+          fd_fstar = (-al*get_ub(flRx,iv,ix,iy,iz,0) + ar*get_ub(flLx,iv,ix,iy,iz,0) + al*ar* (fd_uR[iv] - fd_uL[iv]))/(ar-al);
+        }
+        set_ubx(flbx,iv,ix,iy,iz,fd_fstar);
+      } 
+    } // for(iv=0;i<NV;i++)
+  }  // if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
+
+  
+  //**********************************************************************//
+  //Work on the y-face at ix, iy, iz, which lies in between cells ix,iy-1,iz and ix,iy,iz  
+#ifdef MPI4CORNERS
+  if(NY>1 && iy>=0 && iy<=NY && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1)
+#else
+  if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ)
+#endif
+  {
+    // fd_pL, fd_pR are the left-biased and right-biased primitives at the current cell face
+    for(int iv=0;iv<NV;iv++)
+    {
+      fd_pL[iv]=get_ub(pbLy,iv,ix,iy,iz,1);
+      fd_pR[iv]=get_ub(pbRy,iv,ix,iy,iz,1);
+    }
+    
+    // fd_uL, fd_uR are the left-biased and right-biased conserveds at the current cell face
+    fill_geometry_face_device(ix,iy,iz,1,&geom,x_arr,xb_arr,
+			      gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+    p2u_device(fd_pL,fd_uL,&geom);
+    p2u_device(fd_pR,fd_uR,&geom);
+
+    // Characteristic wave speeds in the two adjoining cells of the current face,
+    // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
+    // l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
+    // [0], [1] correspond to hydro and radiation wave speeds    
+    ap1l[0]=get_u_scalar(ahdyl_arr,ix,iy,iz);
+    ap1r[0]=get_u_scalar(ahdyr_arr,ix,iy,iz);
+    ap1[0] =get_u_scalar(ahdy_arr, ix,iy,iz);
+    
+    am1l[0]=get_u_scalar(ahdyl_arr,ix,iy-1,iz);
+    am1r[0]=get_u_scalar(ahdyr_arr,ix,iy-1,iz);
+    am1[0] =get_u_scalar(ahdy_arr,ix,iy-1,iz);    
+    
+    ap1l[1]=get_u_scalar(aradyl_arr,ix,iy,iz);
+    ap1r[1]=get_u_scalar(aradyr_arr,ix,iy,iz);
+    ap1[1] =get_u_scalar(arady_arr, ix,iy,iz);
+    
+    am1l[1]=get_u_scalar(aradyl_arr,ix,iy-1,iz);
+    am1r[1]=get_u_scalar(aradyr_arr,ix,iy-1,iz);
+    am1[1] =get_u_scalar(arady_arr, ix,iy-1,iz);
+
+    /* //TODO
+#ifdef WAVESPEEDSATFACES // recompute wavespeeds directly at face
+    ldouble aaa[24];
+    //left-biased wavespeeds
+    calc_wavespeeds_lr_pure(fd_uL,&geom,aaa);
+    am1l[0]=aaa[2];
+    am1r[0]=aaa[3];
+    am1l[1]=aaa[8];
+    am1r[1]=aaa[9];
+    am1[0]=my_max(fabs(aaa[2]),fabs(aaa[3]));
+    am1[1]=my_max(fabs(aaa[8]),fabs(aaa[9]));
+
+    //right-biased wavespeeds
+    calc_wavespeeds_lr_pure(fd_uR,&geom,aaa);
+    ap1l[0]=aaa[2];
+    ap1r[0]=aaa[3];
+    ap1l[1]=aaa[8];
+    ap1r[1]=aaa[9];
+    ap1[0]=my_max(fabs(aaa[2]),fabs(aaa[3]));
+    ap1[1]=my_max(fabs(aaa[8]),fabs(aaa[9]));
+#endif
+    */	    
+
+    // Loop over variables and calculate flux using Lax-Friedrichs or HLL, as required
+    for(int iv=0;iv<NV;iv++)
+    {
+      // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
+      // Hydro and radiation are treated as two separate systems
+#ifdef RADIATION
+      if(iv<NVMHD) //hydro characteristic speeds
+      {
+        ag=my_max(ap1[0],  am1[0]);
+        al=my_min(ap1l[0],am1l[0]);
+        ar=my_max(ap1r[0],am1r[0]);
+              
+#ifdef BATTERY
+      //when radiation battery on - magnetic fields are affected by radiation
+#ifdef BATTERYRADWAVESPEEDS
+#ifdef BATTERYRADWAVESPEEDSBONLY
+       if(vi>=B1 && iv<=B3)
+#endif
+       {
+         ag=my_max(ag,my_max(ap1[1], am1[1]));
+         al=my_min(al,my_min(ap1l[1],am1l[1]));
+         ar=my_max(ar,my_max(ap1r[1],am1r[1]));
+       }
+#endif
+#endif
+     }
+     else //radiative characteristic speeds
+     {
+       ag=my_max(ap1[1], am1[1]);
+       al=my_min(ap1l[1],am1l[1]);
+       ar=my_max(ap1r[1],am1r[1]);
+     }
+            
+#else //no RADIATION -- use hydro  wavespeeds
+     ag=my_max(ap1[0], am1[0]);
+     al=my_min(ap1l[0],am1l[0]);
+     ar=my_max(ap1r[0],am1r[0]);
+#endif
+
+     ldouble fd_fstar;
+     if(FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs Flux
+     {
+       //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
+       fd_fstar = 0.5*(get_ub(flRy_arr,iv,ix,iy,iz,1) + get_ub(flLy_arr,iv,ix,iy,iz,1) - ag * (fd_uR[iv] - fd_uL[iv])); 
+       set_uby(flby,iv,ix,iy,iz,fd_fstar);
+     }
+     else if(FLUXMETHOD==HLL_FLUX) //HLL Flux
+     {
+       if(al>0.)
+       {
+         fd_fstar = get_ub(flLy_arr,iv,ix,iy,iz,1);
+       }
+       else if(ar<0.)
+       {
+         fd_fstar = get_ub(flRy_arr,iv,ix,iy,iz,1);
+       }
+       else
+       {
+         //HLL: Flux = [ar * FL - al * FR + al * ar * (UR - UL)] / (ar - al)
+         fd_fstar = (-al*get_ub(flRy_arr,iv,ix,iy,iz,1) + ar*get_ub(flLy_arr,iv,ix,iy,iz,1) + al*ar* (fd_uR[i] - fd_uL[i]))/(ar-al);
+       }
+       set_uby(flby_arr,iv,ix,iy,iz,fd_fstar);
+     } 
+   }  // for(iv=0;i<NV;i++)
+ }  // if(NY>1 && iy>=0 && iy<=NY  && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
+
+
+  //**********************************************************************//
+  // Work on the z-face at ix, iy, iz, which lies in between cells ix,iy,iz-1 and ix,iy,iz  
+#ifdef MPI4CORNERS
+  if(NZ>1 && iz>=0 && iz<=NZ && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1)
+#else
+  if(NZ>1 && iz>=0 && iz<=NZ && ix>=0 && ix<NX && iy>=0 && iy<NY)
+#endif
+  {
+    // fd_pL, fd_pR are the left-biased and right-biased primitives at the current cell face  
+    for(int iv=0;iv<NV;iv++)
+    {
+      fd_pL[iv]=get_ub(pbLz_arr,iv,ix,iy,iz,2);
+      fd_pR[iv]=get_ub(pbRz_arr,iv,ix,iy,iz,2);
+    }
+
+    // fd_uL, fd_uR are the left-biased and right-biased conserveds at the current cell face
+    fill_geometry_face_device(ix,iy,iz,2,&geom,x_arr,xb_arr,
+			      gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+    p2u_device(fd_pL,fd_uL,&geom);
+    p2u_device(fd_pR,fd_uR,&geom);
+
+    // Characteristic wave speeds in the two adjoining cells of the current face,
+    // ap1, am1 correspond to ix and ix-1, i.e., speeds on the right and left of the current face;
+    // l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
+    // [0], [1] correspond to hydro and radiation wave speeds
+
+    ap1l[0]=get_u_scalar(ahdzl_arr,ix,iy,iz);
+    ap1r[0]=get_u_scalar(ahdzr_arr,ix,iy,iz);
+    ap1[0] =get_u_scalar(ahdz_arr, ix,iy,iz);
+
+    am1l[0]=get_u_scalar(ahdzl_arr,ix,iy,iz-1);
+    am1r[0]=get_u_scalar(ahdzr_arr,ix,iy,iz-1);
+    am1[0] =get_u_scalar(ahdz_arr, ix,iy,iz-1);
+	
+    ap1l[1]=get_u_scalar(aradzl_arr,ix,iy,iz);
+    ap1r[1]=get_u_scalar(aradzr_arr,ix,iy,iz);
+    ap1[1] =get_u_scalar(aradz_arr, ix,iy,iz);
+
+    am1l[1]=get_u_scalar(aradzl_arr,ix,iy,iz-1);
+    am1r[1]=get_u_scalar(aradzr_arr,ix,iy,iz-1);
+    am1[1] =get_u_scalar(aradz_arr, ix,iy,iz-1);
+
+	/* //TODO
+#ifdef WAVESPEEDSATFACES // recompute wavespeeds directly at face
+    ldouble aaa[24];
+    //left-biased wavespeeds
+    calc_wavespeeds_lr_pure(fd_uL,&geom,aaa);
+    am1l[0]=aaa[4];
+    am1r[0]=aaa[5];
+    am1l[1]=aaa[10];
+    am1r[1]=aaa[11];
+    am1[0]=my_max(fabs(aaa[4]),fabs(aaa[5]));
+    am1[1]=my_max(fabs(aaa[10]),fabs(aaa[11]));
+
+    //right-biased wavespeeds
+    calc_wavespeeds_lr_pure(fd_uR,&geom,aaa);
+    ap1l[0]=aaa[4];
+    ap1r[0]=aaa[5];
+    ap1l[1]=aaa[10];
+    ap1r[1]=aaa[11];
+    ap1[0]=my_max(fabs(aaa[4]),fabs(aaa[5]));
+    ap1[1]=my_max(fabs(aaa[10]),fabs(aaa[11]));
+#endif
+	*/
+	
+    // Loop over variables and calculate flux using Lax-Friedrichs or HLL, as required
+    for(int iv=0;i<NV;i++)
+    {
+      // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
+      // Hydro and radiation are treated as two separate systems
+#ifdef RADIATION
+      if(iv<NVMHD) // hydro characteristic speeds
+      {
+        ag=my_max(ap1[0], am1[0]);
+        al=my_min(ap1l[0],am1l[0]);
+        ar=my_max(ap1r[0],am1r[0]);
+              
+#ifdef BATTERY
+        //when radiation battery on - magnetic fields are affected by radiation
+#ifdef BATTERYRADWAVESPEEDS
+#ifdef BATTERYRADWAVESPEEDSBONLY
+        if(iv>=B1 && iv<=B3)
+#endif
+        {
+          ag=my_max(ag,my_max(ap1[1], am1[1]));
+          al=my_min(al,my_min(ap1l[1],am1l[1]));
+          ar=my_max(ar,my_max(ap1r[1],am1r[1]));
+        }
+#endif
+#endif
+      }
+      else //radiative characteristic speeds
+      {
+        ag=my_max(ap1[1], am1[1]);
+        al=my_min(ap1l[1],am1l[1]);
+        ar=my_max(ap1r[1],am1r[1]);
+      }
+#else //no radiation -- hydro characteristic speeds
+      ag=my_max(ap1[0], am1[0]);
+      al=my_min(ap1l[0],am1l[0]);
+      ar=my_max(ap1r[0],am1r[0]);
+#endif
+
+      ldouble fd_fstar;
+      if(FLUXMETHOD==LAXF_FLUX) //Lax-Friedrichs Flux
+      {      
+        //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
+        fd_fstar = 0.5*(get_ub(flRz_arr,iv,ix,iy,iz,2) + get_ub(flLz_arr,iv,ix,iy,iz,2) - ag * (fd_uR[iv] - fd_uL[iv]));      
+        set_ubz(flbz_arr,iv,ix,iy,iz,fd_fstar);
+      } 
+      else if(FLUXMETHOD==HLL_FLUX) //HLL Flux
+      {
+        if(al>0.)
+        {
+          fd_fstar = get_ub(flLz_arr,iv,ix,iy,iz,2);
+        }
+        else if(ar<0.)
+        {
+          fd_fstar = get_ub(flRz_arr,iv,ix,iy,iz,2);
+        }
+        else
+        {
+          //HLL: Flux = [ar * FL - al * FR + al * ar * (UR - UL)] / (ar - al)  
+          fd_fstar = (-al*get_ub(flRz_arr,iv,ix,iy,iz,2) + ar*get_ub(flLz_arr,iv,ix,iy,iz,2) + al*ar* (fd_uR[iv] - fd_uL[iv]))/(ar-al);
+        }
+        set_ubz(flbz_arr,iv,ix,iy,iz,fd_fstar);
+      } 
+    }  // for(iv=0;iv<NV;iv++)
+  }  // if(NZ>1 && iz>=0 && iz<=NZ && ix>=0 && ix<NX && iy>=0 && iy<NY...)
+}
+
+
 ldouble calc_update_gpu(ldouble dtin)
 {
   cudaError_t err = cudaSuccess;
@@ -562,11 +1099,11 @@ ldouble calc_update_gpu(ldouble dtin)
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
-  // Launch calc_update_kernel
-
+  // Determine number of threadblocks
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
   //printf("\nTest %d\n", threadblocks); fflush(stdout);
 
+  // Launch kernel
   cudaEventRecord(start);
   calc_update_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, 
 						d_loop0_ix, d_loop0_iy, d_loop0_iz,
@@ -586,7 +1123,8 @@ ldouble calc_update_gpu(ldouble dtin)
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu update time: %0.2f \n",tms);
- 
+
+  // output for comparison
 #ifdef CPUKO 
   ldouble* u_tmp;
   long long Nprim  = (SX)*(SY)*(SZ)*NV;
@@ -602,6 +1140,66 @@ ldouble calc_update_gpu(ldouble dtin)
 
   // set global timestep dt
   dt = dtin;
+
+  return (ldouble)tms;
+}
+
+ldouble calc_fluxes_gpu()
+{
+  cudaError_t err = cudaSuccess;
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  // Determine number of threadblocks
+  int threadblocks = (Nloop_1 / TB_SIZE) + ((Nloop_1 % TB_SIZE)? 1:0);
+  //printf("\nTest %d\n", threadblocks); fflush(stdout);
+
+  // Launch kernel
+  cudaEventRecord(start);
+  calc_fluxes_kernel(Nloop_1,
+                     d_loop1_ix, d_loop1_iy, d_loop1_iz,
+		     d_x, d_xb,
+		     d_gbx, d_gby, d_gbz,
+		     d_Gbx, d_Gby, d_Gbz,
+		     d_pbLx_arr, d_pbLy_arr, d_pbLz_arr,
+		     d_pbRx_arr, d_pbRy_arr, d_pbRz_arr,
+		     d_flLx_arr, d_flLy_arr, d_flLz_arr,
+		     d_flRx_arr, d_flRy_arr, d_flRz_arr,
+		     d_ahdxl_arr, d_ahdyl_arr, d_ahdzl_arr,
+		     d_ahdxr_arr, d_ahdyr_arr, d_ahdzr_arr,
+                     d_ahdx_arr,  d_ahdy_arr,  d_ahdz_arr,
+		     d_aradxl_arr, d_aradyl_arr, d_aradzl_arr,
+		     d_aradxr_arr, d_aradyr_arr, d_aradzr_arr,
+		     d_aradx_arr,  d_arady_arr,  d_aradz_arr,
+		     d_flbx_arr, d_flby_arr, d_flbz_arr);
+  
+  cudaEventRecord(stop);
+  err = cudaPeekAtLastError();
+  // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
+
+  // synchronize
+  cudaDeviceSynchronize();
+  
+  // timing information
+  cudaEventSynchronize(stop);
+  float tms = 0.;
+  cudaEventElapsedTime(&tms, start,stop);
+  printf("gpu calc_fluxes time: %0.2f \n",tms);
+ 
+#ifdef CPUKO 
+  ldouble* flbx_tmp;
+  long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
+  if((flbx_tmp=(ldouble*)malloc(NfluxX*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(flbx_tmp, d_flbx_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy of d_flbx_arr to flbx_tmp\n");
+  printf("gpu calc_fluxes flbx[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(flbx_tmp, iv, ixTEST, iyTEST, izTEST,0));
+  printf("\n");
+  free(flbx_tmp);
+#endif
+
 
   return (ldouble)tms;
 }
