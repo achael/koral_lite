@@ -9,6 +9,7 @@
 
 //Declaring constant geometrical arrays for device
 extern int *d_loop0_ix, *d_loop0_iy, *d_loop0_iz;
+extern int *d_loop1_ix, *d_loop1_iy, *d_loop1_iz;
 extern int *d_loop4_ix, *d_loop4_iy, *d_loop4_iz;
 extern ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
 extern ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
