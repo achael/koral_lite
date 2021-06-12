@@ -15,6 +15,8 @@ extern ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
 extern ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
 extern ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
 extern ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
+extern ldouble *d_gbx, *d_gby, *d_gbz;
+extern ldouble *d_Gbx, *d_Gby, *d_Gbz;
 extern ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)]
 
 __device__ __host__ int fill_geometry_device(int ix,int iy,int iz, void* geom,

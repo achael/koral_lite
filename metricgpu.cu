@@ -14,6 +14,8 @@ ldouble *d_x;    //[(NX+NY+NZ+6*NG)*sizeof(ldouble)]
 ldouble *d_xb;   //[(NX+1+NY+1+NZ+1+6*NG)*sizeof(ldouble)]
 ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
 ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
+ldouble *d_gbx, *d_gby, *d_gbz;
+ldouble *d_Gbx, *d_Gby, *d_Gbz;
 ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)];
 
 int GEOMETRY_HAS_BEEN_ALLOCED = 0;
@@ -187,12 +189,12 @@ int push_geometry_gpu()
   err = cudaMalloc(&d_gcon,     sizeof(ldouble)*Nmet);
   err = cudaMalloc(&d_Kris,     sizeof(ldouble)*Nkris);
 
-  err = cudaMalloc(&d_gbX,     sizeof(ldouble)*NmetX);
-  err = cudaMalloc(&d_GbX,     sizeof(ldouble)*NmetX);
-  err = cudaMalloc(&d_gbY,     sizeof(ldouble)*NmetY);
-  err = cudaMalloc(&d_GbY,     sizeof(ldouble)*NmetY);  
-  err = cudaMalloc(&d_gbZ,     sizeof(ldouble)*NmetZ);
-  err = cudaMalloc(&d_GbZ,     sizeof(ldouble)*NmetZ);
+  err = cudaMalloc(&d_gbx,     sizeof(ldouble)*NmetX);
+  err = cudaMalloc(&d_Gby,     sizeof(ldouble)*NmetX);
+  err = cudaMalloc(&d_gbz,     sizeof(ldouble)*NmetY);
+  err = cudaMalloc(&d_Gbx,     sizeof(ldouble)*NmetY);  
+  err = cudaMalloc(&d_gby,     sizeof(ldouble)*NmetZ);
+  err = cudaMalloc(&d_Gbz,     sizeof(ldouble)*NmetZ);
   
   // Make 1D arrays of ix,iy,iz indicies for easier copy to device
   int *h_loop0_ix = (int*)malloc(sizeof(int)*Nloop_0);
