@@ -515,17 +515,17 @@ int calc_interp()
       //create arrays for interpolating conserved quantities
       struct geometry geom;
       //ldouble x0[3],x0l[3],x0r[3],xm1[3],xp1[3];
-      ldouble fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
-      ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV];
+      //ldouble fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
+      //ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV];
       ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
-      ldouble fd_s0[NV],fd_sp1[NV],fd_sp2[NV],fd_sm1[NV],fd_sm2[NV];
-      ldouble fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
-      ldouble fd_pLr[NV],fd_pLl[NV],fd_pRl[NV],fd_pRr[NV];
+      //ldouble fd_s0[NV],fd_sp1[NV],fd_sp2[NV],fd_sm1[NV],fd_sm2[NV];
+      //ldouble fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
+      //ldouble fd_pLr[NV],fd_pLl[NV],fd_pRl[NV],fd_pRr[NV];
       ldouble fd_pr[NV],fd_pl[NV];
-      ldouble fd_sLr[NV],fd_sLl[NV],fd_sRl[NV],fd_sRr[NV];
-      ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-      ldouble a0[2],am1[2],ap1[2],al,ar,amax,dx;  
-      ldouble ffRl[NV],ffRr[NV],ffLl[NV],ffLr[NV];
+      //ldouble fd_sLr[NV],fd_sLl[NV],fd_sRl[NV],fd_sRr[NV];
+      //ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
+      //ldouble a0[2],am1[2],ap1[2],al,ar,amax,dx;  
+      //ldouble ffRl[NV],ffRr[NV],ffLl[NV],ffLr[NV];
       ldouble ffl[NV],ffr[NV]; 
       ldouble dx0, dxm2, dxm1, dxp1, dxp2;
       ldouble minmod_theta=MINMOD_THETA;
@@ -1288,29 +1288,24 @@ op_explicit(ldouble t, ldouble dtin)
   // calculates H/R and velocity averages
   calc_avgs_throughout(); 
 
-  // calculates wavespeeds over the domain and ghost cells
+  //**********************************************************************//
+  // Calculate wavespeeds over the domain and ghost cells
+  #pragma omp barrier
   calc_wavespeeds();
 
 #ifndef SKIPEVOLUTION
 
-  //**********************************************************************
-  // Next interpolate to the cell walls and calculate left and right-biased fluxes
-#pragma omp barrier
-  calc_interp();
-
-  //**********************************************************************
-  // Compute fluxes at the six walls of all cells using the selected approximation of the Riemann problem
-  
-#pragma omp barrier
-  calc_fluxes();
-  
   //**********************************************************************//
-  // Constrained transport to preserve div.B=0
+  // Interpolate to the cell walls and calculate left and right-biased fluxes
+  #pragma omp barrier
+  calc_interp();
 
 
   /////////////////////////////////////////////
   // Block for initializing GPU -- keep moving up
   // TODO: make this better...
+  ldouble time_cpu_fluxes=0.;
+  ldouble time_gpu_fluxes=0.;
   ldouble time_cpu_ct = 0.;
   ldouble time_gpu_ct = 0.;
   ldouble time_cpu_update = 0;
@@ -1318,11 +1313,44 @@ op_explicit(ldouble t, ldouble dtin)
   ldouble time_cpu_u2p = 0;
   ldouble time_gpu_u2p = 0;
 
-#ifdef GPUKO
+  #ifdef GPUKO
   // TODO eventually this will be moved out of op_explicit => problem.c
   push_pu_gpu();
-#endif 
+  #endif 
   ////////////////////////////////////////////
+  
+  //**********************************************************************//
+  // Compute fluxes at the six walls of all cells
+  // using the selected approximation of the Riemann problem
+
+#ifdef GPUKO
+  time_gpu_fluxes = calc_fluxes_gpu();
+#endif
+
+
+#if defined(CPUKO) || !defined(GPUKO)
+  struct timespec temp_clock;
+  ldouble tstart,tstop;
+
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  
+  #pragma omp barrier
+  calc_fluxes();
+
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_ct = (tstop-tstart)*1.e3;
+  
+  printf("cpu calc_fluxes time: %0.2lf \n", time_cpu_ct);
+  printf("gpu calc_fluxes flbx[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(flbx, iv, ixTEST, iyTEST, izTEST,0));
+  printf("\n\n");
+#endif
+  
+  //**********************************************************************//
+  // Constrained transport to preserve div.B=0
   
 #ifdef MAGNFIELD
 
@@ -1331,8 +1359,6 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)
-  struct timespec temp_clock;
-  ldouble tstart,tstop;
 
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
@@ -1460,8 +1486,8 @@ op_explicit(ldouble t, ldouble dtin)
   //////////////////////////////////////
   
   
-  //**********************************************************************  
-  // fixups and boundary conditions
+  //**********************************************************************//
+  // Apply Fixups and boundary conditions
   // TODO NOTE: these were previously wrapped in calc_u2p, now in calc_u2p_fixup_and_bc
   
   //fixup here hd and rad after inversions
@@ -1472,12 +1498,13 @@ op_explicit(ldouble t, ldouble dtin)
 
   //re-set boundary conditions
   set_bc(global_time,0);
-  //**********************************************************************	    
-  // Entropy Mixing
+
+  //**********************************************************************//	    
+  // Electron/ion Entropy Mixing
   
-#ifdef MIXENTROPIESPROPERLY
+  #ifdef MIXENTROPIESPROPERLY
   mix_entropies(dt);
-#endif
+  #endif
 
   return GSL_SUCCESS;
 }
@@ -1596,7 +1623,7 @@ op_implicit(ldouble t, ldouble dtin)
 
 
 //************************************************************************
-/*! \fn inc calc_fluxes()
+/*! \fn int calc_fluxes()
  \brief Calculates fluxes at cell faces
  
  Uses the selected approximate Riemann solver to estimate the fluxes on the six faces of the cell (ix, iy, iz)\n
@@ -1607,30 +1634,30 @@ op_implicit(ldouble t, ldouble dtin)
 //************************************************************************
 int calc_fluxes()
 {
-  int ii,ix,iy,iz;
+
 #pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
-  for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
+  for(int ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
-    ix=loop_1[ii][0];
-    iy=loop_1[ii][1];
-    iz=loop_1[ii][2];
+    int ix=loop_1[ii][0];
+    int iy=loop_1[ii][1];
+    int iz=loop_1[ii][2];
 
 
-    //ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz) // --> moved code directly below
+    //ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz) // --> moved code from here directly below
     
-    int i;
     struct geometry geom;
    
-    ldouble a0[2],am1[2],ap1[2],ag,al,ar,amax,cmin,cmax,csLl[2],csLr[2],csRl[2],csRr[2];
+    ldouble a0[2],am1[2],ap1[2],ag,al,ar,amax;
+    //ldouble cmin,cmax,csLl[2],csLr[2],csRl[2],csRr[2];
     ldouble am1l[2],am1r[2],ap1l[2],ap1r[2];
-    ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV],fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
+    //ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV],fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
     ldouble fd_pLl[NV], fd_pRl[NV], fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
-    ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-    ldouble gdet,gg[4][5],GG[4][5];
-    //ldouble eup[4][4],elo[4][4];
+    ldouble fd_fstarl[NV],fd_fstarr[NV];
+    //ldouble fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
+    //ldouble gdet,gg[4][5],GG[4][5];
 
     // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
-    for(i=0;i<NV;i++) 
+    for(int i=0;i<NV;i++) 
     {
       set_ubx(flbx,i,ix,iy,iz,0.);
       set_uby(flby,i,ix,iy,iz,0.);
@@ -1652,26 +1679,26 @@ int calc_fluxes()
 	// l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
         // [0], [1] correspond to hydro and radiation wave speeds      
 
-        ap1l[0]=get_u_scalar(ahdxl,ix,iy,iz);
-	ap1r[0]=get_u_scalar(ahdxr,ix,iy,iz);
-	ap1l[1]=get_u_scalar(aradxl,ix,iy,iz);
-	ap1r[1]=get_u_scalar(aradxr,ix,iy,iz);
-	ap1[0]=get_u_scalar(ahdx,ix,iy,iz);
-	ap1[1]=get_u_scalar(aradx,ix,iy,iz);
+        ap1l[0] = get_u_scalar(ahdxl,ix,iy,iz);
+	ap1r[0] = get_u_scalar(ahdxr,ix,iy,iz);
+	ap1l[1] = get_u_scalar(aradxl,ix,iy,iz);
+	ap1r[1] = get_u_scalar(aradxr,ix,iy,iz);
+	ap1[0]  = get_u_scalar(ahdx,ix,iy,iz);
+	ap1[1]  = get_u_scalar(aradx,ix,iy,iz);
         
-	am1l[0]=get_u_scalar(ahdxl,ix-1,iy,iz);
-	am1r[0]=get_u_scalar(ahdxr,ix-1,iy,iz);
-	am1l[1]=get_u_scalar(aradxl,ix-1,iy,iz);
-	am1r[1]=get_u_scalar(aradxr,ix-1,iy,iz);
-	am1[0]=get_u_scalar(ahdx,ix-1,iy,iz);
-	am1[1]=get_u_scalar(aradx,ix-1,iy,iz);
+	am1l[0] = get_u_scalar(ahdxl,ix-1,iy,iz);
+	am1r[0] = get_u_scalar(ahdxr,ix-1,iy,iz);
+	am1l[1] = get_u_scalar(aradxl,ix-1,iy,iz);
+	am1r[1] = get_u_scalar(aradxr,ix-1,iy,iz);
+	am1[0]  = get_u_scalar(ahdx,ix-1,iy,iz);
+	am1[1]  = get_u_scalar(aradx,ix-1,iy,iz);
 
 	//primitives at the face
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
           // fd_pLl, fd_pRl are the left-biased and right-biased primitives at the current cell face
-          fd_pLl[i]=get_ub(pbLx,i,ix,iy,iz,0);
-          fd_pRl[i]=get_ub(pbRx,i,ix,iy,iz,0);
+          fd_pLl[i] = get_ub(pbLx,i,ix,iy,iz,0);
+          fd_pRl[i] = get_ub(pbRx,i,ix,iy,iz,0);
 	}
 
 	fill_geometry_face(ix,iy,iz,0,&geom);
@@ -1704,7 +1731,7 @@ int calc_fluxes()
 #endif
    
         // Loop over variables and calculate flux using Lax-Friedrichs or HLL
-        for(i=0;i<NV;i++)
+        for(int i=0;i<NV;i++)
         {
           // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
           // Hydro and radiation are treated as two separate systems

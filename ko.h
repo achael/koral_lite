@@ -511,8 +511,8 @@ struct OpTable {
 						 (iZ(iz)+(NGCZ))*(SXSYNVAVG)]=val
   
 #define get_u_scalar(uarr,ix,iy,iz) uarr[(iX(ix)+(NGCX)) + \
-					  (iY(iy)+(NGCY))*(SX) + \
-					  (iZ(iz)+(NGCZ))*(SY)*(SX)]
+					 (iY(iy)+(NGCY))*(SX) + \
+					 (iZ(iz)+(NGCZ))*(SY)*(SX)]
   
 #define set_u_scalar(uarr,ix,iy,iz,val) uarr[iX(ix)+(NGCX) + \
 					    (iY(iy)+(NGCY))*(SX) + \
@@ -632,6 +632,8 @@ struct OpTable {
 
 //some more macros
 #define my_max(x,y) (x>y?x:y)
+#define my_min(x,y) (x<y?x:y)
+
 #define my_max3(x,y,z) (x>my_max(y,z)?x:my_max(y,z))
 #define mybilinear(x, y, i, j, xx, yy, zz)  (( zz[i][j]*(xx[i+1]-x)*(yy[j+1]-y) + \
 					       zz[i+1][j]*(x-xx[i])*(yy[j+1]-y) + \
@@ -674,7 +676,7 @@ ldouble step_function(ldouble x,ldouble x9);
 int my_err(const char *message);
 int my_warning(const char *message);
 int getch();
-ldouble my_min(ldouble a, ldouble b);
+//ldouble my_min(ldouble a, ldouble b);
 ldouble my_min_N(ldouble *v,int N);
 ldouble my_max_N(ldouble *v,int N);
 ldouble my_sign(ldouble x);

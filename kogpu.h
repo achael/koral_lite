@@ -16,7 +16,12 @@ extern ldouble *d_gcov; //[SX*SY*SZMET*sizeof(ldouble)]
 extern ldouble *d_gcon; //[SX*SY*SZMET*sizeof(ldouble)]
 extern ldouble *d_Kris; //[(SX)*(SY)*(SZMET)*64*sizeof(ldouble)]
 
-
+__device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr, void* geom,
+				             ldouble* g_arr, ldouble* G_arr);
+__host__ __device__ int fill_geometry_face_device(int ix,int iy,int iz,int idim, void *geom,
+						  ldouble* x_arr, ldouble* xb_arr,
+						  ldouble* gbx_arr,ldouble* gby_arr,ldouble* gbz_arr,
+						  ldouble* Gbx_arr,ldouble* Gby_arr,ldouble* Gbz_arr);
 ///////////////////////////////////////////////////////////////
 // finitegpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
@@ -41,16 +46,7 @@ __device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
 
 __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim);
 
-
-__device__ __host__ int fill_geometry_device(int ix,int iy,int iz, ldouble* x_arr, void* geom,
-				             ldouble* g_arr, ldouble* G_arr);
-__device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
-			                            ldouble* p_arr, ldouble* x_arr,
-			                            ldouble* g_arr, ldouble* G_arr, ldouble* l_arr);
-			                   
-
-
-// kernel
+// kernels
 
 __global__ void calc_update_kernel(int Nloop_0, 
                                    int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
@@ -90,6 +86,9 @@ __device__ __host__ int calc_normalobs_ncon_device(ldouble GG[][5], ldouble alph
 
 __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
 __device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz);
+__device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
+			                            ldouble* p_arr, ldouble* x_arr,
+			                            ldouble* g_arr, ldouble* G_arr, ldouble* l_arr);
   
 ///////////////////////////////////////////////////////////////
 // magngpu.cu   ///////////////////////////////////////////////
@@ -115,6 +114,7 @@ __global__ void flux_ct_getemf_kernel(int Nloop_4,
 //////////////////////////////////////////////////////////////
 __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int iy,int iz, int val);
 
+__device__ __host__ int p2u_device(ldouble *p, ldouble *u, void *ggg);
 __device__ __host__ int p2u_mhd_device(ldouble *p, ldouble *u, void *ggg);
 __device__ __host__ ldouble calc_utp1_device(ldouble *vcon, ldouble *ucon, void *ggg);
   
