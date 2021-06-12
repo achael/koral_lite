@@ -9,6 +9,16 @@ extern "C" {
 // persistent arrays, extern'd in kogpu.h
 ldouble *d_p_arr, *d_u_arr;
 ldouble *d_flbx_arr, *d_flby_arr, *d_flbz_arr;
+ldouble *d_pbLx_arr, *d_pbLy_arr, *d_pbLz_arr;
+ldouble *d_pbRx_arr, *d_pbRy_arr, *d_pbRz_arr;
+ldouble *d_flLx_arr, *d_flLy_arr, *d_flLz_arr;
+ldouble *d_flRx_arr, *d_flRy_arr, *d_flRz_arr;
+ldouble *d_ahdxl_arr, *d_ahdyl_arr, *d_ahdzl_arr;
+ldouble *d_ahdxr_arr, *d_ahdyr_arr, *d_ahdzr_arr;
+ldouble *d_ahdx_arr, *d_ahdy_arr, *d_ahdz_arr;
+ldouble *d_aradl_arr, *d_aradl_arr, *d_aradl_arr;
+ldouble *d_aradr_arr, *d_aradr_arr, *d_aradr_arr;
+ldouble *d_aradx_arr, *d_arady_arr, *d_aradz_arr;
 ldouble *d_emf_arr;
 
 int *d_cellflag_arr, *d_int_slot_arr;

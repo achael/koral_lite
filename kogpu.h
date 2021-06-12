@@ -29,9 +29,18 @@ __host__ __device__ int fill_geometry_face_device(int ix,int iy,int iz,int idim,
 extern ldouble *d_u_arr;
 extern ldouble *d_p_arr;
 
-extern ldouble *d_flbx_arr;
-extern ldouble *d_flby_arr;
-extern ldouble *d_flbz_arr;
+extern ldouble *d_flbx_arr,*d_flby_arr, *d_flbz_arr;
+extern ldouble *d_pbLx_arr, *d_pbLy_arr, *d_pbLz_arr;
+extern ldouble *d_pbRx_arr, *d_pbRy_arr, *d_pbRz_arr;
+extern ldouble *d_flLx_arr, *d_flLy_arr, *d_flLz_arr;
+extern ldouble *d_flRx_arr, *d_flRy_arr, *d_flRz_arr;
+extern ldouble *d_ahdxl_arr, *d_ahdyl_arr, *d_ahdzl_arr;
+extern ldouble *d_ahdxr_arr, *d_ahdyr_arr, *d_ahdzr_arr;
+extern ldouble *d_ahdx_arr, *d_ahdy_arr, *d_ahdz_arr;
+extern ldouble *d_aradl_arr, *d_aradl_arr, *d_aradl_arr;
+extern ldouble *d_aradr_arr, *d_aradr_arr, *d_aradr_arr;
+extern ldouble *d_aradx_arr, *d_arady_arr, *d_aradz_arr;
+
 extern ldouble *d_emf_arr;
 
 extern int *d_cellflag_arr;
