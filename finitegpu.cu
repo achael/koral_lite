@@ -663,7 +663,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 				   ldouble* ahdx_arr,  ldouble* ahdy_arr,  ldouble* ahdz_arr,	   
 				   ldouble* aradxl_arr, ldouble* aradyl_arr, ldouble* aradzl_arr,
 				   ldouble* aradxr_arr, ldouble* aradyr_arr, ldouble* aradzr_arr,
-				   ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,	   
+				   ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,	 
 				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr)
 {
 

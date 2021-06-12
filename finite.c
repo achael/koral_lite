@@ -1635,7 +1635,7 @@ op_implicit(ldouble t, ldouble dtin)
 int calc_fluxes()
 {
 
-#pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
+#pragma omp parallel for schedule (static)
   for(int ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
     int ix=loop_1[ii][0];
@@ -1828,7 +1828,7 @@ int calc_fluxes()
 	am1[0]=get_u_scalar(ahdy,ix,iy-1,iz);
 	am1[1]=get_u_scalar(arady,ix,iy-1,iz);
 
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
           // fd_pLl, fd_pRl are the left-biased and right-biased primitives at the current cell face
           fd_pLl[i]=get_ub(pbLy,i,ix,iy,iz,1);
@@ -1863,7 +1863,7 @@ int calc_fluxes()
 #endif
  	    
         // Loop over variables and calculate flux using Lax-Friedrichs or HLL, as required
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
             // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
             // Hydro and radiation are treated as two separate systems
@@ -1960,7 +1960,7 @@ int calc_fluxes()
 	am1[0]=get_u_scalar(ahdz,ix,iy,iz-1);
 	am1[1]=get_u_scalar(aradz,ix,iy,iz-1);
  
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
           // fd_pLl, fd_pRl are the left-biased and right-biased primitives at the current cell face  
           fd_pLl[i]=get_ub(pbLz,i,ix,iy,iz,2);
@@ -1995,7 +1995,7 @@ int calc_fluxes()
 #endif
 
         // Loop over variables and calculate flux using Lax-Friedrichs or HLL, as required
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
             // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
             // Hydro and radiation are treated as two separate systems
