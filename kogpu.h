@@ -54,6 +54,21 @@ __global__ void calc_update_kernel(int Nloop_0,
                                    ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
 				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
 				   ldouble* u_arr, ldouble* p_arr, ldouble dtin);
+__global__ void calc_fluxes_kernel(int Nloop_1,
+                                   int* loop_1_ix, int* loop_0_iy, int* loop_1_iz,
+		       	           ldouble* x_arr, ldouble* xb_arr,
+				   ldouble* gbx_arr, ldouble* gby_arr, ldouble* gbz_arr,
+				   ldouble* Gbx_arr, ldouble* Gby_arr, ldouble* Gbz_arr,
+				   ldouble* pbLx_arr, ldouble* pbLy_arr, ldouble* pbLz_arr,
+				   ldouble* pbRx_arr, ldouble* pbRy_arr, ldouble* pbRz_arr,
+				   ldouble* flLx_arr, ldouble* flLy_arr, ldouble* flLz_arr,
+				   ldouble* flRx_arr, ldouble* flRy_arr, ldouble* flRz_arr,
+				   ldouble* ahdxl_arr, ldouble* ahdyl_arr, ldouble* ahdzl_arr,
+				   ldouble* ahdxr_arr, ldouble* ahdyr_arr, ldouble* ahdzr_arr,
+				   ldouble* ahdx_arr,  ldouble* ahdy_arr,  ldouble* ahdz_arr,	   
+				   ldouble* aradxl_arr, ldouble* aradyl_arr, ldouble* aradzl_arr,
+				   ldouble* aradxr_arr, ldouble* aradyr_arr, ldouble* aradzr_arr,
+				   ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,	   				    ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr);
 
 
 ///////////////////////////////////////////////////////////////

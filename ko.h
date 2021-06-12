@@ -1492,6 +1492,7 @@ ldouble return_RossOpacity_from_table(ldouble logTin, ldouble logrhoin);
 ///////////////////////////////////////////////////////////////
 // All gpu functions called in C code /////////////////////////
 ///////////////////////////////////////////////////////////////
+ldouble calc_fluxes_gpu();
 ldouble flux_ct_gpu();
 ldouble calc_update_gpu(ldouble dtin);
 ldouble calc_u2p_gpu(int setflags);
