@@ -1167,22 +1167,22 @@ ldouble calc_fluxes_gpu()
 
   // Launch kernel
   cudaEventRecord(start);
-  calc_fluxes_kernel(Nloop_1,
-                     d_loop1_ix, d_loop1_iy, d_loop1_iz,
-		     d_x, d_xb,
-		     d_gbx, d_gby, d_gbz,
-		     d_Gbx, d_Gby, d_Gbz,
-		     d_pbLx_arr, d_pbLy_arr, d_pbLz_arr,
-		     d_pbRx_arr, d_pbRy_arr, d_pbRz_arr,
-		     d_flLx_arr, d_flLy_arr, d_flLz_arr,
-		     d_flRx_arr, d_flRy_arr, d_flRz_arr,
-		     d_ahdxl_arr, d_ahdyl_arr, d_ahdzl_arr,
-		     d_ahdxr_arr, d_ahdyr_arr, d_ahdzr_arr,
-                     d_ahdx_arr,  d_ahdy_arr,  d_ahdz_arr,
-		     d_aradxl_arr, d_aradyl_arr, d_aradzl_arr,
-		     d_aradxr_arr, d_aradyr_arr, d_aradzr_arr,
-		     d_aradx_arr,  d_arady_arr,  d_aradz_arr,
-		     d_flbx_arr, d_flby_arr, d_flbz_arr);
+  calc_fluxes_kernel<<<threadblocks, TB_SIZE>>>(Nloop_1,
+                                                d_loop1_ix, d_loop1_iy, d_loop1_iz,
+		                                d_x, d_xb,
+		                                d_gbx, d_gby, d_gbz,
+		                                d_Gbx, d_Gby, d_Gbz,
+		                                d_pbLx_arr, d_pbLy_arr, d_pbLz_arr,
+		                                d_pbRx_arr, d_pbRy_arr, d_pbRz_arr,
+		                                d_flLx_arr, d_flLy_arr, d_flLz_arr,
+		                                d_flRx_arr, d_flRy_arr, d_flRz_arr,
+		                                d_ahdxl_arr, d_ahdyl_arr, d_ahdzl_arr,
+		                                d_ahdxr_arr, d_ahdyr_arr, d_ahdzr_arr,
+                                                d_ahdx_arr,  d_ahdy_arr,  d_ahdz_arr,
+		                                d_aradxl_arr, d_aradyl_arr, d_aradzl_arr,
+		                                d_aradxr_arr, d_aradyr_arr, d_aradzr_arr,
+		                                d_aradx_arr,  d_arady_arr,  d_aradz_arr,
+		                                d_flbx_arr, d_flby_arr, d_flbz_arr);
   
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
