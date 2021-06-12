@@ -167,9 +167,9 @@ int push_geometry_gpu()
   long long Nmet   = (SX)*(SY)*(SZMET)*gSIZE;
   long long Nkris  = (SX)*(SY)*(SZMET)*64;
 
-  long long NMetX = (SX+1)*(SY)*(SZMET)*gSIZE;
-  long long NMetY = (SX)*(SY+1)*(SZMET)*gSIZE;
-  long long NMetZ = (SX)*(SY)*(SZMET+1)*gSIZE;
+  long long NmetX = (SX+1)*(SY)*(SZMET)*gSIZE;
+  long long NmetY = (SX)*(SY+1)*(SZMET)*gSIZE;
+  long long NmetZ = (SX)*(SY)*(SZMET+1)*gSIZE;
 	       
   // allocate device arrays
   err = cudaMalloc(&d_loop0_ix, sizeof(int)*Nloop_0);
