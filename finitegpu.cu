@@ -16,8 +16,8 @@ ldouble *d_flRx_arr, *d_flRy_arr, *d_flRz_arr;
 ldouble *d_ahdxl_arr, *d_ahdyl_arr, *d_ahdzl_arr;
 ldouble *d_ahdxr_arr, *d_ahdyr_arr, *d_ahdzr_arr;
 ldouble *d_ahdx_arr, *d_ahdy_arr, *d_ahdz_arr;
-ldouble *d_aradxl_arr, *d_aradxl_arr, *d_aradxl_arr;
-ldouble *d_aradxr_arr, *d_aradxr_arr, *d_aradxr_arr;
+ldouble *d_aradxl_arr, *d_aradyl_arr, *d_aradzl_arr;
+ldouble *d_aradxr_arr, *d_aradyr_arr, *d_aradzr_arr;
 ldouble *d_aradx_arr, *d_arady_arr, *d_aradz_arr;
 ldouble *d_emf_arr;
 
