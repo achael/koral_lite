@@ -689,7 +689,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
   int iz=loop_1_iz[ii]; 
 
   struct geometry geom; 
-  ldouble ag,al,ar,amax;
+  ldouble ag,al,ar;
   ldouble am1l[2],am1r[2],am1[2];
   ldouble ap1l[2],ap1r[2],ap1[2];
   ldouble fd_pL[NV], fd_pR[NV], fd_uL[NV],fd_uR[NV];
@@ -1036,7 +1036,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 	*/
 	
     // Loop over variables and calculate flux using Lax-Friedrichs or HLL, as required
-    for(int iv=0;i<NV;i++)
+    for(int iv=0;iv<NV;iv++)
     {
       // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
       // Hydro and radiation are treated as two separate systems
