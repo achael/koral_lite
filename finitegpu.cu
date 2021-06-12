@@ -660,7 +660,7 @@ __global__ void calc_update_kernel(int Nloop_0,
 //************************************************************************//
 // TODO -- wrap up xyz wavespeeds and xyz boundary metric and xyz primitives and xyz LR fluxes in single arrays
 __global__ void calc_fluxes_kernel(int Nloop_1,
-                                   int* loop_1_ix, int* loop_0_iy, int* loop_1_iz,
+                                   int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
 		       	           ldouble* x_arr, ldouble* xb_arr,
 				   ldouble* gbx_arr, ldouble* gby_arr, ldouble* gbz_arr,
 				   ldouble* Gbx_arr, ldouble* Gby_arr, ldouble* Gbz_arr,
@@ -681,7 +681,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
   // Nloop_1 is number of cells to compute bcs for
   // domain plus lim (=1 usually) ghost cells
   int ii = blockIdx.x * blockDim.x + threadIdx.x;
-  if(ii >= Nloop_0) return;
+  if(ii >= Nloop_1) return;
     
   // get indices from 1D arrays
   int ix=loop_1_ix[ii];
@@ -697,7 +697,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 
   // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
   // set all to 0 to start
-  for(int iv=0;i<NV;i++) 
+  for(int iv=0;iv<NV;iv++) 
   {
     set_ubx(flbx_arr,iv,ix,iy,iz,0.);
     set_uby(flby_arr,iv,ix,iy,iz,0.);
@@ -714,7 +714,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
   {
 
     // fd_pL, fd_pR are the left-biased and right-biased primitives at the current cell face
-    for(int iv=0;i<NV;i++)
+    for(int iv=0;iv<NV;iv++)
     {      
       fd_pL[iv] = get_ub(pbLx_arr,iv,ix,iy,iz,0);
       fd_pR[iv] = get_ub(pbRx_arr,iv,ix,iy,iz,0);
@@ -816,24 +816,24 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
       {
         //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
         fd_fstar = 0.5*(get_ub(flRx_arr,iv,ix,iy,iz,0) + get_ub(flLx_arr,iv,ix,iy,iz,0) - ag * (fd_uR[iv] - fd_uL[iv]));     
-        set_ubx(flbx_arr,i,ix,iy,iz,fd_fstar);	    
+        set_ubx(flbx_arr,iv,ix,iy,iz,fd_fstar);	    
       } 
       else if(FLUXMETHOD==HLL_FLUX) //HLL Flux
       {
         if(al>0.)
         {
-          fd_fstar = get_ub(flLx,iv,ix,iy,iz,0);
+          fd_fstar = get_ub(flLx_arr,iv,ix,iy,iz,0);
         }
         else if(ar<0.)
         {
-          fd_fstar = get_ub(flRx,iv,ix,iy,iz,0);
+          fd_fstar = get_ub(flRx_arr,iv,ix,iy,iz,0);
         }
         else
         {
-          //HLL: Flux = [ar * FL - al * FR + al * ar * (UR - UL)] / (ar - al)
-          fd_fstar = (-al*get_ub(flRx,iv,ix,iy,iz,0) + ar*get_ub(flLx,iv,ix,iy,iz,0) + al*ar* (fd_uR[iv] - fd_uL[iv]))/(ar-al);
+          //HLL: Flux = [ar * FL - al * FR + al * ar * (UR - UL)] / (ar - al)25
+          fd_fstar = (-al*get_ub(flRx_arr,iv,ix,iy,iz,0) + ar*get_ub(flLx_arr,iv,ix,iy,iz,0) + al*ar* (fd_uR[iv] - fd_uL[iv]))/(ar-al);
         }
-        set_ubx(flbx,iv,ix,iy,iz,fd_fstar);
+        set_ubx(flbx_arr,iv,ix,iy,iz,fd_fstar);
       } 
     } // for(iv=0;i<NV;i++)
   }  // if(NX>1 && ix>=0 && ix<=NX && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
@@ -850,8 +850,8 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
     // fd_pL, fd_pR are the left-biased and right-biased primitives at the current cell face
     for(int iv=0;iv<NV;iv++)
     {
-      fd_pL[iv]=get_ub(pbLy,iv,ix,iy,iz,1);
-      fd_pR[iv]=get_ub(pbRy,iv,ix,iy,iz,1);
+      fd_pL[iv]=get_ub(pbLy_arr,iv,ix,iy,iz,1);
+      fd_pR[iv]=get_ub(pbRy_arr,iv,ix,iy,iz,1);
     }
     
     // fd_uL, fd_uR are the left-biased and right-biased conserveds at the current cell face
@@ -947,7 +947,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
      {
        //Lax-Friedrichs: Flux = 0.5 * [FR + FL - ag * (UR - UL)]
        fd_fstar = 0.5*(get_ub(flRy_arr,iv,ix,iy,iz,1) + get_ub(flLy_arr,iv,ix,iy,iz,1) - ag * (fd_uR[iv] - fd_uL[iv])); 
-       set_uby(flby,iv,ix,iy,iz,fd_fstar);
+       set_uby(flby_arr,iv,ix,iy,iz,fd_fstar);
      }
      else if(FLUXMETHOD==HLL_FLUX) //HLL Flux
      {
@@ -962,7 +962,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
        else
        {
          //HLL: Flux = [ar * FL - al * FR + al * ar * (UR - UL)] / (ar - al)
-         fd_fstar = (-al*get_ub(flRy_arr,iv,ix,iy,iz,1) + ar*get_ub(flLy_arr,iv,ix,iy,iz,1) + al*ar* (fd_uR[i] - fd_uL[i]))/(ar-al);
+         fd_fstar = (-al*get_ub(flRy_arr,iv,ix,iy,iz,1) + ar*get_ub(flLy_arr,iv,ix,iy,iz,1) + al*ar* (fd_uR[iv] - fd_uL[iv]))/(ar-al);
        }
        set_uby(flby_arr,iv,ix,iy,iz,fd_fstar);
      } 
