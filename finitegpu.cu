@@ -189,28 +189,28 @@ int push_pu_gpu()
   err =  cudaMemcpy(d_flbz_arr, flbz, sizeof(ldouble)*NfluxZ, cudaMemcpyHostToDevice);
 
   err = cudaMemcpy(d_ahdxl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_ahdyl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_ahdzl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+  err = cudaMemcpy(d_ahdyl_arr, ahdyl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdzl_arr, ahdzl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
 
   err = cudaMemcpy(d_ahdxr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_ahdyr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_ahdzr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+  err = cudaMemcpy(d_ahdyr_arr, ahdyr, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdzr_arr, ahdzr, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
 
-  err = cudaMemcpy(d_ahdx_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_ahdy_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_ahdz_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+  err = cudaMemcpy(d_ahdx_arr, ahdx, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdy_arr, ahdy, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_ahdz_arr, ahdz, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
 
-  err = cudaMemcpy(d_aradxl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_aradyl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_aradzl_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+  err = cudaMemcpy(d_aradxl_arr, aradxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradyl_arr, aradyl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradzl_arr, aradzl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
 
-  err = cudaMemcpy(d_aradxr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_aradyr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_aradzr_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+  err = cudaMemcpy(d_aradxr_arr, aradxr, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradyr_arr, aradyr, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradzr_arr, aradzr, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
 
-  err = cudaMemcpy(d_aradx_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_arady_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
-  err = cudaMemcpy(d_aradz_arr, ahdxl, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
+  err = cudaMemcpy(d_aradx_arr, aradx, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_arady_arr, arady, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_aradz_arr, aradz, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
   
   // TODO: add error checks
   return 1;
