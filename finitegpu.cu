@@ -20,8 +20,35 @@ ldouble *d_aradxl_arr, *d_aradyl_arr, *d_aradzl_arr;
 ldouble *d_aradxr_arr, *d_aradyr_arr, *d_aradzr_arr;
 ldouble *d_aradx_arr, *d_arady_arr, *d_aradz_arr;
 ldouble *d_emf_arr;
-
+ldouble *d_cell_tstepden_arr, *d_cell_dt_arr;
 int *d_cellflag_arr, *d_int_slot_arr;
+
+//taken from https://stackoverflow.com/questions/55140908/can-anybody-help-me-with-atomicmin-function-syntax-for-cuda
+// TODO check if it works
+// TODO is this the best solution for tstepdenmin/max? 
+__device__ double atomicMin_double(double* address, double val)
+{
+    unsigned long long int* address_as_ull = (unsigned long long int*) address;
+    unsigned long long int old = *address_as_ull, assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed,
+            __double_as_longlong(fmin(val, __longlong_as_double(assumed))));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+}
+__device__ double atomicMax_double(double* address, double val)
+{
+    unsigned long long int* address_as_ull = (unsigned long long int*) address;
+    unsigned long long int old = *address_as_ull, assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed,
+            __double_as_longlong(fmax(val, __longlong_as_double(assumed))));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+}
+
 
 int prealloc_arrays_gpu()
 {
@@ -83,7 +110,10 @@ int prealloc_arrays_gpu()
   err = cudaMalloc(&d_aradz_arr, sizeof(ldouble)*Ngrid);
   
   err = cudaMalloc(&d_emf_arr,  sizeof(ldouble)*Nemf);
-  
+
+  err = cudaMalloc(&d_cell_tstepden_arr, sizeof(ldouble)*Ngrid);
+  err = cudaMalloc(&d_cell_dt_arr, sizeof(ldouble)*Ngrid);
+    
   err = cudaMalloc(&d_cellflag_arr, sizeof(int)*Ncellflag);
   err = cudaMalloc(&d_int_slot_arr, sizeof(int)*NGLOBALINTSLOT);
 
@@ -142,6 +172,9 @@ int free_arrays_gpu()
   
   cudaFree(d_emf_arr);
 
+  cudaFree(d_cell_tstepden_arr);
+  cudaFree(d_cell_dt_arr);
+  
   cudaFree(d_cellflag_arr);
   cudaFree(d_int_slot_arr);
   
@@ -157,13 +190,19 @@ int push_pu_gpu()
   if(doTEST==1) printf("H u: %e \n", get_u(u,ivTEST,ixTEST,iyTEST,izTEST));
 
   // copy prims, cons from host to device
+  long long Ngrid  = (SX)*(SY)*(SZ);
   long long Nprim  = (SX)*(SY)*(SZ)*NV;
   err = cudaMemcpy(d_u_arr, u, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
 
+  // copy tstep arrays
+  // TODO: do these need to be initialized or will they be entirely internal to GPU eventually?
+  err = cudaMemcpy(d_cell_tstepden_arr, cell_tstepden, sizeof(ldouble)*Ngrid, cudaMemcpyHosttoDevice);
+  err = cudaMemcpy(d_cell_dt_arr, cell_dt, sizeof(ldouble)*Ngrid, cudaMemcpyHosttoDevice);
+  
   // copy fluxes and wavespeeds from host to device
   // TODO: in the future, this will be entirely internal to the GPU
-  long long Ngrid  = (SX)*(SY)*(SZ);
+  
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
@@ -322,6 +361,15 @@ __device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int i
   return 0;
 }
 
+//checks if cell is inside main domain
+__device__ __host__ int is_cell_indomain_device(int ix, int iy, int iz)
+{
+  if(ix>=0 && ix<NX && iy>=0 && iy<NY && iz>=0 && iz<NZ)
+    return 1;
+  else
+    return 0;
+}
+
 
 // TODO replace get_x, get_xb everywhere
 
@@ -359,31 +407,28 @@ __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 }
 
 
-//**********************************************************************
-/*! \fn int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,ldouble *ul,ldouble *ur,ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,int param,ldouble theta)
- \brief Interpolates primitives to the left and right walls of current cell i
+//**********************************************************************//
+//Interpolates primitives to the left and right walls of current cell i
+//um2, um1, u0, up1, up2 values of primitive in the i-2, i-1, i, i+1, i+2 cells
+//ul, ur interpolated primitives at the left and right walls of cell i
+//dxm2, dxm1, dx0, dxp1, dxp2 sizes of the five cells
+//reconstrpar -- overrides standard reconstruction to reduce to donor cell
+//theta MINMOD_THETA
+
+//Several interpolation schemes are available to define at compilation
  
- @param[in] um2, um1, u0, up1, up2 values of primitive in the i-2, i-1, i, i+1, i+2 cells
- @param[out] ul, ur interpolated primitives at the left and right walls of cell i
- @param[in] dxm2, dxm1, dx0, dxp1, dxp2 sizes of the five cells
- @param[in] param reconstrpar -- overrides standard reconstruction to reduce to donor cell
- @param[in] minmod_theta MINMOD_THETA
+//INT_ORDER=0: basic donor cell
+//INT_ORDER=1: Minmod (FLUXLIMITER=0), Monotonized Central (FLUXLIMITER=1), Superbee (FLUXLIMITER=4)
+//INT_ORDER=2: Piecewise Parabolic Method (PPM)
  
- Several interpolation schemes are available.
- 
- INT_ORDER=0: basic donor cell\n
- INT_ORDER=1: Minmod (FLUXLIMITER=0), Monotonized Central (FLUXLIMITER=1), Superbee (FLUXLIMITER=4)\n
- INT_ORDER=2: Piecewise Parabolic Method (PPM)\n
- 
- */
-//**********************************************************************
+//**********************************************************************//
 __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 	                                 ldouble *ul,ldouble *ur,
 	                                 ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,
-	                                 int param,ldouble theta)
+	                                 int reconstrpar,ldouble theta)
 {
   
-  if(INT_ORDER==0 || param==1) // donor cell, no interpolation
+  if(INT_ORDER==0 || reconstrpar==1) // donor cell, no interpolation
   { 
     for(int iv=0;iv<NV;iv++)
     {
@@ -603,362 +648,147 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
 }
 
 
-//***************************************************************
-// calculates fluxes at faces
-//***************************************************************
-__device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,void* ggg)
-{  
-
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  // zero fluxes initially
-  for(int iv=0;iv<NV;iv++) 
-    ff[iv]=0.;
-
-  // TODO -- pass this!
-  //picking up metric from a cell face  
-  //struct geometry geom;
-  //fill_geometry_face(ix,iy,iz,idim,&geom);
-
-  ldouble (*gg)[5],(*GG)[5],gdetu;
-  gg=geom->gg;
-  GG=geom->GG;
-  gdetu=geom->gdet;
-
-  #if (GDETIN==0) //no metric determinant inside derivative
-  gdetu=1.;
-  #endif
-
-  //calculating Tij
-  ldouble T[4][4];
-  calc_Tij_device(pp,geom,T);
-  indices_2221_device(T,T,gg);//T^ij --> T^i_j
-
-  //primitives
-#ifdef EVOLVEELECTRONS
-  ldouble Se=pp[ENTRE]; //entropy of electrons
-  ldouble Si=pp[ENTRI]; //entropy of ions
-#endif
-  ldouble rho=pp[RHO];
-  ldouble u=pp[UU];
-  ldouble S=pp[5];
-  
-  ldouble vcon[4],ucon[4],ucov[4];
-  vcon[1]=pp[2];
-  vcon[2]=pp[3];
-  vcon[3]=pp[4];
-
-  //converting to 4-velocity
-  conv_vels_both_device(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
-
-#ifdef NONRELMHD
-  ucon[0]=1.;
-  ucov[0]=-1.;
-#endif
-
-  ldouble bsq=0.;
-#ifdef MAGNFIELD
-  ldouble bcon[4],bcov[4];
-  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, geom, bcon, bcov, &bsq);
-#endif
-
-  ldouble gamma=GAMMA;
-  #ifdef CONSISTENTGAMMA
-  //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); // TODO 
-  #endif
-
-  ldouble pre=(gamma-1.)*u; 
-  ldouble w=rho+u+pre;
-  ldouble eta=w+bsq;
-  ldouble etap = u+pre+bsq; //eta-rho
-
-  for(int ii=0;ii<4;ii++)
-  {
-    for(int jj=0;jj<4;jj++)
-    {
-	if(isnan(T[ii][jj])) 
-	{
-	  printf("%d %d %e\n",ii,jj,T[ii][jj]);
-	  printf("nan in flux_prime \n");
-	  // TODO print and my_err
-	  //printf("%d > nan tmunu: %d %d %e at %d %d %d\n",PROCID,ii,jj,T[ii][jj],geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
-	  //  printf("%d > nan tmunu: %e %e %e %e\n",PROCID,gamma,pre,w,eta);
-	  //  print_4vector(ucon);
-	  //  print_metric(geom->gg);
-	  //  print_Nvector(pp,NV);
-	  //  my_err("nan in flux_prime\n");
-	  //  exit(1);
-	}
-    }
-  }
-  
-  ldouble utp1=calc_utp1_device(vcon,ucon,geom);
-
-  //***************************************
-  //fluxes
-  //***************************************
-  //hydro fluxes
-  ff[0]= gdetu*rho*ucon[idim+1];
-  
-  //ff[1]= gdetu*(T[idim+1][0]+rho*ucon[idim+1]);
-  //to avoid slow cancellation:
-  ff[1]= gdetu*(etap*ucon[idim+1]*ucov[0] + rho*ucon[idim+1]*utp1);
-  
-#ifdef MAGNFIELD
-  ff[1]+= -gdetu*bcon[idim+1]*bcov[0];
-#endif
-
-  ff[2]= gdetu*(T[idim+1][1]);
-  ff[3]= gdetu*(T[idim+1][2]); 
-  ff[4]= gdetu*(T[idim+1][3]);
-  ff[5]= gdetu*S*ucon[idim+1];
-
-#ifdef NONRELMHD
-  ff[1]= gdetu*T[idim+1][0];
-#endif
-
-  //magnetic fluxes
-#ifdef MAGNFIELD
-  ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
-  ff[B2]=gdetu*(bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
-  ff[B3]=gdetu*(bcon[3]*ucon[idim+1] - bcon[idim+1]*ucon[3]);
-#endif
-
-  //radiation fluxes // TODO 
-#ifdef RADIATION
-  f_flux_prime_rad(pp,idim,geom,ff);
-#ifdef MAGNFIELD
-#ifdef BATTERY
-  ldouble eterm[4]={-1.,0.,0.,0.};
-  calc_batteryflux(pp,geom,eterm,idim,ucov);
-  ldouble suppfac=1.;
- 
-  ff[B1]+=suppfac*gdetu*eterm[1];
-  ff[B2]+=suppfac*gdetu*eterm[2];
-  ff[B3]+=suppfac*gdetu*eterm[3];
-#endif
-#endif
-#endif
-
-  // electron species fluxes
-#ifdef EVOLVEELECTRONS
-  ff[ENTRE]= gdetu*Se*ucon[idim+1]; 
-  ff[ENTRI]= gdetu*Si*ucon[idim+1]; 
-
-#ifdef RELELECTRONS
-  for(int ie=0; ie < NRELBIN ; ie++)
-    ff[NEREL(ie)] = gdetu*pp[NEREL(ie)]*ucon[idim+1];
-#endif
-#endif
-
-  return 0;
-}
-
-
-// Metric source term
-// TODO: deleted RADIATION and SHEARINGBOX parts
-__device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, void* ggg,ldouble* gKr_arr)
-/*  
-__device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
-		      	                            ldouble* p_arr, ldouble* x_arr,
-			                            ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr)
-*/
-{
-  /*
-  ldouble *pp = &get_u(p_arr,0,ix,iy,iz); // TODO -- pass pp and geom instead?
-  
-  struct geometry geom;
-  fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr,G_arr);
-
-      
-  ldouble (*gg)[5],(*GG)[5],gdetu;
-  
-
-  gg=geom.gg;
-  GG=geom.GG;
-
-  #if (GDETIN==0) //no metric determinant inside derivatives
-  gdetu=1.;
-  #else
-  gdetu=geom.gdet;
-  #endif
-  */
-
-  struct geometry *geom 
-    = (struct geometry *) ggg;
-
-  ldouble (*gg)[5],(*GG)[5],gdetu;
-  gg=geom->gg;
-  GG=geom->GG;
-  gdetu=geom->gdet;
-
-  #if (GDETIN==0) //no metric determinant inside derivative
-  gdetu=1.;
-  #endif
-
-  int ix=geom->ix;
-  int iy=geom->iy;
-  int iz=geom->iz;
-  
-  ldouble T[4][4];
-  //calculating stress energy tensor components
-  //calc_Tij_device(pp,&geom,T);
-  calc_Tij_device(pp,geom,T); 
-  indices_2221_device(T,T,gg);
-
-  for(int i=0;i<4;i++)
-  {
-    for(int j=0;j<4;j++)
-    {
-	if(isnan(T[i][j])) 
-	{
-	    printf("%d %d %e\n",i,j,T[i][j]);
-	    printf("nan in metric_source_terms\n");
-	    //my_err("nan in metric_source_terms\n");//TODO
-	}
-    }
-  }
-  
-  // zero out all source terms initially
-  for(int iv=0;iv<NV;iv++)
-    ss[iv]=0.;  
-
-  //terms with Christoffels
-  for(int k=0;k<4;k++)
-  {
-    for(int l=0;l<4;l++)
-    {
-      ss[1]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,0,k,ix,iy,iz);
-      ss[2]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,1,k,ix,iy,iz);
-      ss[3]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,2,k,ix,iy,iz);
-      ss[4]+=gdetu*T[k][l]*get_gKr(gKr_arr,l,3,k,ix,iy,iz);       
-    }
-  }
-
-
-#if (GDETIN==0)
-  GG=ggg->GG;
-    
-  //gdet derivatives
-  ldouble dlgdet[3];
-  dlgdet[0]=gg[0][4]; //D[gdet,x1]/gdet
-  dlgdet[1]=gg[1][4]; //D[gdet,x2]/gdet
-  dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
-
-  //get 4-velocity
-  ldouble vcon[4],ucon[4];
-  vcon[1]=pp[2];
-  vcon[2]=pp[3];
-  vcon[3]=pp[4];  
-  conv_vels_device(vcon,ucon,VELPRIM,VEL4,gg,GG); 
-
-  //terms with dloggdet  
-  for(int l=1;l<4;l++)
-  {
-    ss[0]+=-dlgdet[l-1]*pp[RHO]*ucon[l];
-    ss[1]+=-dlgdet[l-1]*(T[l][0]+pp[RHO]*ucon[l]);
-    ss[2]+=-dlgdet[l-1]*(T[l][1]);
-    ss[3]+=-dlgdet[l-1]*(T[l][2]);
-    ss[4]+=-dlgdet[l-1]*(T[l][3]);
-    ss[5]+=-dlgdet[l-1]*pp[ENTR]*ucon[l];
-  }   
-#endif
-  
-  return 0;
-}
-
-//**********************************************************************
-// calculate stress energy tensor
-//**********************************************************************
-__device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
-{
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  ldouble (*gg)[5],(*GG)[5];
-  gg=geom->gg;
-  GG=geom->GG;
-
-  ldouble utcon[4],ucon[4],ucov[4];  
-  ldouble bcon[4],bcov[4],bsq=0.;
-  
-  //converts to 4-velocity
-  utcon[0]=0.;
-  for(int iv=1;iv<4;iv++)
-    utcon[iv]=pp[1+iv];
-  conv_vels_both_device(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
-
-#ifdef NONRELMHD
-  ucon[0]=1.;
-  ucov[0]=-1.;
-#endif
-
-#ifdef MAGNFIELD
-  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, geom, bcon, bcov, &bsq); 
-#else
-  bcon[0]=bcon[1]=bcon[2]=bcon[3]=0.;
-  bsq=0.;
-#endif
-  
-  ldouble gamma=GAMMA;
-  #ifdef CONSISTENTGAMMA
-  //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
-  #endif
-
-  ldouble rho=pp[RHO];
-  ldouble uu=pp[UU];  
-  ldouble p=(gamma-1.)*uu; 
-  ldouble w=rho+uu+p;
-  ldouble eta=w+bsq;
-  ldouble ptot=p+0.5*bsq;
-
-#ifndef NONRELMHD  
-  for(int i=0;i<4;i++)
-    for(int j=0;j<4;j++)
-      T[i][j]=eta*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
-#else
-  
-  ldouble v2=dot3nr(ucon,ucov); //TODO
-  for(int i=1;i<4;i++)
-    for(int j=1;j<4;j++)
-      T[i][j]=(rho)*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
-
-  T[0][0]=uu + bsq/2. + rho*v2/2.;
-  for(int i=1;i<4;i++)
-    T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
-
-#endif  // ifndef NONRELMHD
-
-  return 0;
-}
-
-
-//**********************************************************************
-// calculate total gas entropy from density & energy density
-//**********************************************************************
-__device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz)
-{
-  ldouble gamma=GAMMA;
-  #ifdef CONSISTENTGAMMA
-  //gamma=pick_gammagas(ix,iy,iz); //TODO
-  #endif
-  ldouble gammam1=gamma-1.;
-  ldouble indexn=1.0/gammam1;
-  ldouble pre=gammam1*u;
-  #ifdef NOLOGINS
-  ldouble ret = rho*u / pow(rho,gamma);
-  #else
-  ldouble ret = rho*log(pow(pre,indexn)/pow(rho,indexn+1.));
-  #endif
-
-  return ret;
-}
-
-
 //**********************************************************************
 // kernels
 //**********************************************************************
+
+// TODO wrap up xyz wavespeeds in their own array
+__global__ void calc_wavespeeds_kernel(int Nloop_1
+				       int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
+				       ldouble* x_arr, ldouble* xb_arr,
+				       ldouble* g_arr, ldouble* G_arr,
+				       ldouble* p_arr,
+				       ldouble* ahdxl_arr, ldouble* ahdyl_arr, ldouble* ahdzl_arr,
+				       ldouble* ahdxr_arr, ldouble* ahdyr_arr, ldouble* ahdzr_arr,
+				       ldouble* ahdx_arr,  ldouble* ahdy_arr,  ldouble* ahdz_arr,	   
+				       ldouble* aradxl_arr, ldouble* aradyl_arr, ldouble* aradzl_arr,
+				       ldouble* aradxr_arr, ldouble* aradyr_arr, ldouble* aradzr_arr,
+				       ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arrl,
+				       ldouble* cell_tstepden_arr, ldouble* tstepdenmin_ptr, ldouble* tstepdenmax_ptr)
+
+{
+  
+  // get index for this thread
+  // Nloop_1 is number of cells to compute bcs for
+  // domain plus lim (=1 usually) ghost cells
+  int ii = blockIdx.x * blockDim.x + threadIdx.x;
+  if(ii >= Nloop_1) return;
+    
+  // get indices from 1D arrays
+  int ix=loop_1_ix[ii];
+  int iy=loop_1_iy[ii];
+  int iz=loop_1_iz[ii]; 
+
+  // TODO MPI
+#ifndef MPI4CORNERS
+  if(if_outsidegc(ix,iy,iz)==1) return; //avoid corners
+#endif
+    
+  // currently is_cell_active always returns 1
+  if(!is_cell_active_device(ix,iy,iz)) return;
+
+  // get geometry
+  struct geometry geom;
+  fill_geometry_device(ix,iy,iz,&geom, x_arr,g_arr,G_arr);
+  
+  // get primitives 
+  ldouble pp[NV];
+  for(int iv=0;iv<NV;iv++)
+    pp[iv]=get_u(p_arr,iv,ix,iy,iz);
+
+  ldouble aaa[18];
+  calc_wavespeeds_lr_pure_device(pp,&geom,aaa);
+
+  // save the wavespeeds
+  // NOTE: this part was in save_wavespeeds(), which is not used elsewhere
+
+  // hydro wavespeeds
+  set_u_scalar(ahdxl_arr,ix,iy,iz,aaa[0]);
+  set_u_scalar(ahdxr_arr,ix,iy,iz,aaa[1]);
+  set_u_scalar(ahdyl_arr,ix,iy,iz,aaa[2]);
+  set_u_scalar(ahdyr_arr,ix,iy,iz,aaa[3]);
+  set_u_scalar(ahdzl_arr,ix,iy,iz,aaa[4]);
+  set_u_scalar(ahdzr_arr,ix,iy,iz,aaa[5]);
+  
+  ldouble aaaxhd=my_max(fabs(aaa[0]),fabs(aaa[1]));
+  ldouble aaayhd=my_max(fabs(aaa[2]),fabs(aaa[3]));
+  ldouble aaazhd=my_max(fabs(aaa[4]),fabs(aaa[5]));
+
+  set_u_scalar(ahdx_arr,ix,iy,iz,aaaxhd);
+  set_u_scalar(ahdy_arr,ix,iy,iz,aaayhd);
+  set_u_scalar(ahdz_arr,ix,iy,iz,aaazhd);
+
+  // TODO -- put behind RADIATION gate? 
+  // radiative wavespeeds in slots[12::] are limited by the optical depth
+  // used to calculate the fluxes
+  set_u_scalar(aradxl_arr,ix,iy,iz,aaa[12]);
+  set_u_scalar(aradxr_arr,ix,iy,iz,aaa[13]);
+  set_u_scalar(aradyl_arr,ix,iy,iz,aaa[14]);
+  set_u_scalar(aradyr_arr,ix,iy,iz,aaa[15]);
+  set_u_scalar(aradzl_arr,ix,iy,iz,aaa[16]);
+  set_u_scalar(aradzr_arr,ix,iy,iz,aaa[17]);
+
+  ldouble aaaxrad=my_max(fabs(aaa[12]),fabs(aaa[13]));
+  ldouble aaayrad=my_max(fabs(aaa[14]),fabs(aaa[15]));
+  ldouble aaazrad=my_max(fabs(aaa[16]),fabs(aaa[17]));
+  
+  set_u_scalar(aradx_arr,ix,iy,iz,aaaxrad);
+  set_u_scalar(arady_arr,ix,iy,iz,aaayrad);
+  set_u_scalar(aradz_arr,ix,iy,iz,aaazrad);
+
+  // search for the maximal unlimited wavespeed to set the timestep
+  // only domain cells
+  if(is_cell_indomain_device(ix,iy,iz)==1) 
+  {      
+
+    ldouble wsx=aaaxhd;
+    ldouble wsy=aaayhd;
+    ldouble wsz=aaazhd;
+
+    #ifdef RADIATION
+    #ifndef SKIPRADEVOLUTION
+    // here use radiative wavespeeds not limited by the optical depth
+    // in slots 6-11
+    aaaxrad=my_max(fabs(aaa[6]),fabs(aaa[7]));
+    aaayrad=my_max(fabs(aaa[8]),fabs(aaa[9]));
+    aaazrad=my_max(fabs(aaa[10]),fabs(aaa[11]));
+
+    wsx=my_max(aaaxhd,aaaxrad);
+    wsy=my_max(aaayhd,aaayrad);
+    wsz=my_max(aaazhd,aaazrad);
+    #endif
+    #endif
+
+    ldouble dx=get_size_x_device(xb_arr,ix,0);
+    ldouble dy=get_size_x_device(xb_arr,iy,1);
+    ldouble dz=get_size_x_device(xb_arr,iz,2);
+
+    ldouble tstepden;
+    if(NZ>1 && NY>1)
+      tstepden=wsx/dx + wsy/dy + wsz/dz;
+    else if(NZ==1 && NY>1)
+      tstepden=wsx/dx + wsy/dy;
+    else if(NY==1 && NZ>1)
+      tstepden=wsx/dx + wsz/dz;
+    else
+      tstepden=wsx/dx;   
+
+    // apply limiter
+    tstepden/=TSTEPLIM;
+
+    // set_global_arr
+    set_u_scalar(cell_tstepden_arr,ix,iy,iz,tstepden);
+
+    // TODO TODO -- do these atomics work?
+    // TODO is there a faster way? 
+    //global variables for maximum/minimum (inverse) cell timestep
+    atomicMin_double(tstepdenmin_ptr, tstepden)
+    atomicMax_double(tstepdenmax_ptr, tstepden)
+      //if(tstepden>tstepdenmax) tstepdenmax=tstepden;  
+      //if(tstepden<tstepdenmin) tstepdenmin=tstepden;  
+  }
+  
+}
 
 
 __global__ void calc_interp_kernel(int Nloop_1,
@@ -996,9 +826,9 @@ __global__ void calc_interp_kernel(int Nloop_1,
   giiz = iz + TOK;
   #endif
 
-  // TODO
+  // TODO MPI
   #ifndef MPI4CORNERS
-  if(if_outsidegc(ix,iy,iz)==1) continue; //avoid corners
+  if(if_outsidegc(ix,iy,iz)==1) return; //avoid corners
   #endif
 
   // TODO -- what is ret_val? defined in PR_BC_SPECIAL_LOOP?
@@ -1564,7 +1394,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 	
     /* //TODO
 #ifdef WAVESPEEDSATFACES //re-calculate the wavespeeds directly at the face
-    ldouble aaa[24];
+    ldouble aaa[18];
     //left biased wavespeeds
     calc_wavespeeds_lr_pure_device(fd_uL,&geom,aaa);
     am1l[0]=aaa[0];
@@ -1697,7 +1527,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 
     /* //TODO
 #ifdef WAVESPEEDSATFACES // recompute wavespeeds directly at face
-    ldouble aaa[24];
+    ldouble aaa[18];
     //left-biased wavespeeds
     calc_wavespeeds_lr_pure(fd_uL,&geom,aaa);
     am1l[0]=aaa[2];
@@ -1829,7 +1659,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 
 	/* //TODO
 #ifdef WAVESPEEDSATFACES // recompute wavespeeds directly at face
-    ldouble aaa[24];
+    ldouble aaa[18];
     //left-biased wavespeeds
     calc_wavespeeds_lr_pure(fd_uL,&geom,aaa);
     am1l[0]=aaa[4];
@@ -2021,6 +1851,63 @@ __global__ void calc_update_kernel(int Nloop_0,
   }  
 }
 
+
+ldouble calc_wavespeeds_gpu()
+{
+  cudaError_t err = cudaSuccess;
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  // Determine number of threadblocks
+  int threadblocks = (Nloop_1 / TB_SIZE) + ((Nloop_1 % TB_SIZE)? 1:0);
+  //printf("\nTest %d\n", threadblocks); fflush(stdout);
+
+  // Launch kernel
+  cudaEventRecord(start);
+
+  ldouble* d_tstepdenmin, d_tstepdenmax;
+  err = cudaMalloc(&d_tstepdenmin, sizeof(ldouble));
+  err = cudaMalloc(&d_tstepdenmin, sizeof(ldouble));
+  err = cudaMemcpy(d_tstepdenmin, &tstepdenmin, sizeof(ldouble), cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_tstepdenmax, &tstepdenmax, sizeof(ldouble), cudaMemcpyHostToDevice);
+  
+  calc_wavespeeds_kernel<<<threadblocks, TB_SIZE>>>(Nloop_1,
+                                                    d_loop1_ix, d_loop1_iy, d_loop1_iz,
+		                                    d_x, d_xb,
+						    d_gcov, d_gcon,
+						    d_p_arr,
+						    d_ahdxl_arr, d_ahdyl_arr, d_ahdzl_arr,
+		                                    d_ahdxr_arr, d_ahdyr_arr, d_ahdzr_arr,
+                                                    d_ahdx_arr,  d_ahdy_arr,  d_ahdz_arr,
+		                                    d_aradxl_arr, d_aradyl_arr, d_aradzl_arr,
+		                                    d_aradxr_arr, d_aradyr_arr, d_aradzr_arr,
+		                                    d_aradx_arr,  d_arady_arr,  d_aradz_arr,
+		                                    d_cell_tstepden_arr, d_tstepdenmin, d_tstepdenmax
+						    );
+  cudaEventRecord(stop);
+  err = cudaPeekAtLastError();
+  // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
+
+  // synchronize
+  cudaDeviceSynchronize();
+    
+  // timing information
+  cudaEventSynchronize(stop);
+  float tms = 0.;
+  cudaEventElapsedTime(&tms, start,stop);
+  printf("gpu calc_wavespeeds time: %0.2f \n",tms);
+
+  // TODO replace tstepdenmin_tmp,tstepdenmax_tmp with actual tstepdenmin/max when confident reduction works
+  ldouble tstepdenmin_tmp, tstepdenmax_tmp;
+  err = cudaMemcpy(&tstepdenmin_tmp, d_tstepdemin, sizeof(ldouble), cudaMemcpyDeviceToHost);
+  err = cudaMemcpy(&tstepdenmax_tmp, d_tstepdenmax, sizeof(ldouble), cudaMemcpyDeviceToHost);
+  cudaFree(d_tstepdenmin);
+  cudaFree(d_tstepdenmax);
+
+  printf("gpu calc wavespeeds tstepdensmin/max: %e %e\n",tstepdenmin_tmp,tstepdenmax_tmp);
+  return (ldouble)tms;
+}
 
 ldouble calc_interp_gpu()
 {

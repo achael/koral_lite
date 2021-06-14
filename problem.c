@@ -221,14 +221,13 @@ solve_the_problem(ldouble tstart, char* folder)
 	    set_bc(t,0);
 	    
             // Explicit evolution (advection plus source terms) from t to t+dt
-	    op_explicit (t, dt);  //U(1) in *ut1;
+	    op_explicit(t, dt);  //U(1) in *ut1;
 
-	    
             // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
         
             // Intermediate step between explicit and implicit for relativistic electrons
-	    op_intermediate (t,dt);
+	    op_intermediate(t,dt);
 	    
 	    global_expdt=dt;
  
@@ -281,7 +280,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    count_entropy(&nentr[2],&nentr2[2]);
 	    
             // Implicit evolution of radiation terms
-	    op_implicit (t,gamma*dt); //U(2) in *u
+	    op_implicit(t,gamma*dt); //U(2) in *u
 
 	    global_impdt=gamma*dt;
         

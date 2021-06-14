@@ -391,7 +391,6 @@ int
 save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
 {
   ldouble aaaxhd,aaaxrad,aaayhd,aaayrad,aaazhd,aaazrad;
-  ldouble aaaxrad2,aaayrad2,aaazrad2;
 
   //hydro wavespeeds
   set_u_scalar(ahdxl,ix,iy,iz,aaa[0]);
@@ -1271,22 +1270,20 @@ op_explicit(ldouble t, ldouble dtin)
   ldouble dt;
 
   // Save conserveds and primitives over domain + ghost (no corners)
+  // these are only used in entropy mixing
   copyi_u(1.,u,upreexplicit); //conserved quantities before explicit update
   copyi_u(1.,p,ppreexplicit); //primitive quantities before explicit update
 
   // calculates H/R and velocity averages
+  // only used for CALCHRONTHEGO and CORRECT_POLARAXIS_3D
   calc_avgs_throughout(); 
 
-  //**********************************************************************//
-  // Calculate wavespeeds over the domain and ghost cells
-  #pragma omp barrier
-  calc_wavespeeds();
-
-#ifndef SKIPEVOLUTION
-
+ 
   /////////////////////////////////////////////
   // Block for initializing GPU -- keep moving up
   // TODO: make this better...
+  ldouble time_cpu_wavespeeds=0.;
+  ldouble time_gpu_wavespeeds=0.;
   ldouble time_cpu_interp=0.;
   ldouble time_gpu_interp=0.;
   ldouble time_cpu_fluxes=0.;
@@ -1303,6 +1300,32 @@ op_explicit(ldouble t, ldouble dtin)
   push_pu_gpu();
   #endif 
   ////////////////////////////////////////////
+ 
+  //**********************************************************************//
+  // Calculate wavespeeds over the domain and ghost cells
+#ifdef GPUKO
+  time_gpu_wavespeeds = calc_wavespeeds_gpu();
+#endif
+
+#if defined(CPUKO) || !defined(GPUKO)
+  struct timespec temp_clock;
+  ldouble tstart,tstop;
+
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  
+  #pragma omp barrier
+  calc_wavespeeds();
+
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_wavespeeds = (tstop-tstart)*1.e3;
+  
+  printf("cpu calc_wavespeeds time: %0.2lf \n", time_cpu_wavespeeds);
+  
+  printf("gpu calc wavespeeds tstepdensmin/max: %e %e\n",tstepdenmin,tstepdenmax);
+    
+#ifndef SKIPEVOLUTION
   
 
   //**********************************************************************//
@@ -1312,8 +1335,6 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)
-  struct timespec temp_clock;
-  ldouble tstart,tstop;
 
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
@@ -1323,9 +1344,9 @@ op_explicit(ldouble t, ldouble dtin)
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  time_cpu_ct = (tstop-tstart)*1.e3;
+  time_cpu_interp = (tstop-tstart)*1.e3;
   
-  printf("cpu calc_interp time: %0.2lf \n", time_cpu_ct);
+  printf("cpu calc_interp time: %0.2lf \n", time_cpu_interp);
   printf("cpu calc_interp flLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(flLz, iv, ixTEST, iyTEST, izTEST,2));
@@ -1356,9 +1377,9 @@ op_explicit(ldouble t, ldouble dtin)
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  time_cpu_ct = (tstop-tstart)*1.e3;
+  time_cpu_fluxes = (tstop-tstart)*1.e3;
   
-  printf("cpu calc_fluxes time: %0.2lf \n", time_cpu_ct);
+  printf("cpu calc_fluxes time: %0.2lf \n", time_cpu_fluxes);
   printf("gpu calc_fluxes flbx[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(flbx, iv, ixTEST, iyTEST, izTEST,0));
@@ -1545,7 +1566,6 @@ op_intermediate(ldouble t, ldouble dt)
   
   // Apply viscous heating to thermal & nonthermal electrons and ions  
 #ifndef HEATELECTRONSATENDRK2   //here? or separate after RK2
-
   heat_electronions_with_state(dt); 
 #endif
 #endif
