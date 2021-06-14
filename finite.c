@@ -96,7 +96,6 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 	  ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,
 	  int param,ldouble theta)
 {
-  ldouble r0[NV],rm1[NV],rp1[NV];
 
   if(param!=0) //overrule the standard reconstruction
   {
@@ -124,7 +123,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
   
   else if(INT_ORDER==1) //linear
   {
-    ldouble diffpar=theta;
+
     int i;
     
     for(i=0;i<NV;i++)
@@ -1295,15 +1294,11 @@ op_explicit(ldouble t, ldouble dtin)
 
 #ifndef SKIPEVOLUTION
 
-  //**********************************************************************//
-  // Interpolate to the cell walls and calculate left and right-biased fluxes
-  #pragma omp barrier
-  calc_interp();
-
-
   /////////////////////////////////////////////
   // Block for initializing GPU -- keep moving up
   // TODO: make this better...
+  ldouble time_cpu_interp=0.;
+  ldouble time_gpu_interp=0.;
   ldouble time_cpu_fluxes=0.;
   ldouble time_gpu_fluxes=0.;
   ldouble time_cpu_ct = 0.;
@@ -1319,6 +1314,35 @@ op_explicit(ldouble t, ldouble dtin)
   #endif 
   ////////////////////////////////////////////
   
+
+  //**********************************************************************//
+  // Interpolate to the cell walls and calculate left and right-biased fluxes
+#ifdef GPUKO
+  time_gpu_interp = calc_interp_gpu();
+#endif
+
+#if defined(CPUKO) || !defined(GPUKO)
+  struct timespec temp_clock;
+  ldouble tstart,tstop;
+
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  #pragma omp barrier
+  calc_interp();
+
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_ct = (tstop-tstart)*1.e3;
+  
+  printf("cpu calc_interp time: %0.2lf \n", time_cpu_ct);
+  printf("gpu calc_interp pbLx[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(pbLx, iv, ixTEST, iyTEST, izTEST,0));
+  printf("\n\n");
+
+#endif
+  
   //**********************************************************************//
   // Compute fluxes at the six walls of all cells
   // using the selected approximation of the Riemann problem
@@ -1329,8 +1353,6 @@ op_explicit(ldouble t, ldouble dtin)
 
 
 #if defined(CPUKO) || !defined(GPUKO)
-  struct timespec temp_clock;
-  ldouble tstart,tstop;
 
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;

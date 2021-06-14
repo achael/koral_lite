@@ -323,7 +323,7 @@ __device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int i
 }
 
 
-// TODO replace get_x, get_xb, and get_gKr   everywherex
+// TODO replace get_x, get_xb everywhere
 
 // get grid coordinate at the cell center indexed ic in dimeinsion idim
 // copied from get_x macro in ko.h
@@ -348,16 +348,7 @@ __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim)
 
   return xb_out;
 }
-/*
-__device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
-				  int ix, int iy, int iz)
-{
-  ldouble gKr_out = gKr_arr[i*4*4+j*4+k + (iX(ix)+(NGCX))*64 + \
-				          (iY(iy)+(NGCY))*(SX)*64 + \
-			                  (iZMET(iz)+(NGCZMET))*(SY)*(SX)*64];
-  return gKr_out;
-}
-*/
+
 // get size of cell indexed ic in dimension idim
 // copied from get_size_x in finite.c
 __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
@@ -368,20 +359,423 @@ __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 }
 
 
+//**********************************************************************
+/*! \fn int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,ldouble *ul,ldouble *ur,ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,int param,ldouble theta)
+ \brief Interpolates primitives to the left and right walls of current cell i
+ 
+ @param[in] um2, um1, u0, up1, up2 values of primitive in the i-2, i-1, i, i+1, i+2 cells
+ @param[out] ul, ur interpolated primitives at the left and right walls of cell i
+ @param[in] dxm2, dxm1, dx0, dxp1, dxp2 sizes of the five cells
+ @param[in] param reconstrpar -- overrides standard reconstruction to reduce to donor cell
+ @param[in] minmod_theta MINMOD_THETA
+ 
+ Several interpolation schemes are available.
+ 
+ INT_ORDER=0: basic donor cell\n
+ INT_ORDER=1: Minmod (FLUXLIMITER=0), Monotonized Central (FLUXLIMITER=1), Superbee (FLUXLIMITER=4)\n
+ INT_ORDER=2: Piecewise Parabolic Method (PPM)\n
+ 
+ */
+//**********************************************************************
+__device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
+	                                 ldouble *ul,ldouble *ur,
+	                                 ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,
+	                                 int param,ldouble theta)
+{
+  
+  else if(INT_ORDER==0 || param==1) // donor cell, no interpolation
+  {
+    int i;
+    
+    for(int iv=0;iv<NV;iv++)
+    {
+      ur[iv]=u0[iv];
+      ul[iv]=u0[iv];
+    }
+  }  
+  
+  else if(INT_ORDER==1) // linear interpolation 
+  {
+    
+    for(int iv=0;iv<NV;iv++)
+    {
+      // Slope limiter code rewritten by Ramesh. No function-calls, no divisions.
+      ldouble slope;
+      ldouble deltam = u0[i]-um1[i];
+      ldouble deltap = up1[i]-u0[i];
+      
+      if (deltam * deltap <= 0.)
+      {
+        // We are at a local maximum or minimum. Use zero slope (i.e., donor cell)
+        ur[iv] = u0[iv];
+        ul[iv] = u0[iv];
+      }
+      else
+      {
+        if (deltam > 0.)
+        {
+          // Slopes are positive. Choose limiter appropriately
+	  
+          if (FLUXLIMITER == 0) // MinMod
+          {
+            slope = my_min(my_min(theta*deltam, 0.5*(deltam+deltap)), theta*deltap); // theta=1 is MinMod, theta=2 is MC
+          }
+          else if (FLUXLIMITER == 1) // MC
+          {
+            slope = my_min(my_min(2*deltam, 0.5*(deltam+deltap)), 2*deltap);
+          }
+          else if (FLUXLIMITER == 2) // Osher -- discouraged since it is not symmetric
+          {
+            printf("Error: Osher slope limiter is discouraged since it is not symmetric\n");
+            return -2;
+	    //exit(-2); // TODO
+          }
+          else if (FLUXLIMITER == 3) // Koren -- discouraged since it is not symmetric
+          {
+            printf("Error: Koren slope limiter is discouraged since it is not symmetric\n");
+            return -3
+	    //exit(-3); // TODO
+          }
+          else // Superbee
+          {
+            slope = my_max(my_min(2*deltam, deltap), my_min(deltam, 2*deltap));
+          }
+        }
+        else
+        {
+          // Slopes are negative. Choose limiter appropriately
+          
+          if (FLUXLIMITER == 0) // MinMod
+          {
+            slope = my_max(my_max(theta*deltam, 0.5*(deltam+deltap)), theta*deltap); // theta=1 is MinMod, theta=2 is MC
+          }
+          else if (FLUXLIMITER == 1) // MC
+          {
+            slope = my_max(my_max(2*deltam, 0.5*(deltam+deltap)), 2*deltap);
+          }
+          else if (FLUXLIMITER == 2) // Osher -- discouraged since it is not symmetric
+          {
+            printf("Error: Osher slope limiter is discouraged since it is not symmetric\n");
+	    return -2;
+            //exit(-2); // TODO 
+          }
+          else if (FLUXLIMITER == 3) // Koren -- discouraged since it is not symmetric
+          {
+            printf("Error: Koren slope limiter is discouraged since it is not symmetric\n");
+	    return -3;
+            //exit(-3); // TODO
+          }
+          else // Superbee
+          {
+            slope = my_min(my_max(2*deltam, deltap), my_max(deltam, 2*deltap));
+          }
+        }
+        
+        ur[iv] = u0[iv] + 0.5*slope;
+        ul[iv] = u0[iv] - 0.5*slope;
+      }
+      
+      if(isnan(ur[iv]) || isnan (ul[iv]))
+	printf("%d %e %e %e %e %e\n",i,um2[i],um1[i],u0[i],up1[i],up2[i]);
+    } 
+  }  // else if(INT_ORDER==1)
+
+  else if(INT_ORDER==2) //parabolic PPM
+  {
+    
+    //The following is based on Colella & Woodward (J. Comp. Phys. 54, 174, 1984).
+    //It uses five points: m2, m1, 0, p1, p2.
+    //The code has been checked and verified by Ramesh: July 14, 2017
+    
+    // Define various quantities that apear in the formula
+    ldouble dxp2_plus_dxp1 = dxp2 + dxp1;
+    ldouble dxp2_plus_dxp1_inv = 1. / dxp2_plus_dxp1;
+    ldouble dxp1_plus_dx0 = dxp1 + dx0;
+    ldouble dxp1_plus_dx0_inv = 1. / dxp1_plus_dx0;
+    ldouble dx0_plus_dxm1 = dx0 + dxm1;
+    ldouble dx0_plus_dxm1_inv = 1. / dx0_plus_dxm1;
+    ldouble dxm1_plus_dxm2 = dxm1 + dxm2;
+    ldouble dxm1_plus_dxm2_inv = 1. / dxm1_plus_dxm2;
+    
+    ldouble dxm1_plus_dx0_plus_dxp1_inv = 1. / (dxm1+dx0+dxp1);
+    ldouble dx0_plus_dxp1_plus_dxp2_inv = 1. / (dx0+dxp1+dxp2);
+    ldouble dxm2_plus_dxm1_plus_dx0_inv = 1. / (dxm2+dxm1+dx0);
+    
+    ldouble dx0_plus_twodxm1 = dx0 + 2. * dxm1;
+    ldouble dxp1_plus_twodx0 = dxp1 + 2. * dx0;
+    ldouble dxm1_plus_twodxm2 = dxm1 + 2. * dxm2;
+    ldouble twodxp1_plus_dx0 = 2. * dxp1 + dx0;
+    ldouble twodxp2_plus_dxp1 = 2. * dxp2 + dxp1;
+    ldouble twodx0_plus_dxm1 = 2. * dx0 + dxm1;
+    
+    //ldouble l,r;
+    ldouble dri[NV],drim1[NV],drip1[NV];
+    
+    for(int iv=0;iv<NV;iv++)
+    {
+      // dri, drip1, drim1 are the slopes delta a_j, delta a_{j+1}, delta a_{j-1} in eq (1.7) of C&W
+      dri[iv] = dx0 * dxm1_plus_dx0_plus_dxp1_inv *
+      (dx0_plus_twodxm1 * dxp1_plus_dx0_inv * (up1[iv]-u0[iv]) +
+       twodxp1_plus_dx0 * dx0_plus_dxm1_inv * (u0[iv]-um1[iv]));
+      drip1[iv] = dxp1 * dx0_plus_dxp1_plus_dxp2_inv *
+      (dxp1_plus_twodx0 * dxp2_plus_dxp1_inv * (up2[iv]-up1[iv]) +
+       twodxp2_plus_dxp1 * dxp1_plus_dx0_inv * (up1[iv]-u0[iv]));
+      drim1[iv] = dxm1 * dxm2_plus_dxm1_plus_dx0_inv *
+      (dxm1_plus_twodxm2 * dx0_plus_dxm1_inv * (u0[iv]-um1[iv]) +
+       twodx0_plus_dxm1 * dxm1_plus_dxm2_inv * (um1[iv]-um2[iv]));
+      
+      // Limit the slopes to be monotonic. This is eq (1.8) in C&W. (Note a minor typo in C&W: one of their _{j-1} should be _{j+1})
+      if( (up1[iv]-u0[iv]) * (u0[iv]-um1[iv]) > 0.)
+      {
+        dri[iv] = my_min(fabs(dri[iv]), my_min(2. * fabs(u0[iv] - um1[iv]), 2. * fabs(u0[iv] - up1[iv]))) * my_sign(dri[iv]);
+      }
+      else
+      {
+        dri[iv]=0.;
+      }
+        
+      if( (up2[iv]-up1[iv]) * (up1[iv]-u0[iv]) > 0.)
+      {
+        drip1[iv] = my_min(fabs(drip1[iv]), my_min(2. * fabs(up1[iv] - u0[iv]), 2. * fabs(up1[iv] - up2[iv]))) * my_sign(drip1[iv]);
+      }
+      else
+      {
+        drip1[iv]=0.;
+      }
+      
+      if( (u0[iv]-um1[iv]) * (um1[iv]-um2[iv]) > 0.)
+      {
+        drim1[iv] = my_min(fabs(drim1[iv]), my_min(2. * fabs(um1[iv] - um2[iv]), 2. * fabs(um1[iv] - u0[iv]))) * my_sign(drim1[iv]);
+      }
+      else
+      {
+        drim1[iv]=0.;
+      }
+    }
+    
+    // Work on the right face of cell j
+    ldouble Z1, Z2, DX_inv;
+    Z1 = dx0_plus_dxm1 / dxp1_plus_twodx0;
+    Z2 = dxp2_plus_dxp1 / twodxp1_plus_dx0;
+    DX_inv = 1. / (dxm1+dx0+dxp1+dxp2);
+    
+    for(int iv=0;iv<NV;iv++)
+    {
+      // This is a_{j+1/2) in eq (1.6) of Colella & Woodward
+      ur[iv] = u0[iv] + dx0 * dxp1_plus_dx0_inv * (up1[iv]-u0[iv]) +
+            DX_inv * ((2.*dxp1*dx0) * dxp1_plus_dx0_inv * (Z1-Z2) * (up1[iv]-u0[iv]) -
+            dx0 * Z1 * drip1[iv] + dxp1 * Z2 * dri[iv]);
+    }
+    
+    // Next work on the left face of cell j
+    Z1 = dxm1_plus_dxm2 / dx0_plus_twodxm1;
+    Z2 = dxp1_plus_dx0 / twodx0_plus_dxm1;
+    DX_inv = 1. / (dxm2+dxm1+dx0+dxp1);
+    
+    for(iv=0;iv<NV;iv++)
+    {
+      // This is a_{j-1/2} in eq (1.6) of Colella & Woodward
+      ul[iv] = um1[iv] + dxm1 * dx0_plus_dxm1_inv * (u0[iv]-um1[iv]) +
+            DX_inv * ((2.*dx0*dxm1) * dx0_plus_dxm1_inv * (Z1-Z2) * (u0[iv]-um1[iv]) -
+            dxm1 * Z1 * dri[iv] + dx0 * Z2 * drim1[iv]);
+    }
+    
+    // Make sure that the parabola remains monotonic.
+    // The following is equivalent to eq (1.10) in C&W, though it looks different  
+    for(int iv=0;iv<NV;iv++)
+    {
+      if((ur[iv]-u0[iv])*(u0[iv]-ul[iv])<=0.)
+      {
+        ul[iv] = u0[iv];
+        ur[iv] = u0[iv];
+      }
+      if((ur[iv] - ul[iv]) * (ul[iv] - (3. * u0[iv] - 2. * ur[iv])) < 0.)
+      {
+        ul[iv] = 3. * u0[iv] - 2.*ur[iv];
+      }
+      if((ur[iv] - ul[iv]) * ((3. * u0[iv] - 2. * ul[iv]) - ur[iv]) < 0.)
+      {
+        ur[iv] = 3. * u0[iv] - 2. * ul[iv];
+      }      
+    }
+    
+  }  // else if(INT_ORDER==2)
+
+  return 0;
+}
+
+
+//***************************************************************
+// calculates fluxes at faces
+//***************************************************************
+__device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,void* geom)
+{  
+
+  struct geometry *ggg 
+    = (struct geometry *) geom;
+
+  // zero fluxes initially
+  for(int iv=0;iv<NV;iv++) 
+    ff[iv]=0.;
+
+  // TODO -- pass this!
+  //picking up metric from a cell face  
+  //struct geometry geom;
+  //fill_geometry_face(ix,iy,iz,idim,&geom);
+
+  ldouble (*gg)[5],(*GG)[5],gdetu;
+  gg=ggg->gg;
+  GG=ggg->GG;
+  gdetu=ggg->gdet;
+
+  #if (GDETIN==0) //no metric determinant inside derivative
+  gdetu=1.;
+  #endif
+
+  //calculating Tij
+  ldouble T[4][4];
+  calc_Tij_device(pp,ggg,T);
+  indices_2221_device(T,T,gg);//T^ij --> T^i_j
+
+  //primitives
+#ifdef EVOLVEELECTRONS
+  ldouble Se=pp[ENTRE]; //entropy of electrons
+  ldouble Si=pp[ENTRI]; //entropy of ions
+#endif
+  ldouble rho=pp[RHO];
+  ldouble u=pp[UU];
+  ldouble S=pp[5];
+  
+  ldouble vcon[4],ucon[4],ucov[4];
+  vcon[1]=pp[2];
+  vcon[2]=pp[3];
+  vcon[3]=pp[4];
+
+  //converting to 4-velocity
+  conv_vels_both_device(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
+
+#ifdef NONRELMHD
+  ucon[0]=1.;
+  ucov[0]=-1.;
+#endif
+
+  ldouble bsq=0.;
+#ifdef MAGNFIELD
+  ldouble bcon[4],bcov[4]
+  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
+#endif
+
+  ldouble gamma=GAMMA;
+  #ifdef CONSISTENTGAMMA
+  //gamma=pick_gammagas(ggg->ix,ggg->iy,ggg->iz); // TODO 
+  #endif
+
+  ldouble pre=(gamma-1.)*u; 
+  ldouble w=rho+u+pre;
+  ldouble eta=w+bsq;
+  ldouble etap = u+pre+bsq; //eta-rho
+
+  for(int ii=0;ii<4;ii++)
+  {
+    for(int jj=0;jj<4;jj++)
+    {
+	if(isnan(T[ii][jj])) 
+	{
+	  printf("%d %d %e\n",ii,jj,T[ii][jj]);
+	  printf("nan in flux_prime \n");
+	  // TODO print and my_err
+	  //printf("%d > nan tmunu: %d %d %e at %d %d %d\n",PROCID,ii,jj,T[ii][jj],ggg->ix+TOI,ggg->iy+TOJ,ggg->iz+TOK);
+	  //  printf("%d > nan tmunu: %e %e %e %e\n",PROCID,gamma,pre,w,eta);
+	  //  print_4vector(ucon);
+	  //  print_metric(geom.gg);
+	  //  print_Nvector(pp,NV);
+	  //  my_err("nan in flux_prime\n");
+	  //  exit(1);
+	}
+    }
+  }
+  
+  ldouble utp1=calc_utp1_device(vcon,ucon,&geom);
+
+  //***************************************
+  //fluxes
+  //***************************************
+  //hydro fluxes
+  ff[0]= gdetu*rho*ucon[idim+1];
+  
+  //ff[1]= gdetu*(T[idim+1][0]+rho*ucon[idim+1]);
+  //to avoid slow cancellation:
+  ff[1]= gdetu*(etap*ucon[idim+1]*ucov[0] + rho*ucon[idim+1]*utp1);
+  
+#ifdef MAGNFIELD
+  ff[1]+= -gdetu*bcon[idim+1]*bcov[0];
+#endif
+
+  ff[2]= gdetu*(T[idim+1][1]);
+  ff[3]= gdetu*(T[idim+1][2]); 
+  ff[4]= gdetu*(T[idim+1][3]);
+  ff[5]= gdetu*S*ucon[idim+1];
+
+#ifdef NONRELMHD
+  ff[1]= gdetu*T[idim+1][0];
+#endif
+
+#ifdef EVOLVEELECTRONS
+  ff[ENTRE]= gdetu*Se*ucon[idim+1]; 
+  ff[ENTRI]= gdetu*Si*ucon[idim+1]; 
+
+#ifdef RELELECTRONS
+  for(int ie=0; ie < NRELBIN ; ie++)
+    ff[NEREL(ie)] = gdetu*pp[NEREL(ie)]*ucon[idim+1];
+#endif
+#endif
+
+  //magnetic fluxes
+#ifdef MAGNFIELD
+  ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
+  ff[B2]=gdetu*(bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
+  ff[B3]=gdetu*(bcon[3]*ucon[idim+1] - bcon[idim+1]*ucon[3]);
+#endif
+
+  //radiation fluxes // TODO 
+#ifdef RADIATION
+  f_flux_prime_rad(pp,idim,&geom,ff);
+#ifdef MAGNFIELD
+#ifdef BATTERY
+  ldouble eterm[4]={-1.,0.,0.,0.};
+  calc_batteryflux(pp,&geom,eterm,idim,ucov);
+  ldouble suppfac=1.;
+ 
+  ff[B1]+=suppfac*gdetu*eterm[1];
+  ff[B2]+=suppfac*gdetu*eterm[2];
+  ff[B3]+=suppfac*gdetu*eterm[3];
+#endif
+#endif
+#endif
+
+  return 0;
+}
+
+
 // Metric source term
 // TODO: deleted RADIATION and SHEARINGBOX parts
+__device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, void* geom,ldouble* gKr_arr)
+/*  
 __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 		      	                            ldouble* p_arr, ldouble* x_arr,
 			                            ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr)
+*/
 {
-
-     
+  /*
+  ldouble *pp = &get_u(p_arr,0,ix,iy,iz); // TODO -- pass pp and geom instead?
+  
   struct geometry geom;
   fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr,G_arr);
 
       
   ldouble (*gg)[5],(*GG)[5],gdetu;
-  ldouble *pp = &get_u(p_arr,0,ix,iy,iz);
+  
+
   gg=geom.gg;
   GG=geom.GG;
 
@@ -390,10 +784,29 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   #else
   gdetu=geom.gdet;
   #endif
+  */
+
+
+  struct geometry *ggg 
+    = (struct geometry *) geom;
+
+  ldouble (*gg)[5],(*GG)[5],gdetu;
+  gg=ggg->gg;
+  GG=ggg->GG;
+  gdetu=ggg->gdet;
+
+  #if (GDETIN==0) //no metric determinant inside derivative
+  gdetu=1.;
+  #endif
+
+  int ix=ggg->ix;
+  int iy=ggg->iy;
+  int iz=ggg->iz;
   
   ldouble T[4][4];
   //calculating stress energy tensor components
-  calc_Tij_device(pp,&geom,T); 
+  //calc_Tij_device(pp,&geom,T);
+  calc_Tij_device(pp,ggg,T); 
   indices_2221_device(T,T,gg);
 
   for(int i=0;i<4;i++)
@@ -492,7 +905,6 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
   #ifdef CONSISTENTGAMMA
   //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); //TODO
   #endif
-  ldouble gammam1=gamma-1.;
 
   ldouble rho=pp[RHO];
   ldouble uu=pp[UU];  
@@ -548,104 +960,494 @@ __device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int 
 // kernels
 //**********************************************************************
 
-__global__ void calc_update_kernel(int Nloop_0, 
-                                   int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-		       	           ldouble* x_arr, ldouble* xb_arr,
-                                   ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
-				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				   ldouble* u_arr, ldouble* p_arr, ldouble dtin)
+
+__global__ void calc_interp_kernel(int Nloop_1,
+				   int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
+				   ldouble* x_arr, ldouble* xb_arr,
+				   ldouble* gbx_arr, ldouble* gby_arr, ldouble* gbz_arr,
+				   ldouble* Gbx_arr, ldouble* Gby_arr, ldouble* Gbz_arr,				 
+				   ldouble* pbLx_arr, ldouble* pbLy_arr, ldouble* pbLz_arr,
+				   ldouble* pbRx_arr, ldouble* pbRy_arr, ldouble* pbRz_arr,
+				   ldouble* flLx_arr, ldouble* flLy_arr, ldouble* flLz_arr,
+				   ldouble* flRx_arr, ldouble* flRy_arr, ldouble* flRz_arr,				   
+				   ldouble* p_arr)
 {
+
   // get index for this thread
-  // Nloop_0 is number of cells to update;
-  // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
+  // Nloop_1 is number of cells to compute bcs for
+  // domain plus lim (=1 usually) ghost cells
   int ii = blockIdx.x * blockDim.x + threadIdx.x;
-  if(ii >= Nloop_0) return;
+  if(ii >= Nloop_1) return;
     
   // get indices from 1D arrays
-  int ix=loop_0_ix[ii];
-  int iy=loop_0_iy[ii];
-  int iz=loop_0_iz[ii]; 
+  int ix=loop_1_ix[ii];
+  int iy=loop_1_iy[ii];
+  int iz=loop_1_iz[ii]; 
 
-  // Source term
-  ldouble ms[NV];
-  //ldouble gs[NV]; //NOTE gs[NV] is for artifical sources, rarely used
-#ifdef NOSOURCES
-  for(int iv=0;iv<NV;iv++) ms[iv]=0.;
-#else
-  if(is_cell_active_device(ix,iy,iz)==0) // NOTE: is_cell_active currently always returns 1 
+  #ifdef SPECIAL_BC_CHECK
+  int giix,giiy,giiz;
+  #endif
+  int perform_sweep = 1; //Brandon - Added for special conditions where a sweep should not be performed under SPECIAL_BC_CHECK
+
+  // TODO MPI indices
+  #ifdef SPECIAL_BC_CHECK
+  giix = ix + TOI;
+  giiy = iy + TOJ;
+  giiz = iz + TOK;
+  #endif
+
+  // TODO
+  #ifndef MPI4CORNERS
+  if(if_outsidegc(ix,iy,iz)==1) continue; //avoid corners
+  #endif
+
+  // TODO -- what is ret_val? defined in PR_BC_SPECIAL_LOOP?
+  #ifdef SPECIAL_BC_CHECK
+  #include PR_BC_SPECIAL_LOOP
+  if(ret_val == 4) 
   {
-     // Source terms applied only for active cells	  
-     for(int iv=0;iv<NV;iv++) ms[iv]=0.; 
+    return; //Exclude 'corners' in stream region
   }
-  else
+  #endif
+
+  //create arrays for interpolating conserved quantities
+  struct geometry geom;
+  ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
+  ldouble fd_pr[NV],fd_pl[NV];
+  ldouble ffl[NV],ffr[NV]; 
+  ldouble dx0, dxm2, dxm1, dxp1, dxp2;
+  ldouble minmod_theta=MINMOD_THETA;
+  int reconstrpar;
+  int dol,dor;
+
+  //**********************************************************************
+  // x 'sweep'
+  //**********************************************************************
+
+  perform_sweep = 1;
+
+#ifdef MPI4CORNERS
+  if(NX>1 && iy>=-1 && iy<NY+1 && iz>=-1 && iz<NZ+1 && perform_sweep == 1) //needed to calculate face fluxes for flux-CT divB enforcement
+#else
+  if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ && perform_sweep == 1)
+#endif
   {
-     // Get metric source terms ms[iv]
-     // and any other source terms gs[iv] 
-     f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,gcov_arr,gcon_arr,gKr_arr);
-     //f_general_source_term(ix,iy,iz,gs); //NOTE TODO: *very* rarely used, ignore for now
-     //for(int iv=0;iv<NV;iv++) ms[iv]+=gs[iv];
+    dol=dor=1;
+    if(ix<0) dol=0;
+    if(ix>=NX) dor=0;
+
+    // TODO - check these !
+#ifdef SPECIAL_BC_CHECK //Don't do l/r fluxes when at GC - Brandon
+#ifndef SEARCH_STREAM_BOUNDARY
+    if(TNY>1 && TNZ==1)
+    {
+      if(giiy >= STREAM_IYT && giiy <= STREAM_IYB)
+      {
+        if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3))
+	  dor=0;
+      }
+    }
+    else if(TNY==1 && TNZ>1)
+    {
+      if(giiz >= STREAM_IZT && giiz <= STREAM_IZB)
+      {
+        if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3))
+	  dor=0;
+      }
+    }
+    else if(TNY>1 && TNZ>1)
+    {
+      #ifndef STREAM_RING
+      if(giiy >= STREAM_IYT && giiy <= STREAM_IYB && giiz >= STREAM_IZT && giiz <= STREAM_IZB)
+      #else
+      if(giiy >= STREAM_IYT && giiy <= STREAM_IYB)
+      #endif
+      {
+        if(giix == STREAM_IX || giix == (STREAM_IX+1) || giix == (STREAM_IX+2) || giix == (STREAM_IX+3)) dor=0;
+      }
+    }
+#endif
+#endif //SPECIAL_BC_CHECK
+
+    // skip flux calculation if not needed
+    // is_cell_active is currently always 1
+    if((ix==0 && is_cell_active_device(ix,iy,iz)==0) || (ix>0 && is_cell_active_device(ix,iy,iz)==0 && is_cell_active_device(ix-1,iy,iz)==0))
+      dol=0;
+    if((ix==NX-1 && is_cell_active_device(ix,iy,iz)==0) || (ix<NX-1 && is_cell_active_device(ix,iy,iz)==0 && is_cell_active_device(ix+1,iy,iz)==0))
+      dor=0;
+			      
+    // dx0, dxm1, dxp1 are x-sizes (wall to wall) of cells ix, ix-1, ix+1, dxm2m, dxp2 are sizes of cells ix-2, ix+2		
+    dx0  = get_size_x_device(xb_arr,ix,  0);    
+    dxm1 = get_size_x_device(xb_arr,ix-1,0);    
+    dxp1 = get_size_x_device(xb_arr,ix+1,0);    
+	  
+    if(INT_ORDER>1)
+    {
+      dxm2 = get_size_x_device(xb_arr,ix-2,0);    
+      dxp2 = get_size_x_device(xb_arr,ix+2,0);    
+    }
+
+    //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells   
+    for(int iv=0;iv<NV;iv++)
+    {
+      fd_p0[iv]  = get_u(p_arr,iv,ix,  iy,iz);
+      fd_pp1[iv] = get_u(p_arr,iv,ix+1,iy,iz);
+      fd_pm1[iv] = get_u(p_arr,iv,ix-1,iy,iz);
+            
+      if(INT_ORDER>1)
+      {
+        fd_pm2[iv] = get_u(p_arr,iv,ix-2,iy,iz);
+        fd_pp2[iv] = get_u(p_arr,iv,ix+2,iy,iz);
+      }
+    }
+
+    reconstrpar=0;
+    minmod_theta=MINMOD_THETA;
+ 
+    // TODO -- reduce order
+#ifdef REDUCEORDERWHENNEEDED
+    reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
+#endif
+
+    // TODOD -- reduce minmod
+#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
+    minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
+#endif
+
+    // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
+    avg2point_device(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);   
+
+    // if(ix>0)
+    if(dol) //no need to calculate at left face of first GC if dol=0
+    {
+      // Left wall of current cell: compute fluxes and save in array ffl[NV]
+      fill_geometry_face_device(ix,iy,iz,0,&geom,
+                                x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+      check_floors_mhd_device(fd_pl,VELPRIM,&geom);
+     
+      f_flux_prime_device(fd_pl,0,ffl,&geom);
+    }
+
+    // if(ix<NX)
+    if(dor) //no need to calculate at right face of first GC if dor=0
+    {
+      // Right wall of current cell: compute fluxes and save in array ffr[NV]
+      fill_geometry_face_device(ix+1,iy,iz,0,&geom,
+                                x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+      check_floors_mhd_device(fd_pr,VELPRIM,&geom);
+     
+      f_flux_prime_device(fd_pr,0,ffr,&geom);
+    }
+
+    //save interpolated values to memory
+    //Note that l and r of a given cell ix are the left and right wall of that cell
+    //whereas L and R of given ix are quantities to the left and right of wall ix
+    for(int iv=0;iv<NV;iv++)
+    {
+      // Save fd_pl in array pbRx (Primitive_R) of wall ix
+      // Save fd_pr in array pbLx (Primitive_L) of wall ix+1
+      set_ubx(pbRx_arr,iv,ix,  iy,iz,fd_pl[i]);
+      set_ubx(pbLx_arr,iv,ix+1,iy,iz,fd_pr[i]);
+
+      // Save ffl in array flRx (F_R) of wall ix     
+      // Save ffr in array flLx (F_L) of wall ix+1 
+      if(dol)
+        set_ubx(flRx_arr,iv,ix,  iy,iz,ffl[i]);
+      if(dor)
+        set_ubx(flLx_arr,iv,ix+1,iy,iz,ffr[i]);
+    } 
+  }  // if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
+      
+  //**********************************************************************
+  //y 'sweep'
+  //**********************************************************************
+  
+  perform_sweep = 1;
+
+  // TODO - check these !      
+#ifdef SPECIAL_BC_CHECK
+  if(giix > STREAM_IX && giix <= (STREAM_IX+3))
+  {
+#ifdef MPI4CORNERS
+    if(TNY>1 && TNZ==1)
+    {
+      if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+    }
+    else if(TNY>1 && TNZ>1)
+    {
+      #ifndef STREAM_RING
+      if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB-1))
+      { 
+        if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+      }
+      #else
+      if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+      #endif
+    }
+#else
+    if(TNY>1 && TNZ==1)
+    {
+      if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+    }
+    else if(TNY>1 && TNZ>1)
+    {
+      #ifndef STREAM_RING
+      if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB-1))
+      { 
+        if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+      }
+      #else
+      if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+      #endif
+    }
+#endif
   }
 #endif
 
+#ifdef MPI4CORNERS
+  if(NY>1 && ix>=-1 && ix<NX+1 && iz>=-1 && iz<NZ+1 && perform_sweep == 1)
+#else
+  if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ && perform_sweep == 1)
+#endif
+  {
+    dol=dor=1;
+    if(iy<0) dol=0;
+    if(iy>=NY) dor=0;
 
- if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST)
-   printf("D ms[NV]: %e %e %e %e %e %e %e %e %e\n", ms[0],ms[1],ms[2],ms[3],ms[4],ms[5],ms[6],ms[7],ms[8]);
-  
-  // Get the cell size in the three directions
-  ldouble dx = get_size_x_device(xb_arr,ix,0); 
-  ldouble dy = get_size_x_device(xb_arr,iy,1); 
-  ldouble dz = get_size_x_device(xb_arr,iz,2); 
-  
-  //update all conserved according to fluxes and source terms      
-  for(int iv=0;iv<NV;iv++)
-  {	
+    // skip flux calculation if not needed
+    // is_cell_active is currently always 1
+    if((iy==0 && is_cell_active_device(ix,iy,iz)==0) || (iy>0 && is_cell_active_device(ix,iy,iz)==0 && is_cell_active_device(ix,iy-1,iz)==0))
+      dol=0;
+             
+    if((iy==NY-1 && is_cell_active_device(ix,iy,iz)==0) || (iy<NY-1 && is_cell_active_device(ix,iy,iz)==0 && is_cell_active_device(ix,iy+1,iz)==0))
+      dor=0;
 
-    // Get the initial value of the conserved quantity
-    ldouble val = get_u(u_arr,iv,ix,iy,iz);
-    
-    if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
-      printf("D u: %e\n", val);
-    
-    // Get the fluxes on the six faces.
-    // flbx, flby, flbz are the fluxes at the LEFT walls of cell ix, iy, iz.
-    // To get the RIGHT fluxes, we need flbx(ix+1,iy,iz), etc.
-    ldouble flxl=get_ub(flbx_arr,iv,ix,iy,iz,0);
-    ldouble flxr=get_ub(flbx_arr,iv,ix+1,iy,iz,0);
-    ldouble flyl=get_ub(flby_arr,iv,ix,iy,iz,1);
-    ldouble flyr=get_ub(flby_arr,iv,ix,iy+1,iz,1);
-    ldouble flzl=get_ub(flbz_arr,iv,ix,iy,iz,2);
-    ldouble flzr=get_ub(flbz_arr,iv,ix,iy,iz+1,2);
-
-    // Compute Delta U from the six fluxes
-    ldouble du = -(flxr-flxl)*dtin/dx - (flyr-flyl)*dtin/dy - (flzr-flzl)*dtin/dz;
-
-    // Compute the new conserved by adding Delta U and the source term
-    val += (du + ms[iv]*dtin);
-
-    // Save the new conserved to memory
-
-    //TODO
-//#ifdef SKIPHDEVOLUTION
-//  if(iv>=NVMHD)
-//#endif
-//#ifdef RADIATION
-//#ifdef SKIPRADEVOLUTION
-//#ifdef EVOLVEPHOTONNUMBER
-//  if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
-//#else
-//  if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
-//#endif
-//#endif  
-//#endif  
-//#ifdef SKIPHDBUTENERGY
-//  if(iv>=NVMHD || iv==UU)
-//#endif
+    // dx0, dxm1, dxp1 are y-sizes (wall to wall) of cells iy, iy-1, iy+1, dxm2m, dxp2 are sizes of cells iy-2, iy+2
+    dx0  = get_size_x_device(xb_arr,iy,  1);    
+    dxm1 = get_size_x_device(xb_arr,iy-1,1);    
+    dxp1 = get_size_x_device(xb_arr,iy+1,1);    
 	
-    set_u(u_arr,iv,ix,iy,iz,val);	 
+    if(INT_ORDER>1)
+    {
+      dxm2 = get_size_x_device(xb_arr,iy-2,1);  
+      dxp2 = get_size_x_device(xb_arr,iy+2,1);
+    }
 
-  }  
+    //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells		  
+    for(int iv=0;iv<NV;iv++)
+    {
+      fd_p0[iv] =  get_u(p_arr,iv,ix,iy,  iz);
+      fd_pp1[iv] = get_u(p_arr,iv,ix,iy+1,iz);
+      fd_pm1[iv] = get_u(p_arr,iv,ix,iy-1,iz);
+      if(INT_ORDER>1)
+      {
+        fd_pm2[iv]=get_u(p_arr,iv,ix,iy-2,iz);
+        fd_pp2[iv]=get_u(p_arr,iv,ix,iy+2,iz);
+      }
+    }
+	  
+    reconstrpar=0;
+    minmod_theta=MINMOD_THETA;
+		
+    // TODO -- reduce order
+#ifdef REDUCEORDERWHENNEEDED
+   reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
+#endif
+
+   // TODO -- minmod
+#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
+   minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
+#endif
+
+   // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
+   avg2point_device(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
+
+   //iy>0
+   if(dol) //no need to calculate at left face of first GC if dol=0
+   {
+     // Left wall of current cell: compute fluxes and save in array ffl[NV]
+     fill_geometry_face_device(ix,iy,iz,1,&geom,
+			       x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+     check_floors_mhd_device(fd_pl,VELPRIM,&geom);
+     
+     f_flux_prime_device(fd_pl,1,ffl,&geom);
+   }
+
+   //iy<NY
+   if(dor) //no need to calculate at right face of first GC if dor=0
+   {
+
+     // Right wall of current cell: compute fluxes and save in array ffr[NV]
+     fill_geometry_face_device(ix,iy+1,iz,1,&geom,
+			       x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+     check_floors_mhd_device(fd_pr,VELPRIM,&geom);
+     
+     f_flux_prime_device(fd_pr,1,ffr,&geom);
+   }
+
+   //save interpolated values to memory
+   //Note that l and r of a given cell iy are the left and right wall of that cell,
+   //whereas L and R of given iy are quantities to the left and right of wall iy
+   for(int iv=0;iv<NV;iv++)
+   {
+     // Save fd_pl in array pbRy (Primitive_R) of wall iy
+     // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
+     set_uby(pbRy_arr,iv,ix,iy,  iz,fd_pl[iv]);
+     set_uby(pbLy_arr,iv,ix,iy+1,iz,fd_pr[iv]);
+
+     // Save ffl in array flRy (F_R) of wall iy
+     // Save ffr in array flLy (F_R) of wall iy+1
+     if(dol)              
+       set_uby(flRy_arr,iv,ix,iy,  iz,ffl[iv]);
+     if(dor)
+       set_uby(flLy_arr,iv,ix,iy+1,iz,ffr[iv]);
+   } 
+ }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
+
+ //**********************************************************************
+ //z 'sweep'
+ //**********************************************************************
+	      
+  perform_sweep = 1;
+
+//TODO -- check these! 
+#ifdef SPECIAL_BC_CHECK
+  if(giix > STREAM_IX && giix <= (STREAM_IX+3))
+  {
+#ifdef MPI4CORNERS
+    if(TNY==1 && TNZ>1)
+    {
+      if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB+1)) perform_sweep = 0;
+    }
+    else if(TNY>1 && TNZ>1)
+    {
+      #ifndef STREAM_RING
+      if(giiz > (STREAM_IZT-1) && giiz < (STREAM_IZB-1))
+      { 
+        if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+      }
+      #else
+      if(giiy > (STREAM_IYT-1) && giiy < (STREAM_IYB+1)) perform_sweep = 0;
+      #endif
+    }
+#else
+    if(TNY==1 && TNZ>1)
+    {
+      if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB+1)) perform_sweep = 0;
+    }
+    else if(TNY>1 && TNZ>1)
+    {
+      #ifndef STREAM_RING
+      if(giiz >= (STREAM_IZT-1) && giiz <= (STREAM_IZB-1))
+      { 
+        if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+      }
+      #else
+      if(giiy >= (STREAM_IYT-1) && giiy <= (STREAM_IYB+1)) perform_sweep = 0;
+      #endif
+    }
+#endif
+  }
+#endif
+
+#ifdef MPI4CORNERS
+  if(NZ>1 && ix>=-1 && ix<NX+1 && iy>=-1 && iy<NY+1 && perform_sweep == 1)
+#else
+  if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY && perform_sweep == 1)
+#endif
+  {
+    dol=dor=1;
+    if(iz<0) dol=0;
+    if(iz>=NZ) dor=0;
+
+    // skip flux calculation if not needed    
+    // is_cell_active is currently always 1
+    if((iz==0 && is_cell_active_device(ix,iy,iz)==0) || (iz>0 && is_cell_active_device(ix,iy,iz)==0 && is_cell_active_device(ix,iy,iz-1)==0))
+      dol=0;
+    if((iz==NZ-1 && is_cell_active_device(ix,iy,iz)==0) || (iz<NZ-1 && is_cell_active_device(ix,iy,iz)==0 && is_cell_active_device(ix,iy,iz+1)==0))
+      dor=0;
+
+    // dx0, dxm1, dxp1 are z-sizes (wall to wall) of cells iz, iz-1, iz+1, dxm2m, dxp2 are sizes of cells iz-2, iz+2
+    dx0  = get_size_x_device(xb_arr,iz, 2);
+    dxm1 = get_size_x_device(xb_arr,iz-1,2);
+    dxp1 = get_size_x_device(xb_arr,iz+1,2);
+         
+    if(INT_ORDER>1)
+    {
+      dxm2 = get_size_x_device(xb_arr,iz-2,2);
+      dxp2 = get_size_x_device(xb_arr,iz+2,2);
+    }
+
+    //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
+    for(int iv=0;iv<NV;iv++)
+    {
+      fd_p0[iv]  = get_u(p_arr,iv,ix,iy,iz);
+      fd_pp1[iv] = get_u(p_arr,iv,ix,iy,iz+1);
+      fd_pm1[iv] = get_u(p_arr,iv,ix,iy,iz-1);
+           
+      if(INT_ORDER>1)
+      {
+        fd_pm2[iv]=get_u(p_arr,iv,ix,iy,iz-2);
+        fd_pp2[iv]=get_u(p_arr,iv,ix,iy,iz+2);
+      }
+    }
+         
+    reconstrpar=0;
+    minmod_theta=MINMOD_THETA;
+		
+    // TODO -- reduce order
+#ifdef REDUCEORDERWHENNEEDED
+    reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
+#endif
+         
+    // TODO -- minmod
+#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
+    minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
+#endif
+         
+    // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
+    avg2point_device(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
+
+    //iz>0
+    if(dol) //no need to calculate at left face of first GC if dol=0
+    {
+      // Left wall of current cell: compute fluxes and save in array ffl[NV]
+      fill_geometry_face_device(ix,iy,iz,2,&geom,
+			        x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+      check_floors_mhd_device(fd_pl,VELPRIM,&geom);   
+      f_flux_prime_device(fd_pl,2,ffl,&geom);
+    }
+
+    //iz<NZ
+    if(dor) //no need to calculate at right face of first GC if dor=0
+    {
+      // Right wall of current cell: compute fluxes and save in array ffr[NV]
+      fill_geometry_face_device(ix,iy,iz+1,2,&geom,
+			        x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+      check_floors_mhd_device(fd_pr,VELPRIM,&geom);   
+      f_flux_prime_device(fd_pr,2,ffr,&geom);
+    }
+         
+    //save interpolated values to memory
+    //Note that l and r of a given cell iy are the left and right wall of that cell,
+    //whereas L and R of given iy are quantities to the left and right of wall iy
+    for(int iv=0;iv<NV;iv++)
+    {
+      // Save fd_pl in array pbRz (Primitive_R) of wall iz
+      // Save fd_pr in array pbLz (Primitive_L) of wall iz+1
+      set_ubz(pbRz_arr,iv,ix,iy,iz,  fd_pl[iv]);
+      set_ubz(pbLz_arr,iv,ix,iy,iz+1,fd_pr[iv]);
+
+      // Save ffl in array flRz (F_R) of wall iz
+      // Save ffr in array flLz (F_R) of wall iz+1
+      if(dol)
+        set_ubz(flRz_arr,iv,ix,iy,iz,  ffl[iv]);
+      if(dor)
+        set_ubz(flLz_arr,iv,ix,iy,iz+1,ffr[iv]);   
+    }
+  }  // if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY...)
+	     
 }
-
 
 
 //************************************************************************//
@@ -1102,7 +1904,112 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 }
 
 
-ldouble calc_update_gpu(ldouble dtin)
+__global__ void calc_update_kernel(int Nloop_0, 
+                                   int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+		       	           ldouble* x_arr, ldouble* xb_arr,
+                                   ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
+				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
+				   ldouble* u_arr, ldouble* p_arr, ldouble dtin)
+{
+  // get index for this thread
+  // Nloop_0 is number of cells to update;
+  // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
+  int ii = blockIdx.x * blockDim.x + threadIdx.x;
+  if(ii >= Nloop_0) return;
+    
+  // get indices from 1D arrays
+  int ix=loop_0_ix[ii];
+  int iy=loop_0_iy[ii];
+  int iz=loop_0_iz[ii]; 
+
+  // Source term
+  ldouble ms[NV];
+  //ldouble gs[NV]; //NOTE gs[NV] is for artifical sources, rarely used
+#ifdef NOSOURCES
+  for(int iv=0;iv<NV;iv++) ms[iv]=0.;
+#else
+  if(is_cell_active_device(ix,iy,iz)==0) // NOTE: is_cell_active currently always returns 1 
+  {
+     // Source terms applied only for active cells	  
+     for(int iv=0;iv<NV;iv++) ms[iv]=0.; 
+  }
+  else
+  {
+     // Get metric source terms ms[iv]
+     // and any other source terms gs[iv]
+     struct geometry geom;
+     fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr,G_arr);
+
+     ldouble *pp = &get_u(p_arr,0,ix,iy,iz); 
+     f_metric_source_term_device(pp, ms, &geom, gKr_arr)
+
+     //f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,gcov_arr,gcon_arr,gKr_arr); // OLD
+     //f_general_source_term(ix,iy,iz,gs); //NOTE TODO: *very* rarely used, ignore for now
+     //for(int iv=0;iv<NV;iv++) ms[iv]+=gs[iv];
+  }
+#endif
+
+
+ if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST)
+   printf("D ms[NV]: %e %e %e %e %e %e %e %e %e\n", ms[0],ms[1],ms[2],ms[3],ms[4],ms[5],ms[6],ms[7],ms[8]);
+  
+  // Get the cell size in the three directions
+  ldouble dx = get_size_x_device(xb_arr,ix,0); 
+  ldouble dy = get_size_x_device(xb_arr,iy,1); 
+  ldouble dz = get_size_x_device(xb_arr,iz,2); 
+  
+  //update all conserved according to fluxes and source terms      
+  for(int iv=0;iv<NV;iv++)
+  {	
+
+    // Get the initial value of the conserved quantity
+    ldouble val = get_u(u_arr,iv,ix,iy,iz);
+    
+    if(doTEST==1 && ix==ixTEST && iy==iyTEST && iz==izTEST && iv==ivTEST)
+      printf("D u: %e\n", val);
+    
+    // Get the fluxes on the six faces.
+    // flbx, flby, flbz are the fluxes at the LEFT walls of cell ix, iy, iz.
+    // To get the RIGHT fluxes, we need flbx(ix+1,iy,iz), etc.
+    ldouble flxl=get_ub(flbx_arr,iv,ix,iy,iz,0);
+    ldouble flxr=get_ub(flbx_arr,iv,ix+1,iy,iz,0);
+    ldouble flyl=get_ub(flby_arr,iv,ix,iy,iz,1);
+    ldouble flyr=get_ub(flby_arr,iv,ix,iy+1,iz,1);
+    ldouble flzl=get_ub(flbz_arr,iv,ix,iy,iz,2);
+    ldouble flzr=get_ub(flbz_arr,iv,ix,iy,iz+1,2);
+
+    // Compute Delta U from the six fluxes
+    ldouble du = -(flxr-flxl)*dtin/dx - (flyr-flyl)*dtin/dy - (flzr-flzl)*dtin/dz;
+
+    // Compute the new conserved by adding Delta U and the source term
+    val += (du + ms[iv]*dtin);
+
+    // Save the new conserved to memory
+
+    //TODO
+//#ifdef SKIPHDEVOLUTION
+//  if(iv>=NVMHD)
+//#endif
+//#ifdef RADIATION
+//#ifdef SKIPRADEVOLUTION
+//#ifdef EVOLVEPHOTONNUMBER
+//  if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ && iv!=NF)
+//#else
+//  if(iv!=EE && iv!=FX && iv!=FY && iv!=FZ)
+//#endif
+//#endif  
+//#endif  
+//#ifdef SKIPHDBUTENERGY
+//  if(iv>=NVMHD || iv==UU)
+//#endif
+	
+    set_u(u_arr,iv,ix,iy,iz,val);	 
+
+  }  
+}
+
+
+ldouble calc_interp_gpu()
 {
   cudaError_t err = cudaSuccess;
   cudaEvent_t start, stop;
@@ -1110,17 +2017,21 @@ ldouble calc_update_gpu(ldouble dtin)
   cudaEventCreate(&stop);
 
   // Determine number of threadblocks
-  int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
+  int threadblocks = (Nloop_1 / TB_SIZE) + ((Nloop_1 % TB_SIZE)? 1:0);
   //printf("\nTest %d\n", threadblocks); fflush(stdout);
 
   // Launch kernel
   cudaEventRecord(start);
-  calc_update_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, 
-						d_loop0_ix, d_loop0_iy, d_loop0_iz,
-						d_x, d_xb,d_gcov, d_gcon, d_Kris,
-						d_flbx_arr, d_flby_arr, d_flbz_arr,
-						d_u_arr, d_p_arr, dtin);
-  
+  calc_interp_kernel<<<threadblocks, TB_SIZE>>>(Nloop_1,
+                                                d_loop1_ix, d_loop1_iy, d_loop1_iz,
+		                                d_x, d_xb,
+		                                d_gbx, d_gby, d_gbz,
+		                                d_Gbx, d_Gby, d_Gbz,
+		                                d_pbLx_arr, d_pbLy_arr, d_pbLz_arr,
+		                                d_pbRx_arr, d_pbRy_arr, d_pbRz_arr,
+		                                d_flLx_arr, d_flLy_arr, d_flLz_arr,
+		                                d_flRx_arr, d_flRy_arr, d_flRz_arr,
+						d_p_arr);
   cudaEventRecord(stop);
   err = cudaPeekAtLastError();
   // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
@@ -1132,24 +2043,20 @@ ldouble calc_update_gpu(ldouble dtin)
   cudaEventSynchronize(stop);
   float tms = 0.;
   cudaEventElapsedTime(&tms, start,stop);
-  printf("gpu update time: %0.2f \n",tms);
-
-  // output for comparison
+  printf("gpu calc_interp time: %0.2f \n",tms);
+ 
 #ifdef CPUKO 
-  ldouble* u_tmp;
-  long long Nprim  = (SX)*(SY)*(SZ)*NV;
-  if((u_tmp=(ldouble*)malloc(Nprim*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(u_tmp, d_u_arr, Nprim*sizeof(ldouble), cudaMemcpyDeviceToHost);
-  if(err != cudaSuccess) printf("failed cudaMemcpy of d_p_arr to p_tmp\n");
-  printf("gpu update uu[NV]: ");
+  ldouble* pbLx_tmp;
+  long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
+  if((pbLx_tmp=(ldouble*)malloc(NfluxX*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(pbLx_tmp, d_pbLx_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy of d_pbLx_arr to pbLx_tmp\n");
+  printf("gpu calc_interp pbLx[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_u(u_tmp, iv, ixTEST, iyTEST, izTEST));
+    printf("%e ", get_ub(pbLx_tmp, iv, ixTEST, iyTEST, izTEST,0));
   printf("\n");
-  free(u_tmp);
+  free(pbLx_tmp);
 #endif
-
-  // set global timestep dt
-  dt = dtin;
 
   return (ldouble)tms;
 }
@@ -1214,3 +2121,54 @@ ldouble calc_fluxes_gpu()
   return (ldouble)tms;
 }
 
+ldouble calc_update_gpu(ldouble dtin)
+{
+  cudaError_t err = cudaSuccess;
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  // Determine number of threadblocks
+  int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
+  //printf("\nTest %d\n", threadblocks); fflush(stdout);
+
+  // Launch kernel
+  cudaEventRecord(start);
+  calc_update_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, 
+						d_loop0_ix, d_loop0_iy, d_loop0_iz,
+						d_x, d_xb,d_gcov, d_gcon, d_Kris,
+						d_flbx_arr, d_flby_arr, d_flbz_arr,
+						d_u_arr, d_p_arr, dtin);
+  
+  cudaEventRecord(stop);
+  err = cudaPeekAtLastError();
+  // printf("ERROR-Kernel (error code %s)!\n", cudaGetErrorString(err));
+
+  // synchronize
+  cudaDeviceSynchronize();
+  
+  // timing information
+  cudaEventSynchronize(stop);
+  float tms = 0.;
+  cudaEventElapsedTime(&tms, start,stop);
+  printf("gpu update time: %0.2f \n",tms);
+
+  // output for comparison
+#ifdef CPUKO 
+  ldouble* u_tmp;
+  long long Nprim  = (SX)*(SY)*(SZ)*NV;
+  if((u_tmp=(ldouble*)malloc(Nprim*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(u_tmp, d_u_arr, Nprim*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy of d_p_arr to p_tmp\n");
+  printf("gpu update uu[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(u_tmp, iv, ixTEST, iyTEST, izTEST));
+  printf("\n");
+  free(u_tmp);
+#endif
+
+  // set global timestep dt
+  dt = dtin;
+
+  return (ldouble)tms;
+}

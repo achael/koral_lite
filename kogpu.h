@@ -53,19 +53,16 @@ __device__ __host__ int is_cell_active_device(int ix, int iy, int iz);
 __device__ __host__ int is_cell_corrected_polaraxis_device(int ix, int iy, int iz);
 __device__ __host__ ldouble get_x_device(ldouble* x_arr, int ic, int idim);
 __device__ __host__ ldouble get_xb_device(ldouble* xb_arr, int ic, int idim);
-__device__ __host__ ldouble get_gKr_device(ldouble* gKr_arr, int i,int j, int k,
-				           int ix, int iy, int iz);
-
 __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim);
+__device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
+	                                 ldouble *ul,ldouble *ur,
+	                                 ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,
+	                                 int param,ldouble theta)
+
+
 
 // kernels
 
-__global__ void calc_update_kernel(int Nloop_0, 
-                                   int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
-		        	   ldouble* x_arr, ldouble* xb_arr,
-                                   ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
-				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
-				   ldouble* u_arr, ldouble* p_arr, ldouble dtin);
 __global__ void calc_fluxes_kernel(int Nloop_1,
                                    int* loop_1_ix, int* loop_0_iy, int* loop_1_iz,
 		       	           ldouble* x_arr, ldouble* xb_arr,
@@ -80,7 +77,26 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 				   ldouble* ahdx_arr,  ldouble* ahdy_arr,  ldouble* ahdz_arr,	   
 				   ldouble* aradxl_arr, ldouble* aradyl_arr, ldouble* aradzl_arr,
 				   ldouble* aradxr_arr, ldouble* aradyr_arr, ldouble* aradzr_arr,
-				   ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,	   				    ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr);
+				   ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,
+				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr);
+
+__global__ void calc_interp_kernel(int Nloop_1,
+				   int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
+				   ldouble* x_arr, ldouble* xb_arr,
+				   ldouble* gbx_arr, ldouble* gby_arr, ldouble* gbz_arr,
+				   ldouble* Gbx_arr, ldouble* Gby_arr, ldouble* Gbz_arr,				 
+				   ldouble* pbLx_arr, ldouble* pbLy_arr, ldouble* pbLz_arr,
+				   ldouble* pbRx_arr, ldouble* pbRy_arr, ldouble* pbRz_arr,
+				   ldouble* flLx_arr, ldouble* flLy_arr, ldouble* flLz_arr,
+				   ldouble* flRx_arr, ldouble* flRy_arr, ldouble* flRz_arr,				   
+				   ldouble* p_arr)
+
+__global__ void calc_update_kernel(int Nloop_0, 
+                                   int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+		        	   ldouble* x_arr, ldouble* xb_arr,
+                                   ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
+				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
+				   ldouble* u_arr, ldouble* p_arr, ldouble dtin);
 
 
 ///////////////////////////////////////////////////////////////
@@ -108,14 +124,16 @@ __device__ __host__ int fill_utinucon_device(ldouble *u1,double gg[][5],ldouble 
 __device__ __host__ int calc_normalobs_ncon_device(ldouble GG[][5], ldouble alpha, ldouble *ncon);
 
 ///////////////////////////////////////////////////////////////
-// physics.cu  (TODO ???) /////////////////////////////////////
+// physicsgpu.cu  (TODO ???) /////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
+__device__ __host__ int f_flux_prime_device(ldouble *pp, int idim,ldouble *ff,int lr);
+__device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, void* geom,ldouble* gKr_arr);
+//__device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
+//			                            ldouble* p_arr, ldouble* x_arr,
+//			                            ldouble* g_arr, ldouble* G_arr, ldouble* l_arr);
 __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
 __device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz);
-__device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
-			                            ldouble* p_arr, ldouble* x_arr,
-			                            ldouble* g_arr, ldouble* G_arr, ldouble* l_arr);
   
 ///////////////////////////////////////////////////////////////
 // magngpu.cu   ///////////////////////////////////////////////
