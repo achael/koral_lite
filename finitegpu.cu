@@ -625,7 +625,6 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
   gg=ggg->gg;
   GG=ggg->GG;
   gdetu=ggg->gdet;
-
   #if (GDETIN==0) //no metric determinant inside derivative
   gdetu=1.;
   #endif
@@ -789,7 +788,6 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
   ldouble (*gg)[5],(*GG)[5],gdetu;
   gg=ggg->gg;
-  GG=ggg->GG;
   gdetu=ggg->gdet;
 
   #if (GDETIN==0) //no metric determinant inside derivative
@@ -837,6 +835,8 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
 
 
 #if (GDETIN==0)
+  GG=ggg->GG;
+    
   //gdet derivatives
   ldouble dlgdet[3];
   dlgdet[0]=gg[0][4]; //D[gdet,x1]/gdet
@@ -1253,53 +1253,53 @@ __global__ void calc_interp_kernel(int Nloop_1,
 
    // TODO -- minmod
 #ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
-   minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
+    minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
 #endif
 
-   // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
-   avg2point_device(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
+    // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
+    avg2point_device(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
 
-   //iy>0
-   if(dol) //no need to calculate at left face of first GC if dol=0
-   {
-     // Left wall of current cell: compute fluxes and save in array ffl[NV]
-     fill_geometry_face_device(ix,iy,iz,1,&geom,
-			       x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
-     check_floors_mhd_device(fd_pl,VELPRIM,&geom);
+    //iy>0
+    if(dol) //no need to calculate at left face of first GC if dol=0
+    {
+      // Left wall of current cell: compute fluxes and save in array ffl[NV]
+      fill_geometry_face_device(ix,iy,iz,1,&geom,
+ 			       x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+      check_floors_mhd_device(fd_pl,VELPRIM,&geom);
      
-     f_flux_prime_device(fd_pl,1,ffl,&geom);
-   }
+      f_flux_prime_device(fd_pl,1,ffl,&geom);
+    }
 
-   //iy<NY
-   if(dor) //no need to calculate at right face of first GC if dor=0
-   {
+    //iy<NY
+    if(dor) //no need to calculate at right face of first GC if dor=0
+    {
 
-     // Right wall of current cell: compute fluxes and save in array ffr[NV]
-     fill_geometry_face_device(ix,iy+1,iz,1,&geom,
-			       x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
-     check_floors_mhd_device(fd_pr,VELPRIM,&geom);
+      // Right wall of current cell: compute fluxes and save in array ffr[NV]
+      fill_geometry_face_device(ix,iy+1,iz,1,&geom,
+ 			       x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
+      check_floors_mhd_device(fd_pr,VELPRIM,&geom);
      
-     f_flux_prime_device(fd_pr,1,ffr,&geom);
-   }
+      f_flux_prime_device(fd_pr,1,ffr,&geom);
+    }
 
-   //save interpolated values to memory
-   //Note that l and r of a given cell iy are the left and right wall of that cell,
-   //whereas L and R of given iy are quantities to the left and right of wall iy
-   for(int iv=0;iv<NV;iv++)
-   {
-     // Save fd_pl in array pbRy (Primitive_R) of wall iy
-     // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
-     set_uby(pbRy_arr,iv,ix,iy,  iz,fd_pl[iv]);
-     set_uby(pbLy_arr,iv,ix,iy+1,iz,fd_pr[iv]);
-
-     // Save ffl in array flRy (F_R) of wall iy
-     // Save ffr in array flLy (F_R) of wall iy+1
-     if(dol)              
-       set_uby(flRy_arr,iv,ix,iy,  iz,ffl[iv]);
-     if(dor)
-       set_uby(flLy_arr,iv,ix,iy+1,iz,ffr[iv]);
-   } 
- }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
+    //save interpolated values to memory
+    //Note that l and r of a given cell iy are the left and right wall of that cell,
+    //whereas L and R of given iy are quantities to the left and right of wall iy
+    for(int iv=0;iv<NV;iv++)
+    {
+      // Save fd_pl in array pbRy (Primitive_R) of wall iy
+      // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
+      set_uby(pbRy_arr,iv,ix,iy,  iz,fd_pl[iv]);
+      set_uby(pbLy_arr,iv,ix,iy+1,iz,fd_pr[iv]);
+ 
+      // Save ffl in array flRy (F_R) of wall iy
+      // Save ffr in array flLy (F_R) of wall iy+1
+      if(dol)              
+        set_uby(flRy_arr,iv,ix,iy,  iz,ffl[iv]);
+      if(dor)
+        set_uby(flLy_arr,iv,ix,iy+1,iz,ffr[iv]);
+    } 
+  }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
 
  //**********************************************************************
  //z 'sweep'

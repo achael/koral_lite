@@ -513,18 +513,8 @@ int calc_interp()
 
       //create arrays for interpolating conserved quantities
       struct geometry geom;
-      //ldouble x0[3],x0l[3],x0r[3],xm1[3],xp1[3];
-      //ldouble fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
-      //ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV];
-      ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
-      //ldouble fd_s0[NV],fd_sp1[NV],fd_sp2[NV],fd_sm1[NV],fd_sm2[NV];
-      //ldouble fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
-      //ldouble fd_pLr[NV],fd_pLl[NV],fd_pRl[NV],fd_pRr[NV];
+      ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV];
       ldouble fd_pr[NV],fd_pl[NV];
-      //ldouble fd_sLr[NV],fd_sLl[NV],fd_sRl[NV],fd_sRr[NV];
-      //ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-      //ldouble a0[2],am1[2],ap1[2],al,ar,amax,dx;  
-      //ldouble ffRl[NV],ffRr[NV],ffLl[NV],ffLr[NV];
       ldouble ffl[NV],ffr[NV]; 
       ldouble dx0, dxm2, dxm1, dxp1, dxp2;
       ldouble minmod_theta=MINMOD_THETA;
@@ -1670,13 +1660,9 @@ int calc_fluxes()
     struct geometry geom;
    
     ldouble a0[2],am1[2],ap1[2],ag,al,ar,amax;
-    //ldouble cmin,cmax,csLl[2],csLr[2],csRl[2],csRr[2];
     ldouble am1l[2],am1r[2],ap1l[2],ap1r[2];
-    //ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV],fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
     ldouble fd_pLl[NV], fd_pRl[NV], fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
     ldouble fd_fstarl[NV],fd_fstarr[NV];
-    //ldouble fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-    //ldouble gdet,gg[4][5],GG[4][5];
 
     // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
     for(int i=0;i<NV;i++) 
