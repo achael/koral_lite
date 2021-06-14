@@ -383,10 +383,8 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
 	                                 int param,ldouble theta)
 {
   
-  else if(INT_ORDER==0 || param==1) // donor cell, no interpolation
-  {
-    int i;
-    
+  if(INT_ORDER==0 || param==1) // donor cell, no interpolation
+  { 
     for(int iv=0;iv<NV;iv++)
     {
       ur[iv]=u0[iv];
@@ -477,7 +475,7 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
       
       if(isnan(ur[iv]) || isnan (ul[iv]))
 	printf("%d %e %e %e %e %e\n",i,um2[i],um1[i],u0[i],up1[i],up2[i]);
-    } 
+    }  // for(int iv=0;iv<NV;iv++)
   }  // else if(INT_ORDER==1)
 
   else if(INT_ORDER==2) //parabolic PPM
