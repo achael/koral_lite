@@ -1901,7 +1901,7 @@ ldouble calc_wavespeeds_gpu()
 
   // TODO replace tstepdenmin_tmp,tstepdenmax_tmp with actual tstepdenmin/max when confident reduction works
   ldouble tstepdenmin_tmp, tstepdenmax_tmp;
-  err = cudaMemcpy(&tstepdenmin_tmp, d_tstepdemin, sizeof(ldouble), cudaMemcpyDeviceToHost);
+  err = cudaMemcpy(&tstepdenmin_tmp, d_tstepdenmin, sizeof(ldouble), cudaMemcpyDeviceToHost);
   err = cudaMemcpy(&tstepdenmax_tmp, d_tstepdenmax, sizeof(ldouble), cudaMemcpyDeviceToHost);
   cudaFree(d_tstepdenmin);
   cudaFree(d_tstepdenmax);
