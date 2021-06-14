@@ -2046,9 +2046,9 @@ ldouble calc_interp_gpu()
   ldouble* pbLx_tmp;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   if((pbLx_tmp=(ldouble*)malloc(NfluxX*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(pbLx_tmp, d_pbLx_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  err = cudaMemcpy(pbLx_tmp, d_flLx_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
   if(err != cudaSuccess) printf("failed cudaMemcpy of d_pbLx_arr to pbLx_tmp\n");
-  printf("gpu calc_interp pbLx[NV]: ");
+  printf("gpu calc_interp flLx[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(pbLx_tmp, iv, ixTEST, iyTEST, izTEST,0));
   printf("\n");
