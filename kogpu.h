@@ -63,7 +63,7 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
 
 
 // kernels
-__global__ void calc_wavespeeds_kernel(int Nloop_1
+__global__ void calc_wavespeeds_kernel(int Nloop_1,
 				       int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
 				       ldouble* x_arr, ldouble* xb_arr,
 				       ldouble* g_arr, ldouble* G_arr,
