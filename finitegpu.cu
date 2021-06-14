@@ -474,7 +474,7 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
       }
       
       if(isnan(ur[iv]) || isnan (ul[iv]))
-	printf("%d %e %e %e %e %e\n",i,um2[iv],um1[iv],u0[iv],up1[iv],up2[iv]);
+	printf("%d %e %e %e %e %e\n",iv,um2[iv],um1[iv],u0[iv],up1[iv],up2[iv]);
     }  // for(int iv=0;iv<NV;iv++)
   }  // else if(INT_ORDER==1)
 
