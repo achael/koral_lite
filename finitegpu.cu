@@ -1866,9 +1866,10 @@ ldouble calc_wavespeeds_gpu()
   // Launch kernel
   cudaEventRecord(start);
 
-  ldouble* d_tstepdenmin, d_tstepdenmax;
+  ldouble* d_tstepdenmin;
+  ldoulbe* d_tstepdenmax;
   err = cudaMalloc(&d_tstepdenmin, sizeof(ldouble));
-  err = cudaMalloc(&d_tstepdenmin, sizeof(ldouble));
+  err = cudaMalloc(&d_tstepdenmax, sizeof(ldouble));
   err = cudaMemcpy(d_tstepdenmin, &tstepdenmin, sizeof(ldouble), cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_tstepdenmax, &tstepdenmax, sizeof(ldouble), cudaMemcpyHostToDevice);
   
