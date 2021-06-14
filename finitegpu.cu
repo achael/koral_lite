@@ -718,16 +718,6 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
   ff[1]= gdetu*T[idim+1][0];
 #endif
 
-#ifdef EVOLVEELECTRONS
-  ff[ENTRE]= gdetu*Se*ucon[idim+1]; 
-  ff[ENTRI]= gdetu*Si*ucon[idim+1]; 
-
-#ifdef RELELECTRONS
-  for(int ie=0; ie < NRELBIN ; ie++)
-    ff[NEREL(ie)] = gdetu*pp[NEREL(ie)]*ucon[idim+1];
-#endif
-#endif
-
   //magnetic fluxes
 #ifdef MAGNFIELD
   ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
@@ -748,6 +738,17 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
   ff[B2]+=suppfac*gdetu*eterm[2];
   ff[B3]+=suppfac*gdetu*eterm[3];
 #endif
+#endif
+#endif
+
+  // electron species fluxes
+#ifdef EVOLVEELECTRONS
+  ff[ENTRE]= gdetu*Se*ucon[idim+1]; 
+  ff[ENTRI]= gdetu*Si*ucon[idim+1]; 
+
+#ifdef RELELECTRONS
+  for(int ie=0; ie < NRELBIN ; ie++)
+    ff[NEREL(ie)] = gdetu*pp[NEREL(ie)]*ucon[idim+1];
 #endif
 #endif
 
@@ -1123,6 +1124,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
       check_floors_mhd_device(fd_pl,VELPRIM,&geom);
      
       f_flux_prime_device(fd_pl,0,ffl,&geom);
+      //            if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet ix: %e\n",geom.gdet);
     }
 
     // if(ix<NX)
@@ -1134,6 +1136,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
       check_floors_mhd_device(fd_pr,VELPRIM,&geom);
      
       f_flux_prime_device(fd_pr,0,ffr,&geom);
+      //            if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet ix+1: %e\n",geom.gdet);
     }
 
     //save interpolated values to memory
@@ -1268,6 +1271,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
      check_floors_mhd_device(fd_pl,VELPRIM,&geom);
      
      f_flux_prime_device(fd_pl,1,ffl,&geom);
+     //           if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iy: %e\n",geom.gdet);
    }
 
    //iy<NY
@@ -1280,6 +1284,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
      check_floors_mhd_device(fd_pr,VELPRIM,&geom);
      
      f_flux_prime_device(fd_pr,1,ffr,&geom);
+     //           if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iy+1: %e\n",geom.gdet);
    }
 
    //save interpolated values to memory
@@ -1413,6 +1418,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
 			        x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
       check_floors_mhd_device(fd_pl,VELPRIM,&geom);   
       f_flux_prime_device(fd_pl,2,ffl,&geom);
+      //      if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iz: %e\n",geom.gdet);
     }
 
     //iz<NZ
@@ -1423,6 +1429,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
 			        x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
       check_floors_mhd_device(fd_pr,VELPRIM,&geom);   
       f_flux_prime_device(fd_pr,2,ffr,&geom);
+      //      if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iz+1: %e\n",geom.gdet);
     }
          
     //save interpolated values to memory
@@ -1440,7 +1447,12 @@ __global__ void calc_interp_kernel(int Nloop_1,
       if(dol)
         set_ubz(flRz_arr,iv,ix,iy,iz,  ffl[iv]);
       if(dor)
-        set_ubz(flLz_arr,iv,ix,iy,iz+1,ffr[iv]);   
+        set_ubz(flLz_arr,iv,ix,iy,iz+1,ffr[iv]);
+
+      if(ix==ixTEST && iy==iyTEST && iz==izTEST)
+	{
+	  //printf("%d %d %e %e %e %e\n",dol, dor, fd_pl[iv],fd_pr[iv],ffl[iv],ffr[iv]);
+	}
     }
   }  // if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY...)
 	     
@@ -1935,7 +1947,7 @@ __global__ void calc_update_kernel(int Nloop_0,
      // Get metric source terms ms[iv]
      // and any other source terms gs[iv]
      struct geometry geom;
-     fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr,G_arr);
+     fill_geometry_device(ix,iy,iz,&geom, x_arr,g_arr,G_arr);
 
      ldouble *pp = &get_u(p_arr,0,ix,iy,iz); 
      f_metric_source_term_device(pp, ms, &geom, gKr_arr);
@@ -2043,18 +2055,21 @@ ldouble calc_interp_gpu()
   printf("gpu calc_interp time: %0.2f \n",tms);
  
 #ifdef CPUKO 
-  ldouble* pbLx_tmp;
+  ldouble* f_tmp;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
+  long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
+  
+  if((f_tmp=(ldouble*)malloc(NfluxZ*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(f_tmp, d_flLz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
 
-  if((pbLx_tmp=(ldouble*)malloc(NfluxY*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(pbLx_tmp, d_pbLy_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  
   if(err != cudaSuccess) printf("failed cudaMemcpy of d_pbLx_arr to pbLx_tmp\n");
-  printf("gpu calc_interp pbLy[NV]: ");
+  printf("gpu calc_interp flLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(pbLx_tmp, iv, ixTEST, iyTEST, izTEST,1));
+    printf("%e ", get_ub(f_tmp, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n");
-  free(pbLx_tmp);
+  free(f_tmp);
 #endif
 
   return (ldouble)tms;

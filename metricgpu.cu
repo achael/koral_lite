@@ -70,7 +70,7 @@ __device__ __host__ int fill_geometry_device(int ix,int iy,int iz, void* geom,
 //fills geometry structure for cell face ix,iy,iz in idim
 //**********************************************************************
 
-__host__ __device__ int fill_geometry_face_device(int ix,int iy,int iz,int idim, void *geom,
+__host__ __device__ int fill_geometry_face_device(int ix,int iy,int iz, int idim, void *geom,
 						  ldouble* x_arr, ldouble* xb_arr,
 						  ldouble* gbx_arr,ldouble* gby_arr,ldouble* gbz_arr,
 						  ldouble* Gbx_arr,ldouble* Gby_arr,ldouble* Gbz_arr)
@@ -190,10 +190,12 @@ int push_geometry_gpu()
   err = cudaMalloc(&d_Kris,     sizeof(ldouble)*Nkris);
 
   err = cudaMalloc(&d_gbx,     sizeof(ldouble)*NmetX);
-  err = cudaMalloc(&d_Gby,     sizeof(ldouble)*NmetX);
-  err = cudaMalloc(&d_gbz,     sizeof(ldouble)*NmetY);
-  err = cudaMalloc(&d_Gbx,     sizeof(ldouble)*NmetY);  
-  err = cudaMalloc(&d_gby,     sizeof(ldouble)*NmetZ);
+  err = cudaMalloc(&d_Gbx,     sizeof(ldouble)*NmetX);
+  
+  err = cudaMalloc(&d_gby,     sizeof(ldouble)*NmetY);
+  err = cudaMalloc(&d_Gby,     sizeof(ldouble)*NmetY);  
+
+  err = cudaMalloc(&d_gbz,     sizeof(ldouble)*NmetZ);
   err = cudaMalloc(&d_Gbz,     sizeof(ldouble)*NmetZ);
   
   // Make 1D arrays of ix,iy,iz indicies for easier copy to device
