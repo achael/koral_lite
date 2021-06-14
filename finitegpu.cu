@@ -399,8 +399,8 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
     {
       // Slope limiter code rewritten by Ramesh. No function-calls, no divisions.
       ldouble slope;
-      ldouble deltam = u0[i]-um1[i];
-      ldouble deltap = up1[i]-u0[i];
+      ldouble deltam = u0[iv]-um1[iv];
+      ldouble deltap = up1[iv]-u0[iv];
       
       if (deltam * deltap <= 0.)
       {
@@ -431,7 +431,7 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
           else if (FLUXLIMITER == 3) // Koren -- discouraged since it is not symmetric
           {
             printf("Error: Koren slope limiter is discouraged since it is not symmetric\n");
-            return -3
+            return -3;
 	    //exit(-3); // TODO
           }
           else // Superbee
@@ -570,7 +570,7 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
     Z2 = dxp1_plus_dx0 / twodx0_plus_dxm1;
     DX_inv = 1. / (dxm2+dxm1+dx0+dxp1);
     
-    for(iv=0;iv<NV;iv++)
+    for(int iv=0;iv<NV;iv++)
     {
       // This is a_{j-1/2} in eq (1.6) of Colella & Woodward
       ul[iv] = um1[iv] + dxm1 * dx0_plus_dxm1_inv * (u0[iv]-um1[iv]) +
@@ -659,7 +659,7 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
 
   ldouble bsq=0.;
 #ifdef MAGNFIELD
-  ldouble bcon[4],bcov[4]
+  ldouble bcon[4],bcov[4];
   calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
 #endif
 
@@ -1010,7 +1010,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
 
   //create arrays for interpolating conserved quantities
   struct geometry geom;
-  ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
+  ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV];
   ldouble fd_pr[NV],fd_pl[NV];
   ldouble ffl[NV],ffr[NV]; 
   ldouble dx0, dxm2, dxm1, dxp1, dxp2;
@@ -1144,15 +1144,15 @@ __global__ void calc_interp_kernel(int Nloop_1,
     {
       // Save fd_pl in array pbRx (Primitive_R) of wall ix
       // Save fd_pr in array pbLx (Primitive_L) of wall ix+1
-      set_ubx(pbRx_arr,iv,ix,  iy,iz,fd_pl[i]);
-      set_ubx(pbLx_arr,iv,ix+1,iy,iz,fd_pr[i]);
+      set_ubx(pbRx_arr,iv,ix,  iy,iz,fd_pl[iv]);
+      set_ubx(pbLx_arr,iv,ix+1,iy,iz,fd_pr[iv]);
 
       // Save ffl in array flRx (F_R) of wall ix     
       // Save ffr in array flLx (F_L) of wall ix+1 
       if(dol)
-        set_ubx(flRx_arr,iv,ix,  iy,iz,ffl[i]);
+        set_ubx(flRx_arr,iv,ix,  iy,iz,ffl[iv]);
       if(dor)
-        set_ubx(flLx_arr,iv,ix+1,iy,iz,ffr[i]);
+        set_ubx(flLx_arr,iv,ix+1,iy,iz,ffr[iv]);
     } 
   }  // if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
       
@@ -1905,7 +1905,7 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 __global__ void calc_update_kernel(int Nloop_0, 
                                    int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
 		       	           ldouble* x_arr, ldouble* xb_arr,
-                                   ldouble* gcov_arr, ldouble* gcon_arr, ldouble* gKr_arr,
+                                   ldouble* g_arr, ldouble* G_arr, ldouble* gKr_arr,
 				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr,
 				   ldouble* u_arr, ldouble* p_arr, ldouble dtin)
 {
@@ -1939,9 +1939,9 @@ __global__ void calc_update_kernel(int Nloop_0,
      fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr,G_arr);
 
      ldouble *pp = &get_u(p_arr,0,ix,iy,iz); 
-     f_metric_source_term_device(pp, ms, &geom, gKr_arr)
+     f_metric_source_term_device(pp, ms, &geom, gKr_arr);
 
-     //f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,gcov_arr,gcon_arr,gKr_arr); // OLD
+     //f_metric_source_term_device(ix,iy,iz,ms,p_arr, x_arr,g_arr,G_arr,gKr_arr); // OLD
      //f_general_source_term(ix,iy,iz,gs); //NOTE TODO: *very* rarely used, ignore for now
      //for(int iv=0;iv<NV;iv++) ms[iv]+=gs[iv];
   }
