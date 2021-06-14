@@ -1324,7 +1324,8 @@ op_explicit(ldouble t, ldouble dtin)
   printf("cpu calc_wavespeeds time: %0.2lf \n", time_cpu_wavespeeds);
   
   printf("gpu calc wavespeeds tstepdensmin/max: %e %e\n",tstepdenmin,tstepdenmax);
-    
+#endif
+  
 #ifndef SKIPEVOLUTION
   
 
