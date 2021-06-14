@@ -57,11 +57,21 @@ __device__ __host__ ldouble get_size_x_device(ldouble* xb_arr, int ic, int idim)
 __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 	                                 ldouble *ul,ldouble *ur,
 	                                 ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,
-	                                 int param,ldouble theta)
+	                                 int param,ldouble theta);
 
 
 
 // kernels
+__global__ void calc_interp_kernel(int Nloop_1,
+				   int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
+				   ldouble* x_arr, ldouble* xb_arr,
+				   ldouble* gbx_arr, ldouble* gby_arr, ldouble* gbz_arr,
+				   ldouble* Gbx_arr, ldouble* Gby_arr, ldouble* Gbz_arr,				 
+				   ldouble* pbLx_arr, ldouble* pbLy_arr, ldouble* pbLz_arr,
+				   ldouble* pbRx_arr, ldouble* pbRy_arr, ldouble* pbRz_arr,
+				   ldouble* flLx_arr, ldouble* flLy_arr, ldouble* flLz_arr,
+				   ldouble* flRx_arr, ldouble* flRy_arr, ldouble* flRz_arr,				   
+				   ldouble* p_arr);
 
 __global__ void calc_fluxes_kernel(int Nloop_1,
                                    int* loop_1_ix, int* loop_0_iy, int* loop_1_iz,
@@ -80,16 +90,6 @@ __global__ void calc_fluxes_kernel(int Nloop_1,
 				   ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,
 				   ldouble* flbx_arr, ldouble* flby_arr, ldouble* flbz_arr);
 
-__global__ void calc_interp_kernel(int Nloop_1,
-				   int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
-				   ldouble* x_arr, ldouble* xb_arr,
-				   ldouble* gbx_arr, ldouble* gby_arr, ldouble* gbz_arr,
-				   ldouble* Gbx_arr, ldouble* Gby_arr, ldouble* Gbz_arr,				 
-				   ldouble* pbLx_arr, ldouble* pbLy_arr, ldouble* pbLz_arr,
-				   ldouble* pbRx_arr, ldouble* pbRy_arr, ldouble* pbRz_arr,
-				   ldouble* flLx_arr, ldouble* flLy_arr, ldouble* flLz_arr,
-				   ldouble* flRx_arr, ldouble* flRy_arr, ldouble* flRz_arr,				   
-				   ldouble* p_arr)
 
 __global__ void calc_update_kernel(int Nloop_0, 
                                    int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
