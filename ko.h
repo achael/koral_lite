@@ -680,7 +680,7 @@ int getch();
 //ldouble my_min(ldouble a, ldouble b);
 ldouble my_min_N(ldouble *v,int N);
 ldouble my_max_N(ldouble *v,int N);
-ldouble my_sign(ldouble x);
+//ldouble my_sign(ldouble x);
 ldouble my_atan2(ldouble y, ldouble x);
 void shuffle_loop(int **array, size_t n);
 int print_tensor(ldouble T[][4]);
