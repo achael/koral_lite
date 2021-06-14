@@ -633,7 +633,8 @@ struct OpTable {
 //some more macros
 #define my_max(x,y) (x>y?x:y)
 #define my_min(x,y) (x<y?x:y)
-
+#define my_sign(x) (x>0. ? 1. : (x<0. ? -1 : (x==0. ? 1. : 0.)))
+  
 #define my_max3(x,y,z) (x>my_max(y,z)?x:my_max(y,z))
 #define mybilinear(x, y, i, j, xx, yy, zz)  (( zz[i][j]*(xx[i+1]-x)*(yy[j+1]-y) + \
 					       zz[i+1][j]*(x-xx[i])*(yy[j+1]-y) + \

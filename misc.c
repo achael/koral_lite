@@ -1314,6 +1314,7 @@ ldouble my_max_N(ldouble *v,int N)
 // sign of a double
 //**********************************************************************
 
+/*
 ldouble my_sign(ldouble x)
 {
   if(x>0.) return 1.;
@@ -1321,6 +1322,7 @@ ldouble my_sign(ldouble x)
   if(x==0.) return 1.;
   return 0;
 }
+*/
 
 //**********************************************************************
 //* atan2 in [0,2pi] 
