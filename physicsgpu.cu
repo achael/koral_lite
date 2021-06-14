@@ -345,6 +345,7 @@ __device__ __host__ int calc_wavespeeds_lr_pure_device(ldouble *pp,void *ggg,ldo
   ldouble axhdl,axhdr,ayhdl,ayhdr,azhdl,azhdr;
   ldouble axl0,axr0,ayl0,ayr0,azl0,azr0;
   ldouble axl,axr,ayl,ayr,azl,azr;
+  axl0=axr0=ayl0=ayr0=azl0=azr0=1.;
   axl=axr=ayl=ayr=azl=azr=1.;
  
   //**********************************************************************//
