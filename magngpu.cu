@@ -255,7 +255,7 @@ __global__ void flux_ct_setemf_kernel(int Nloop_4,
 #endif
   {
     // upper axis
-    if(iy==0 && ix>=0 && ix<=NX && iz>=0 && iz<=NZ)
+    if(iy==0 &&  ix>=0 && ix<=NX && iz>=0 && iz<=NZ)
     {
       set_emf(emf_arr,1,ix,iy,iz,0.);
       set_emf(emf_arr,3,ix,iy,iz,0.);

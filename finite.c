@@ -1326,9 +1326,9 @@ op_explicit(ldouble t, ldouble dtin)
   time_cpu_ct = (tstop-tstart)*1.e3;
   
   printf("cpu calc_interp time: %0.2lf \n", time_cpu_ct);
-  printf("gpu calc_interp pbLx[NV]: ");
+  printf("cpu calc_interp pbLy[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(pbLx, iv, ixTEST, iyTEST, izTEST,0));
+    printf("%e ", get_ub(pbLy, iv, ixTEST, iyTEST, izTEST,1));
   printf("\n\n");
 
 #endif
@@ -1336,6 +1336,10 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************//
   // Compute fluxes at the six walls of all cells
   // using the selected approximation of the Riemann problem
+  #ifdef GPUKO
+  // TODO eventually this will be moved out of op_explicit => problem.c
+  //push_pu_gpu();
+  #endif 
 
 #ifdef GPUKO
   time_gpu_fluxes = calc_fluxes_gpu();

@@ -606,11 +606,11 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
 //***************************************************************
 // calculates fluxes at faces
 //***************************************************************
-__device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,void* geom)
+__device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,void* ggg)
 {  
 
-  struct geometry *ggg 
-    = (struct geometry *) geom;
+  struct geometry *geom
+    = (struct geometry *) ggg;
 
   // zero fluxes initially
   for(int iv=0;iv<NV;iv++) 
@@ -622,16 +622,17 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
   //fill_geometry_face(ix,iy,iz,idim,&geom);
 
   ldouble (*gg)[5],(*GG)[5],gdetu;
-  gg=ggg->gg;
-  GG=ggg->GG;
-  gdetu=ggg->gdet;
+  gg=geom->gg;
+  GG=geom->GG;
+  gdetu=geom->gdet;
+
   #if (GDETIN==0) //no metric determinant inside derivative
   gdetu=1.;
   #endif
 
   //calculating Tij
   ldouble T[4][4];
-  calc_Tij_device(pp,ggg,T);
+  calc_Tij_device(pp,geom,T);
   indices_2221_device(T,T,gg);//T^ij --> T^i_j
 
   //primitives
@@ -659,12 +660,12 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
   ldouble bsq=0.;
 #ifdef MAGNFIELD
   ldouble bcon[4],bcov[4];
-  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
+  calc_bcon_bcov_bsq_from_4vel_device(pp, ucon, ucov, geom, bcon, bcov, &bsq);
 #endif
 
   ldouble gamma=GAMMA;
   #ifdef CONSISTENTGAMMA
-  //gamma=pick_gammagas(ggg->ix,ggg->iy,ggg->iz); // TODO 
+  //gamma=pick_gammagas(geom->ix,geom->iy,geom->iz); // TODO 
   #endif
 
   ldouble pre=(gamma-1.)*u; 
@@ -681,10 +682,10 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
 	  printf("%d %d %e\n",ii,jj,T[ii][jj]);
 	  printf("nan in flux_prime \n");
 	  // TODO print and my_err
-	  //printf("%d > nan tmunu: %d %d %e at %d %d %d\n",PROCID,ii,jj,T[ii][jj],ggg->ix+TOI,ggg->iy+TOJ,ggg->iz+TOK);
+	  //printf("%d > nan tmunu: %d %d %e at %d %d %d\n",PROCID,ii,jj,T[ii][jj],geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
 	  //  printf("%d > nan tmunu: %e %e %e %e\n",PROCID,gamma,pre,w,eta);
 	  //  print_4vector(ucon);
-	  //  print_metric(geom.gg);
+	  //  print_metric(geom->gg);
 	  //  print_Nvector(pp,NV);
 	  //  my_err("nan in flux_prime\n");
 	  //  exit(1);
@@ -692,7 +693,7 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
     }
   }
   
-  ldouble utp1=calc_utp1_device(vcon,ucon,&geom);
+  ldouble utp1=calc_utp1_device(vcon,ucon,geom);
 
   //***************************************
   //fluxes
@@ -736,11 +737,11 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
 
   //radiation fluxes // TODO 
 #ifdef RADIATION
-  f_flux_prime_rad(pp,idim,&geom,ff);
+  f_flux_prime_rad(pp,idim,geom,ff);
 #ifdef MAGNFIELD
 #ifdef BATTERY
   ldouble eterm[4]={-1.,0.,0.,0.};
-  calc_batteryflux(pp,&geom,eterm,idim,ucov);
+  calc_batteryflux(pp,geom,eterm,idim,ucov);
   ldouble suppfac=1.;
  
   ff[B1]+=suppfac*gdetu*eterm[1];
@@ -756,7 +757,7 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff,v
 
 // Metric source term
 // TODO: deleted RADIATION and SHEARINGBOX parts
-__device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, void* geom,ldouble* gKr_arr)
+__device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, void* ggg,ldouble* gKr_arr)
 /*  
 __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldouble* ss,
 		      	                            ldouble* p_arr, ldouble* x_arr,
@@ -783,25 +784,26 @@ __device__ __host__ int f_metric_source_term_device(int ix, int iy, int iz, ldou
   #endif
   */
 
-  struct geometry *ggg 
-    = (struct geometry *) geom;
+  struct geometry *geom 
+    = (struct geometry *) ggg;
 
   ldouble (*gg)[5],(*GG)[5],gdetu;
-  gg=ggg->gg;
-  gdetu=ggg->gdet;
+  gg=geom->gg;
+  GG=geom->GG;
+  gdetu=geom->gdet;
 
   #if (GDETIN==0) //no metric determinant inside derivative
   gdetu=1.;
   #endif
 
-  int ix=ggg->ix;
-  int iy=ggg->iy;
-  int iz=ggg->iz;
+  int ix=geom->ix;
+  int iy=geom->iy;
+  int iz=geom->iz;
   
   ldouble T[4][4];
   //calculating stress energy tensor components
   //calc_Tij_device(pp,&geom,T);
-  calc_Tij_device(pp,ggg,T); 
+  calc_Tij_device(pp,geom,T); 
   indices_2221_device(T,T,gg);
 
   for(int i=0;i<4;i++)
@@ -2045,12 +2047,14 @@ ldouble calc_interp_gpu()
 #ifdef CPUKO 
   ldouble* pbLx_tmp;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
-  if((pbLx_tmp=(ldouble*)malloc(NfluxX*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(pbLx_tmp, d_pbLx_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
+
+  if((pbLx_tmp=(ldouble*)malloc(NfluxY*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(pbLx_tmp, d_pbLy_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
   if(err != cudaSuccess) printf("failed cudaMemcpy of d_pbLx_arr to pbLx_tmp\n");
-  printf("gpu calc_interp pbLx[NV]: ");
+  printf("gpu calc_interp pbLy[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(pbLx_tmp, iv, ixTEST, iyTEST, izTEST,0));
+    printf("%e ", get_ub(pbLx_tmp, iv, ixTEST, iyTEST, izTEST,1));
   printf("\n");
   free(pbLx_tmp);
 #endif
