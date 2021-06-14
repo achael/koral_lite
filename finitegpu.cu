@@ -663,7 +663,7 @@ __global__ void calc_wavespeeds_kernel(int Nloop_1,
 				       ldouble* ahdx_arr,  ldouble* ahdy_arr,  ldouble* ahdz_arr,	   
 				       ldouble* aradxl_arr, ldouble* aradyl_arr, ldouble* aradzl_arr,
 				       ldouble* aradxr_arr, ldouble* aradyr_arr, ldouble* aradzr_arr,
-				       ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arrl,
+				       ldouble* aradx_arr,  ldouble* arady_arr,  ldouble* aradz_arr,
 				       ldouble* cell_tstepden_arr, ldouble* tstepdenmin_ptr, ldouble* tstepdenmax_ptr)
 
 {
@@ -782,10 +782,10 @@ __global__ void calc_wavespeeds_kernel(int Nloop_1,
     // TODO TODO -- do these atomics work?
     // TODO is there a faster way? 
     //global variables for maximum/minimum (inverse) cell timestep
-    atomicMin_double(tstepdenmin_ptr, tstepden)
-    atomicMax_double(tstepdenmax_ptr, tstepden)
-      //if(tstepden>tstepdenmax) tstepdenmax=tstepden;  
-      //if(tstepden<tstepdenmin) tstepdenmin=tstepden;  
+    atomicMin_double(tstepdenmin_ptr, tstepden);
+    atomicMax_double(tstepdenmax_ptr, tstepden);
+    //if(tstepden>tstepdenmax) tstepdenmax=tstepden;  
+    //if(tstepden<tstepdenmin) tstepdenmin=tstepden;  
   }
   
 }
