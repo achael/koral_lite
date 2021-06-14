@@ -10,7 +10,7 @@ else
 CC=gcc
 //CC=/usr/bin/h5cc
 
-CFLAGS = -O3 -fPIC
+CFLAGS = -O3 -fPIC 
 CFLAGSGPU = -O3 -fPIC -DGPUKO -DCPUKO
 OMPFLAGS = -fopenmp
 
