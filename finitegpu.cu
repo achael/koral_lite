@@ -197,8 +197,8 @@ int push_pu_gpu()
 
   // copy tstep arrays
   // TODO: do these need to be initialized or will they be entirely internal to GPU eventually?
-  err = cudaMemcpy(d_cell_tstepden_arr, cell_tstepden, sizeof(ldouble)*Ngrid, cudaMemcpyHosttoDevice);
-  err = cudaMemcpy(d_cell_dt_arr, cell_dt, sizeof(ldouble)*Ngrid, cudaMemcpyHosttoDevice);
+  err = cudaMemcpy(d_cell_tstepden_arr, cell_tstepden, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
+  err = cudaMemcpy(d_cell_dt_arr, cell_dt, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
   
   // copy fluxes and wavespeeds from host to device
   // TODO: in the future, this will be entirely internal to the GPU
@@ -653,7 +653,7 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
 //**********************************************************************
 
 // TODO wrap up xyz wavespeeds in their own array
-__global__ void calc_wavespeeds_kernel(int Nloop_1
+__global__ void calc_wavespeeds_kernel(int Nloop_1,
 				       int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
 				       ldouble* x_arr, ldouble* xb_arr,
 				       ldouble* g_arr, ldouble* G_arr,
