@@ -1326,9 +1326,9 @@ op_explicit(ldouble t, ldouble dtin)
   time_cpu_ct = (tstop-tstart)*1.e3;
   
   printf("cpu calc_interp time: %0.2lf \n", time_cpu_ct);
-  printf("cpu calc_interp pbLy[NV]: ");
+  printf("cpu calc_interp flLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(pbLy, iv, ixTEST, iyTEST, izTEST,1));
+    printf("%e ", get_ub(flLz, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n\n");
 
 #endif
