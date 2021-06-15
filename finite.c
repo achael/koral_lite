@@ -1299,6 +1299,7 @@ op_explicit(ldouble t, ldouble dtin)
   ldouble time_cpu_update = 0.;
   ldouble time_gpu_update = 0.;
   ldouble time_cpu_u2p = 0.;
+  ldouble time_cpu_u2p_total=0.;
   ldouble time_gpu_u2p_total = 0.;
   ldouble time_cpu_u2p_fixup = 0.;
     
@@ -1485,6 +1486,7 @@ op_explicit(ldouble t, ldouble dtin)
   // timer for u2p only already defined, only times u2p, not including fixups/bcs 
   time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3;
   time_cpu_u2p_fixup = (tstop-tstart)*1.e3 - time_cpu_u2p;
+  time_cpu_u2p_total = time_cpu_u2p + time_cpu_u2p_fixup;
   
   printf("cpu u2p time: %0.2lf \n", time_cpu_u2p); 
   printf("cpu u2p fixup time: %0.2lf \n", time_cpu_u2p_fixup); 
@@ -1495,7 +1497,7 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
   ldouble time_cpu_total, time_gpu_total;
-  time_cpu_total = time_cpu_wavespeeds + time_cpu_interp + time_cpu_fluxes + time_cpu_ct + time_cpu_update + time_cpu_u2p + time_cpu_u2p_fixup;
+  time_cpu_total = time_cpu_wavespeeds + time_cpu_interp + time_cpu_fluxes + time_cpu_ct + time_cpu_update + time_cpu_u2p_total;
   time_gpu_total = time_gpu_wavespeeds + time_gpu_interp + time_gpu_fluxes + time_gpu_ct + time_gpu_update + time_gpu_u2p_total;
 
   printf("\n\n");
@@ -1520,8 +1522,8 @@ op_explicit(ldouble t, ldouble dtin)
 	
   snprintf(header, 255, "\"timestep\": %d,\n\"time\": %g,", nstep, global_time);
 
-  snprintf(ctimes, 255, "{\"update\": %g, \"u2p\": %g}", time_cpu_update, time_cpu_u2p);
-  snprintf(gtimes, 255, "{\"update\": %g, \"u2p\": %g}", time_gpu_update, time_gpu_u2p);
+  snprintf(ctimes, 255, "{\"update\": %g, \"u2p\": %g}", time_cpu_update, time_cpu_u2p_total);
+  snprintf(gtimes, 255, "{\"update\": %g, \"u2p\": %g}", time_gpu_update, time_gpu_u2p_total);
  
   output_state_debug(fname, header, ctimes, gtimes);
 
