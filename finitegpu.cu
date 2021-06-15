@@ -8,6 +8,7 @@ extern "C" {
 
 // persistent arrays, extern'd in kogpu.h
 ldouble *d_p_arr, *d_u_arr;
+ldouble *d_p_fixup_arr, *d_u_fixup_arr;
 ldouble *d_flbx_arr, *d_flby_arr, *d_flbz_arr;
 ldouble *d_pbLx_arr, *d_pbLy_arr, *d_pbLz_arr;
 ldouble *d_pbRx_arr, *d_pbRy_arr, *d_pbRz_arr;
@@ -64,6 +65,9 @@ int prealloc_arrays_gpu()
   
   err = cudaMalloc(&d_p_arr,    sizeof(ldouble)*Nprim);
   err = cudaMalloc(&d_u_arr,    sizeof(ldouble)*Nprim);
+
+  err = cudaMalloc(&d_u_fixup_arr, sizeof(ldouble)*Nprim);
+  err = cudaMalloc(&d_p_fixup_arr, sizeof(ldouble)*Nprim);
 
   err = cudaMalloc(&d_pbLx_arr, sizeof(ldouble)*NfluxX);
   err = cudaMalloc(&d_pbLy_arr, sizeof(ldouble)*NfluxY);
@@ -125,6 +129,9 @@ int free_arrays_gpu()
 {
   cudaFree(d_p_arr);
   cudaFree(d_u_arr);
+
+  cudaFree(d_p_fixup_arr);
+  cudaFree(d_u_fixup_arr);
 
   cudaFree(d_pbLx_arr);
   cudaFree(d_pbLy_arr);

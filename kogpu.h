@@ -29,8 +29,8 @@ __host__ __device__ int fill_geometry_face_device(int ix,int iy,int iz,int idim,
 // finitegpu.cu ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-extern ldouble *d_u_arr;
-extern ldouble *d_p_arr;
+extern ldouble *d_u_arr, *d_p_arr;
+extern ldouble *d_u_fixup_arr, *d_p_fixup_arr;
 
 extern ldouble *d_flbx_arr,*d_flby_arr, *d_flbz_arr;
 extern ldouble *d_pbLx_arr, *d_pbLy_arr, *d_pbLz_arr;
