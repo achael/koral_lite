@@ -1783,6 +1783,7 @@ ldouble calc_u2p_gpu(int setflags)
     float tms_fixup = 0.;
     cudaEventElapsedTime(&tms_fixup, start,stop);
     printf("gpu u2p fixup time: %0.2f \n",tms_fixup);
+    tms += tms_fixup;
 
   #ifdef CPUKO
     // print results
@@ -1797,7 +1798,7 @@ ldouble calc_u2p_gpu(int setflags)
   #endif
   }
 
-  return (ldouble)(tms+tms_fixup);
+  return (ldouble)tms;
 }
 
 
