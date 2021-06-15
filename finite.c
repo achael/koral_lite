@@ -1311,6 +1311,7 @@ op_explicit(ldouble t, ldouble dtin)
  
   //**********************************************************************//
   // Calculate wavespeeds over the domain and ghost cells
+  printf("\n********************************************************\n");
 #ifdef GPUKO
   time_gpu_wavespeeds = calc_wavespeeds_gpu();
 #endif
@@ -1505,7 +1506,8 @@ op_explicit(ldouble t, ldouble dtin)
   printf("\n\n");
   printf("total op_explicit gpu time: %0.2lf \n",time_gpu_total);
   printf("total op_explicit cpu time: %0.2lf \n",time_cpu_total);
-  printf("speedup: %0.2lf\n\n",time_cpu_total/time_gpu_total);
+  printf("speedup: %0.2lf\n",time_cpu_total/time_gpu_total);
+  printf("********************************************************\n\n");
   ///////////////////////////////////////
   // Block for pulling from GPU -- keep moving down
   
