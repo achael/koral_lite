@@ -1495,8 +1495,8 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
   ldouble time_cpu_total, time_gpu_total;
-  time_cpu_total = time_cpu_wavespeeds + time_cpu_inter + time_cpu_fluxes + time_cpu_ct + time_cpu_update + time_cpu_u2p + time_cpu_u2p_fixup;
-  time_gpu_total = time_gpu_wavespeeds + time_gpu_inter + time_gpu_fluxes + time_gpu_ct + time_gpu_update + time_gpu_u2p_total;
+  time_cpu_total = time_cpu_wavespeeds + time_cpu_interp + time_cpu_fluxes + time_cpu_ct + time_cpu_update + time_cpu_u2p + time_cpu_u2p_fixup;
+  time_gpu_total = time_gpu_wavespeeds + time_gpu_interp + time_gpu_fluxes + time_gpu_ct + time_gpu_update + time_gpu_u2p_total;
 
   printf("\n\n");
   printf("total op_explicit gpu time: %0.2lf \n",time_gpu_total);
