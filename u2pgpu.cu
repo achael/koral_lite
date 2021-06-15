@@ -1414,7 +1414,7 @@ __global__ void cell_fixup_kernel(int Nloop_0,
 
   // copy current primitives/conserved to output arrays
   // TODO could use up_copy_kernel
-  for(int iv;iv<NV;iv++)
+  for(int iv=0;iv<NV;iv++)
   {
     set_u(u_bak_fixup_arr,iv,ix,iy,iz,get_u(u_arr,iv,ix,iy,iz));
     set_u(p_bak_fixup_arr,iv,ix,iy,iz,get_u(p_arr,iv,ix,iy,iz));
@@ -1753,7 +1753,7 @@ ldouble calc_u2p_gpu(int setflags)
   {
     // TODO -- do this malloc in prealloc_arrays_gpu? 
     long long Nprim  = (SX)*(SY)*(SZ)*NV;
-    ldouble* d_p_bak_fixup_arr, d_u_bak_fixup_arr;
+    ldouble *d_p_bak_fixup_arr, *d_u_bak_fixup_arr;
     err = cudaMalloc(&d_u_bak_fixup_arr, sizeof(ldouble)*Nprim);
     err = cudaMalloc(&d_p_bak_fixup_arr, sizeof(ldouble)*Nprim);
 
