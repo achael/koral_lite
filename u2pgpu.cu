@@ -304,6 +304,7 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
       if(verbose>2 )
       {
 	//TODO -- print with mpi variables
+	printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix, geom->iy,u2pret,u0,pp[1]);
         //printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
       }
       
@@ -782,7 +783,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   if(verbose>1)
   {
     fu2pret=(*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
-    printf("end: %d %e %e %e %e\n",iter,W,f0,dfdW,err);
+    printf("end: %d %e %e %e %e %d \n",iter,W,f0,dfdW,err,fu2pret);
   }
   
   //W found, let's calculate v2 and the rest

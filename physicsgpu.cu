@@ -265,19 +265,19 @@ __device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, vo
   struct geometry *geom 
     = (struct geometry *) ggg;
 
-  ldouble (*gg)[5],(*GG)[5],gdetu;
+  ldouble (*gg)[5],gdetu;
   gg=geom->gg;
-  GG=geom->GG;
   gdetu=geom->gdet;
 
   #if (GDETIN==0) //no metric determinant inside derivative
   gdetu=1.;
   #endif
 
-  int iz=geom->iz;
-  int ix=geom->ix;
-  int iy=geom->iy;
-
+  int ix,iy,iz;
+  ix=geom->ix;
+  iy=geom->iy;
+  iz=geom->iz;
+ 
   ldouble T[4][4];
   //calculating stress energy tensor components
   //calc_Tij_device(pp,&geom,T);
@@ -316,6 +316,7 @@ __device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, vo
 
 
 #if (GDETIN==0)
+  ldouble (*GG)[5];
   GG=ggg->GG;
     
   //gdet derivatives
