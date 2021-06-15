@@ -1354,10 +1354,12 @@ op_explicit(ldouble t, ldouble dtin)
   time_cpu_interp = (tstop-tstart)*1.e3;
   
   printf("cpu calc_interp time: %0.2lf \n", time_cpu_interp);
+  /*
   printf("cpu calc_interp pbLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(pbLz, iv, ixTEST, iyTEST, izTEST,2));
-  printf("\ncpu calc_interp flLz[NV]: ");
+  */
+  printf("cpu calc_interp flLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(flLz, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n\n");

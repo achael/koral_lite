@@ -1992,14 +1992,14 @@ ldouble calc_interp_gpu()
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
 
   if((f_tmp=(ldouble*)malloc(NfluxZ*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  
+  /*
   err = cudaMemcpy(f_tmp, d_pbLz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
   if(err != cudaSuccess) printf("failed cudaMemcpy to f_tmp\n");
   printf("gpu calc_interp pbLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(f_tmp, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n");
-
+  */
   err = cudaMemcpy(f_tmp, d_flLz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
   if(err != cudaSuccess) printf("failed cudaMemcpy to f_tmp\n");
   printf("gpu calc_interp flLz[NV]: ");
@@ -2066,7 +2066,7 @@ ldouble calc_fluxes_gpu()
   if((f_tmp=(ldouble*)malloc(NfluxZ*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
   err = cudaMemcpy(f_tmp, d_flbz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
   if(err != cudaSuccess) printf("failed cudaMemcpy to f_tmp\n");
-  printf("gpu calc_fluxes flby[NV]: ");
+  printf("gpu calc_fluxes flbz[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(f_tmp, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n");
