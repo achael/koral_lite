@@ -1736,6 +1736,7 @@ ldouble calc_u2p_gpu(int setflags)
   // fixups
 
   int do_fixups=1;
+  int type=FIXUP_U2PMHD;
   if(DOFIXUPS==0)
     do_fixups=0;
 
@@ -1753,16 +1754,16 @@ ldouble calc_u2p_gpu(int setflags)
     // TODO -- do this malloc in prealloc_arrays_gpu? 
     long long Nprim  = (SX)*(SY)*(SZ)*NV;
     ldouble* d_p_fixup_arr, d_u_fixup_arr;
-    err = cudaMalloc(&d_u_fixup_arr, sizeof(ldouble)*Nprim);
-    err = cudaMalloc(&d_p_fixup_arr, sizeof(ldouble)*Nprim);
+    err = cudaMalloc(&d_u_bak_fixup_arr, sizeof(ldouble)*Nprim);
+    err = cudaMalloc(&d_p_bak_fixup_arr, sizeof(ldouble)*Nprim);
 
     // launch cell_fixup kernel 
     cell_fixup_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, 
 						 d_loop0_ix, d_loop0_iy, d_loop0_iz,
 						 d_x, d_gcov, d_gcon,
-						 d_cellflag_arr, FIXUP_U2PMHD,
+						 d_cellflag_arr, type, 
 						 d_u_arr, d_p_arr,
-						 d_u_bak_fixup_arr, d_p_bak_fixup_arr)
+						 d_u_bak_fixup_arr, d_p_bak_fixup_arr);
     err = cudaPeekAtLastError(); // TODO ?? 
     cudaDeviceSynchronize(); 
 
@@ -1776,7 +1777,7 @@ ldouble calc_u2p_gpu(int setflags)
     up_copy_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0,
 					      d_loop0_ix, d_loop0_iy, d_loop0_iz,
 					      d_u_bak_fixup_arr, d_p_bak_fixup_arr)
-					      d_u_arr, d_p_arr)
+                                              d_u_arr, d_p_arr);
     cudaEventRecord(stop);
     err = cudaPeekAtLastError(); // TODO ?? 
     cudaDeviceSynchronize(); 
