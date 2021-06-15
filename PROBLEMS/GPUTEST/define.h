@@ -222,7 +222,7 @@
 /************************************/
 //reconstruction / Courant
 /************************************/
-#define INT_ORDER 1
+#define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
 #define TSTEPLIM .8
 #define FLUXMETHOD LAXF_FLUX

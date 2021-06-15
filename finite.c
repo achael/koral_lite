@@ -817,6 +817,8 @@ int calc_interp()
 		  if(dor)
                   // Save ffr in array flLy (F_R) of wall iy+1
 		  set_uby(flLy,i,ix,iy+1,iz,ffr[i]);
+
+		  //if(ix==ixTEST && iy==iyTEST-1 && iz==izTEST) printf("in finte calc_interp: ffr: %e %e %e %e \n" , ffr[0], ffr[B1], ffr[B2], ffr[B3]);
 		}
       }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
 
@@ -1323,11 +1325,10 @@ op_explicit(ldouble t, ldouble dtin)
   
   printf("cpu calc_wavespeeds time: %0.2lf \n", time_cpu_wavespeeds);
   
-  printf("gpu calc wavespeeds tstepdensmin/max: %e %e\n",tstepdenmin,tstepdenmax);
+  printf("gpu calc wavespeeds tstepdensmin/max: %e %e\n\n",tstepdenmin,tstepdenmax);
 #endif
   
 #ifndef SKIPEVOLUTION
-  
 
   //**********************************************************************//
   // Interpolate to the cell walls and calculate left and right-biased fluxes
@@ -1348,7 +1349,10 @@ op_explicit(ldouble t, ldouble dtin)
   time_cpu_interp = (tstop-tstart)*1.e3;
   
   printf("cpu calc_interp time: %0.2lf \n", time_cpu_interp);
-  printf("cpu calc_interp flLz[NV]: ");
+  printf("cpu calc_interp pbLz[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(pbLz, iv, ixTEST, iyTEST, izTEST,2));
+  printf("\ncpu calc_interp flLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(flLz, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n\n");
@@ -1381,9 +1385,9 @@ op_explicit(ldouble t, ldouble dtin)
   time_cpu_fluxes = (tstop-tstart)*1.e3;
   
   printf("cpu calc_fluxes time: %0.2lf \n", time_cpu_fluxes);
-  printf("gpu calc_fluxes flbx[NV]: ");
+  printf("cpu calc_fluxes flbz[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(flbx, iv, ixTEST, iyTEST, izTEST,0));
+    printf("%e ", get_ub(flbz, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n\n");
 #endif
   
@@ -1409,9 +1413,9 @@ op_explicit(ldouble t, ldouble dtin)
   time_cpu_ct = (tstop-tstart)*1.e3;
   
   printf("cpu flux_ct time: %0.2lf \n", time_cpu_ct);
-  printf("gpu flux_ct flbx[NV]: ");
+  printf("cpu flux_ct flbz[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(flbx, iv, ixTEST, iyTEST, izTEST,0));
+    printf("%e ", get_ub(flbz, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n\n");
 #endif
 #endif

@@ -96,16 +96,18 @@ __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4])
 //***************************************************************//
 // calculates fluxes at faces
 //***************************************************************//
-__device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff, void* ggg)
+__device__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff, void* ggg)
 {  
 
   struct geometry *geom
     = (struct geometry *) ggg;
 
   // zero fluxes initially
-  for(int iv=0;iv<NV;iv++) 
+  for(int iv=0;iv<NV;iv++)
+  {
     ff[iv]=0.;
-
+  }
+  
   ldouble (*gg)[5],(*GG)[5],gdetu;
   gg=geom->gg;
   GG=geom->GG;
@@ -190,7 +192,7 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff, 
 #ifdef MAGNFIELD
   ff[1]+= -gdetu*bcon[idim+1]*bcov[0];
 #endif
-
+  
   ff[2]= gdetu*(T[idim+1][1]);
   ff[3]= gdetu*(T[idim+1][2]); 
   ff[4]= gdetu*(T[idim+1][3]);
@@ -202,9 +204,19 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff, 
 
   //magnetic fluxes
 #ifdef MAGNFIELD
-  ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
-  ff[B2]=gdetu*(bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
-  ff[B3]=gdetu*(bcon[3]*ucon[idim+1] - bcon[idim+1]*ucon[3]);
+  ff[B1]=gdetu * (bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
+  ff[B2]=gdetu * (bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
+  ff[B3]=gdetu * (bcon[3]*ucon[idim+1] - bcon[idim+1]*ucon[3]);
+
+  //TODO TODO -- what to do about fused multiply add that prevents exact cancellation above?
+  // turned off in compiler with -fmad=false, but in general more precision/perfomance from fmad is supposed to be good
+  // what to do? 
+  /*
+  if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST && idim==0)
+  {
+    printf("in flux_prime, idim %d: ff[B1] %e \n",idim,ff[B1]);
+  }
+  */
 #endif
 
   //radiation fluxes // TODO 
@@ -234,6 +246,11 @@ __device__ __host__ int f_flux_prime_device(ldouble *pp, int idim, ldouble *ff, 
 #endif
 #endif
 
+      if(geom->ix==ixTEST && geom->iy==iyTEST && geom->iz==izTEST && idim==0)
+      {
+	//	printf("in flux_prime, idim %d: %e %e %e %e %e %e %e %e %e\n",idim,ff[0],ff[1],ff[2],ff[3],ff[4],ff[5],ff[6],ff[7],ff[8]);
+      }
+
   return 0;
 }
 
@@ -260,7 +277,7 @@ __device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, vo
   int ix=geom->ix;
   int iy=geom->iy;
   int iz=geom->iz;
-  
+
   ldouble T[4][4];
   //calculating stress energy tensor components
   //calc_Tij_device(pp,&geom,T);
@@ -282,8 +299,9 @@ __device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, vo
   
   // zero out all source terms initially
   for(int iv=0;iv<NV;iv++)
+  {
     ss[iv]=0.;  
-
+  }
   //terms with Christoffels
   for(int k=0;k<4;k++)
   {

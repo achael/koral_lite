@@ -143,7 +143,7 @@ __device__ __host__ int calc_normalobs_ncon_device(ldouble GG[][5], ldouble alph
 
 __device__ __host__ ldouble calc_Sfromu_device(ldouble rho,ldouble u,int ix,int iy,int iz);
 __device__ __host__ int calc_Tij_device(ldouble *pp, void* ggg, ldouble T[][4]);
-__device__ __host__ int f_flux_prime_device(ldouble *pp, int idim,ldouble *ff, void* ggg);
+__device__ int f_flux_prime_device(ldouble *pp, int idim,ldouble *ff, void* ggg);
 __device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, void* ggg,ldouble* gKr_arr);
 __device__ __host__ int calc_wavespeeds_lr_pure_device(ldouble *pp,void *ggg,ldouble *aaa);
 __device__ __host__ int calc_wavespeeds_lr_core_device(ldouble *ucon, ldouble GG[][5], ldouble *aret,

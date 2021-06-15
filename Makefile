@@ -13,7 +13,7 @@ CC=gcc
 CFLAGS = -O3 -fPIC 
 CFLAGSGPU = -O3 -fPIC -DGPUKO -DCPUKO
 OMPFLAGS = -fopenmp
-
+NVCCFLAGS = -rdc=true -gencode arch=compute_80,code=sm_80, -fmad=false
 endif
 
 //LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt -lhdf5_serial -L/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include
@@ -44,8 +44,8 @@ $(OBJS_SWITCH_GPU):%_gpu.o:%.c
 
 ko_gpu: $(OBJS_SWITCH_GPU) $(SRCS) $(SRCSGPU) Makefile ko.h kogpu.h problem.h mnemonics.h 
 	$(CC) $(CFLAGSGPU) -c $(SRCS)
-	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -x cu -dc $(SRCSGPU)
-	nvcc -rdc=true -gencode arch=compute_80,code=sm_80 --compiler-options '$(CFLAGSGPU)' -lcudart $(LIBS) $(OBJS) $(OBJSGPU) -o ko_gpu ko_gpu.o
+	nvcc $(NVCCFLAGS) --compiler-options '$(CFLAGSGPU)' -x cu -dc $(SRCSGPU)
+	nvcc $(NVCCFLAGS) --compiler-options '$(CFLAGSGPU)' -lcudart $(LIBS) $(OBJS) $(OBJSGPU) -o ko_gpu ko_gpu.o
 
 ko: $(OBJS_SWITCH_CPU) $(SRCS) Makefile ko.h problem.h mnemonics.h
 	$(CC) $(CFLAGS) $(OMPFLAGS) -o ko ko_cpu.o $(SRCS) $(LIBS)

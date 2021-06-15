@@ -380,16 +380,19 @@ ldouble flux_ct_gpu()
   printf("gpu flux_ct time: %0.2f \n",tms);
  
 #ifdef CPUKO 
-  ldouble* flbx_tmp;
+  ldouble* f_tmp;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
-  if((flbx_tmp=(ldouble*)malloc(NfluxX*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(flbx_tmp, d_flbx_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
-  if(err != cudaSuccess) printf("failed cudaMemcpy of d_flbx_arr to flbx_tmp\n");
-  printf("gpu flux_ct flbx[NV]: ");
+  long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
+  long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
+      
+  if((f_tmp=(ldouble*)malloc(NfluxZ*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(f_tmp, d_flbz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy to f_tmp\n");
+  printf("gpu flux_ct flbz[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(flbx_tmp, iv, ixTEST, iyTEST, izTEST,0));
+    printf("%e ", get_ub(f_tmp, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n");
-  free(flbx_tmp);
+  free(f_tmp);
 #endif
 
   return (ldouble)tms;

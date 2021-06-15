@@ -956,7 +956,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
       check_floors_mhd_device(fd_pl,VELPRIM,&geom);
      
       f_flux_prime_device(fd_pl,0,ffl,&geom);
-      //            if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet ix: %e\n",geom.gdet);
+      //                  if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet ix: %e\n",geom.gdet);
     }
 
     // if(ix<NX)
@@ -968,9 +968,16 @@ __global__ void calc_interp_kernel(int Nloop_1,
       check_floors_mhd_device(fd_pr,VELPRIM,&geom);
      
       f_flux_prime_device(fd_pr,0,ffr,&geom);
-      //            if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet ix+1: %e\n",geom.gdet);
+      //                  if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet ix+1: %e\n",geom.gdet);
     }
 
+    /*
+    if(ix==ixTEST && iy==iyTEST && iz==izTEST){
+      printf("ffl: ");
+      for(int iv=0;iv<NV;iv++) printf("%e ",ffl[iv]);
+      printf("\n");}
+    *///TODO
+    
     //save interpolated values to memory
     //Note that l and r of a given cell ix are the left and right wall of that cell
     //whereas L and R of given ix are quantities to the left and right of wall ix
@@ -1103,7 +1110,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
       check_floors_mhd_device(fd_pl,VELPRIM,&geom);
      
      f_flux_prime_device(fd_pl,1,ffl,&geom);
-     //           if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iy: %e\n",geom.gdet);
+     //                if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iy: %e\n",geom.gdet);
    }
 
 
@@ -1117,7 +1124,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
       check_floors_mhd_device(fd_pr,VELPRIM,&geom);
      
       f_flux_prime_device(fd_pr,1,ffr,&geom);
-     //           if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iy+1: %e\n",geom.gdet);
+      //                if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iy+1: %e\n",geom.gdet);
     }
 
     //save interpolated values to memory
@@ -1252,7 +1259,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
 			        x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
       check_floors_mhd_device(fd_pl,VELPRIM,&geom);   
       f_flux_prime_device(fd_pl,2,ffl,&geom);
-      //      if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iz: %e\n",geom.gdet);
+      //            if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iz: %e\n",geom.gdet);
     }
 
     //iz<NZ
@@ -1263,7 +1270,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
 			        x_arr,xb_arr,gbx_arr,gby_arr,gbz_arr,Gbx_arr,Gby_arr,Gbz_arr);
       check_floors_mhd_device(fd_pr,VELPRIM,&geom);   
       f_flux_prime_device(fd_pr,2,ffr,&geom);
-      //      if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iz+1: %e\n",geom.gdet);
+      //            if(ix==ixTEST && iy==iyTEST && iz==izTEST) printf("gdet iz+1: %e\n",geom.gdet);
     }
          
     //save interpolated values to memory
@@ -1285,7 +1292,7 @@ __global__ void calc_interp_kernel(int Nloop_1,
 
       if(ix==ixTEST && iy==iyTEST && iz==izTEST)
 	{
-	  //printf("%d %d %e %e %e %e\n",dol, dor, fd_pl[iv],fd_pr[iv],ffl[iv],ffr[iv]);
+	  //	  printf("%d %d %e %e %e %e\n",dol, dor, fd_pl[iv],fd_pr[iv],ffl[iv],ffr[iv]);
 	}
     }
   }  // if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY...)
@@ -1951,16 +1958,23 @@ ldouble calc_interp_gpu()
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
-  
-  if((f_tmp=(ldouble*)malloc(NfluxZ*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(f_tmp, d_flLz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
 
+  if((f_tmp=(ldouble*)malloc(NfluxZ*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
   
-  if(err != cudaSuccess) printf("failed cudaMemcpy of d_pbLx_arr to pbLx_tmp\n");
+  err = cudaMemcpy(f_tmp, d_pbLz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy to f_tmp\n");
+  printf("gpu calc_interp pbLz[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(f_tmp, iv, ixTEST, iyTEST, izTEST,2));
+  printf("\n");
+
+  err = cudaMemcpy(f_tmp, d_flLz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy to f_tmp\n");
   printf("gpu calc_interp flLz[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_ub(f_tmp, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n");
+
   free(f_tmp);
 #endif
 
@@ -2010,17 +2024,21 @@ ldouble calc_fluxes_gpu()
   cudaEventElapsedTime(&tms, start,stop);
   printf("gpu calc_fluxes time: %0.2f \n",tms);
  
-#ifdef CPUKO 
-  ldouble* flbx_tmp;
+#ifdef CPUKO
+  ldouble* f_tmp;
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
-  if((flbx_tmp=(ldouble*)malloc(NfluxX*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
-  err = cudaMemcpy(flbx_tmp, d_flbx_arr, NfluxX*sizeof(ldouble), cudaMemcpyDeviceToHost);
-  if(err != cudaSuccess) printf("failed cudaMemcpy of d_flbx_arr to flbx_tmp\n");
-  printf("gpu calc_fluxes flbx[NV]: ");
+  long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
+  long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
+
+ 
+  if((f_tmp=(ldouble*)malloc(NfluxZ*sizeof(ldouble)))==NULL) my_err("malloc err.\n");
+  err = cudaMemcpy(f_tmp, d_flbz_arr, NfluxZ*sizeof(ldouble), cudaMemcpyDeviceToHost);
+  if(err != cudaSuccess) printf("failed cudaMemcpy to f_tmp\n");
+  printf("gpu calc_fluxes flby[NV]: ");
   for(int iv=0;iv<NV;iv++)
-    printf("%e ", get_ub(flbx_tmp, iv, ixTEST, iyTEST, izTEST,0));
+    printf("%e ", get_ub(f_tmp, iv, ixTEST, iyTEST, izTEST,2));
   printf("\n");
-  free(flbx_tmp);
+  free(f_tmp);
 #endif
 
 
