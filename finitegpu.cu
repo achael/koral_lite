@@ -651,6 +651,31 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
 //**********************************************************************
 // kernels
 //**********************************************************************
+__global__ void up_copy_kernel(int Nloop_0,
+			       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+                               ldouble* u_in_arr, ldouble* p_in_arr,
+			       ldouble* u_out_arr, ldouble* p_out_arr)
+{
+  // get index for this thread
+  // Nloop_0 is number of cells to update;
+  // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
+  int ii = blockIdx.x * blockDim.x + threadIdx.x;
+  if(ii >= Nloop_0) return;
+    
+  // get indices from 1D arrays
+  int ix=loop_0_ix[ii];
+  int iy=loop_0_iy[ii];
+  int iz=loop_0_iz[ii]; 
+
+  // copy current primitives/conserved to output arrays
+  // TODO could use up_copy_kernel
+  for(int iv;iv<NV;iv++)
+  {
+    set_u(u_out_arr,iv,ix,iy,iz,get_u(u_in_arr,iv,ix,iy,iz));
+    set_u(p_out_arr,iv,ix,iy,iz,get_u(p_in_arr,iv,ix,iy,iz));
+  }
+
+}
 
 // TODO wrap up xyz wavespeeds in their own array
 __global__ void calc_wavespeeds_kernel(int Nloop_1,

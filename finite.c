@@ -1296,11 +1296,11 @@ op_explicit(ldouble t, ldouble dtin)
   ldouble time_gpu_fluxes=0.;
   ldouble time_cpu_ct = 0.;
   ldouble time_gpu_ct = 0.;
-  ldouble time_cpu_update = 0;
-  ldouble time_gpu_update = 0;
-  ldouble time_cpu_u2p = 0;
-  ldouble time_gpu_u2p = 0;
-
+  ldouble time_cpu_update = 0.;
+  ldouble time_gpu_update = 0.;
+  ldouble time_cpu_u2p = 0.;
+  ldouble time_gpu_u2p = 0.;
+  ldouble time_cpu_u2p_fixup = 0.;
   #ifdef GPUKO
   // TODO eventually this will be moved out of op_explicit => problem.c
   push_pu_gpu();
@@ -1473,16 +1473,25 @@ op_explicit(ldouble t, ldouble dtin)
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
   #pragma omp_barrier
   calc_u2p(1);
 
-  // timer already defined, only times u2p, not including fixups/bcs 
-  time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3; 
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+ 
+  // timer for u2p only already defined, only times u2p, not including fixups/bcs 
+  time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3;
+  time_cpu_u2p_fixup = (tstop-tstart)*1.e3 - time_cpu_u2p;
+  
   printf("cpu u2p time: %0.2lf \n", time_cpu_u2p); 
-  printf("cpu u2p pp[NV]: ");
+  printf("cpu u2p fixup time: %0.2lf \n", time_cpu_u2p_fixup); 
+  printf("cpu u2p fixup pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+
 #endif
 
   printf("\n\n");
@@ -1581,7 +1590,7 @@ apply_dynamo(ldouble t, ldouble dt)
 
   //update primitives
   //calc_u2p(0);
-  calc_u2p_bc(0);
+  calc_u2p_fixup_and_bc(0);
 #endif
 
   return GSL_SUCCESS;

@@ -63,6 +63,11 @@ __device__ __host__ int avg2point_device(ldouble *um2,ldouble *um1,ldouble *u0,l
 
 
 // kernels
+__global__ void up_copy_kernel(int Nloop_0,
+			       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+                               ldouble* u_in_arr, ldouble* p_in_arr,
+			       ldouble* u_out_arr, ldouble* p_out_arr);
+
 __global__ void calc_wavespeeds_kernel(int Nloop_1,
 				       int* loop_1_ix, int* loop_1_iy, int* loop_1_iz,
 				       ldouble* x_arr, ldouble* xb_arr,
@@ -186,10 +191,16 @@ __device__ __host__ int u2p_solver_device(ldouble *uu, ldouble *pp, void *ggg,in
 __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *ggg);
   
-// kernel
+// kernels
 __global__ void calc_primitives_kernel(int Nloop_0,
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
                                        ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
 				       ldouble *u_arr, ldouble *p_arr,
 				       int setflags, int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT]);
 				       
+__global__ void cell_fixup_kernel(int Nloop_0, 
+				  int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+				  ldouble* x_arr, ldouble* g_arr, ldouble* G_arr,
+				  int* cellflag_arr, int type,
+				  ldouble* p_arr, ldouble* u_arr,
+				  ldouble* p_bak_fixup_arr, ldouble* u_bak_fixup_arr);
