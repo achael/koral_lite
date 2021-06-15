@@ -676,7 +676,7 @@ __global__ void up_copy_kernel(int Nloop_0,
 
   // copy current primitives/conserved to output arrays
   // TODO could use up_copy_kernel
-  for(int iv;iv<NV;iv++)
+  for(int iv=0;iv<NV;iv++)
   {
     set_u(u_out_arr,iv,ix,iy,iz,get_u(u_in_arr,iv,ix,iy,iz));
     set_u(p_out_arr,iv,ix,iy,iz,get_u(p_in_arr,iv,ix,iy,iz));

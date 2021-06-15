@@ -274,9 +274,9 @@ __device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, vo
   gdetu=1.;
   #endif
 
+  int iz=geom->iz;
   int ix=geom->ix;
   int iy=geom->iy;
-  int iz=geom->iz;
 
   ldouble T[4][4];
   //calculating stress energy tensor components
