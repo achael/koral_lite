@@ -1502,8 +1502,8 @@ op_explicit(ldouble t, ldouble dtin)
 
   printf("\n\n");
   printf("total op_explicit gpu time: %0.2lf \n",time_gpu_total);
-  printf("total op_explicit cpu time: %0.2lf \n\n",time_cpu_total);
-
+  printf("total op_explicit cpu time: %0.2lf \n",time_cpu_total);
+  printf("speedup: %0.2lf\n\n",time_cpu_total/time_gpu_total);
   ///////////////////////////////////////
   // Block for pulling from GPU -- keep moving down
   
