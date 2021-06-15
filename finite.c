@@ -1469,7 +1469,7 @@ op_explicit(ldouble t, ldouble dtin)
   // Compute postexplicit primitives and count entropy inversions
 
 #ifdef GPUKO
-  time_gpu_u2p_toal = calc_u2p_gpu(1);
+  time_gpu_u2p_total = calc_u2p_gpu(1);
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)
