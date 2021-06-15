@@ -203,13 +203,13 @@ int push_pu_gpu()
   err = cudaMemcpy(d_p_arr, p, sizeof(ldouble)*Nprim, cudaMemcpyHostToDevice);
 
   // copy tstep arrays
-  // TODO: do these need to be initialized or will they be entirely internal to GPU eventually?
+  // TODO: these do need to be initialized once in problem.c
   err = cudaMemcpy(d_cell_tstepden_arr, cell_tstepden, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_cell_dt_arr, cell_dt, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
   
   // copy fluxes and wavespeeds from host to device
   // TODO: in the future, this will be entirely internal to the GPU
-  
+  /*
   long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
   long long NfluxY = (SX)*(SY+1)*(SZ)*NV;
   long long NfluxZ = (SX)*(SY)*(SZ+1)*NV;
@@ -257,7 +257,7 @@ int push_pu_gpu()
   err = cudaMemcpy(d_aradx_arr, aradx, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_arady_arr, arady, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);
   err = cudaMemcpy(d_aradz_arr, aradz, sizeof(ldouble)*Ngrid, cudaMemcpyHostToDevice);  
-  
+  */
   // TODO: add error checks
   return 1;
 }
