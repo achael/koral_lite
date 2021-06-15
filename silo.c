@@ -482,7 +482,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      ldouble pregas,prerad,premag,ueloc,uiloc;
               ldouble ne,nethloc,nrelelloc,G0relelloc,G0ic_relel_loc,G0syn_relel_loc,G0ic_th_loc,urelelloc,gbrkloc;
 
-	      entropyinv[zonalindex]=get_cflag(ENTROPYFLAG3,ix,iy,iz);
+	      entropyinv[zonalindex]=get_cflag(cellflag,ENTROPYFLAG3,ix,iy,iz);
 
 	      if(doingavg==0) //using snapshot data
 		{
@@ -596,7 +596,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  gracen=0.;
 		  for(i=0;i<4;i++)
 		    for(j=0;j<4;j++)
-		      gracen += gdet*Tij[i][j]*get_gKr(j,1,i,ix,iy,iz);
+		      gracen += gdet*Tij[i][j]*get_gKr(gKr,j,1,i,ix,iy,iz);
 
 
 	      #ifdef PRINTVISCHEATINGTOSILO
@@ -696,7 +696,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  gracen=0.;
 		  for(i=0;i<4;i++)
 		    for(j=0;j<4;j++)
-		      gracen += gdet*Tij[i][j]*get_gKr(j,1,i,ix,iy,iz);
+		      gracen += gdet*Tij[i][j]*get_gKr(gKr,j,1,i,ix,iy,iz);
 
 		  #ifdef EVOLVEELECTRONS
 		  ldouble pe,pi;

@@ -205,8 +205,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,u,ut1);
 
 	    // ANDREW is this excessive? should be consistent after implicit? 
-	    //calc_u2p(1);
-            calc_u2p_fixup_and_bc(1);
+            calc_u2p_bc(1);
 	    
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
 	    count_entropy(&nentr[0],&nentr2[0]);
@@ -221,14 +220,13 @@ solve_the_problem(ldouble tstart, char* folder)
 	    set_bc(t,0);
 	    
             // Explicit evolution (advection plus source terms) from t to t+dt
-	    op_explicit (t, dt);  //U(1) in *ut1;
+	    op_explicit(t, dt);  //U(1) in *ut1;
 
-	    
             // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
         
             // Intermediate step between explicit and implicit for relativistic electrons
-	    op_intermediate (t,dt);
+	    op_intermediate(t,dt);
 	    
 	    global_expdt=dt;
  
@@ -266,8 +264,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,u,uforget);
 
 	    // Invert to primitives
-	    //calc_u2p(1);
-            calc_u2p_fixup_and_bc(1);
+            calc_u2p_bc(1);
 
 	    // Set ptm1 = p over domain
             copy_u(1.,p,ptm1); 
@@ -281,7 +278,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    count_entropy(&nentr[2],&nentr2[2]);
 	    
             // Implicit evolution of radiation terms
-	    op_implicit (t,gamma*dt); //U(2) in *u
+	    op_implicit(t,gamma*dt); //U(2) in *u
 
 	    global_impdt=gamma*dt;
         
@@ -324,8 +321,7 @@ solve_the_problem(ldouble tstart, char* folder)
 
 	    // Invert to primitives
 	    // ANDREW  is this excessive? should still be consistent after implicit!
-	    //calc_u2p(1);
-            calc_u2p_fixup_and_bc(1);
+            calc_u2p_bc(1);
  
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
             count_entropy(&nentr[4],&nentr2[4]);
@@ -391,8 +387,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    }
 	   
 	    // Final inversion
-	    //calc_u2p(1);
-	    calc_u2p_fixup_and_bc(1);
+	    calc_u2p_bc(1);
 	    
 	    // Heat species at end
             #ifdef HEATELECTRONSATENDRK2
@@ -483,8 +478,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,u,ut1);
 
 	    // ANDREW is this excessive?  Should be consistent after implicit!
-	    //calc_u2p(1);
-            calc_u2p_fixup_and_bc(1);
+            calc_u2p_bc(1);
 	
 	    // Set ptm1 = p over domain
 	    copy_u(1.,p,ptm1); 
@@ -546,8 +540,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    addi_u_3(1.,ut0,1./2.,ut2,1./2.,ut3,u); //u = U(0) + dt/2 (R(U(1)) + R(U(2))) in *u
 
 	    // Calculate primitves
-	    //calc_u2p(1); //do not calculate visc. heating, do count entropy inversions
-	    calc_u2p_fixup_and_bc(1);
+	    calc_u2p_bc(1);
 	    
 	    // Heat species at end
             #ifdef HEATELECTRONSATENDRK2
@@ -623,8 +616,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,u,ut1);
 
 	    // ANDREW is this excessive? Should be consistent after implicit!
-	    //calc_u2p(1);
-            calc_u2p_fixup_and_bc(1);
+            calc_u2p_bc(1);
 	
 	    // Set ptm1 = p over domain
 	    copy_u(1.,p,ptm1);
@@ -686,8 +678,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    addi_u_3(1.,ut0,0.,ut2,1.,ut3,u); //U(0) + dt R(U(2)) in *u
 
 	    // Calculate primitves
-	    //calc_u2p(1); //do not calculate visc. heating, do count entropy inversions
-	    calc_u2p_fixup_and_bc(1);
+	    calc_u2p_bc(1);
 	    
 	    // Heat species at end
             #ifdef HEATELECTRONSATENDRK2
@@ -767,8 +758,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    
 	    // Calculate primitves
 	    // ANDREW is this excessive? Should be consistent after implicit!
-	    //calc_u2p(1); //do not calculate visc. heating, do count entropy inversions
-	    calc_u2p_fixup_and_bc(1);
+	    calc_u2p_bc(1);
 	    
 	    // Heat species at end
             #ifdef HEATELECTRONSATENDRK2

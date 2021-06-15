@@ -27,6 +27,7 @@ __device__ __host__ static ldouble compute_dspecificSdwmrho0_wmrho0_idealgas(ldo
 __device__ __host__ static ldouble compute_dspecificSdrho_wmrho0_idealgas(ldouble rho0, ldouble wmrho0, ldouble gamma);
 __device__ __host__ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
 
+/*
 __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int iy,int iz, int val)
 {
    cellflag_arr[iflag + (iX(ix)+(NGCX))*NFLAGS +  \
@@ -34,11 +35,25 @@ __device__ __host__ int set_cflag_device(int *cellflag_arr, int iflag,int ix,int
 		        (iZ(iz)+(NGCZ))*(SY)*(SX)*NFLAGS] = val;
    return 0;
 }
-
+*/
 
 //**********************************************************************
-//primitive to conserved converter -- hydro
+//primitive to conserved converter 
 //**********************************************************************
+
+__device__ __host__ int p2u_device(ldouble *p, ldouble *u, void *ggg)
+{
+  p2u_mhd_device(p,u,ggg);
+
+  /* //TODO 
+#ifdef RADIATION
+  p2u_rad_device(p,u,ggg);
+#endif
+  */
+  
+  return 0;
+}
+
 
 __device__ __host__ int p2u_mhd_device(ldouble *pp, ldouble *uu, void *ggg)
 {
@@ -289,6 +304,7 @@ __device__ int u2p_device(ldouble *uu0, ldouble *pp, void *ggg,
       if(verbose>2 )
       {
 	//TODO -- print with mpi variables
+	printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix, geom->iy,u2pret,u0,pp[1]);
         //printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
       }
       
@@ -767,7 +783,7 @@ __device__ __host__ int u2p_solver_W_device(ldouble *uu, ldouble *pp, void *ggg,
   if(verbose>1)
   {
     fu2pret=(*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
-    printf("end: %d %e %e %e %e\n",iter,W,f0,dfdW,err);
+    printf("end: %d %e %e %e %e %d \n",iter,W,f0,dfdW,err,fu2pret);
   }
   
   //W found, let's calculate v2 and the rest
@@ -891,7 +907,7 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
   ldouble D=cons[2];
   ldouble QdotBsq=cons[3];
   ldouble Bsq=cons[4];
-  ldouble Qdotnp=cons[6];
+  //ldouble Qdotnp=cons[6]; //not used unles U2P_EQS_JON
   
   ldouble W=Wp+D;
   ldouble X = Bsq + W;
@@ -916,6 +932,7 @@ __device__ __host__ static int f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ld
 
   //JONS:
 #if (U2P_EQS==U2P_EQS_JON)
+ ldouble Qdotnp=cons[6];
    *f = Qdotnp + Wp - p + 0.5*Bsq + (Bsq*Qtsq - QdotBsq)/Xsq;
  *err = fabs(*f) / (fabs(Qdotnp) + fabs(Wp) + fabs(p) + fabs(0.5*Bsq) + fabs((Bsq*Qtsq - QdotBsq)/Xsq));
 #endif
@@ -1131,12 +1148,14 @@ __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *
 
     ldouble f=magpre/(B2RHORATIOMAX*pp[RHO]); //correction factor
 
+#ifdef B2RHOFLOOR_BACKUP_FFFRAME
     ldouble pporg[NV];
     for(int iv=0;iv<NVMHD;iv++)
     {
       pporg[iv]=pp[iv];
     }
-
+#endif
+    
     ldouble uu[NV];
     p2u_mhd_device(pp,uu,ggg); 
 
@@ -1203,7 +1222,6 @@ __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *
   if(VELPRIM==VELR) 
   {
     ldouble qsq=0.;
-      int i,j;
     for(int i=1;i<4;i++)
     {
       for(int j=1;j<4;j++)
@@ -1247,11 +1265,11 @@ __device__ __host__ int check_floors_mhd_device(ldouble *pp, int whichvel,void *
 // u2p kernel
 //**********************************************************************
 
-__global__ void calc_primitives_kernel(int Nloop_0, int setflags, 
+__global__ void calc_primitives_kernel(int Nloop_0, 
 				       int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
                                        ldouble *x_arr, ldouble *g_arr, ldouble *G_arr,
 				       ldouble *u_arr, ldouble *p_arr,
-				       int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT])
+				       int setflags, int* cellflag_arr, int int_slot_arr[NGLOBALINTSLOT])
 				       
 {
   
@@ -1271,7 +1289,7 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
     return;
   
   struct geometry geom;
-  fill_geometry_device(ix,iy,iz, x_arr,&geom,g_arr, G_arr);
+  fill_geometry_device(ix,iy,iz,&geom,x_arr,g_arr, G_arr);
 
   ldouble uu[NV],pp[NV];
   
@@ -1284,8 +1302,8 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
  
   if(setflags)
   {
-    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,0);
-    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,0);
+    set_cflag(cellflag_arr,ENTROPYFLAG,ix,iy,iz,0);
+    set_cflag(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,0);
   }
   
   //u to p inversion is done here
@@ -1303,12 +1321,12 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   //set flags for entropy solver
   if(corrected[0]==1 && setflags) //hd correction - entropy solver
   {
-    set_cflag_device(cellflag_arr,ENTROPYFLAG,ix,iy,iz,1);
+    set_cflag(cellflag_arr,ENTROPYFLAG,ix,iy,iz,1);
   }
   
   if(corrected[2]==1 && setflags) //borrowing energy from radiation didn't work
   {  
-    set_cflag_device(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,1);
+    set_cflag(cellflag_arr,ENTROPYFLAG2,ix,iy,iz,1);
   }
 
 #ifndef NOFLOORS
@@ -1354,28 +1372,317 @@ __global__ void calc_primitives_kernel(int Nloop_0, int setflags,
   {
     if(fixups[0]>0)
     {
-      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
+      set_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,1);
       atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALMHDFIXUPS],1); //TODO right??
       //global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++; 
     }
     else
-      set_cflag_device(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
+      set_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy,iz,0);
     
     if(fixups[1]>0)
     {
-      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
+      set_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,-1);
       atomicAdd(&int_slot_arr[GLOBALINTSLOT_NTOTALRADFIXUPS],1); //TODO right??
       //global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
     }
     else
-      set_cflag_device(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,0); 
+      set_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy,iz,0); 
   }
-    
-
 } 
 
+
+__global__ void cell_fixup_kernel(int Nloop_0, 
+				  int* loop_0_ix, int* loop_0_iy, int* loop_0_iz,
+				  ldouble* x_arr, ldouble* g_arr, ldouble* G_arr,
+				  int* cellflag_arr, int type,
+				  ldouble* u_arr, ldouble* p_arr,
+				  ldouble* u_bak_fixup_arr, ldouble* p_bak_fixup_arr)
+
+{
+
+  int verbose=1;
+
+  // get index for this thread
+  // Nloop_0 is number of cells to update;
+  // usually Nloop_0=NX*NY*NZ, but sometimes there are weird bcs inside domain 
+  int ii = blockIdx.x * blockDim.x + threadIdx.x;
+  if(ii >= Nloop_0) return;
+    
+  // get indices from 1D arrays
+  int ix=loop_0_ix[ii];
+  int iy=loop_0_iy[ii];
+  int iz=loop_0_iz[ii]; 
+
+  // copy current primitives/conserved to output arrays
+  // TODO could use up_copy_kernel
+  for(int iv=0;iv<NV;iv++)
+  {
+    set_u(u_bak_fixup_arr,iv,ix,iy,iz,get_u(u_arr,iv,ix,iy,iz));
+    set_u(p_bak_fixup_arr,iv,ix,iy,iz,get_u(p_arr,iv,ix,iy,iz));
+  }
+  
+  //do not correct if overwritten later on
+  if(is_cell_corrected_polaraxis_device(ix,iy,iz))
+    return;
+
+  // check if we want to fixup
+  if(((get_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PMHD) ||
+      (get_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PRAD) ||
+      (get_cflag(cellflag_arr,RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) &&
+       is_cell_active_device(ix,iy,iz))
+  {
+
+    // fill geometry
+    struct geometry geom;
+    fill_geometry_device(ix,iy,iz,&geom, x_arr,g_arr,G_arr);
+
+    //looking around for good neighbors
+    ldouble ppn[6][NV],pp[NV],uu[NV];
+
+    //should care about global but at the stage where it is called knowns not about the boundaries
+    //so fixups idividually in tiles but later exchanged 
+
+    int in=0; //number of successful neighbors
+
+    //********************//
+    // x neighbors
+    //********************//
+
+    if(ix-1>=0 &&  
+       ((get_cflag(cellflag_arr,HDFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
+	(get_cflag(cellflag_arr,RADFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
+	(get_cflag(cellflag_arr,RADIMPFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_RADIMP)))	      
+    {
+      // TODO -- MPI variables
+      #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream cell
+      if(TNY>1 && TNZ==1)
+      {
+        if((iy+TOJ) >= STREAM_IYT && (iy+TOJ) <= STREAM_IYB && (ix+TOI) > (STREAM_IX+1))
+        {
+          if((ix-1+TOI) > (STREAM_IX+3)) //not a stream cell in ix-1
+          {
+            in++;
+            for(int iv=0;iv<NV;iv++)
+              ppn[in-1][iv]=get_u(p_arr,iv,ix-1,iy,iz);
+          }
+        }
+        else
+        {
+          in++;
+          for(int iv=0;iv<NV;iv++)
+            ppn[in-1][iv]=get_u(p_arr,iv,ix-1,iy,iz);
+        }
+      }
+      #else
+
+      in++;
+      for(int iv=0;iv<NV;iv++)
+        ppn[in-1][iv]=get_u(p_arr,iv,ix-1,iy,iz);
+      #endif
+    }
+
+    if(ix+1<NX &&
+      ((get_cflag(cellflag_arr,HDFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
+       (get_cflag(cellflag_arr,RADFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
+       (get_cflag(cellflag_arr,RADIMPFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_RADIMP)))
+    {
+      // TODO -- MPI variables
+      #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
+      if(TNY>1 && TNZ==1)
+      {
+	if((iy+TOJ) >= STREAM_IYT && (iy+TOJ) <= STREAM_IYB && (ix+TOI) < STREAM_IX)
+	{
+	  if((ix+1+TOI) < STREAM_IX) //not a stream cell in ix+1
+	  {
+	    in++;
+	    for(int iv=0;iv<NV;iv++)
+	      ppn[in-1][iv]=get_u(p_arr,iv,ix+1,iy,iz);
+	  }
+	}
+	else //not in danger of using a stream ghost to do a fixup
+	{
+	  in++;
+	  for(int iv=0;iv<NV;iv++)
+	    ppn[in-1][iv]=get_u(p_arr,iv,ix+1,iy,iz);
+	}
+      }
+      #else
+      in++;
+      for(int iv=0;iv<NV;iv++)
+	ppn[in-1][iv]=get_u(p_arr,iv,ix+1,iy,iz);
+      #endif
+    }
+
+    //********************//
+    // y neighbors
+    //********************//
+    if(iy-1>=0 &&
+      ((get_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PMHD) ||
+       (get_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PRAD) ||
+       (get_cflag(cellflag_arr,RADIMPFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_RADIMP)))
+    {
+      // TODO -- MPI variables
+      #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
+      if(TNY>1 && TNZ==1)
+      {
+	if((ix+TOI) >= STREAM_IX && (ix+TOI) <= (STREAM_IX+3) && (iy+TOJ) > STREAM_IYB)
+	{
+	  if((iy-1+TOJ) > STREAM_IYB) //not a stream cell in iy-1
+	  {
+	    in++;
+	    for(int iv=0;iv<NV;iv++)
+	      ppn[in-1][iv]=get_u(p_arr,iv,ix,iy-1,iz);
+	  }
+	}
+	else //not in danger of using a stream ghost to do a fixup
+	{
+	  in++;
+	  for(int iv=0;iv<NV;iv++)
+	    ppn[in-1][iv]=get_u(p_arr,iv,ix,iy-1,iz);
+	}
+      }
+      #else
+      in++;
+      for(int iv=0;iv<NV;iv++)
+	ppn[in-1][iv]=get_u(p_arr,iv,ix,iy-1,iz);
+      #endif
+    }
+
+    if(iy+1<NY &&
+       ((get_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PMHD) ||
+	(get_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PRAD) ||
+	(get_cflag(cellflag_arr,RADIMPFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_RADIMP)))
+    {
+      // TODO -- MPI variables
+      #ifdef SPECIAL_BC_CHECK //make sure that iy+1 is not a stream ghost cell
+      if(TNY>1 && TNZ==1)
+      {
+	if((ix+TOI) >= STREAM_IX && (ix+TOI) <= (STREAM_IX+3) && (iy+TOJ) < STREAM_IYT)
+	{
+	  if((iy+1+TOJ) < STREAM_IYT) //not a stream cell in iy+1
+	  {
+	    in++;
+	    for(int iv=0;iv<NV;iv++)
+	      ppn[in-1][iv]=get_u(p_arr,iv,ix,iy+1,iz);
+	  }
+	}
+	else //not in danger of using a stream ghost to do a fixup
+	{
+	  in++;
+	  for(int iv=0;iv<NV;iv++)
+	    ppn[in-1][iv]=get_u(p_arr,iv,ix,iy+1,iz);
+	}
+      }
+      #else
+      in++;
+      for(int iv=0;iv<NV;iv++)
+	ppn[in-1][iv]=get_u(p_arr,iv,ix,iy+1,iz);
+      #endif
+    }
+
+
+    //********************//
+    // z neighbors
+    //********************//
+
+    if(iz-1>=0 &&
+       ((get_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PMHD) ||
+	(get_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PRAD) ||
+	(get_cflag(cellflag_arr,RADIMPFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_RADIMP)))
+    {
+      in++;
+      for(int iv=0;iv<NV;iv++)
+        ppn[in-1][iv]=get_u(p_arr,iv,ix,iy,iz-1);
+    }
+
+    if(iz+1<NZ  &&
+       ((get_cflag(cellflag_arr,HDFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PMHD) ||
+	(get_cflag(cellflag_arr,RADFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PRAD) ||
+	(get_cflag(cellflag_arr,RADIMPFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_RADIMP)))
+    {
+      in++;
+      for(int iv=0;iv<NV;iv++)
+        ppn[in-1][iv]=get_u(p_arr,iv,ix,iy,iz+1);
+    }
+
+    // TODO do we want to set all flags to zero when we are done?
+    // would need a separate kernel after synchronization
+
+    //*******************************************//
+    // do fixup if there are sufficient neighbors
+    //*******************************************//
+
+    if((NZ==1 && NY==1 && in>=1) ||
+       (NZ==1 && in>=2) || (NY==1 && in>=2) ||
+       (in>=3))
+    {
+      for(int iv=0;iv<NV;iv++)
+      {
+        int fixthis=0;
+
+	if(type==FIXUP_U2PMHD &&  iv!=RHO && iv<B1) 
+	  fixthis=1; //skip correcting magnetic field so we don't disrupt div B
+
+	if(type==FIXUP_U2PRAD &&  iv!=RHO && iv>=EE && iv<=FZ) 
+	  fixthis=1; //fix only radiative quantites
+
+	if(type==FIXUP_RADIMP &&  iv!=RHO && (iv<B1 || (iv>=EE && iv<=FZ))) 
+	  fixthis=1; //fix both mhd and rad but not magn field
+
+	#ifdef EVOLVEPHOTONNUMBER
+	if(type==FIXUP_RADIMP &&  iv==NF) 
+	  fixthis=1; //fix number of photons
+	#endif
+
+	#ifdef EVOLVEELECTRONS
+	if(type==FIXUP_RADIMP &&  (iv==ENTRE || iv==ENTRI)) 
+	  fixthis=1; //fix electron/ion entropy
+	#endif
+
+	// do the fixup
+	if(fixthis==1)
+	{
+	  pp[iv]=0.;
+	  for(int iii=0;iii<in;iii++)
+	    pp[iv]+=ppn[iii][iv];
+	  pp[iv]/=(ldouble)in;  
+	}
+	else //leave as was
+	{
+	  pp[iv]=get_u(p_arr,iv,ix,iy,iz); 
+	}
+      }
+
+      // do p2u to get consistent u 
+      p2u_device(pp,uu,&geom);
+
+      // TODO MPI prints
+      if(verbose>1) 
+      {
+	//if(type==FIXUP_U2PMHD) printf("%4d > %4d %4d %4d > U2PMHD > fixing up with %d neighbors\n",PROCID,ix+TOI,iy+TOJ,iz+TOK,in);
+	//if(type==FIXUP_U2PRAD) printf("%4d > %4d %4d %4d > U2PRAD > fixing up with %d neighbors\n",PROCID,ix+TOI,iy+TOJ,iz+TOK,in);
+	//if(type==FIXUP_RADIMP) printf("%4d > %4d %4d %4d > RADIMP > fixing up with %d neighbors\n",PROCID,ix+TOI,iy+TOJ,iz+TOK,in);
+      }
+
+      //save to updated arrays memory
+      for(int iv=0;iv<NV;iv++)
+      {
+	set_u(u_bak_fixup_arr,iv,ix,iy,iz,uu[iv]);
+	set_u(p_bak_fixup_arr,iv,ix,iy,iz,pp[iv]);
+      }
+    }
+    else
+    {
+      //TODO MPI prints
+      //if(type==FIXUP_U2PMHD) printf("%4d > %4d %4d %4d > U2PMHD > didn't manage to hd fixup\n",PROCID,ix+TOI,iy+TOJ,iz+TOK);
+      //if(type==FIXUP_U2PRAD) printf("%4d > %4d %4d %4d > U2PRAD > didn't manage to hd fixup\n",PROCID,ix+TOI,iy+TOJ,iz+TOK);
+      //if(type==FIXUP_RADIMP) printf("%4d > %4d %4d %4d > RADIMP > didn't manage to hd fixup\n",PROCID,ix+TOI,iy+TOJ,iz+TOK);
+    }
+  }
+}
+
 //**********************************************************************
-//Call the kernel
+//Call the kernels in u2p
 //**********************************************************************
 
 ldouble calc_u2p_gpu(int setflags)
@@ -1399,15 +1706,15 @@ ldouble calc_u2p_gpu(int setflags)
   int threadblocks = (Nloop_0 / TB_SIZE) + ((Nloop_0 % TB_SIZE)? 1:0);
 
   cudaEventRecord(start);
-  calc_primitives_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, setflags, 
+  calc_primitives_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, 
 						    d_loop0_ix, d_loop0_iy, d_loop0_iz,
 						    d_x, d_gcov, d_gcon,
 						    d_u_arr, d_p_arr,
-						    d_cellflag_arr, d_int_slot_arr);
+						    setflags, d_cellflag_arr, d_int_slot_arr);
               
   cudaEventRecord(stop);
-  err = cudaPeekAtLastError();
-  cudaDeviceSynchronize(); //TODO: do we need this, does cudaMemcpy synchronize?
+  err = cudaPeekAtLastError(); // TODO ?? 
+  cudaDeviceSynchronize(); 
 
   cudaEventSynchronize(stop);
   float tms = 0.;
@@ -1426,7 +1733,71 @@ ldouble calc_u2p_gpu(int setflags)
   printf("\n");
   free(p_tmp);
 #endif
-  
+
+  // fixups
+
+  int do_fixups=1;
+  int type=FIXUP_U2PMHD;
+  if(DOFIXUPS==0)
+    do_fixups=0;
+
+  if(DOU2PMHDFIXUPS==0 && type==FIXUP_U2PMHD)
+    do_fixups=0;
+
+  if(DOU2PRADFIXUPS==0 && type==FIXUP_U2PRAD)
+    do_fixups=0;
+
+  if(DORADIMPFIXUPS==0 && type==FIXUP_RADIMP)
+    do_fixups=0;
+
+  // TODO need a test for fixups
+  if(do_fixups)
+  {
+    // launch cell_fixup kernel 
+    cell_fixup_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0, 
+						 d_loop0_ix, d_loop0_iy, d_loop0_iz,
+						 d_x, d_gcov, d_gcon,
+						 d_cellflag_arr, type, 
+						 d_u_arr, d_p_arr,
+						 d_u_fixup_arr, d_p_fixup_arr);
+    err = cudaPeekAtLastError(); // TODO ?? 
+    cudaDeviceSynchronize(); 
+
+  #ifdef RADIATION
+    //TODO
+    cell_fixup_kernel(FIXUP_U2PRAD);
+  #endif
+
+    // copy fixed up p&u to p,u
+    cudaEventRecord(start);
+    up_copy_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0,
+					      d_loop0_ix, d_loop0_iy, d_loop0_iz,
+					      d_u_fixup_arr, d_p_fixup_arr,
+                                              d_u_arr, d_p_arr);
+    cudaEventRecord(stop);
+    err = cudaPeekAtLastError(); // TODO ?? 
+    cudaDeviceSynchronize(); 
+
+
+    cudaEventSynchronize(stop);
+    float tms_fixup = 0.;
+    cudaEventElapsedTime(&tms_fixup, start,stop);
+    printf("gpu u2p fixup time: %0.2f \n",tms_fixup);
+    tms += tms_fixup;
+
+  #ifdef CPUKO
+    // print results
+    if((p_tmp=(ldouble*)malloc(sizeof(ldouble)*Nprim))==NULL) my_err("malloc err.\n");
+    err = cudaMemcpy(p_tmp, d_p_arr, sizeof(ldouble)*Nprim, cudaMemcpyDeviceToHost);
+    if(err != cudaSuccess) printf("failed cudaMemcpy of d_p_arr to p_tmp\n");
+    printf("gpu u2p fixup pp[NV]: ");
+    for(int iv=0;iv<NV;iv++)
+      printf("%e ", get_u(p_tmp, iv, ixTEST, iyTEST, izTEST));
+    printf("\n");
+    free(p_tmp);
+  #endif
+  }
+
   return (ldouble)tms;
 }
 

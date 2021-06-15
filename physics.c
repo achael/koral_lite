@@ -848,8 +848,9 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   
   int k,l,iv;
   for(iv=0;iv<NV;iv++)
+  {
     ss[iv]=0.;  // zero out all source terms initially
-
+  }
 #ifdef RADIATION
 
   ldouble Rij[4][4];
@@ -860,14 +861,14 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   for(k=0;k<4;k++)
     for(l=0;l<4;l++)
       {
-	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
-	ss[EE0]+=gdetu*Rij[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[FX0]+=gdetu*Rij[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[FY0]+=gdetu*Rij[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[FZ0]+=gdetu*Rij[k][l]*get_gKr(l,3,k,ix,iy,iz);
+	ss[1]+=gdetu*T[k][l]*get_gKr(gKr,l,0,k,ix,iy,iz);
+	ss[2]+=gdetu*T[k][l]*get_gKr(gKr,l,1,k,ix,iy,iz);
+	ss[3]+=gdetu*T[k][l]*get_gKr(gKr,l,2,k,ix,iy,iz);
+	ss[4]+=gdetu*T[k][l]*get_gKr(gKr,l,3,k,ix,iy,iz);
+	ss[EE0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,0,k,ix,iy,iz);
+	ss[FX0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,1,k,ix,iy,iz);
+	ss[FY0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,2,k,ix,iy,iz);
+	ss[FZ0]+=gdetu*Rij[k][l]*get_gKr(gKr,l,3,k,ix,iy,iz);
       }
 
 #if (GDETIN==0)   //terms with dloggdet if gdet not inside the derivatives
@@ -917,10 +918,10 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   for(k=0;k<4;k++)
     for(l=0;l<4;l++)
       {
-	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
+	ss[1]+=gdetu*T[k][l]*get_gKr(gKr,l,0,k,ix,iy,iz);
+	ss[2]+=gdetu*T[k][l]*get_gKr(gKr,l,1,k,ix,iy,iz);
+	ss[3]+=gdetu*T[k][l]*get_gKr(gKr,l,2,k,ix,iy,iz);
+	ss[4]+=gdetu*T[k][l]*get_gKr(gKr,l,3,k,ix,iy,iz);
       }
 
   //terms with dloggdet  
@@ -1252,7 +1253,12 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
   ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
   ff[B2]=gdetu*(bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
   ff[B3]=gdetu*(bcon[3]*ucon[idim+1] - bcon[idim+1]*ucon[3]);
-
+  /*     if(geom.ix==ixTEST && geom.iy==iyTEST && geom.iz==izTEST && idim==0)
+      {
+	//	printf("in flux_prime, idim %d: ff[B] %e %e %e | %e\n",idim,ff[B1],ff[B2],ff[B3],bcon[1]*ucon[idim+1]-bcon[idim+1]*ucon[1]);
+	printf("in cpu flux_prime, idim %d: gdetu %e\n",idim,gdetu);
+      }
+  *///TODO
 #ifdef BATTERY //radiation battery
 #ifdef RADIATION
   ldouble eterm[4]={-1.,0.,0.,0.};

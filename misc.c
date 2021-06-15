@@ -585,7 +585,6 @@ initialize_arrays()
   long long Navg=Ngrid*(NV+NAVGVARS);
   long long AvgSize=Navg*sizeof(ldouble);
 
-
   long long Ngridmet=(SX)*(SY)*(SZMET);
   long long Nmet=Ngridmet*gSIZE;
   long long MetSize=Nmet*sizeof(ldouble);
@@ -768,7 +767,6 @@ initialize_arrays()
      if((flRz=(ldouble*)malloc(fluxZSize))==NULL) my_err("malloc err.\n");
 
      //auxiliary primitive arrays
-     
      if((ptm1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((ut0=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
      if((ut1=(ldouble*)malloc(PrimSize))==NULL) my_err("malloc err.\n");
@@ -1280,13 +1278,13 @@ getch()
 //*********************************************************************
 // minimum of 2 numbers
 //**********************************************************************
-
+/*
 ldouble my_min(ldouble a, ldouble b)
 {
   if(a<b) return a;
   else return b;
 }
-
+*/
 //**********************************************************************
 // minimum of a length N array
 //**********************************************************************
@@ -1316,6 +1314,7 @@ ldouble my_max_N(ldouble *v,int N)
 // sign of a double
 //**********************************************************************
 
+/*
 ldouble my_sign(ldouble x)
 {
   if(x>0.) return 1.;
@@ -1323,6 +1322,7 @@ ldouble my_sign(ldouble x)
   if(x==0.) return 1.;
   return 0;
 }
+*/
 
 //**********************************************************************
 //* atan2 in [0,2pi] 

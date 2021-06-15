@@ -48,8 +48,8 @@ calc_primitives(int ix,int iy,int iz,int setflags)
   
   if(setflags)
   {
-    set_cflag(ENTROPYFLAG,ix,iy,iz,0);
-    set_cflag(ENTROPYFLAG2,ix,iy,iz,0);
+    set_cflag(cellflag,ENTROPYFLAG,ix,iy,iz,0);
+    set_cflag(cellflag,ENTROPYFLAG2,ix,iy,iz,0);
   }
 
   //u to p inversion is done here
@@ -65,12 +65,12 @@ calc_primitives(int ix,int iy,int iz,int setflags)
   //set flags for entropy solver
   if(corrected[0]==1 && setflags) //hd correction - entropy solver
   {
-    set_cflag(ENTROPYFLAG,ix,iy,iz,1);
+    set_cflag(cellflag,ENTROPYFLAG,ix,iy,iz,1);
   }
   
   if(corrected[2]==1 && setflags) //borrowing energy from radiation didn't work
   {  
-    set_cflag(ENTROPYFLAG2,ix,iy,iz,1);
+    set_cflag(cellflag,ENTROPYFLAG2,ix,iy,iz,1);
   }
 
 #ifndef NOFLOORS
@@ -113,19 +113,19 @@ calc_primitives(int ix,int iy,int iz,int setflags)
   {
     if(fixups[0]>0)
     {
-      set_cflag(HDFIXUPFLAG,ix,iy,iz,1);
+      set_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz,1);
       global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;
     }
     else
-      set_cflag(HDFIXUPFLAG,ix,iy,iz,0);
+      set_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz,0);
     
     if(fixups[1]>0)
     {
-      set_cflag(RADFIXUPFLAG,ix,iy,iz,-1);
+      set_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz,-1);
       global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]++;
     }
     else
-      set_cflag(RADFIXUPFLAG,ix,iy,iz,0); 
+      set_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz,0); 
   }
   
   return 0;
@@ -1993,8 +1993,8 @@ int count_entropy(int *n, int *n2)
     for(iy=0;iy<NY;iy++)
       for(iz=0;iz<NZ;iz++)
 	{
-	  nentrloc+=get_cflag(ENTROPYFLAG,ix,iy,iz); 
-	  nentrloc2+=get_cflag(ENTROPYFLAG2,ix,iy,iz); 
+	  nentrloc+=get_cflag(cellflag,ENTROPYFLAG,ix,iy,iz); 
+	  nentrloc2+=get_cflag(cellflag,ENTROPYFLAG2,ix,iy,iz); 
 	}
 
 #ifdef MPI
@@ -2022,8 +2022,8 @@ int copy_entropycount()
       ix=loop_0[ii][0];
       iy=loop_0[ii][1];
       iz=loop_0[ii][2];
-      ldouble val=get_cflag(ENTROPYFLAG,ix,iy,iz);
-      set_cflag(ENTROPYFLAG3,ix,iy,iz,val);
+      ldouble val=get_cflag(cellflag,ENTROPYFLAG,ix,iy,iz);
+      set_cflag(cellflag,ENTROPYFLAG3,ix,iy,iz,val);
     }
 
   return 0;

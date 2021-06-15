@@ -96,7 +96,6 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 	  ldouble dxm2,ldouble dxm1,ldouble dx0,ldouble dxp1,ldouble dxp2,
 	  int param,ldouble theta)
 {
-  ldouble r0[NV],rm1[NV],rp1[NV];
 
   if(param!=0) //overrule the standard reconstruction
   {
@@ -124,7 +123,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
   
   else if(INT_ORDER==1) //linear
   {
-    ldouble diffpar=theta;
+
     int i;
     
     for(i=0;i<NV;i++)
@@ -392,7 +391,6 @@ int
 save_wavespeeds(int ix,int iy,int iz, ldouble *aaa)
 {
   ldouble aaaxhd,aaaxrad,aaayhd,aaayrad,aaazhd,aaazrad;
-  ldouble aaaxrad2,aaayrad2,aaazrad2;
 
   //hydro wavespeeds
   set_u_scalar(ahdxl,ix,iy,iz,aaa[0]);
@@ -514,18 +512,8 @@ int calc_interp()
 
       //create arrays for interpolating conserved quantities
       struct geometry geom;
-      //ldouble x0[3],x0l[3],x0r[3],xm1[3],xp1[3];
-      ldouble fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
-      ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV];
-      ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV],fd_pm3[NV],fd_pp3[NV];
-      ldouble fd_s0[NV],fd_sp1[NV],fd_sp2[NV],fd_sm1[NV],fd_sm2[NV];
-      ldouble fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
-      ldouble fd_pLr[NV],fd_pLl[NV],fd_pRl[NV],fd_pRr[NV];
+      ldouble fd_p0[NV],fd_pp1[NV],fd_pp2[NV],fd_pm1[NV],fd_pm2[NV];
       ldouble fd_pr[NV],fd_pl[NV];
-      ldouble fd_sLr[NV],fd_sLl[NV],fd_sRl[NV],fd_sRr[NV];
-      ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-      ldouble a0[2],am1[2],ap1[2],al,ar,amax,dx;  
-      ldouble ffRl[NV],ffRr[NV],ffLl[NV],ffLr[NV];
       ldouble ffl[NV],ffr[NV]; 
       ldouble dx0, dxm2, dxm1, dxp1, dxp2;
       ldouble minmod_theta=MINMOD_THETA;
@@ -829,6 +817,8 @@ int calc_interp()
 		  if(dor)
                   // Save ffr in array flLy (F_R) of wall iy+1
 		  set_uby(flLy,i,ix,iy+1,iz,ffr[i]);
+
+		  //if(ix==ixTEST && iy==iyTEST-1 && iz==izTEST) printf("in finte calc_interp: ffr: %e %e %e %e \n" , ffr[0], ffr[B1], ffr[B2], ffr[B3]);
 		}
       }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
 
@@ -1034,7 +1024,9 @@ int calc_update(ldouble dtin)
       ldouble dz=get_size_x(iz,2);
 
       //timestep
-      dt=dtin;  // dtin is an input parameter to op_explicit
+      // TODO check: make sure this is local dt and not global in original! 
+      ldouble dt=dtin;  // dtin is an input parameter to op_explicit
+      
       
       //update all conserved according to fluxes and source terms
       for(iv=0;iv<NV;iv++)
@@ -1081,6 +1073,36 @@ int calc_update(ldouble dtin)
 }
 
 
+int calc_radexplicit(ldouble dtin)
+{
+#ifdef RADIATION
+#ifndef SKIPRADSOURCE
+#ifdef EXPLICIT_LAB_RAD_SOURCE
+
+  int ii,ix,iy,iz,iv;
+  ldouble dt;
+  #pragma omp parallel for private(ii,ix,iy,iz,iv,dt) schedule (static)
+  for(ii=0;ii<Nloop_0;ii++) //domain 
+  {
+    ix=loop_0[ii][0];
+    iy=loop_0[ii][1];
+    iz=loop_0[ii][2]; 
+
+    if(is_cell_active(ix,iy,iz)==0) 
+      continue;
+
+    //timestep
+    dt=dtin;
+
+    // Use primitives from *p, i.e., from the beginning of this timestep.
+    // explicit_rad_source_term computes the radiation source term and adds it to the conserveds.
+    explicit_rad_source_term(ix,iy,iz,dt);
+  }
+#endif
+#endif
+#endif
+  return 0.;
+}
 
 //**********************************************************************
 /*! \fn int save_timesteps
@@ -1138,53 +1160,18 @@ save_timesteps()
 
 
 //**********************************************************************
-/*! \fn int calc_u2p_fixup_and_Bc(int setflags)
+/*! \fn int calc_u2p_bc(int setflags)
  \brief Calculates all primitives from global u, applies fixups and bcs
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p_fixup_and_bc(int setflags)
+calc_u2p_bc(int setflags)
 {
-  /*
-  int ii;
-
-  //timer start
-  struct timespec temp_clock;
-  my_clock_gettime(&temp_clock);
-  start_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
-  //calculates the primitives
-#pragma omp parallel for schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain only
-  {
-    int ix,iy,iz;
-    ix=loop_0[ii][0];
-    iy=loop_0[ii][1];
-    iz=loop_0[ii][2];
-    
-    //skip if cell is passive
-    if(!is_cell_active(ix,iy,iz))
-      continue;
-    
-    calc_primitives(ix,iy,iz,setflags);
-  }
-
-  //timer stop
-  my_clock_gettime(&temp_clock);
-  end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-
-  */
 
   // perform inversion
-  calc_u2p_only(setflags);
+  calc_u2p(setflags);
   
-  //fixup here hd and rad after inversions
-  cell_fixup(FIXUP_U2PMHD);
-#ifdef RADIATION
-  cell_fixup(FIXUP_U2PRAD);
-#endif
-
   //re-set boundary conditions
   set_bc(global_time,0);
 
@@ -1192,13 +1179,13 @@ calc_u2p_fixup_and_bc(int setflags)
 } 
 
 //**********************************************************************
-/*! \fn int calc_u2p_only(int setflags)
- \brief Calculates all primitives from global u, does NOT apply fixups and bcs
+/*! \fn int calc_u2p(int setflags)
+ \brief Calculates all primitives from global u and applies fixups
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p_only(int setflags)
+calc_u2p(int setflags)
 {
   int ii;
 
@@ -1227,6 +1214,12 @@ calc_u2p_only(int setflags)
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
+  //fixup here hd and rad after inversions
+  cell_fixup(FIXUP_U2PMHD);
+#ifdef RADIATION
+  cell_fixup(FIXUP_U2PRAD);
+#endif
+  
   return 0;
 } 
 
@@ -1282,71 +1275,175 @@ op_explicit(ldouble t, ldouble dtin)
   ldouble dt;
 
   // Save conserveds and primitives over domain + ghost (no corners)
+  // these are only used in entropy mixing
+  // TODO -- gpu? 
   copyi_u(1.,u,upreexplicit); //conserved quantities before explicit update
   copyi_u(1.,p,ppreexplicit); //primitive quantities before explicit update
 
   // calculates H/R and velocity averages
+  // only used for CALCHRONTHEGO and CORRECT_POLARAXIS_3D
+  // TODO -- gpu? 
   calc_avgs_throughout(); 
 
-  // calculates wavespeeds over the domain and ghost cells
-  calc_wavespeeds();
-
-#ifndef SKIPEVOLUTION
-
-  //**********************************************************************
-  // Next interpolate to the cell walls and calculate left and right-biased fluxes
-#pragma omp barrier
-  calc_interp();
-
-  //**********************************************************************
-  // Compute fluxes at the six walls of all cells using the selected approximation of the Riemann problem
-  
-#pragma omp barrier
-  calc_fluxes();
-  
-  //**********************************************************************
-  // Constrained transport to preserve div.B=0
-
-#ifdef MAGNFIELD
-  #pragma omp barrier
-  flux_ct();
+  /////////////////////////////////////////////
+  // Block for initializing GPU & timing tests
+  // TODO: make this better...
+  ldouble time_cpu_wavespeeds=0.;
+  ldouble time_gpu_wavespeeds=0.;
+  ldouble time_cpu_interp=0.;
+  ldouble time_gpu_interp=0.;
+  ldouble time_cpu_fluxes=0.;
+  ldouble time_gpu_fluxes=0.;
+  ldouble time_cpu_ct = 0.;
+  ldouble time_gpu_ct = 0.;
+  ldouble time_cpu_update = 0.;
+  ldouble time_gpu_update = 0.;
+  ldouble time_cpu_u2p = 0.;
+  ldouble time_cpu_u2p_total=0.;
+  ldouble time_gpu_u2p_total = 0.;
+  ldouble time_cpu_u2p_fixup = 0.;
+    
+  #ifdef GPUKO
+  // TODO eventually this will be moved out of op_explicit => problem.c
+  push_pu_gpu();
+  #endif 
+  ////////////////////////////////////////////
+ 
+  //**********************************************************************//
+  // Calculate wavespeeds over the domain and ghost cells
+  printf("\n********************************************************\n");
+#ifdef GPUKO
+  time_gpu_wavespeeds = calc_wavespeeds_gpu();
 #endif
 
-  //**********************************************************************
-  // Evolve the conserved quantities
+#if defined(CPUKO) || !defined(GPUKO)
+  struct timespec temp_clock;
+  ldouble tstart,tstop;
 
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  
+  #pragma omp barrier
+  calc_wavespeeds();
 
-  // TODO: make this better...
-  ldouble time_cpu_update = 0;
-  ldouble time_gpu_update = 0;
-  ldouble time_cpu_u2p = 0;
-  ldouble time_gpu_u2p = 0;
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_wavespeeds = (tstop-tstart)*1.e3;
+  
+  printf("cpu calc_wavespeeds time: %0.2lf \n", time_cpu_wavespeeds);  
+  printf("gpu calc wavespeeds tstepdensmin/max: %e %e\n\n",tstepdenmin,tstepdenmax);
+#endif
+  
+#ifndef SKIPEVOLUTION
+
+  //**********************************************************************//
+  // Interpolate to the cell walls and calculate left and right-biased fluxes
+#ifdef GPUKO
+  time_gpu_interp = calc_interp_gpu();
+#endif
+
+#if defined(CPUKO) || !defined(GPUKO)
+
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  #pragma omp barrier
+  calc_interp();
+
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_interp = (tstop-tstart)*1.e3;
+  
+  printf("cpu calc_interp time: %0.2lf \n", time_cpu_interp);
+  /*
+  printf("cpu calc_interp pbLz[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(pbLz, iv, ixTEST, iyTEST, izTEST,2));
+  */
+  printf("cpu calc_interp flLz[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(flLz, iv, ixTEST, iyTEST, izTEST,2));
+  printf("\n\n");
+
+#endif
+  
+  //**********************************************************************//
+  // Compute fluxes at the six walls of all cells
+  // using the selected approximation of the Riemann problem
 
 #ifdef GPUKO
-  // TODO eventually this will be moved out of op_explicit => problem.c
-  push_p_u_gpu();
-#endif 
+  time_gpu_fluxes = calc_fluxes_gpu();
+#endif
 
-  //TODO add extra flag
+
+#if defined(CPUKO) || !defined(GPUKO)
+
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  
+  #pragma omp barrier
+  calc_fluxes();
+
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_fluxes = (tstop-tstart)*1.e3;
+  
+  printf("cpu calc_fluxes time: %0.2lf \n", time_cpu_fluxes);
+  printf("cpu calc_fluxes flbz[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(flbz, iv, ixTEST, iyTEST, izTEST,2));
+  printf("\n\n");
+#endif
+  
+  //**********************************************************************//
+  // Constrained transport to preserve div.B=0
+  
+#ifdef MAGNFIELD
+
+#ifdef GPUKO
+  time_gpu_ct = flux_ct_gpu();
+#endif
+
+#if defined(CPUKO) || !defined(GPUKO)
+
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  #pragma omp barrier
+  flux_ct();
+
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  time_cpu_ct = (tstop-tstart)*1.e3;
+  
+  printf("cpu flux_ct time: %0.2lf \n", time_cpu_ct);
+  printf("cpu flux_ct flbz[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_ub(flbz, iv, ixTEST, iyTEST, izTEST,2));
+  printf("\n\n");
+#endif
+#endif
+  
+  //**********************************************************************//
+  // Evolve the conserved quantities
+
 #ifdef GPUKO
   time_gpu_update = calc_update_gpu(dtin);
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)  
-  struct timespec temp_clock;
-  ldouble tstart,tstop;
   
   my_clock_gettime(&temp_clock);
   tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
+  #pragma omp_barrier
   calc_update(dtin);
 
   my_clock_gettime(&temp_clock);
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  //printf("cpu update time: %0.2lf \n", (tstop-tstart)*1.e3);
-
   time_cpu_update = (tstop-tstart)*1.e3;
-
+  
+  printf("cpu update time: %0.2lf \n", time_cpu_update);
   printf("cpu update uu[NV]: ");
   for(int iv=0;iv<NV;iv++)
     printf("%e ", get_u(u, iv, ixTEST, iyTEST, izTEST));
@@ -1354,69 +1451,71 @@ op_explicit(ldouble t, ldouble dtin)
 
   printf("\n\n");
 
-  //************************************************************************
+  //************************************************************************//
   // Explicit RADIATION COUPLING  
-  
+  //TODO eventually add radiation
+  /*
 #ifdef RADIATION
 #ifndef SKIPRADSOURCE
 #ifdef EXPLICIT_LAB_RAD_SOURCE
-  #pragma omp barrier
-  #pragma omp parallel for private(ii,ix,iy,iz,iv,dt) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain 
-  {
-    ix=loop_0[ii][0];
-    iy=loop_0[ii][1];
-    iz=loop_0[ii][2]; 
 
-    if(is_cell_active(ix,iy,iz)==0) 
-      continue;
+  #pragma omp_barrier
+  calc_radexplicit(dtin);  
 
-    //timestep
-    dt=dtin;
-
-    // Use primitives from *p, i.e., from the beginning of this timestep.
-    // explicit_rad_source_term computes the radiation source term and adds it to the conserveds.
-    explicit_rad_source_term(ix,iy,iz,dt);
-  }
-  
 #endif //EXPLICIT_LAB_RAD_SOURCE
 #endif //SKIPRADSOURCE
 #endif //RADIATION
+  */
+  
 #endif //SKIPEVOLUTION
-
-
-  //**********************************************************************  
+  
+  //**********************************************************************//
   // Compute postexplicit primitives and count entropy inversions
 
 #ifdef GPUKO
-  time_gpu_u2p = calc_u2p_gpu(1);
+  time_gpu_u2p_total = calc_u2p_gpu(1);
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)
-  // TODO: timing functionality. reuse timer from above
-  //my_clock_gettime(&temp_clock);
-  //tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  my_clock_gettime(&temp_clock);
+  tstart=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
-  calc_u2p_only(1);
+  #pragma omp_barrier
+  calc_u2p(1);
 
-  //my_clock_gettime(&temp_clock);
-  //tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  my_clock_gettime(&temp_clock);
+  tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+ 
+  // timer for u2p only already defined, only times u2p, not including fixups/bcs 
   time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3;
-  //printf("cpu u2p time: %0.2lf \n", (end_u2ptime-start_u2ptime)*1.e3); // this only times u2p, not including fixups/bcs 
-  //printf("cpu u2p time: %0.2lf \n", (tstop-tstart)*1.e3);
-  //printf("cpu u2p pp[NV]: ");
-  //for(int iv=0;iv<NV;iv++)
-  //  printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+  time_cpu_u2p_fixup = (tstop-tstart)*1.e3 - time_cpu_u2p;
+  time_cpu_u2p_total = time_cpu_u2p + time_cpu_u2p_fixup;
+  
+  printf("cpu u2p time: %0.2lf \n", time_cpu_u2p); 
+  printf("cpu u2p fixup time: %0.2lf \n", time_cpu_u2p_fixup); 
+  printf("cpu u2p fixup pp[NV]: ");
+  for(int iv=0;iv<NV;iv++)
+    printf("%e ", get_u(p, iv, ixTEST, iyTEST, izTEST));
+
 #endif
 
-  printf("\n\n");
+  ldouble time_cpu_total, time_gpu_total;
+  time_cpu_total = time_cpu_wavespeeds + time_cpu_interp + time_cpu_fluxes + time_cpu_ct + time_cpu_update + time_cpu_u2p_total;
+  time_gpu_total = time_gpu_wavespeeds + time_gpu_interp + time_gpu_fluxes + time_gpu_ct + time_gpu_update + time_gpu_u2p_total;
 
+  printf("\n\n");
+  printf("total op_explicit gpu time: %0.2lf \n",time_gpu_total);
+  printf("total op_explicit cpu time: %0.2lf \n",time_cpu_total);
+  printf("speedup: %0.2lf\n",time_cpu_total/time_gpu_total);
+  printf("********************************************************\n\n");
+  ///////////////////////////////////////
+  // Block for pulling from GPU -- keep moving down
+  
 #if defined(GPUKO) && !defined(CPUKO)
 
-  // TODO eventually this will be moved out of op_explicit => problem.c
-  pull_p_u_gpu();
+  pull_pu_gpu(); // TODO eventually this will be moved out of op_explicit => problem.c
 
-#elif defined(GPUKO) && defined(CPUKO)
+#elif defined(GPUKO) && defined(CPUKO) // TODO work on diagnostics
 
   char fname[256];
   snprintf(fname, 255, "diagnostics/step_%010d.json", nstep);
@@ -1427,33 +1526,29 @@ op_explicit(ldouble t, ldouble dtin)
 	
   snprintf(header, 255, "\"timestep\": %d,\n\"time\": %g,", nstep, global_time);
 
-  snprintf(ctimes, 255, "{\"update\": %g, \"u2p\": %g}", time_cpu_update, time_cpu_u2p);
-  snprintf(gtimes, 255, "{\"update\": %g, \"u2p\": %g}", time_gpu_update, time_gpu_u2p);
+  snprintf(ctimes, 255, "{\"update\": %g, \"u2p\": %g}", time_cpu_update, time_cpu_u2p_total);
+  snprintf(gtimes, 255, "{\"update\": %g, \"u2p\": %g}", time_gpu_update, time_gpu_u2p_total);
  
   output_state_debug(fname, header, ctimes, gtimes);
 
 #endif
-
+  //////////////////////////////////////
   
   
-  //**********************************************************************  
-  // fixups and boundary conditions
-  // TODO NOTE: these were previously wrapped in calc_u2p, now in calc_u2p_fixup_and_bc
-  
-  //fixup here hd and rad after inversions
-  cell_fixup(FIXUP_U2PMHD);
-  #ifdef RADIATION
-  cell_fixup(FIXUP_U2PRAD);
-  #endif
+  //**********************************************************************//
+  // Apply boundary conditions
+  // TODO NOTE: these were previously wrapped in calc_u2p, now in calc_u2p_bc
+  // TODO -- do we need these applied here? 
 
   //re-set boundary conditions
   set_bc(global_time,0);
-  //**********************************************************************	    
-  // Entropy Mixing
+
+  //**********************************************************************//	    
+  // Electron/ion Entropy Mixing
   
-#ifdef MIXENTROPIESPROPERLY
+  #ifdef MIXENTROPIESPROPERLY
   mix_entropies(dt);
-#endif
+  #endif
 
   return GSL_SUCCESS;
 }
@@ -1478,7 +1573,6 @@ op_intermediate(ldouble t, ldouble dt)
   
   // Apply viscous heating to thermal & nonthermal electrons and ions  
 #ifndef HEATELECTRONSATENDRK2   //here? or separate after RK2
-
   heat_electronions_with_state(dt); 
 #endif
 #endif
@@ -1572,7 +1666,7 @@ op_implicit(ldouble t, ldouble dtin)
 
 
 //************************************************************************
-/*! \fn inc calc_fluxes()
+/*! \fn int calc_fluxes()
  \brief Calculates fluxes at cell faces
  
  Uses the selected approximate Riemann solver to estimate the fluxes on the six faces of the cell (ix, iy, iz)\n
@@ -1583,30 +1677,26 @@ op_implicit(ldouble t, ldouble dtin)
 //************************************************************************
 int calc_fluxes()
 {
-  int ii,ix,iy,iz;
-#pragma omp parallel for private(ii,iy,iz,ix)  schedule (static)
-  for(ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
+
+#pragma omp parallel for schedule (static)
+  for(int ii=0;ii<Nloop_1;ii++) //domain plus lim (=1 usually) ghost cells
   {
-    ix=loop_1[ii][0];
-    iy=loop_1[ii][1];
-    iz=loop_1[ii][2];
+    int ix=loop_1[ii][0];
+    int iy=loop_1[ii][1];
+    int iz=loop_1[ii][2];
 
 
-    //ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz) // --> moved code directly below
+    //ldouble f_calc_fluxes_at_faces(int ix,int iy,int iz) // --> moved code from here directly below
     
-    int i;
     struct geometry geom;
    
-    ldouble a0[2],am1[2],ap1[2],ag,al,ar,amax,cmin,cmax,csLl[2],csLr[2],csRl[2],csRr[2];
+    ldouble a0[2],am1[2],ap1[2],ag,al,ar,amax;
     ldouble am1l[2],am1r[2],ap1l[2],ap1r[2];
-    ldouble fd_u0[NV],fd_up1[NV],fd_up2[NV],fd_um1[NV],fd_um2[NV],fd_r0[NV],fd_rm1[NV],fd_rp1[NV];
     ldouble fd_pLl[NV], fd_pRl[NV], fd_uLr[NV],fd_uLl[NV],fd_uRl[NV],fd_uRr[NV];
-    ldouble fd_fstarl[NV],fd_fstarr[NV],fd_dul[3*NV],fd_dur[3*NV],fd_pdiffl[NV],fd_pdiffr[NV];
-    ldouble gdet,gg[4][5],GG[4][5];
-    //ldouble eup[4][4],elo[4][4];
+    ldouble fd_fstarl[NV],fd_fstarr[NV];
 
     // flbx[NV], flby[NV], flbz[NV] are the fluxes at the three walls under consideration
-    for(i=0;i<NV;i++) 
+    for(int i=0;i<NV;i++) 
     {
       set_ubx(flbx,i,ix,iy,iz,0.);
       set_uby(flby,i,ix,iy,iz,0.);
@@ -1628,26 +1718,26 @@ int calc_fluxes()
 	// l and r correspond to left-going and right-going waves; if neither l nor r, it is the maximum speed
         // [0], [1] correspond to hydro and radiation wave speeds      
 
-        ap1l[0]=get_u_scalar(ahdxl,ix,iy,iz);
-	ap1r[0]=get_u_scalar(ahdxr,ix,iy,iz);
-	ap1l[1]=get_u_scalar(aradxl,ix,iy,iz);
-	ap1r[1]=get_u_scalar(aradxr,ix,iy,iz);
-	ap1[0]=get_u_scalar(ahdx,ix,iy,iz);
-	ap1[1]=get_u_scalar(aradx,ix,iy,iz);
+        ap1l[0] = get_u_scalar(ahdxl,ix,iy,iz);
+	ap1r[0] = get_u_scalar(ahdxr,ix,iy,iz);
+	ap1l[1] = get_u_scalar(aradxl,ix,iy,iz);
+	ap1r[1] = get_u_scalar(aradxr,ix,iy,iz);
+	ap1[0]  = get_u_scalar(ahdx,ix,iy,iz);
+	ap1[1]  = get_u_scalar(aradx,ix,iy,iz);
         
-	am1l[0]=get_u_scalar(ahdxl,ix-1,iy,iz);
-	am1r[0]=get_u_scalar(ahdxr,ix-1,iy,iz);
-	am1l[1]=get_u_scalar(aradxl,ix-1,iy,iz);
-	am1r[1]=get_u_scalar(aradxr,ix-1,iy,iz);
-	am1[0]=get_u_scalar(ahdx,ix-1,iy,iz);
-	am1[1]=get_u_scalar(aradx,ix-1,iy,iz);
+	am1l[0] = get_u_scalar(ahdxl,ix-1,iy,iz);
+	am1r[0] = get_u_scalar(ahdxr,ix-1,iy,iz);
+	am1l[1] = get_u_scalar(aradxl,ix-1,iy,iz);
+	am1r[1] = get_u_scalar(aradxr,ix-1,iy,iz);
+	am1[0]  = get_u_scalar(ahdx,ix-1,iy,iz);
+	am1[1]  = get_u_scalar(aradx,ix-1,iy,iz);
 
 	//primitives at the face
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
           // fd_pLl, fd_pRl are the left-biased and right-biased primitives at the current cell face
-          fd_pLl[i]=get_ub(pbLx,i,ix,iy,iz,0);
-          fd_pRl[i]=get_ub(pbRx,i,ix,iy,iz,0);
+          fd_pLl[i] = get_ub(pbLx,i,ix,iy,iz,0);
+          fd_pRl[i] = get_ub(pbRx,i,ix,iy,iz,0);
 	}
 
 	fill_geometry_face(ix,iy,iz,0,&geom);
@@ -1680,7 +1770,7 @@ int calc_fluxes()
 #endif
    
         // Loop over variables and calculate flux using Lax-Friedrichs or HLL
-        for(i=0;i<NV;i++)
+        for(int i=0;i<NV;i++)
         {
           // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
           // Hydro and radiation are treated as two separate systems
@@ -1777,7 +1867,7 @@ int calc_fluxes()
 	am1[0]=get_u_scalar(ahdy,ix,iy-1,iz);
 	am1[1]=get_u_scalar(arady,ix,iy-1,iz);
 
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
           // fd_pLl, fd_pRl are the left-biased and right-biased primitives at the current cell face
           fd_pLl[i]=get_ub(pbLy,i,ix,iy,iz,1);
@@ -1812,7 +1902,7 @@ int calc_fluxes()
 #endif
  	    
         // Loop over variables and calculate flux using Lax-Friedrichs or HLL, as required
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
             // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
             // Hydro and radiation are treated as two separate systems
@@ -1909,7 +1999,7 @@ int calc_fluxes()
 	am1[0]=get_u_scalar(ahdz,ix,iy,iz-1);
 	am1[1]=get_u_scalar(aradz,ix,iy,iz-1);
  
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
           // fd_pLl, fd_pRl are the left-biased and right-biased primitives at the current cell face  
           fd_pLl[i]=get_ub(pbLz,i,ix,iy,iz,2);
@@ -1944,7 +2034,7 @@ int calc_fluxes()
 #endif
 
         // Loop over variables and calculate flux using Lax-Friedrichs or HLL, as required
-	for(i=0;i<NV;i++)
+	for(int i=0;i<NV;i++)
 	{
             // Choose the proper characteristic speeds: al (left-going wave), ar (right-going wave), ag (maximum wavespeed)
             // Hydro and radiation are treated as two separate systems
@@ -5378,17 +5468,17 @@ cell_fixup(int type)
       if(is_cell_corrected_polaraxis(ix,iy,iz)) continue;
 
 
-      if(((get_cflag(HDFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PMHD) ||
-	  (get_cflag(RADFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PRAD) ||
-	  (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
+      if(((get_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PMHD) ||
+	  (get_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_U2PRAD) ||
+	  (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
 	)
 	{
 	  //ANDREW - I think maybe this should be here, to set the flag back to its default? 
 	  //this should not be here, should it?
 	  /*
-	  if(type==FIXUP_U2PMHD) set_cflag(HDFIXUPFLAG,ix,iy,iz,0); //try only once
-	  if(type==FIXUP_U2PRAD) set_cflag(RADFIXUPFLAG,ix,iy,iz,0); //try only once
-	  if(type==FIXUP_RADIMP) set_cflag(RADIMPFIXUPFLAG,ix,iy,iz,0); //try only once
+	  if(type==FIXUP_U2PMHD) set_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz,0); //try only once
+	  if(type==FIXUP_U2PRAD) set_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz,0); //try only once
+	  if(type==FIXUP_RADIMP) set_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz,0); //try only once
 	  */
 
 	  //looking around for good neighbors
@@ -5403,9 +5493,9 @@ cell_fixup(int type)
 	  in=0; //number of successful neighbors
 		  
 	  if(ix-1>=0 &&  
-	     ((get_cflag(HDFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_RADIMP)))	      
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix-1,iy,iz)==0 && type==FIXUP_RADIMP)))	      
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream cell
               if(TNY>1 && TNZ==1)
@@ -5434,9 +5524,9 @@ cell_fixup(int type)
 	    }
 
 	  if(ix+1<NX &&
-	     ((get_cflag(HDFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix+1,iy,iz)==0 && type==FIXUP_RADIMP)))
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
               if(TNY>1 && TNZ==1)
@@ -5465,9 +5555,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iy-1>=0 &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy-1,iz)==0 && type==FIXUP_RADIMP)))
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that ix-1 is not a stream ghost cell
               if(TNY>1 && TNZ==1)
@@ -5496,9 +5586,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iy+1<NY &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy+1,iz)==0 && type==FIXUP_RADIMP)))
 	    {
               #ifdef SPECIAL_BC_CHECK //make sure that iy+1 is not a stream ghost cell
               if(TNY>1 && TNZ==1)
@@ -5527,9 +5617,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iz-1>=0 &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz-1)==0 && type==FIXUP_RADIMP)))
 	    {
 	      in++;
 	      for(iv=0;iv<NV;iv++)
@@ -5537,9 +5627,9 @@ cell_fixup(int type)
 	    }
 
 	  if(iz+1<NZ  &&
-	     ((get_cflag(HDFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PMHD) ||
-	      (get_cflag(RADFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PRAD) ||
-	      (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_RADIMP)))
+	     ((get_cflag(cellflag,HDFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PMHD) ||
+	      (get_cflag(cellflag,RADFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_U2PRAD) ||
+	      (get_cflag(cellflag,RADIMPFIXUPFLAG,ix,iy,iz+1)==0 && type==FIXUP_RADIMP)))
 	    {
 	      in++;
 	      for(iv=0;iv<NV;iv++)
