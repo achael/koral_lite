@@ -1299,8 +1299,9 @@ op_explicit(ldouble t, ldouble dtin)
   ldouble time_cpu_update = 0.;
   ldouble time_gpu_update = 0.;
   ldouble time_cpu_u2p = 0.;
-  ldouble time_gpu_u2p = 0.;
+  ldouble time_gpu_u2p_total = 0.;
   ldouble time_cpu_u2p_fixup = 0.;
+    
   #ifdef GPUKO
   // TODO eventually this will be moved out of op_explicit => problem.c
   push_pu_gpu();
@@ -1327,8 +1328,7 @@ op_explicit(ldouble t, ldouble dtin)
   tstop=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
   time_cpu_wavespeeds = (tstop-tstart)*1.e3;
   
-  printf("cpu calc_wavespeeds time: %0.2lf \n", time_cpu_wavespeeds);
-  
+  printf("cpu calc_wavespeeds time: %0.2lf \n", time_cpu_wavespeeds);  
   printf("gpu calc wavespeeds tstepdensmin/max: %e %e\n\n",tstepdenmin,tstepdenmax);
 #endif
   
@@ -1469,7 +1469,7 @@ op_explicit(ldouble t, ldouble dtin)
   // Compute postexplicit primitives and count entropy inversions
 
 #ifdef GPUKO
-  time_gpu_u2p = calc_u2p_gpu(1);
+  time_gpu_u2p_toal = calc_u2p_gpu(1);
 #endif
 
 #if defined(CPUKO) || !defined(GPUKO)
@@ -1494,7 +1494,13 @@ op_explicit(ldouble t, ldouble dtin)
 
 #endif
 
+  ldouble time_cpu_total, time_gpu_total;
+  time_cpu_total = time_cpu_wavespeeds + time_cpu_inter + time_cpu_fluxes + time_cpu_ct + time_cpu_update + time_cpu_u2p + time_cpu_u2p_fixup;
+  time_gpu_total = time_gpu_wavespeeds + time_gpu_inter + time_gpu_fluxes + time_gpu_ct + time_gpu_update + time_gpu_u2p_total;
+
   printf("\n\n");
+  printf("total op_explicit gpu time: %0.2lf \n",time_gpu_total);
+  printf("total op_explicit cpu time: %0.2lf \n\n",time_cpu_total);
 
   ///////////////////////////////////////
   // Block for pulling from GPU -- keep moving down
@@ -1503,7 +1509,7 @@ op_explicit(ldouble t, ldouble dtin)
 
   pull_pu_gpu(); // TODO eventually this will be moved out of op_explicit => problem.c
 
-#elif defined(GPUKO) && defined(CPUKO)
+#elif defined(GPUKO) && defined(CPUKO) // TODO work on diagnostics
 
   char fname[256];
   snprintf(fname, 255, "diagnostics/step_%010d.json", nstep);

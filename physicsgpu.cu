@@ -290,7 +290,7 @@ __device__ __host__ int f_metric_source_term_device(ldouble *pp, ldouble *ss, vo
     {
 	if(isnan(T[i][j])) 
 	{
-	    printf("%d %d %e\n",i,j,T[i][j]);
+	    printf("%d %d %d | %d %d %e\n",ix,iy,iz,i,j,T[i][j]);
 	    printf("nan in metric_source_terms\n");
 	    //my_err("nan in metric_source_terms\n");//TODO
 	}
