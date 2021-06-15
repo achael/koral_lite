@@ -1753,7 +1753,7 @@ ldouble calc_u2p_gpu(int setflags)
   {
     // TODO -- do this malloc in prealloc_arrays_gpu? 
     long long Nprim  = (SX)*(SY)*(SZ)*NV;
-    ldouble* d_p_fixup_arr, d_u_fixup_arr;
+    ldouble* d_p_bak_fixup_arr, d_u_bak_fixup_arr;
     err = cudaMalloc(&d_u_bak_fixup_arr, sizeof(ldouble)*Nprim);
     err = cudaMalloc(&d_p_bak_fixup_arr, sizeof(ldouble)*Nprim);
 
@@ -1776,7 +1776,7 @@ ldouble calc_u2p_gpu(int setflags)
     cudaEventRecord(start);
     up_copy_kernel<<<threadblocks, TB_SIZE>>>(Nloop_0,
 					      d_loop0_ix, d_loop0_iy, d_loop0_iz,
-					      d_u_bak_fixup_arr, d_p_bak_fixup_arr)
+					      d_u_bak_fixup_arr, d_p_bak_fixup_arr,
                                               d_u_arr, d_p_arr);
     cudaEventRecord(stop);
     err = cudaPeekAtLastError(); // TODO ?? 
