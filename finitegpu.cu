@@ -2091,8 +2091,5 @@ ldouble calc_update_gpu(ldouble dtin)
   free(u_tmp);
 #endif
 
-  // set global timestep dt
-  dt = dtin;
-
   return (ldouble)tms;
 }

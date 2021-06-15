@@ -1024,7 +1024,9 @@ int calc_update(ldouble dtin)
       ldouble dz=get_size_x(iz,2);
 
       //timestep
-      dt=dtin;  // dtin is an input parameter to op_explicit
+      // TODO check: make sure this is local dt and not global in original! 
+      ldouble dt=dtin;  // dtin is an input parameter to op_explicit
+      
       
       //update all conserved according to fluxes and source terms
       for(iv=0;iv<NV;iv++)
@@ -1071,6 +1073,36 @@ int calc_update(ldouble dtin)
 }
 
 
+int calc_radexplicit(ldouble dtin)
+{
+#ifdef RADIATION
+#ifndef SKIPRADSOURCE
+#ifdef EXPLICIT_LAB_RAD_SOURCE
+
+  int ii,ix,iy,iz,iv;
+  ldouble dt;
+  #pragma omp parallel for private(ii,ix,iy,iz,iv,dt) schedule (static)
+  for(ii=0;ii<Nloop_0;ii++) //domain 
+  {
+    ix=loop_0[ii][0];
+    iy=loop_0[ii][1];
+    iz=loop_0[ii][2]; 
+
+    if(is_cell_active(ix,iy,iz)==0) 
+      continue;
+
+    //timestep
+    dt=dtin;
+
+    // Use primitives from *p, i.e., from the beginning of this timestep.
+    // explicit_rad_source_term computes the radiation source term and adds it to the conserveds.
+    explicit_rad_source_term(ix,iy,iz,dt);
+  }
+#endif
+#endif
+#endif
+  return 0.;
+}
 
 //**********************************************************************
 /*! \fn int save_timesteps
@@ -1128,53 +1160,18 @@ save_timesteps()
 
 
 //**********************************************************************
-/*! \fn int calc_u2p_fixup_and_Bc(int setflags)
+/*! \fn int calc_u2p_bc(int setflags)
  \brief Calculates all primitives from global u, applies fixups and bcs
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p_fixup_and_bc(int setflags)
+calc_u2p_bc(int setflags)
 {
-  /*
-  int ii;
-
-  //timer start
-  struct timespec temp_clock;
-  my_clock_gettime(&temp_clock);
-  start_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
-  //calculates the primitives
-#pragma omp parallel for schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain only
-  {
-    int ix,iy,iz;
-    ix=loop_0[ii][0];
-    iy=loop_0[ii][1];
-    iz=loop_0[ii][2];
-    
-    //skip if cell is passive
-    if(!is_cell_active(ix,iy,iz))
-      continue;
-    
-    calc_primitives(ix,iy,iz,setflags);
-  }
-
-  //timer stop
-  my_clock_gettime(&temp_clock);
-  end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-
-  */
 
   // perform inversion
-  calc_u2p_only(setflags);
+  calc_u2p(setflags);
   
-  //fixup here hd and rad after inversions
-  cell_fixup(FIXUP_U2PMHD);
-#ifdef RADIATION
-  cell_fixup(FIXUP_U2PRAD);
-#endif
-
   //re-set boundary conditions
   set_bc(global_time,0);
 
@@ -1182,13 +1179,13 @@ calc_u2p_fixup_and_bc(int setflags)
 } 
 
 //**********************************************************************
-/*! \fn int calc_u2p_only(int setflags)
- \brief Calculates all primitives from global u, does NOT apply fixups and bcs
+/*! \fn int calc_u2p(int setflags)
+ \brief Calculates all primitives from global u and applies fixups
  \param[in] setflags, should always=1 to set flags for cell fixups
 */
 //**********************************************************************
 int
-calc_u2p_only(int setflags)
+calc_u2p(int setflags)
 {
   int ii;
 
@@ -1217,6 +1214,12 @@ calc_u2p_only(int setflags)
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
+  //fixup here hd and rad after inversions
+  cell_fixup(FIXUP_U2PMHD);
+#ifdef RADIATION
+  cell_fixup(FIXUP_U2PRAD);
+#endif
+  
   return 0;
 } 
 
@@ -1273,16 +1276,17 @@ op_explicit(ldouble t, ldouble dtin)
 
   // Save conserveds and primitives over domain + ghost (no corners)
   // these are only used in entropy mixing
+  // TODO -- gpu? 
   copyi_u(1.,u,upreexplicit); //conserved quantities before explicit update
   copyi_u(1.,p,ppreexplicit); //primitive quantities before explicit update
 
   // calculates H/R and velocity averages
   // only used for CALCHRONTHEGO and CORRECT_POLARAXIS_3D
+  // TODO -- gpu? 
   calc_avgs_throughout(); 
 
- 
   /////////////////////////////////////////////
-  // Block for initializing GPU -- keep moving up
+  // Block for initializing GPU & timing tests
   // TODO: make this better...
   ldouble time_cpu_wavespeeds=0.;
   ldouble time_gpu_wavespeeds=0.;
@@ -1362,10 +1366,6 @@ op_explicit(ldouble t, ldouble dtin)
   //**********************************************************************//
   // Compute fluxes at the six walls of all cells
   // using the selected approximation of the Riemann problem
-  #ifdef GPUKO
-  // TODO eventually this will be moved out of op_explicit => problem.c
-  //push_pu_gpu();
-  #endif 
 
 #ifdef GPUKO
   time_gpu_fluxes = calc_fluxes_gpu();
@@ -1449,30 +1449,15 @@ op_explicit(ldouble t, ldouble dtin)
 
   //************************************************************************//
   // Explicit RADIATION COUPLING  
-  //TODO eventually
+  //TODO eventually add radiation
   /*
 #ifdef RADIATION
 #ifndef SKIPRADSOURCE
 #ifdef EXPLICIT_LAB_RAD_SOURCE
-  #pragma omp barrier
-  #pragma omp parallel for private(ii,ix,iy,iz,iv,dt) schedule (static)
-  for(ii=0;ii<Nloop_0;ii++) //domain 
-  {
-    ix=loop_0[ii][0];
-    iy=loop_0[ii][1];
-    iz=loop_0[ii][2]; 
 
-    if(is_cell_active(ix,iy,iz)==0) 
-      continue;
+  #pragma omp_barrier
+  calc_radexplicit(dtin);  
 
-    //timestep
-    dt=dtin;
-
-    // Use primitives from *p, i.e., from the beginning of this timestep.
-    // explicit_rad_source_term computes the radiation source term and adds it to the conserveds.
-    explicit_rad_source_term(ix,iy,iz,dt);
-  }
-  
 #endif //EXPLICIT_LAB_RAD_SOURCE
 #endif //SKIPRADSOURCE
 #endif //RADIATION
@@ -1490,9 +1475,10 @@ op_explicit(ldouble t, ldouble dtin)
 #if defined(CPUKO) || !defined(GPUKO)
 
   #pragma omp_barrier
-  calc_u2p_only(1);
+  calc_u2p(1);
 
-  time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3; // this is already defined, only times u2p, not including fixups/bcs 
+  // timer already defined, only times u2p, not including fixups/bcs 
+  time_cpu_u2p = (end_u2ptime-start_u2ptime)*1.e3; 
   printf("cpu u2p time: %0.2lf \n", time_cpu_u2p); 
   printf("cpu u2p pp[NV]: ");
   for(int iv=0;iv<NV;iv++)
@@ -1529,14 +1515,9 @@ op_explicit(ldouble t, ldouble dtin)
   
   
   //**********************************************************************//
-  // Apply Fixups and boundary conditions
-  // TODO NOTE: these were previously wrapped in calc_u2p, now in calc_u2p_fixup_and_bc
-  
-  //fixup here hd and rad after inversions
-  cell_fixup(FIXUP_U2PMHD);
-  #ifdef RADIATION
-  cell_fixup(FIXUP_U2PRAD);
-  #endif
+  // Apply boundary conditions
+  // TODO NOTE: these were previously wrapped in calc_u2p, now in calc_u2p_bc
+  // TODO -- do we need these applied here? 
 
   //re-set boundary conditions
   set_bc(global_time,0);
@@ -1600,7 +1581,7 @@ apply_dynamo(ldouble t, ldouble dt)
 
   //update primitives
   //calc_u2p(0);
-  calc_u2p_fixup_and_bc(0);
+  calc_u2p_bc(0);
 #endif
 
   return GSL_SUCCESS;

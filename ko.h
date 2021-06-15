@@ -1043,14 +1043,15 @@ int avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 	      ldouble dxp1,ldouble dxp2,int param,ldouble theta);
 int save_wavespeeds(int ix,int iy,int iz, ldouble *aaa);
 int save_timesteps();
-int calc_u2p_fixup_and_bc(int setflags);
-int calc_u2p_only(int setflags);
+int calc_u2p_bc(int setflags);
+int calc_u2p(int setflags);
 int calc_wavespeeds();
 int do_correct();
 int calc_interp();
 int calc_fluxes();
 int calc_update(ldouble dtin);
-  
+int calc_radexplicit(ldouble dtin);
+
 int op_explicit(ldouble t, ldouble dtin);
 int op_intermediate(ldouble t, ldouble dt);
 int apply_dynamo(ldouble t, ldouble dt);
