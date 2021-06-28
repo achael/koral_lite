@@ -212,10 +212,10 @@ int calc_radialprofiles(ldouble profiles[][NX])
 #endif
         
         //coordinates
-        #ifdef PRECOMPUTE_MY2OUT
-        get_xxout(ix, iy, iz, xx); 
-        #else
 	get_xx(ix,iy,iz,xx);
+        #ifdef PRECOMPUTE_MY2OUT
+        get_xxout(ix, iy, iz, xxBL); 
+        #else
         coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
         #endif
 
