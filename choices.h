@@ -263,6 +263,27 @@
 
 /****** Fixups *****************/
 
+//Defaults for TRANSMITTING_YBC
+#ifdef TRANSMITTING_YBC
+#ifndef myCYLCOORDS
+
+#ifndef CORRECT_POLARAXIS
+#define CORRECT_POLARAXIS
+#endif
+
+#ifdef MAGNFIELD
+#ifndef CORRECTMAGNFIELD 
+#define CORRECTMAGNFIELD
+#endif
+#endif
+
+#ifndef NCCORRECTPOLAR
+#define NCCORRECTPOLAR 1
+#endif
+
+#endif //ifdef myCYLCOORDS
+#endif //ifdef TRANSMITTING_YBC
+
 #ifndef NCCORRECTPOLAR
 #define NCCORRECTPOLAR 2
 #endif
