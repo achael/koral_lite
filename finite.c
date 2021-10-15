@@ -945,6 +945,78 @@ op_explicit(ldouble t, ldouble dtin)
 		    fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
 		    fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
 		  }
+		  
+		  #ifdef TRANSMITTING_YBC
+		   //copy iy=-1 to iy=0 for calculating fluxes
+		  if(TJ==0 && iy==0) 
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy-1,iz); //iy=0 -> iy=-1
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==0 && iy==1) 
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-2,iz); //iy=0 -> iy=-1
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==0 && iy==2) 
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-3,iz); //iy=0 -> iy=-1
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  
+		  //copy iy=NY to iy=NY-1 for calculating fluxes
+		  if(TJ==NTY-1 && iy==(NY-1) )
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy+1,iz); //iy=NY-1 -> iy=NY
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==NTY-1 && iy==(NY-2) )
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+2,iz); //iy=NY-1 -> iy=NY
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==NTY-1 && iy==(NY-3) )
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+3,iz); //iy=NY-1 -> iy=NY
+		    }
+		  }
+		  #endif
 		}
 	  
 		reconstrpar=0;
@@ -960,87 +1032,6 @@ op_explicit(ldouble t, ldouble dtin)
                 // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
                 avg2point(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_pl,fd_pr,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
 
-               //Now if transmitting ybc is on
-#ifdef TRANSMITTING_YBC
-		if(TJ==0 && iy==0) // first cell from the 'pole', will ignore flux through left face of iy=0
-		{
-		  dx0=get_size_x(iy-1,1);    
-		  dxm1=get_size_x(iy-2,1);    
-		  dxp1=get_size_x(iy,1);    
-        
-	
-		  if(INT_ORDER>1) // Brandon - Currently just uses 2nd GC again for PPM
-		  {
-		    dxm2=get_size_x(iy-2,1);  
-		    dxp2=get_size_x(iy+1,1);
-		  }    
-		  
-		  for(i=0;i<NV;i++)
-		  {
-                    //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		    fd_p0[i]=get_u(p,i,ix,iy-1,iz);
-		    fd_pp1[i]=get_u(p,i,ix,iy,iz);
-		    fd_pm1[i]=get_u(p,i,ix,iy-2,iz);
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
-		      fd_pp2[i]=get_u(p,i,ix,iy+1,iz);
-		    }
-	  	  }
-	  
-		  reconstrpar=0;
-#ifdef REDUCEORDERWHENNEEDED
-		  reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-
-		  minmod_theta=MINMOD_THETA;
-#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
-		  minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-
-                  // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
-		  avg2point(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_plT,fd_prT,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
-		} // end of iy=0
-		else if(TJ==NTY-1 && iy==(NY-1) ) // first cell from the 'pole', will ignore flux through right face of iy=NY-1
-		{
-		  dx0=get_size_x(iy+1,1);    
-		  dxm1=get_size_x(iy,1);    
-		  dxp1=get_size_x(iy+2,1);    
-	
-		  if(INT_ORDER>1) // Brandon - Currently just uses 2nd GC again for PPM
-		  {
-		    dxm2=get_size_x(iy-1,1);  
-		    dxp2=get_size_x(iy+2,1);
-		  }    
-		  
-		  for(i=0;i<NV;i++)
-		  {
-                    //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		    fd_p0[i]=get_u(p,i,ix,iy+1,iz);
-		    fd_pp1[i]=get_u(p,i,ix,iy+2,iz);
-		    fd_pm1[i]=get_u(p,i,ix,iy,iz);
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[i]=get_u(p,i,ix,iy-1,iz);
-		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
-		    }
-	  	  }
-	  
-		  reconstrpar=0;
-#ifdef REDUCEORDERWHENNEEDED
-		  reconstrpar = reduce_order_check(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-
-		  minmod_theta=MINMOD_THETA;
-#ifdef REDUCEMINMODTHETA  // reduce minmod_theta near axis or inner boundary
-		  minmod_theta = reduce_minmod_theta(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,ix,iy,iz);
-#endif
-
-                  // Interpolate primitives to the left and right walls of current cell: fd_pl, fd_pr
-		  avg2point(fd_pm2,fd_pm1,fd_p0,fd_pp1,fd_pp2,fd_plT,fd_prT,dxm2,dxm1,dx0,dxp1,dxp2,reconstrpar,minmod_theta);
-		} // end of iy=NY-1
-#endif // end TRANSMITTING_YBC
-
 		//iy>0
 		if(dol) //no need to calculate at left face of first GC if dol=0
 		{
@@ -1048,13 +1039,6 @@ op_explicit(ldouble t, ldouble dtin)
 		  fill_geometry_face(ix,iy,iz,1,&geom);
 		  check_floors_mhd(fd_pl,VELPRIM,&geom);
 		  f_flux_prime(fd_pl,1,ix,iy,iz,ffl,1);
-#ifdef TRANSMITTING_YBC // if we don't set these, the normal wall interp values get used
-		  if(TJ==NTY-1 && iy==(NY-1) ) 
-		  {
-		    check_floors_mhd(fd_prT,VELPRIM,&geom);
-		    f_flux_prime(fd_prT,1,ix,iy,iz,ffl,1); //note that we use fd_prT since it is at the RIGHT face for GC iy+1
-		  }
-#endif
 		}
 
 		//iy<NY
@@ -1063,14 +1047,7 @@ op_explicit(ldouble t, ldouble dtin)
                   // Right wall of current cell: compute fluxes and save in array ffr[NV]
 		  fill_geometry_face(ix,iy+1,iz,1,&geom);
 		  check_floors_mhd(fd_pr,VELPRIM,&geom);
-		  f_flux_prime(fd_pr,1,ix,iy+1,iz,ffr,0);
-#ifdef TRANSMITTING_YBC // if we don't set these, the normal wall interp values get used
-		  if(TJ==0 && iy==0) 
-		  {
-		    check_floors_mhd(fd_plT,VELPRIM,&geom);
-		    f_flux_prime(fd_plT,1,ix,iy+1,iz,ffr,0); //note that we use fd_plT since it is at the LEFT face for GC iy=-1
-		  }
-#endif  	          
+		  f_flux_prime(fd_pr,1,ix,iy+1,iz,ffr,0);  
 		}
 
                 //save interpolated values to memory
@@ -1082,11 +1059,6 @@ op_explicit(ldouble t, ldouble dtin)
                   // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
 		  set_uby(pbRy,i,ix,iy,iz,fd_pl[i]);
 		  set_uby(pbLy,i,ix,iy+1,iz,fd_pr[i]);
-#ifdef TRANSMITTING_YBC // if we don't set these, the normal wall interp values get used
-		  if(TJ==0 && iy==0) set_uby(pbLy,i,ix,iy+1,iz,fd_plT[i]); //note that we use fd_plT since it is at the LEFT face for GC iy=-1
-		  if(TJ==NTY-1 && iy==(NY-1) ) set_uby(pbRy,i,ix,iy,iz,fd_prT[i]); //note that we use fd_prT since it is at the RIGHT face for GC iy+1
-#endif
-
 		  if(dol)
                   // Save ffl in array flRy (F_R) of wall iy
 		  set_uby(flRy,i,ix,iy,iz,ffl[i]);
