@@ -212,9 +212,9 @@ if(rho<0.) //outside donut
     //standard single poloidal loop
     A0=my_max(rho-1.e-1*KT_RHO0,0.);
 
-    //sending MKS2 (converting from BL)
-    Acov[2] = dxdx[2][2]*r*A0*dthdt/vmag;//(-costh*cosphi*sinphip + costh*sinphi*cosphip*cosa + sinth*cosphip*sina);
-    Acov[3] = r*sinth*A0*sinth*dphidt/vmag;//(sinphi*sinphip + cosphi*cosphip*cosa);
+    //sending MKS2 (converting from BL) - dxdx=0 and doesn't work in MKS3...
+    Acov[2] = A0*dthdt/vmag/M_PI;
+    Acov[3] = sinth*sinth*sinth*A0*dphidt/vmag;
 #elif (NTORUS==2)
     //standard single poloidal loop
     ldouble rin=KT_R0;
@@ -222,16 +222,9 @@ if(rho<0.) //outside donut
     ldouble rout = 5.e3; //cover full range of torus?
     ldouble lambda = 2.*(rout-rin);
 
-//    if(r > STARTFIELD)
-//    {
-      A0 = my_max( pow(r, RADIUS_POWER) * (pp[RHO] - RHO_CUT_FACTOR * KT_RHO0) * pow(sinthp, SIN_POWER_THETA) * pow(sin(r/lambda), SIN_POWER) , 0.);
-      Acov[2] = A0*dthdt/vmag;
-      Acov[3] = A0*dphidt/vmag;
-//    }
-//    else
-//    {
-//      Acov[3] = my_max( (pp[RHO] - RHO_CUT_FACTOR * KT_RHO0) * pow(sin(th), 3), 0.);
-//    }
+    A0 = my_max( pow(r, RADIUS_POWER) * (pp[RHO] - RHO_CUT_FACTOR * KT_RHO0) * pow(sinthp, SIN_POWER_THETA) * pow(sin(r/lambda), SIN_POWER) , 0.);
+    Acov[2] = A0*dthdt/vmag/M_PI;
+    Acov[3] = sinth*sinth*sinth*A0*dphidt/vmag;
 #elif (NTORUS==3) // dipolar loop
     ldouble lambda = 35.;
     ldouble anorm = 1.;
@@ -262,42 +255,15 @@ if(rho<0.) //outside donut
      
     //    if(iy==NY/2) printf("%d %f %f > %e %e %e %e\n",iy,r,th,uchop,u_av_mid,u_av, u_av_chop);
     A0=vpot;//*sin((M_PI/2.-geomBL.yy));;
-    Acov[2] = A0*dthdt/vmag;
-    Acov[3] = A0*dphidt/vmag;
-
+    Acov[2] = A0*dthdt/vmag/M_PI;
+    Acov[3] = sinth*sinth*sinth*A0*dphidt/vmag;
 #elif (NTORUS==4) //Quadrupolar loops
-    ldouble k = -0.4
-    ldouble lambda = 5.;
-    ldouble anorm = 1.;
-    ldouble rchop = 4.e3;
-    ldouble u_av = uintorg;
-    ldouble u_av_chop, u_av_mid;
-    //midplane at r
-    init_dsandvels_katotorus(r, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell);
-    //midplane at rchop
-    init_dsandvels_katotorus(rchop, M_PI/2., BHSPIN, &rho, &u_av_chop, &ell);
-    //vetor potential follows contours of UU
-    ldouble uchop = u_av - u_av_chop; //vpot->zero on contour of radius r=rchop
-    ldouble uchopmid = u_av_mid - u_av_chop; //vpot->zero away from midplane
+    //standard single poloidal loop
+    A0=costhp*my_max(rho-1.e-1*KT_RHO0,0.);
 
-    ldouble rin=KT_R0/2.;
-    ldouble STARTFIELD = 1.25*rin;
-    ldouble q, fr, fr_start, vpot=0.;
-    if (r > STARTFIELD && r < rchop) {
-      q = anorm * (uchop - 0.2*uchopmid) / (0.8*uchopmid) * pow(sinthp, SIN_POWER_THETA); // * pow(tanh(r/rsmooth),2);
-    } else q = 0;
-
-    
-    if(q > 0.) {
-      fr = (r  + 0.6*0.5/0.4) * pow(r,k) / lambda /0.6;
-      fr_start = (STARTFIELD  + 0.6*0.5/0.4) * pow(STARTFIELD,k) / lambda / 0.6;
-      vpot += q * sin(fr - fr_start) ;
-    }
-     
-    //    if(iy==NY/2) printf("%d %f %f > %e %e %e %e\n",iy,r,th,uchop,u_av_mid,u_av, u_av_chop);
-    A0=vpot*sin((M_PI/2.-geomBL.yy));
-    Acov[2] = A0*dthdt/vmag;
-    Acov[3] = A0*dphidt/vmag;
+    //sending MKS2 (converting from BL) - dxdx=0 and doesn't work in MKS3...
+    Acov[2] = A0*dthdt/vmag/M_PI;
+    Acov[3] = sinth*sinth*sinth*A0*dphidt/vmag;
 #elif (NTORUS==5) //Modified Quadrupolar loops
     ldouble k = -0.4;
     ldouble lambda = 0.4;
