@@ -56,8 +56,8 @@ main(int argc, char **argv)
     {
       ifavg=atoi(argv[4]); //run on avg files or average res files
       procotg=atoi(argv[5]); //DEPRECATED -- print scalars
-      ifphiavg=atoi(argv[5]); //run on phiavg files or not
-      ifoutavg=atoi(argv[6]); //run on average of avg (or res) files or not
+      ifphiavg=atoi(argv[6]); //run on phiavg files or not
+      ifoutavg=atoi(argv[7]); //run on average of avg (or res) files or not
     }
     else if(argc==7)
     {
