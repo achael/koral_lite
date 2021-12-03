@@ -4,8 +4,8 @@
 //guide to ifavg & ifavgavg combinations: 
 //ifavg=1 + ifoutavg=1 : run on avgavg files
 //ifavg=0 + ifoutavg=1 : run on avgres files
-//ifavg=1 + ifoutavg=0 : run on res files (really should be using ana instead!)
-//ifavg=0 + ifoutavg=0 : run on avg files
+//ifavg=0 + ifoutavg=0 : run on res files (really should be using ana instead!)
+//ifavg=1 + ifoutavg=0 : run on avg files
 
 
 #include "ko.h"
