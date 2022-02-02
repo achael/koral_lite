@@ -71,7 +71,7 @@ int set_relel_gammas()
   relel_gammas_e_inv[NRELBIN] = 1./RELGAMMAMAX;
   
 #ifdef RELEL_CONST_INJPARAMS
-  my_err("RELEL_CONST_INJPARAMS is deprecated, use RELEL_HEAT_FIX_LIMITS instead!")
+  my_err("RELEL_CONST_INJPARAMS is deprecated, use RELEL_HEAT_FIX_LIMITS instead!");
 #endif
 
   //precompute injection arrays    
@@ -1615,7 +1615,7 @@ calc_relel_cooling_lf_from_state(ldouble *pp, void *sss, ldouble *pp0, ldouble d
   for(ie=0; ie<NRELBIN; ie++)
   {
     qcool[ie] = - (f[ie+1] - f[ie]) * logbinspace_inv * relel_gammas_inv[ie];
-    if isnan(qcool[ie]) out = -1;
+    if(isnan(qcool[ie])) out = -1;
   }
   //printf("q[0] %e %e %e \n",qcool[0],relel_gammas[1],relel_gammas_inv[1]);
 
