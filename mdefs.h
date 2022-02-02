@@ -6,6 +6,7 @@
 
 
 *************************************************************************/
+#pragma once
 
 /* C language definitions for use with Mathematica output */
 

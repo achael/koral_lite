@@ -1,6 +1,7 @@
 /*! \file ko.h
  \brief mnemonics for various indices
 */
+#pragma once
 
 //rad or hydro
 #define RAD 1

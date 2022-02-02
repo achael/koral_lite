@@ -1,5 +1,6 @@
 //KORAL - problem.h
 //choice of the problem plus some definitions
+#pragma once
 
 //available problems:
 
