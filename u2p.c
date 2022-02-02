@@ -457,7 +457,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     ucond[iv]=pp[1+iv];
   calc_ucon_ucov_from_prims(pp, geom, ucond, ucovd);
   calc_bcon_bcov_bsq_from_4vel(pp, ucond, ucovd, geom, bcond, bcovd, &bsq);
-  magpre = 0.5 * bsq;
+  //magpre = 0.5 * bsq;
+  magpre = bsq; // ANDREW: B2RHORATIOMAX and B2UURATIOMAX make more sense with bsq, not .5bsq
   
   calc_normalobs_ncon(GG, geom->alpha, etacon);
   conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
@@ -597,6 +598,15 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
       ret=-1;      
   } //if(magpre>B2RHORATIOMAX*pp[RHO]) 
+
+  //independent check on ugas vs 
+  if(magpre>B2UURATIOMAX*pp[UU]) 
+  {
+      //if(verbose) printf("mag_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],magpre);
+      pp[UU]*=magpre/(B2UURATIOMAX*pp[UU]);
+      ret=-1;      
+  }
+
 #endif //MAGNFIELD
 
   //**********************************************************************
