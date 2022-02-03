@@ -23,6 +23,14 @@
 #define PERTURBUINT 0.02
 //#define PERTURBAFTERINIT //will not perturb after init if this is not defined
 
+//#define RADSTART
+#ifdef RADSTART
+#define RESTARTFROMMHD
+#define INITURADFRAC 1.e-4
+#define INITUEFRAC 0.4
+#define RESCALEDENSITY 1.e-6
+#endif
+
 /************************************/
 //blackhole
 /************************************/
