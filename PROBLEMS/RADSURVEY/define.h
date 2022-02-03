@@ -441,8 +441,8 @@
 
 // atmosphere //TODO better scalings!
 #define ATMTYPE 0
-#define RHOATMMIN   1.e-4*pow(2.,-1.5) //*FM_rho0 
-#define UINTATMMIN  1.e-6*pow(2.,-2.5)/(GAMMA-1.)/3. 
+#define RHOATMMIN   1.e-5*pow(2.,-1.5)*FM_rho0 
+#define UINTATMMIN  1.e-7*pow(2.,-2.5)*FM_rho0/(GAMMA-1.)/3. 
 #define ATMTRADINIT 2.7
 #define ERADATMMIN  calc_LTE_EfromT(ATMTRADINIT) 
 

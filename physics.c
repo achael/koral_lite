@@ -2071,8 +2071,16 @@ calc_gammaintfromtheta(ldouble theta)
   return gamma;
 }
 
-ldouble calc_meanlorentz(ldouble theta)
+ldouble calc_meanlorentz_fit(ldouble theta)
 {
+  // calculate the mean lorentz factor for a dimensionless temperature using a fitting function
+  ldouble gamma;
+  gamma = 1 + 3*theta*(0.5 + 1.5*theta)/(1 + 1.5*theta);
+  return gamma;
+}
+ldouble calc_meanlorentz_interp(ldouble theta)
+{
+  // calculate the mean lorentz factor for a dimensionless temperature by interpolation 
   ldouble gamma;
   if(theta<1.e-3)
   {
@@ -2651,24 +2659,20 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   delta=HEATELECTRONS_DELTA;
 
 #elif defined(HEATELECTRONS_HOWES)
-  ldouble gamma=state->gamma;
-  ldouble gammam1=gamma-1.;
 
-
-  // get beta = gas pressure / magn pressure
-  ldouble pion = state->pi;  
+  // betai = ion pressure / magn pressure
+  ldouble betai = 0.;
   ldouble bsq=state->bsq;
+  ldouble pion = state->pi;  
+
   ldouble Ti = state->Ti;
   ldouble Te = state->Te;
-  ldouble beta=0.;
+  ldouble tratio = Te/Ti;
+  if(!isfinite(tratio) || tratio>1.e10) tratio=1.e10;
   
   #ifdef MAGNFIELD
-  
-  //ANDREW change beta -> beta_i in Howes
-  ldouble betaion = 2.*pion/bsq;
-  beta=betaion;
-  
-  if(!isfinite(beta) || beta>1.e20) beta=1.e20; //no magnetic field 
+  betai = 2.*pion/bsq;
+  if(!isfinite(betai) || betai>1.e10) betai=1.e10; //no magnetic field 
   #endif
 
   ldouble me = M_ELECTR_CGS;
@@ -2676,234 +2680,174 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   ldouble mi = MU_I*mp;
   //ldouble mi = mp*(HFRAC*1. + HEFRAC*4.);
 
-  ldouble tratio=Ti/Te;
-  ldouble mratio=mi/me;
-  ldouble logtratio = log10(tratio);
+  ldouble tratio_i=1./tratio;
+  ldouble mratio =mi/me;
+  ldouble logtratio_i = log10(tratio_i); // ANDREW: should be log_e not log_10?
   
   //fraction of total viscous heating going to electrons
   ldouble c1 = 0.92;
   ldouble c2 = 1.6*Te/Ti;
   if(Ti<Te) c2 = 1.2*Te/Ti; //non-continuous!
-  ldouble c3 = 18. + 5.*logtratio;
-  
+  ldouble c3 = 18. + 5.*logtratio_i;
   if (Ti < Te) c3 = 18.;
   
   ldouble QpQeRatio;
-  if(beta>1.e10) 
-    {
-      QpQeRatio = c1*sqrt(mratio*tratio);
-    }
+  if(betai>1.e10) 
+  {
+    QpQeRatio = c1*sqrt(mratio*tratio_i);
+  }
   else
-  QpQeRatio = c1*(c2*c2 + pow(beta,2. - 0.2*logtratio ) )/(c3*c3 + pow(beta, 2. - 0.2*logtratio ) )*sqrt(mratio*tratio)*exp(-1./beta);
- 
-  ldouble factorVEHeating = 1./(1. + QpQeRatio); //fe from Ressler et al. 2015 following Howes 2010
-  delta=factorVEHeating;
-
-  if(!isfinite(delta))
-    {
-      //printf("problem with delta fit: %d %d f : %e %e %e %e %e\n",geom->ix,geom->iy,delta,QpQeRatio,beta,Te,Ti);
-      //print_primitives(pp);
-    }
-
-#elif defined(HEATELECTRONS_ROWAN1)
-  //Michael's fit to the reconnection electron heating fraction
-  //fit for data generated at Te=Ti as a function of sigma_w and beta
-  //and mion = mproton
+  {
+    QpQeRatio = c1*(c2*c2 + pow(betai,2. - 0.2*logtratio_i));
+    QpQeRatio = QpQeRatio/(c3*c3 + pow(betai, 2. - 0.2*logtratio_i));
+    QpQeRatio = QpQeRatio*sqrt(mratio*tratio_i)*exp(-1./betai);
+  }
   
-  // get beta = gas pressure / magn pressure
-  // and sigma = magn energy density / enthalpy
-  ldouble beta=0.;
-  ldouble sigmaw=0.;
-  ldouble betamax=0.;
-  ldouble betanorm=0.;
+  //fe from Ressler et al. 2015 following Howes 2010
+  delta = 1./(1. + QpQeRatio); 
 
-  ldouble rho=state->rho;
+#elif defined(HEATELECTRONS_KAWAZURA)
+  // based on Kawazura+ 2018 turbulent heating
+
+  // betai = ion pressure / magn pressure
+  ldouble betai=0.;
   ldouble bsq=state->bsq;
+  ldouble pion = state->pi;
   ldouble Ti = state->Ti;
   ldouble Te = state->Te;
-  ldouble ue = state->ue;
-  ldouble ui = state->ui;
-  ldouble pion = state->pi;
-  ldouble gammae = state->gammae;
-  ldouble gammai = state->gammai;
-    
-  ldouble enth_tot = rho + gammai*ui + gammae*ue;
-
-  #ifdef MAGNFIELD
-  beta = 2.*pion/bsq;
-  sigmaw = bsq/enth_tot;
-  betamax = 0.25/sigmaw;
-
-  if(!isfinite(sigmaw)) sigmaw=1.e10; //magnetic field dominates, delta->.5
-  if(!isfinite(beta)) beta=1.e10; //no magnetic field, delta->.5
-  if(!isfinite(betamax)) betamax=1.e10; //no magnetic field, delta->.4
-
-  betanorm = beta/betamax;
-  if(betanorm>1.) betanorm=1.;
-  if(betanorm<0.) betanorm=0.;
-  #endif
-
-  //Michael's fit to simulation numbers
-
-  delta = fabs(0.5*exp(-pow(1.-betanorm,3.3)/(1.+1.2*pow(sigmaw,0.7))));
-  
-  if(!isfinite(delta))
-    {
-      //printf("problem with Michael delta fit: %d %d f : %e %e %e %e %e\n",geom->ix,geom->iy,delta,beta,sigma,Te,Ti);
-      //print_primitives(pp);
-      delta=.5;
-    }
-
-#elif defined(HEATELECTRONS_ROWAN2)
-  //Michael's fit to the reconnection electron heating fraction
-  //Fit to outflow data
-  //fit for data generated at Te=Ti as a function of sigma_w and beta
-  //and mion = mproton
-  
-  // get beta = gas pressure / magn pressure
-  // and sigma = magn energy density / enthalpy
-  ldouble beta=0.;
-  ldouble sigmaw=0.;
-  ldouble betamax=0.;
-  ldouble betanorm=0.;
-
-  ldouble rho=state->rho;
-  ldouble bsq=state->bsq;
-  ldouble Ti = state->Ti;
-  ldouble Te = state->Te;
-  ldouble ue = state->ue;
-  ldouble ui = state->ui;
-  ldouble pion = state->pi;
-  ldouble gammae = state->gammae;
-  ldouble gammai = state->gammai;
-    
-  ldouble enth_tot = rho + gammai*ui + gammae*ue;
-
-  #ifdef MAGNFIELD
-  beta = 2.*pion/bsq;
-  sigmaw = bsq/enth_tot;
-
-  if(beta<1.e-10) beta=1.e-10;
-  if(sigmaw<1.e-10) sigmaw=1.e-10;
-  if(!isfinite(sigmaw) || sigmaw>1.e10) sigmaw=1.e10; //magnetic field dominates, delta->.5
-  if(!isfinite(beta) || sigmaw>1.e10) beta=1.e10; //no magnetic field, delta->.5
-  
-  betamax = 0.25/sigmaw;
-
-  if(betamax<1.e-10) betamax=1.e-10;
-  if(!isfinite(betamax)) betamax=1.e10; //no magnetic field, delta->.4
-
-  betanorm = beta/betamax;
-  if(!isfinite(betanorm) || betanorm>1.) betanorm=1.;
-  if(betanorm<0.) betanorm=0.;
-  #endif
-
-  //Fit to simulation numbers
-  delta = fabs(0.5*exp(-(1.-betanorm)/(0.8+pow(sigmaw,0.5))));
-  
-  if(!isfinite(delta) || delta>.5)
-    {
-      //printf("problem with Michael delta fit: %d %d f : %e %e %e %e %e\n",geom->ix,geom->iy,delta,beta,sigma,Te,Ti);
-      //print_primitives(pp);
-      delta=.5;
-    }
-  else if(delta<0.)
-    delta=0.;
-        
-#elif defined(HEATELECTRONS_ROWAN3)
-  //Michael's fit to the reconnection electron heating fraction with guide field
-  //Rowan 2019 eqn 19
-  
-  // get beta = gas pressure / magn pressure
-  // and sigma = magn energy density / enthalpy
-
-  #ifndef GUIDE_RATIO
-  #define GUIDE_PREF -0.512 //guide_ratio = 0.33
-  #else
-  #define GUIDE_PREF 1.7*(tanh(0.33*GUIDE_RATIO)-0.4)
-  #endif
-  
-  ldouble beta=0.;
-  ldouble sigmaw=0.;
-  ldouble betamax=0.;
-  ldouble betanorm=0.;
-
-  ldouble rho=state->rho;
-  ldouble bsq=state->bsq;
-  ldouble Ti = state->Ti;
-  ldouble Te = state->Te;
-  ldouble ue = state->ue;
-  ldouble ui = state->ui;
-  ldouble pion = state->pi;
-  ldouble gammae = state->gammae;
-  ldouble gammai = state->gammai;
-    
-  ldouble enth_tot = rho + gammai*ui + gammae*ue;
   ldouble tratio = Te/Ti;
   if(!isfinite(tratio) || tratio>1.e10) tratio=1.e10;
   
   #ifdef MAGNFIELD
-  beta = 2.*pion/bsq;
-  sigmaw = bsq/enth_tot;
-
-  if(beta<1.e-10) beta=1.e-10;
-  if(sigmaw<1.e-10) sigmaw=1.e-10;
-  if(!isfinite(sigmaw) || sigmaw>1.e10) sigmaw=1.e10; //magnetic field dominates, delta->.5
-  if(!isfinite(beta) || sigmaw>1.e10) beta=1.e10; //no magnetic field, delta->.5
-  
-  //betamax = 0.25/sigmaw;
-  betamax = 0.5/(sigmaw*(1.+tratio));
-
-  if(betamax<1.e-10) betamax=1.e-10;
-  if(!isfinite(betamax)) betamax=1.e10; 
-
-  betanorm = beta/betamax;
-  if(!isfinite(betanorm) || betanorm>1.) betanorm=1.;
-  if(betanorm<0.) betanorm=0.;
+  betai = 2.*pion/bsq;
+  if(!isfinite(betai)  || betai>1.e10)  betai=1.e10;  //no magnetic field
   #endif
 
-  //OLD Fit to simulation numbers
-  ldouble numer = sqrt(1-betanorm) * (1-betanorm);
+  ldouble QpQeRatio;
+  QpQeRatio = 35./(1 + pow(betai/15.,-1.4)*exp(-0.1*tratio));
+  
+  //fe from Ressler et al. 2015 following Howes 2010
+  delta = 1./(1. + QpQeRatio); 
+
+#elif defined(HEATELECTRONS_ROWAN1) || defined(HEATELECTRONS_ROWAN2) || defined(HEATELECTRONS_ROWAN3)
+  
+  // betai = ion pressure / magn pressure
+  // sigmaw = magn energy density / enthalpy
+  ldouble betai=0.;
+  ldouble sigmaw=0.;
+  ldouble betanorm=0.;
+
+  ldouble rho=state->rho;
+  ldouble bsq=state->bsq;
+  ldouble Ti = state->Ti;
+  ldouble Te = state->Te;
+  ldouble ue = state->ue;
+  ldouble ui = state->ui;
+  ldouble pion = state->pi;
+  ldouble gammae = state->gammae;
+  ldouble gammai = state->gammai;
+    
+  ldouble enthalpy = rho + gammai*ui + gammae*ue;
+  ldouble tratio = Te/Ti;
+  if(!isfinite(tratio) || tratio>1.e10) tratio=1.e10;
+  
+  #ifdef MAGNFIELD
+  betai = 2.*pion/bsq;
+  sigmai = bsq/rho;
+  sigmaw = bsq/enthalpy;
+  
+  if(!isfinite(sigmaw) || sigmaw>1.e10) sigmaw=1.e10; //magnetic field dominates
+  if(!isfinite(betai)  || betai>1.e10)  betai=1.e10;  //no magnetic field
+  #endif
+
+  // maximum beta_i for fixed sigma_w is beta_max^-1 = 2 sigma_w (1 + te/ti)
+  // by Rowan+2019 Eq 18
+  // so beta / beta_max = 2 beta sigma_w (1 + te/ti) = 4 pi (1 + te/ti) / w
+  // so betanorm does NOT depend on mangetic field
+  betanorm = 4 * pion * (1+tratio) / enthalpy;
+
+  if(!isfinite(betanorm) || betanorm>1.) betanorm=1.;
+  if(betanorm<0.) betanorm=0.;
+
+#if defined(HEATELECTRONS_ROWAN1)
+  //Michael's INITIAL fit to the reconnection electron heating fraction
+  //Eq 34, Rowan+ 2017
+
+  delta = fabs(0.5*exp(-pow(1.-betanorm,3.3)/(1.+1.2*pow(sigmaw,0.7))));
+  
+#elif defined(HEATELECTRONS_ROWAN2)
+  //Michael's modified 2018 fit to outflow data
+  //Chael+ 2018 eq 13
+  
+  delta = fabs(0.5*exp(-(1.-betanorm)/(0.8+pow(sigmaw,0.5))));
+
+#elif defined(HEATELECTRONS_ROWAN3)
+  //Michael's fit to the reconnection electron heating fraction with guide field
+  //Rowan 2019 eqn 19
+
+  if(sigmaw < 1.e-10) sigmaw=1.e-10; // zero field case
+  ldouble numer = pow(1-betanorm, 1.5);
   ldouble denom = pow(sigmaw,0.3) * (0.42 + tratio);
 
-  delta = 0.5*(GUIDE_PREF*tanh(numer/denom) + 1.); //GUIDE_PREF = 1.7*(tanh(0.33bg)-0.4)
+  //guide field prefactor: GUIDE_PREF = 1.7*(tanh(0.33bg)-0.4)
+  #ifndef GUIDE_PREF
+  #ifdef GUIDE_RATIO
+  #define GUIDE_PREF 1.7*(tanh(0.33*GUIDE_RATIO)-0.4)
+  #else
+  #define GUIDE_PREF -0.512248 //default guide_ratio = 0.3
+  #endif
+  #endif
   
-  if(!isfinite(delta))
-    {
-      //delta=1.;
-      delta=0.5; //default to equal heating
-    }
-  else if(delta<0.)
-    delta=0.;
+  delta = 0.5*(GUIDE_PREF*tanh(numer/denom) + 1.); 
+  
+#endif // defined(HEATELECTRONS_ROWAN1) || defined(HEATELECTRONS_ROWAN2) || defined(HEATELECTRONS_ROWAN3)
 
+#elif defined(HEATELECTRONS_WERNER)
+  // based on Werner+ 2018
+
+  ldouble sigmai=0.;
+  ldouble rho=state->rho;
+  ldouble bsq=state->bsq;
+
+  #ifdef MAGNFIELD
+  sigmai = bsq/rho;
+  if(!isfinite(sigmai) || sigmai>1.e10) sigmai=1.e10; //magnetic field dominates
+  #endif
+
+  //Werner+2018 Eq 3
+  delta = 0.25*(1 + sqrt(sigmai/(10. + sigami)));
+    
 #elif defined(HEATELECTRONS_ZHDANKIN)
   //based on ratio of gyroradi Zhdankin 2019 
-  
+
+  // temperature
   ldouble Ti = state->Ti;
   ldouble Te = state->Te;
   ldouble the = kB_over_me * Te;
   ldouble thi = kB_over_mui_mp * Ti;
-  //ldouble gammae=GAMMAE;
-  //ldouble gammai=GAMMAI;
-  //#ifndef FIXEDGAMMASPECIES
-  //gammae=calc_gammaintfromtheta(the);
-  //gammai=calc_gammaintfromtheta(thi);
-  //#endif
-  ldouble gmeane = calc_meanlorentz(the);
-  ldouble gmeani = calc_meanlorentz(thi);
-  ldouble gyroratio = 1836.15267 * sqrt((gmeani*gmeani - 1.)/(gmeane*gmeane - 1.));
-  ldouble uioue = pow(gyroratio,2./3.);
-  delta = 1./(uioue + 1.);
 
-  if(!isfinite(delta) || delta>1.)
-    {
-      delta=1.;
-    }
-  else if(delta<0.)
-    delta=0.;
+  // mean lorentz factors
+  ldouble gmeani = calc_meanlorentz_fit(thi);
+  ldouble gmeane = calc_meanlorentz_fit(the);
+
+  // ratio of gyroradii
+  ldouble mratio = 1836.15267;
+  ldouble gyroratio = mratio * sqrt((gmeani*gmeani - 1.)/(gmeane*gmeane - 1.));
+
+  // heating fraction
+  ldouble uioue = pow(gyroratio,2./3.);
+  delta = 1./(1. + uioue);
+
 #endif
 #endif //HEATELECTRONS
 
+  if(!isfinite(delta))
+    {
+      delta=0.5; //default to equal heating
+    }
+  else if(delta<0.)
+    delta=0.;
+  
   return delta;
 }
 
