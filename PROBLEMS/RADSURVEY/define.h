@@ -133,11 +133,11 @@
 
 //opacities                                             
 #define SCATTERING
-#define BREMSSTRAHLUNG                                 
-//#define KLEINNISHINA                                   
+#define BREMSSTRAHLUNG
 #define SYNCHROTRON
 #define NO_SYNCHROTRON_BRIDGE_FUNCTIONS
 #define COMPTONIZATION                                
+//#define KLEINNISHINA                                   
 //#define NO_COMPTONIZATION
 //#define SKIPCOULOMBCOUPLING
 
@@ -201,8 +201,11 @@
 //heating                                                                               
 #define HEATELECTRONS
 //#define HEATELECTRONS_HOWES                                                                       
+//#define HEATELECTRONS_KAWAZURA
 //#define HEATELECTRONS_ROWAN                                                                       
-//#define HEATELECTRONS_ROWAN2                                                                      //#define HEATELECTRONS_ROWAN3                       
+//#define HEATELECTRONS_ROWAN2
+//#define HEATELECTRONS_ROWAN3
+//#define HEATELECTRONS_WERNER
 #define HEATELECTRONS_ZHDANKIN
 
 #define NOHEATATBH
@@ -211,9 +214,9 @@
 //#define FORCEGAMMAGASFIXED
 
 //entropy mixing     
-//#define MIXENTROPIESPROPERLY                                                  
-//#define UPWINDENTROPYMIXING  
-//#define DONOTLIMITENTRINMIXING
+#define MIXENTROPIESPROPERLY                                                  
+#define UPWINDENTROPYMIXING  
+#define DONOTLIMITENTRINMIXING
 
 //floors                                                                
 #define UEUINTMINRATIO 1.e-3
@@ -236,7 +239,7 @@
 /************************************/
 #define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .8
+#define TSTEPLIM .9
 #define FLUXMETHOD LAXF_FLUX
 
 #define FLUXLIMITER 0
