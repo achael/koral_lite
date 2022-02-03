@@ -2753,7 +2753,6 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   
   #ifdef MAGNFIELD
   betai = 2.*pion/bsq;
-  sigmai = bsq/rho;
   sigmaw = bsq/enthalpy;
   
   if(!isfinite(sigmaw) || sigmaw>1.e10) sigmaw=1.e10; //magnetic field dominates
