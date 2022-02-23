@@ -749,7 +749,7 @@
 #define PR_DEFINE "PROBLEMS/THINDISK/define.h"
 #define PR_BC "PROBLEMS/THINDISK/bc.c"
 #define PR_INIT "PROBLEMS/THINDISK/init.c"
-#define PR_KAPPA "PROBLEMS/THINDISK/kappa.c"
+//#define PR_KAPPA "PROBLEMS/THINDISK/kappa.c"
 #define PR_KAPPAES "PROBLEMS/THINDISK/kappaes.c"
 #define PR_DUMP "PROBLEMS/THINDISK/dump.c"
 #define PR_TOOLS "PROBLEMS/THINDISK/tools.c"
