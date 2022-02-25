@@ -84,7 +84,7 @@ void initialize_constants()
     
   four_third = 4. / 3.;
   one_third = 1. / 3.;
-  two_third = 2./3.;
+  two_third = 2. / 3.;
   log_2p6 = log(2.6);
   one_over_log_2p6 = 1. / log_2p6;
 

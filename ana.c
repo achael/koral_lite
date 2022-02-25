@@ -326,7 +326,11 @@ main(int argc, char **argv)
 
       //hdf5 analysis output (replaces sim)
 #ifdef ANAOUT_HDF5
-      sprintf(prefix,"ana%s",suffix);
+      #ifdef ANAOUT_HDF5_V1
+      sprintf(prefix,"ana%s",suffix); //old version for grtrans
+      #else
+      sprintf(prefix,"ipole%s",suffix); //new version for ipole
+      #endif
       fprint_anaout_hdf5(t, "analysis",prefix);
 #endif
       

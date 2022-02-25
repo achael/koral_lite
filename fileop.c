@@ -88,9 +88,12 @@ fprint_openfiles(char* folder)
 #ifndef MPI
   sprintf(bufor,"%s/scalars.dat",folder);
   fout_scalars=fopen(bufor,"a");
+  printf("fopen %s in function openfiles\n", bufor);
 
   sprintf(bufor,"%s/failures.dat",folder);
   fout_fail=fopen(bufor,"a");
+  printf("fopen %s in function openfiles\n", bufor);
+
 #endif
 
   return 0;
@@ -125,6 +128,7 @@ fprint_gridfile(char* folder)
   char bufor[50];
   sprintf(bufor,"%s/grid.dat",folder);
   out=fopen(bufor,"w");
+  printf("fopen %s in function fprint_gridfile\n", bufor);
 
   int ix,iy,iz,iv;
   ldouble pp[NV],uu[NV];
@@ -196,6 +200,7 @@ fprint_radprofiles(ldouble t, int nfile, char* folder, char* prefix)
       sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
 
       fout_radprofiles=fopen(bufor,"w");
+      printf("fopen %s in function fprint_radprofiles\n", bufor);
 
       ldouble mdotscale = (rhoGU2CGS(1.)*velGU2CGS(1.)*lenGU2CGS(1.)*lenGU2CGS(1.))/calc_mdotEdd();
       ldouble lumscale = (fluxGU2CGS(1.)*lenGU2CGS(1.)*lenGU2CGS(1.))/calc_lumEdd();
@@ -242,6 +247,7 @@ fprint_thprofiles(ldouble t, int nfile, char* folder, char* prefix)
   sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
 
   FILE *fout_thprofiles=fopen(bufor,"w");
+  printf("fopen %s in function fprint_thprofiles\n", bufor);
 
   int ix,iy,iv;
 
@@ -323,6 +329,12 @@ int
 fprint_restartfile_mpi(ldouble t, char* folder)
 {
   #ifdef MPI
+
+  if (PROCID == 0)
+  {
+    printf("Entering fprint_restartfile_mpi\n");
+  }
+
   char bufor[250];
 
   //header
@@ -330,6 +342,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
     {
        sprintf(bufor,"%s/res%04d.head",folder,nfout1);
        fout1=fopen(bufor,"w"); 
+       printf("fopen %s in function fprint_restartfile_mpi, PROCID = %d\n", bufor, PROCID);
        sprintf(bufor,"## %5d %5d %10.6e %5d %5d %5d %5d\n",nfout1,nfout2,t,PROBLEM,TNX,TNY,TNZ);
        fprintf(fout1,"%s",bufor);
        fclose(fout1);
@@ -346,6 +359,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
   MPI_Request req;
 
   int rc = MPI_File_open( MPI_COMM_WORLD, bufor, MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &cFile );
+  //printf("MPI_File_open in fprint_restartfile_mpi, PROCID = %d\n", PROCID);
   if (rc)
   {
     printf( "Unable to open/create file %s\n", bufor );fflush(stdout); exit(-1);
@@ -431,6 +445,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
 int 
 fprint_restartfile_bin(ldouble t, char* folder)
 {
+  printf("Entering fprint_restartfile_bin\n");
   char bufor[250];
   
   //header
@@ -438,6 +453,7 @@ fprint_restartfile_bin(ldouble t, char* folder)
     {
        sprintf(bufor,"%s/res%04d.head",folder,nfout1);
        fout1=fopen(bufor,"w"); 
+       printf("fopen %s in function fprint_restartfile_bin\n", bufor);
        sprintf(bufor,"## %5d %5d %10.6e %5d %5d %5d %5d\n",nfout1,nfout2,t,PROBLEM,TNX,TNY,TNZ);
        fprintf(fout1,"%s",bufor);
        fclose(fout1);
@@ -446,6 +462,7 @@ fprint_restartfile_bin(ldouble t, char* folder)
   //body
   sprintf(bufor,"%s/res%04d.dat",folder,nfout1);
   fout1=fopen(bufor,"wb"); 
+  printf("fopen %s in function fprint_restartfile_bin\n", bufor);
 
   int ix,iy,iz,iv;
   int gix,giy,giz;
@@ -506,15 +523,20 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
 {
 #if defined DUMPS_WRITE_HDF5 && defined MPI
 
+  #ifndef FOLDER_HDF5
+  #define FOLDER_HDF5 "./dumps"
+  #endif
+
+  if (PROCID == 0)
+  {
+    printf("Entering fprint_restartfile_mpi_hdf5:  FOLDER_HDF5 = %s\n", FOLDER_HDF5);
+  }
+
   MPI_Comm comm  = MPI_COMM_WORLD;
   MPI_Info info  = MPI_INFO_NULL;
 
   char bufor[250];
   
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
-
   // Write out header information in group HEADER in HDF5 file
   // Only PROCID=0 does this, but all processes open the file, group and dataspace
 
@@ -537,7 +559,7 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
   dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
 
   plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   dumps_dataset_int = H5Dcreate2(dumps_file_id, "/HEADER/FILE_NUMBER", H5T_STD_I32BE, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (PROCID == 0) status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_number);
@@ -753,9 +775,11 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
 
   char bufor[250];
   
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
+  #ifndef FOLDER_HDF5
+  #define FOLDER_HDF5 "./dumps"
+  #endif
+
+  printf("Entering fprint_restartfile_serial_hdf5: FOLDER_HDF5 = %s\n", FOLDER_HDF5);
 
   // Write out header information in group HEADER in HDF5 file
 
@@ -881,7 +905,7 @@ fprint_restartfile_serial_hdf5(ldouble t, char* folder)
    // Then find the primitive name and save in the hdf5 file
 
     get_prim_name(prim_name, iv);
-    printf("  prim_name: %s\n", prim_name);
+    //printf("  prim_name: %s\n", prim_name);
     
     dumps_dataset_array = H5Dcreate2(dumps_file_id, prim_name, H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT, &(primitive[0][0][0]));
@@ -957,6 +981,7 @@ fread_restartfile(int nout1, char* folder,ldouble *t)
 int 
 fread_restartfile_bin(int nout1, char *folder, ldouble *t)
 {
+  printf("Entering fread_restartfile_bin\n");
   int ret, ix,iy,iz,iv,i,ic,gix,giy,giz;
   char fname[400],fnamehead[400];
   if(nout1>=0)
@@ -983,6 +1008,7 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
   /***********/
   //header file
   fdump=fopen(fnamehead,"r");
+  printf("fopen %s in function fread_restartfile_bin\n", fnamehead);
   if(fdump==NULL) return 1; //request start from scratch
 
   //reading parameters, mostly time
@@ -998,7 +1024,8 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
   /***********/
   //body file
   fdump=fopen(fname,"rb");
- 
+  printf("fopen %s in function fread_restartfile_bin\n", fname);
+
   struct geometry geom;
   ldouble xxvec[4],xxvecout[4];
   ldouble uu[NV],pp[NV],ftemp;
@@ -1044,6 +1071,7 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
       for (ie=0; ie<nvold; ie++) pp[ie] = ppold[ie]; 
 
       // initialize radiation primitives
+      //ldouble Erad=INITERAD;
       ldouble Erad=pp[UU]*INITURADFRAC;   //initial radiation energy density
       pp[EE]=Erad;
       pp[FX]=pp[VX]; //initial radiation velocity is same as fluid     
@@ -1107,7 +1135,14 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
       ldouble gamma=calc_gammaintfromTei(Te,Ti);
       set_u_scalar(gammagas,ix,iy,iz,gamma);
       #endif
-      
+
+#ifdef RESTARTFROMMHD
+#ifdef EVOLVEELECTRONS
+      pp[ENTRE]=calc_SefromrhoT(rhogas,Te,ELECTRONS);
+      pp[ENTRI]=calc_SefromrhoT(rhogas,Ti,IONS);
+#endif
+#endif
+
       p2u(pp,uu,&geom);
 
 
@@ -1137,6 +1172,12 @@ int
 fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 {
   #ifdef MPI
+
+  if (PROCID == 0)
+  {
+    printf("Entering fread_restartfile_mpi\n");
+  }
+
   int ret, ix,iy,iz,iv,i,ic,gix,giy,giz,tix,tiy,tiz;
   char fname[400],fnamehead[400];
 
@@ -1151,27 +1192,48 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
       sprintf(fnamehead,"%s/reslast.head",folder);
     }
 
-  FILE *fdump;
-
   /***********/
-  //header file
+  //Read header file from process 0 if it exists. If not return for start from scratch
  
-  fdump=fopen(fnamehead,"r");
-  if(fdump==NULL) 
+  int exists = 0;
+
+  if (PROCID == 0)
+  {
+    FILE *fdump = fopen(fnamehead,"r");
+    printf("fopen %s in function fread_restartfile_mpi, PROCID = %d\n", fnamehead, PROCID);
+    exists = (fdump != NULL); // cast file open to an integer for broadcasting
+    if(exists == 1)
     {
-      return 1; //request start from scratch
+      //reading parameters, mostly time
+      int intpar[6];
+      ret=fscanf(fdump,"## %d %d %lf %d %d %d %d\n",&intpar[0],&intpar[1],t,&intpar[2],&intpar[3],&intpar[4],&intpar[5]);
+      if(PROCID==0)
+      printf("restart file (%s) read no. %d at time: %f of PROBLEM: %d with NXYZ: %d %d %d\n", fname,intpar[0],*t,intpar[2],intpar[3],intpar[4],intpar[5]); 
+      nfout1=intpar[0]+1; //global file no.
+      nfout2=intpar[1]; //global file no. for avg
+      fclose(fdump);
     }
+  }
+ 
+  // Broadcast `exists` from process 0 to all other processors using a blocking function         
+
+  //printf("Before MPI_Bcast: PROCID, exists, nfout1, nfout2, t = %d %d %d %d %e\n", PROCID, exists, nfout1, nfout2, *t);
+  int intexchange[3];
+  intexchange[0] = exists;
+  intexchange[1] = nfout1;
+  intexchange[2] = nfout2;
+  MPI_Bcast(intexchange, 3, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(t, 1, MPI_LONG_DOUBLE, 0, MPI_COMM_WORLD);
+  exists = intexchange[0];
+  nfout1 = intexchange[1];
+  nfout2 = intexchange[2];
+  //printf("After MPI_Bcast: PROCID, exists, nfout1, nfout2, t = %d %d %d %d %e\n", PROCID, exists, nfout1, nfout2, *t);
+
+  if (exists == 0)
+  {
+    return 1; //request start from scratch
+  }
   
-  //reading parameters, mostly time
-  int intpar[6];
-  ret=fscanf(fdump,"## %d %d %lf %d %d %d %d\n",&intpar[0],&intpar[1],t,&intpar[2],&intpar[3],&intpar[4],&intpar[5]);
-  if(PROCID==0)
-  printf("restart file (%s) read no. %d at time: %f of PROBLEM: %d with NXYZ: %d %d %d\n",
-	 fname,intpar[0],*t,intpar[2],intpar[3],intpar[4],intpar[5]); 
-  nfout1=intpar[0]+1; //global file no.
-  nfout2=intpar[1]; //global file no. for avg
-  fclose(fdump);
-    
   //maybe not needed
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -1185,6 +1247,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
   MPI_Request req;
 
   int rc = MPI_File_open( MPI_COMM_WORLD, fname, MPI_MODE_RDONLY, MPI_INFO_NULL, &cFile );
+  //printf("MPI_File_open in fread_restartfile_mpi, PROCID = %d\n", PROCID);
   if (rc)
   {
     printf( "Unable to open/create file %s\n", fname );fflush(stdout); exit(-1);
@@ -1273,6 +1336,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 
 #ifdef RADIATION		       
 	      // initialize radiation primitives
+	      //ldouble Erad=INITERAD;
 	      ldouble Erad=pout[ppos+UU]*INITURADFRAC;   //initial radiation energy density
 
 	      set_u(p,EE,ix,iy,iz,Erad);
@@ -1314,6 +1378,14 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 	      set_u_scalar(gammagas,ix,iy,iz,gamma);
 #endif
 
+#ifdef RESTARTFROMMHD
+#ifdef EVOLVEELECTRONS
+              Se=calc_SefromrhoT(rhogas,Te,ELECTRONS);
+	      Si=calc_SefromrhoT(rhogas,Ti,IONS);
+	      set_u(p,ENTRE,ix,iy,iz,Se);
+	      set_u(p,ENTRI,ix,iy,iz,Si);
+#endif
+#endif
 
 	      p2u(&get_u(p,0,ix,iy,iz),&get_u(u,0,ix,iy,iz),&geom);
 	      
@@ -1340,12 +1412,17 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
 {
 #if defined DUMPS_READ_HDF5 && defined MPI
 
+  #ifndef FOLDER_HDF5
+  #define FOLDER_HDF5 "./dumps"
+  #endif
+
+  if (PROCID == 0)
+  {
+    printf("Entering fread_restartfile_mpi_hdf5:  FOLDER_HDF5 = %s\n", FOLDER_HDF5);
+  }
+
   MPI_Comm comm  = MPI_COMM_WORLD;
   MPI_Info info  = MPI_INFO_NULL;
-
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
 
   hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dataspace_array, dumps_memspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id, plist_id;
   hsize_t dims_h5[3], chunk_dims[3], offset_3d[3], stride_3d[3], count_3d[3], block_3d[3];
@@ -1364,13 +1441,24 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
     sprintf(fname_h5, "%s/reslast.h5", FOLDER_HDF5);
   }
 
-  // Check if hdf5 file exists
-  FILE *fhdf5;
-  fhdf5=fopen(fname_h5,"r");
-  if(fhdf5==NULL) 
-  {
-    return 1; //request start from scratch
+  int exists;
+
+  // Check if hdf5 file exists from process 0
+  if (PROCID == 0) {
+    FILE *fhdf5 = fopen(fname_h5, "r");
+    printf("fopen %s in fread_restartfile_mpi_hdf5: PROCID = %d\n", fname_h5, PROCID);
+    exists = (fhdf5 != NULL); // cast to an integer so it can be safely broadcasted
+    if (exists == 1) fclose(fhdf5);
   }
+
+  // Broadcast `exists` from process 0 to all other processors using a blocking function
+  MPI_Bcast(&exists, 1, MPI_INT, 0, comm);
+
+  // Request start from scratch if hdf5 file does not exist
+  if(!exists)
+    {
+      return 1;
+    }
 
   /***********/
   // Open hdf5 file and read header information from group HEADER
@@ -1378,11 +1466,12 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
   plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, comm, info);
   dumps_file_id = H5Fopen(fname_h5, H5F_ACC_RDONLY, plist_id);
+  //printf("H5Fopen in function fread_restartfile_mpi_hdf5, PROCID = %d\n", PROCID);
   H5Pclose(plist_id);
 
   if(&dumps_file_id==NULL)
   {
-    printf("Input hdf5 file not available!\n");
+    printf("Input hdf5 file not available! PROCID = %d\n", PROCID);
     exit(1);
   }
 
@@ -1390,7 +1479,7 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
   dumps_dataspace_scalar = H5Screate(H5S_SCALAR);
 
   plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_INDEPENDENT);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   dumps_dataset_int = H5Dopen2(dumps_group_id, "FILE_NUMBER", H5P_DEFAULT);
   status = H5Dread(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &file_number);
@@ -1599,7 +1688,13 @@ fread_restartfile_mpi_hdf5(int nout1, char *folder, ldouble *t)
 int //serial hdf5 input
 fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
 {
-#ifdef DUMPS_READ_HDF5
+  #ifdef DUMPS_READ_HDF5
+
+#ifndef FOLDER_HDF5
+#define FOLDER_HDF5 "./dumps"
+#endif
+
+  printf("Entering fread_restartfile_serial_hdf5:  FOLDER_HDF5 = %s\n", FOLDER_HDF5);
 
   hid_t dumps_file_id, dumps_group_id, dumps_dataspace_scalar, dumps_dataspace_array, dumps_dataset_int, dumps_dataset_double, dumps_dataset_array, dumps_attribute_id;
   hsize_t dims_h5[3];
@@ -1614,10 +1709,6 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
   int ret, ix,iy,iz,iv,i,ic,gix,giy,giz;
   char fname_h5[400];
 
-#ifndef FOLDER_HDF5
-#define FOLDER_HDF5 "./dumps"
-#endif
-
   if(nout1>=0)
   {
     sprintf(fname_h5, "%s/res%04d.h5", FOLDER_HDF5, nout1);
@@ -1630,6 +1721,7 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
   // Check if hdf5 file exists
   FILE *fhdf5;
   fhdf5=fopen(fname_h5,"r");
+  printf("fopen %s in function fread_restartfile_mpi_hdf5, PROCID = %d\n", fname_h5, PROCID);
   if(fhdf5==NULL) 
   {
     return 1; //request start from scratch
@@ -1639,9 +1731,10 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
   // Open hdf5 file and read header information from group HEADER
 
   dumps_file_id = H5Fopen (fname_h5, H5F_ACC_RDWR, H5P_DEFAULT);
+  //printf("H5Fopen in function fread_restartfile_serial_hdf5, PROCID = %d\n", PROCID);
   if(&dumps_file_id==NULL)
   {
-    printf("Input hdf5 file not available!\n");
+    printf("Input hdf5 file not available!  PROCID = %d\n", PROCID);
     exit(1);
   }
 
@@ -1799,7 +1892,7 @@ fread_restartfile_serial_hdf5(int nout1, char *folder, ldouble *t)
     }
   }
 
-#endif  // DUMPS_READ_HDF5
+  #endif  // DUMPS_READ_HDF5
 
   return 0;
 }
@@ -1840,6 +1933,7 @@ fprint_avgfile_mpi(ldouble t, char* folder, char* prefix)
     {
       sprintf(bufor,"%s/%s%04d.head",folder,prefix,nfout2);
       fout1=fopen(bufor,"w"); 
+      printf("fopen %s in function fprint_avgfile_mpi, PROCID = %d\n", bufor, PROCID);
       sprintf(bufor,"## %5d %10.6e %10.6e %10.6e\n",nfout2,t-avgtime,t,avgtime);
       fprintf(fout1,"%s",bufor);
       fclose(fout1);
@@ -1854,6 +1948,7 @@ fprint_avgfile_mpi(ldouble t, char* folder, char* prefix)
 
  
   int rc = MPI_File_open( MPI_COMM_WORLD, bufor, MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &cFile );
+  //printf("MPI_File_open in fprint_avgfile_mpi, PROCID = %d\n", PROCID);
   if (rc)
   {
     printf( "Unable to open/create file %s\n", bufor );fflush(stdout); exit(-1);
@@ -1935,6 +2030,7 @@ fprint_avgfile_bin(ldouble t, char* folder,char *prefix)
     {
       sprintf(bufor,"%s/%s%04d.head",folder,prefix,nfout2);
       fout1=fopen(bufor,"w"); 
+      printf("fopen %s in function fprint_avgfile_bin, PROCID = %d\n", bufor, PROCID);
       sprintf(bufor,"## %5d %10.6e %10.6e %10.6e\n",nfout2,t-avgtime,t,avgtime);
       fprintf(fout1,"%s",bufor);
       fclose(fout1);
@@ -1943,6 +2039,7 @@ fprint_avgfile_bin(ldouble t, char* folder,char *prefix)
   //body
   sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfout2);
   fout1=fopen(bufor,"wb"); 
+  printf("fopen %s in function fprint_avgfile_bin, PROCID = %d\n", bufor, PROCID);
 
   int ix,iy,iz,iv;
   int gix,giy,giz;
@@ -2014,6 +2111,7 @@ fread_avgfile_bin(int nout1, char *base, ldouble *pavg, ldouble *dt, ldouble *t)
   /***********/
   //header file
   fdump=fopen(fnamehead,"r");
+  printf("fopen %s in function fread_avgfile_bin, PROCID = %d\n", fnamehead, PROCID);
 
   //reading parameters, mostly time
   int intpar[5];
@@ -2030,6 +2128,7 @@ fread_avgfile_bin(int nout1, char *base, ldouble *pavg, ldouble *dt, ldouble *t)
   //body file
 
   fdump=fopen(fname,"rb");
+  printf("fopen %s in function fread_avgfile_bin, PROCID = %d\n", fname, PROCID);
 
   struct geometry geom;
   ldouble xxvec[4],xxvecout[4];
@@ -2111,7 +2210,7 @@ int fprint_coordBL(char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%sBL.dat",folder,prefix);
    FILE* fout1=fopen(bufor,"w");
-
+   printf("fopen %s in function fprint_coordBL\n", bufor);
 
 #ifdef COORDOUTPUT_HDF5
    hid_t coordBL_file_id, coordBL_dataspace_id, r_dataset_id, theta_dataset_id, phi_dataset_id;
@@ -2227,7 +2326,8 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simplecart\n", bufor);
+
    //header
    fprintf(fout1,"## %d %e %d %d %d %d\n",nfout1,t,PROBLEM,NX,NY,NZ);
 
@@ -2434,7 +2534,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
    sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
    #endif
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simplesph\n", bufor);
+
    /***********************************/  
    /** writing order is fixed  ********/  
    /***********************************/  
@@ -2469,6 +2570,9 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
      fprintf(fout1,"%.5e %5d %5d %5d %.5e %.5e ",t,NX+2,NY,NZ,BHSPIN,MASS);
 #if(MYCOORDS==MKS3COORDS)
    fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e\n",MKSR0,MKSH0,MKSMY1,MKSMY2,MKSMP0);
+#endif
+#if(MYCOORDS==MKS2COORDS)
+   fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e\n",MKSR0,MKSH0,-1.,-1.,-1.);
 #endif
 #ifdef RELELECTRONS
    fprintf(fout1,"%5d %.5e %.5e\n",NRELBIN, RELGAMMAMIN, RELGAMMAMAX);
@@ -3110,7 +3214,8 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%s%04d_simphiavg.dat",folder,prefix,nfile);
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simple_phiavg\n", bufor);
+
    /***********************************/  
    /** writing order is fixed  ********/  
    /***********************************/  
@@ -3372,7 +3477,8 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
    char bufor[50];
    sprintf(bufor,"%s/%s%04d_phicorr.dat",folder,prefix,nfile);
    fout1=fopen(bufor,"w");
-  
+   printf("fopen %s in function fprint_simple_phicorr\n", bufor);
+
    /***********************************/  
    /** writing order is fixed  ********/  
    /***********************************/  
@@ -3666,6 +3772,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   int file_number = nfout1, problem_number = PROBLEM, nxx = TNX, nyy = TNY, nzz = TNZ, nprimitives = NV;
   int has_radiation=0, has_electrons=0;
   int ndim;
+  char version[40];
   char metric_run[40];
   char metric_out[40];
   ldouble gam=GAMMA;
@@ -3720,6 +3827,18 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 #endif
   
   dumps_group_id = H5Gcreate2(dumps_file_id, "/header", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+  #ifdef ANAOUT_HDF5_V1
+  sprintf(version,"%s","KORALv2");
+  #else
+  sprintf(version,"%s","KORALv2");
+  #endif
+  strtype=H5Tcopy(H5T_C_S1);
+  status=H5Tset_size(strtype,strlen(metric_run));		     
+  dumps_dataset_str = H5Dcreate2(dumps_file_id, "/header/version", strtype, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_str, strtype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+		    &version); 
+  status = H5Dclose(dumps_dataset_str);
 
   strtype=H5Tcopy(H5T_C_S1);
   status=H5Tset_size(strtype,strlen(metric_run));		     
@@ -4062,29 +4181,40 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   ldouble x1_arr[NX][NY][NZ];
   ldouble x2_arr[NX][NY][NZ];
   ldouble x3_arr[NX][NY][NZ];
-
+  ldouble gdet_arr[NX][NY][NZ];
+  
   ldouble r_arr[NX][NY][NZ];
   ldouble th_arr[NX][NY][NZ];
   ldouble ph_arr[NX][NY][NZ];
 
   ldouble rho_arr[NX][NY][NZ];
   ldouble pgas_arr[NX][NY][NZ];
-
+  ldouble uint_arr[NX][NY][NZ];
+  
   ldouble u0_arr[NX][NY][NZ];
   ldouble u1_arr[NX][NY][NZ];
   ldouble u2_arr[NX][NY][NZ];
   ldouble u3_arr[NX][NY][NZ];
+
+  ldouble U1_arr[NX][NY][NZ];
+  ldouble U2_arr[NX][NY][NZ];
+  ldouble U3_arr[NX][NY][NZ];
 
   #ifdef MAGNFIELD
   ldouble b0_arr[NX][NY][NZ];
   ldouble b1_arr[NX][NY][NZ];
   ldouble b2_arr[NX][NY][NZ];
   ldouble b3_arr[NX][NY][NZ];
+
+  ldouble B1_arr[NX][NY][NZ];
+  ldouble B2_arr[NX][NY][NZ];
+  ldouble B3_arr[NX][NY][NZ];
   #endif
   
   #ifdef EVOLVEELECTRONS
   ldouble te_arr[NX][NY][NZ];
   ldouble ti_arr[NX][NY][NZ];
+  ldouble gam_arr[NX][NY][NZ];
   #endif
   
   int iz,iy,ix,iv,i;
@@ -4097,16 +4227,19 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
       {
 
 	// coordinates
-        struct geometry geom,geomBL;
+        struct geometry geom,geomBL,geomBL0;
 	fill_geometry(ix,iy,iz,&geom);
+	fill_geometry_arb(ix,iy,iz,&geomBL0,OUTCOORDS);
 	fill_geometry_arb(ix,iy,iz,&geomBL,OUTCOORDS2);
+
 	ldouble r=geomBL.xx;
 	ldouble th=geomBL.yy;
 	ldouble ph=geomBL.zz;
         ldouble x1=geom.xx;
 	ldouble x2=geom.yy;
 	ldouble x3=geom.zz;
-
+        ldouble gdet=geom.gdet;
+	
         // primitives
         ldouble pp[NV];
 	for(iv=0;iv<NV;iv++)
@@ -4119,7 +4252,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 
 	
 	// get output quantities in OUTCOORDS2 frame
-	ldouble rho,uint,pgas,temp,Te,Ti,utcon[4],utcov[4],bcon[4],bcov[4],bsq;
+	ldouble rho,uint,pgas,temp,Te,Ti,utcon[4],utcov[4],urel[4],bcon[4],bcov[4],Bcon[4],bsq;
 	ldouble gamma=GAMMA;
 	#ifdef CONSISTENTGAMMA
 	gamma=pick_gammagas(ix,iy,iz);
@@ -4140,10 +4273,13 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 	  utcon[2]=get_uavg(pavg,AVGRHOUCON(2),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
 	  utcon[3]=get_uavg(pavg,AVGRHOUCON(3),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
                  
-          //NORMALIZE u^0
+          //NORMALIZE u^0 to be  consistent with u1,u2,u3
           fill_utinucon(utcon,geomBL.gg,geomBL.GG);
 	  indices_21(utcon,utcov,geomBL.gg);
-	
+
+	  // conv vels to primitive VELR (but in OUTCOORDS)
+	  conv_vels_ut(utcon, urel, VEL4, VELR, geomBL.gg, geomBL.GG);
+
           #ifdef MAGNFIELD
 	  bsq=get_uavg(pavg,AVGBSQ,ix,iy,iz);
 	  bcon[0]=get_uavg(pavg,AVGBCON(0),ix,iy,iz);
@@ -4158,7 +4294,15 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
           //NORMALIZE b^mu to be equal to B^2
 	  ldouble alphanorm = bsq/dotB(bcon,bcov);
 	  if(alphanorm<0.) my_err("alpha.lt.0 in b0 norm !!\n");
-          for(i=0;i<4;i++) bcon[i]*=sqrt(alphanorm);		  
+          for(i=0;i<4;i++) bcon[i]*=sqrt(alphanorm);
+
+	  // back to primitive B^i (but in OUTCOORDS)
+	  int j;
+	  for(j=1;j<4;j++)
+          {
+             Bcon[j] = bcon[j]*utcon[0] - bcon[0]*utcon[j];
+          }
+
           #endif //MAGNFIELD
 		  
           #ifdef EVOLVEELECTRONS
@@ -4170,27 +4314,44 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 
 	  Te=pe/K_BOLTZ/ne;
 	  Ti=pi/K_BOLTZ/ni;
-		 
+      	 
           #endif                
         } //doingavg==1
 	else 
-	{ 
+	{
+	  // transform primitives to OUTCOORDS
           #if defined(PRECOMPUTE_MY2OUT) && (OUTCOORDS==OUTCOORDS2)
           trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
-          #else      
-          trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+          #elif defined(PRECOMPUTE_MY2OUT)
+          trans_pall_coco_my2out(pp,pp,&geom,&geomBL0); //transform to OUTCOORDS using precompute, then to OUTCOORDS2
+          trans_pall_coco(pp,pp,OUTCOORDS,OUTCOORDS2,geomBL0.xxvec,&geomBL0,&geomBL);
+          #else
+          trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS2, geom.xxvec,&geom,&geomBL);
           #endif
 
+	  // get scalars
 	  rho=pp[0];
 	  uint=pp[1];
 	  pgas=(gamma-1.)*uint;
           temp=calc_PEQ_Tfromurho(uint,rho,ix,iy,iz);
           
-          
+          // get 4-velocity
           calc_ucon_ucov_from_prims(pp, &geomBL, utcon, utcov);
 
+	  // conv vels to primitive VELR (but in OUTCOORDS)
+	  conv_vels_ut(utcon, urel, VEL4, VELR, geomBL.gg, geomBL.GG);
+
+	  
           #ifdef MAGNFIELD
-          calc_bcon_bcov_bsq_from_4vel(pp, utcon, utcov, &geomBL, bcon, bcov, &bsq);
+          // calculate bcon 4 vector
+	  calc_bcon_bcov_bsq_from_4vel(pp, utcon, utcov, &geomBL, bcon, bcov, &bsq);
+        
+          // back to primitive B^i (but in OUTCOORDS -- this should just be pp[B1],pp[B2],pp[B3])
+          int j;
+	  for(j=1;j<4;j++)
+          {
+             Bcon[j] = bcon[j]*utcon[0] - bcon[0]*utcon[j];
+          }
           #endif
 
           #ifdef EVOLVEELECTRONS
@@ -4201,40 +4362,56 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
         x1_arr[ix][iy][iz] = x1;
         x2_arr[ix][iy][iz] = x2;
         x3_arr[ix][iy][iz] = x3;
-
+        gdet_arr[ix][iy][iz] = gdet;
+	
         r_arr[ix][iy][iz] = r;
         th_arr[ix][iy][iz] = th;
         ph_arr[ix][iy][iz] = ph;
 
         rho_arr[ix][iy][iz] = rho;
         pgas_arr[ix][iy][iz] = pgas;
-
+        uint_arr[ix][iy][iz] = uint;
+	
         u0_arr[ix][iy][iz] = utcon[0];
         u1_arr[ix][iy][iz] = utcon[1];
         u2_arr[ix][iy][iz] = utcon[2];
         u3_arr[ix][iy][iz] = utcon[3];
+
+        U1_arr[ix][iy][iz] = urel[1];
+        U2_arr[ix][iy][iz] = urel[2];
+        U3_arr[ix][iy][iz] = urel[3];
 
         #ifdef MAGNFIELD
         b0_arr[ix][iy][iz] = bcon[0];
         b1_arr[ix][iy][iz] = bcon[1];
         b2_arr[ix][iy][iz] = bcon[2];
         b3_arr[ix][iy][iz] = bcon[3];
+
+        B1_arr[ix][iy][iz] = Bcon[1];
+        B2_arr[ix][iy][iz] = Bcon[2];
+        B3_arr[ix][iy][iz] = Bcon[3];
         #endif
   
         #ifdef EVOLVEELECTRONS
         te_arr[ix][iy][iz] = Te;
         ti_arr[ix][iy][iz] = Ti;
+	gam_arr[ix][iy][iz] = gamma;
         #endif
 
       }
     }
   }
 
-  // !AC -- we don't need this with the left corner defined in /header/geom
-  /*
+  
   // Write runtime grid
   dumps_group_id = H5Gcreate2(dumps_file_id, "/grid_run", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_run/gdet", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(gdet_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+
+ // !AC -- we don't need coordinates with the left corner defined in /header/geom
+  /*
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_run/x1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
 		    &(x1_arr[0][0][0]));
@@ -4281,6 +4458,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 		    &(rho_arr[0][0][0]));
   status = H5Dclose(dumps_dataset_array);
 
+#ifdef ANAOUT_HDF5_V1
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/pgas", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
 		    &(pgas_arr[0][0][0]));
@@ -4328,6 +4506,47 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Dclose(dumps_dataset_array);
   #endif
   
+#else //ifdef ANAOUT_HDF5_V1
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/uint", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(uint_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(U1_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(U2_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(U3_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+
+  #ifdef MAGNFIELD
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(B1_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(B2_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    &(B3_arr[0][0][0]));
+  status = H5Dclose(dumps_dataset_array);
+  #endif
+  
+#endif  //ifdef ANAOUT_HDF5_V1
+    
   #ifdef EVOLVEELECTRONS
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/te", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,

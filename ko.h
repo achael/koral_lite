@@ -1,6 +1,7 @@
 /*! \file ko.h
  \brief constants, variables, and function definitions
 */
+#pragma once
 
 //small and big numbers
 #define SMALL 1.e-80 
@@ -1129,6 +1130,7 @@ int correct_polaraxis();
 int correct_polaraxis_3d();
 int is_cell_corrected_polaraxis(int ix, int iy, int iz);
 int is_cell_active(int ix, int iy, int iz);
+int skip_cell_implicit(int ix, int iy, int iz);
 
 int get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0,
 					ldouble *fxl,ldouble *fxr,
@@ -1425,6 +1427,8 @@ ldouble calc_Edot(ldouble radius);
 ldouble calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max);
 ldouble calc_Ldot(ldouble radius);
 int calc_Bflux(ldouble radius,int type,ldouble *Bflux, ldouble* Bfluxquad);
+
+int calc_lum_tausurface(ldouble taumax,ldouble *radlum);
 
 ///////////////////////////////////////////////////////////////
 // fileop.c ///////////////////////////////////////////////////

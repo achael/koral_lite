@@ -372,7 +372,7 @@ fill_utinvel3(ldouble *u1,double gg[][5],ldouble GG[][5])
 // July 7, 17, Ramesh: streamlined the code to improve efficiency
 // We solve quadratic: a*ut^2 + 2*b*ut + c = 0
 //   where a = g00, b = g0i*ui, c = 1 + gij*ui*uj
-//   solution: ut = (-b + sqrt(b^2-a*c))/a
+//   solution: ut = (-b +/- sqrt(b^2-a*c))/a
 //**********************************************************************
 int
 fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5])
@@ -401,9 +401,11 @@ fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5])
   {
     u1[0] = (-b - sqrt(delta)) / a;
   }
-  else
+  else //this is in ergoregion
   {
-    u1[0] = (-b + sqrt(delta)) / a;
+    //ANDREW THIS IS WRONG, should be minus sign everywhere
+    //u1[0] = (-b + sqrt(delta)) / a;
+    u1[0] = (-b - sqrt(delta)) / a;
   }
   
   return 0;

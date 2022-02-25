@@ -5090,6 +5090,7 @@ calc_Efield_battery(ldouble *pp,void *ggg,ldouble econ[4])
   //four-velocity
   ldouble ucon[4],ucov[4];
   ldouble bcon[4],bcov[4];
+  ldouble bsq;
   calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
   calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
   ldouble b2rho=bsq/pp[RHO];
