@@ -1,4 +1,4 @@
-//unfortunately this is what it was:
+//unfortunately this is what it was
 #define MU_GAS 1.
 #define MU_I 2.
 #define MU_E 2.
@@ -12,16 +12,16 @@
 /************************************/
 //restart
 /************************************/
-//#define RESTART
+#define RESTART
 #define RESTARTGENERALINDICES
-#define RESTARTNUM -1
+#define RESTARTNUM 500
 
 /************************************/
 //radiation choices
 /************************************/
 #define RADIATION
-#define BALANCEENTROPYWITHRADIATION
-#define COMPTONIZATION
+//#define BALANCEENTROPYWITHRADIATION
+//#define COMPTONIZATION
 #define U2PCONV 1.e-10
 #define RADIMPLICITDAMPINGFACTOR 3.
 #define RADIMPLICITMAXENCHANGEDOWN 10.
@@ -34,13 +34,27 @@
 #define RADIMPCONVRELERR 1.e-4
 #define RADIMPCONVRELENTR 1.e-4
 #define RADIMPCONVRELENTRERR 1.e-2
-#define OPDAMPINIMPLICIT 0
+#define OPDAMPINIMPLICIT 0 
 #define MAXRADIMPDAMPING 1.e-3
+
+//no bremsstrahlung in AGN
+#define BREMSSTRAHLUNG
+#define SYNCHROTRON
+//Should be used, the bridge function is adding a NR component to synchotron opacity
+#define NO_SYNCHROTRON_BRIDGE_FUNCTIONS
+#define KLEINNISHINA
+
+
+//#define SKIPFANCYOPACITIES
+
+#define EVOLVEPHOTONNUMBER
+//we need this for evolvephotonnumber
+#define SCALE_JACOBIAN
 
 /************************************/
 //magnetic choices
 /************************************/
-#define MIMICDYNAMO
+//#define MIMICDYNAMO
 //#define CALCHRONTHEGO
 #define THETAANGLE 0.25
 #define ALPHAFLIPSSIGN                                                        
@@ -58,7 +72,7 @@
 //reconstruction / Courant
 /************************************/
 #define INT_ORDER 1
-#define TIMESTEPPING RK2IMEX//HEUN//IMEX
+#define TIMESTEPPING RK2IMEX
 #define TSTEPLIM .5
 #define FLUXLIMITER 0
 #define MINMOD_THETA 1.5
@@ -82,7 +96,7 @@
 //rmhd floors
 /************************************/
 #define CORRECT_POLARAXIS
-//#define POLARAXISAVGIN3D
+#define POLARAXISAVGIN3D
 #define NCCORRECTPOLAR 2
 #define UURHORATIOMIN 1.e-10
 #define UURHORATIOMAX 1.e2
@@ -93,9 +107,10 @@
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 100000.
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 50.
+#define B2RHORATIOMAX 10 //50. increas to run 3d?
 #define GAMMAMAXRAD 10.
 #define GAMMAMAXHD 10.
+#define UUEERATIOMAX 10.
 
 /************************************/
 //blackhole
@@ -108,7 +123,7 @@
 /************************************/
 #define myMKS2COORDS
 #define MKSR0 0.
-#define MKSH0 0.875
+#define MKSH0 0.8
 #define MKSMY1 0.001
 #define MKSMY2 0.2
 #define MKSMP0 1.5
@@ -138,13 +153,13 @@
 #define MAXZ (PHIWEDGE/2.)
 
 //total resolution
-#define TNX 320 //32*10
-#define TNY 320 //64*5
-#define TNZ 1 //32 //2*8
+#define TNX 384 //32*10
+#define TNY 360 //64*5
+#define TNZ 48 // 1 //32 //2*8
 //number of tiles
-#define NTX 20
-#define NTY 40
-#define NTZ 2
+#define NTX 32
+#define NTY 30
+#define NTZ 1
 
 #define SPECIFIC_BC
 #define PERIODIC_ZBC
@@ -152,37 +167,36 @@
 /************************************/
 //output
 /************************************/
-#define DTOUT1 50.
-#define DTOUT2 100.
+#define DTOUT1 100.
+#define DTOUT2 500.
 
 
 #define BOXOUTPUT 0
-#define BOXVERTOUTPUT 0
+//#define BOXVERTOUTPUT 0
 //#undef CALCHRONTHEGO
-#define TSTART 64000.
-#define BOXR1 6.//(pow(pow(19.9,3.5)-10.5*(global_time-TSTART),1./3.5))//12. //v=-3./R^2.5
-#define BOXR2 7.//(pow(pow(20.,3.5)-10.5*(global_time-TSTART),1./3.5))//14.
+//#define TSTART 64000.
+//#define BOXR1 6.//(pow(pow(19.9,3.5)-10.5*(global_time-TSTART),1./3.5))//12. //v=-3./R^2.5
+//#define BOXR2 7.//(pow(pow(20.,3.5)-10.5*(global_time-TSTART),1./3.5))//14.
 //y for testing the runonthego feature of ./ana
 //#define NSTEPSTOP 2.
-#define PRINTEACHT
-#define BOXITH (320/2-31) //distance from eq.plane in cells  
+//#define PRINTEACHT
+//#define BOXITH (320/2-31) //distance from eq.plane in cells  
 //#define BOXITH (320/2) //distance from eq.plane in cells  
 
 
-#define OUTCOORDS KERRCOORDS                                                                    
+#define OUTCOORDS BLCOORDS                                                                    
 #define OUTVEL VEL4
-#define ALLSTEPSOUTPUT 0
+#define ALLSTEPSOUTPUT 1
 //#define RADOUTPUTINZAMO
 //#define RADOUTPUTWITHINDISK
-#define NOUTSTOP 5000
-#define SILOOUTPUT 0
+#define NOUTSTOP 1000
+#define SILOOUTPUT 1
 #define OUTOUTPUT 0
 #define COORDOUTPUT 0
-#define SIMOUTPUT 4 //1
-//#define GRTRANSSIMOUTPUT
+#define SIMOUTPUT 0
 #define RADOUTPUT 0 
-#define SCAOUTPUT 1
-#define AVGOUTPUT 0 
+#define SCAOUTPUT 0
+#define AVGOUTPUT 1 
 #define THOUTPUT 0
 #define THPROFRAD1US 30
 #define SILO2D_XZPLANE
@@ -192,14 +206,16 @@
 /************************************/
 #define RHOATMMIN  1.e-24
 #define UINTATMMIN  (calc_PEQ_ufromTrho(1.e10,RHOATMMIN,0,0,0))
-#define ERADATMMIN  (calc_LTE_EfromT(3.e6)/10)
+#define ATMTRADINIT 3.e6
+#define ERADATMMIN  (calc_LTE_EfromT(ATMTRADINIT)/10)
 #define GAMMA (5./3.)
 
 #define NTORUS 8
+#define QUADLOOPS
 
 #define RESTORETORUS
 //#define RESCALEDENSITY 0.9
-#define RESCALETORUS 0.8
+//#define RESCALETORUS 0.8
 
 #if(NTORUS==8) //thinnish, colder disk
 #define LT_KAPPA 6.e1
