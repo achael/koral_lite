@@ -2688,11 +2688,7 @@ int
 copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, long long N)
 {
   long long i;
-#ifdef APPLY_OMP_SIMD
-  #pragma omp parallel for simd
-#else
   #pragma omp parallel for private(i)
-#endif
   for (i=0;i<N;i++)
     uu2[i]=uu1[i]*factor;
   return 0;
@@ -2715,11 +2711,7 @@ int
 copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2)	
 {
   int ii;
-#ifdef APPLY_OMP_SIMD
-  #pragma omp parallel for simd
-#else
   #pragma omp parallel for private(ii)
-#endif
   for(ii=0;ii<Nloop_02;ii++) //domain + ghost cells, but no corners
   {
     int ix,iy,iz,iv;
@@ -2742,11 +2734,7 @@ int
 add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, long long N)
 {
   long long i;
-#ifdef APPLY_OMP_SIMD
-  #pragma omp parallel for simd private(i)
-#else
   #pragma omp parallel for private(i)
-#endif
   for (i=0;i<N;i++)
     uu3[i]=uu1[i]*f1+uu2[i]*f2;
   return 0;
@@ -2770,11 +2758,7 @@ int
 addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 {
   int ii;
-#ifdef APPLY_OMP_SIMD
-  #pragma omp parallel for simd
-#else
   #pragma omp parallel for
-#endif
   for(ii=0;ii<Nloop_0;ii++) //domain only
     {
       int ix,iy,iz,iv;
@@ -2797,11 +2781,7 @@ int
 add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4,long long N)
 {
   long long i;
-#ifdef APPLY_OMP_SIMD
-  #pragma omp parallel for simd private(i)
-#else
   #pragma omp parallel for private(i)
-#endif
   for (i=0;i<N;i++)
     uu4[i]=uu1[i]*f1+uu2[i]*f2+uu3[i]*f3;
   return 0;
@@ -2824,11 +2804,7 @@ int
 addi_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4)
 {
   int ii;
-#ifdef APPLY_OMP_SIMD
-  #pragma omp parallel for simd
-#else
   #pragma omp parallel for
-#endif
   for(ii=0;ii<Nloop_0;ii++) //domain only
     {
       int ix,iy,iz,iv;
@@ -2970,11 +2946,7 @@ int set_bc(ldouble t,int ifinit)
   int ii;
   
   //first fill the GC with no corners
-#ifdef APPLY_OMP_SIMD
-  #pragma omp parallel for simd schedule(static)
-#else
   #pragma omp parallel for schedule(static)
-#endif
   for(ii=0;ii<Nloop_2;ii++) //ghost cells only, no corners
     {
       int ix,iy,iz,iv;
@@ -5563,7 +5535,12 @@ return 0;
 #ifdef CORRECT_NSSURFACE
 int
 correct_nssurface()
-{   
+{
+#ifdef FORCEFREE
+  printf("ERROR! correct_nssurface not implemented for FORCEFREE\n");
+  exit(-1);
+#endif
+  
     #ifdef MPI
     if(TI != 0) return 0; // only first X cells in the first radial tile do fixup
     #endif
@@ -5750,6 +5727,12 @@ correct_polaraxis()
 			  pp[B3]=get_u(p,B3,ix,iysrc,iz);
 			  pp[B2]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,B2,ix,iysrc,iz);
 #endif
+#ifdef FORCEFREE
+			  //force-free velocities
+			  pp[VXFF]=get_u(p,VXFF,ix,iysrc,iz);
+			  pp[VZFF]=get_u(p,VZFF,ix,iysrc,iz);
+			  pp[VYFF]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,VYFF,ix,iysrc,iz);
+#endif			  
 #endif
 
 #ifdef RADIATION
@@ -5830,6 +5813,12 @@ correct_polaraxis()
 			  pp[B3]=get_u(p,B3,ix,iysrc,iz);
 			  pp[B2]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,B2,ix,iysrc,iz);
 #endif
+#ifdef FORCEFREE
+			  //force-free velocities
+			  pp[VXFF]=get_u(p,VXFF,ix,iysrc,iz);
+			  pp[VZFF]=get_u(p,VZFF,ix,iysrc,iz);
+			  pp[VYFF]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,VYFF,ix,iysrc,iz);
+#endif			  			  
 #endif
 
 
@@ -5921,6 +5910,13 @@ correct_polaraxis()
 		      pp[B1]=fabs((R-Raxis)/(Rsrc-Raxis))*get_u(p,B1,ixsrc,iy,iz);
 		      
 #endif
+#ifdef FORCEFREE
+		      //force-free velocities
+		      pp[VYFF]=get_u(p,VYFF,ixsrc,iy,iz);
+		      pp[VZFF]=get_u(p,VZFF,ixsrc,iy,iz);
+		      pp[VXFF]=fabs((R-Raxis)/(Rsrc-Raxis))*get_u(p,VXFF,ixsrc,iy,iz);
+
+#endif
 #endif
 	
 
@@ -5971,6 +5967,10 @@ correct_polaraxis()
 int
 correct_polaraxis_3d()
 {
+#ifdef FORCEFREE
+  printf("ERROR! correct_polaraxis_3d not implemented for FORCEFREE\n");
+  exit(-1);
+#endif
       int nc=NCCORRECTPOLAR; //correct velocity in nc most polar cells;
 
       //spherical like coords
@@ -6054,23 +6054,6 @@ correct_polaraxis_3d()
 			    vph/=sqrt(geom.gg[3][3]);
 
 			    ucon[1]=vr; ucon[2]=vth; ucon[3]=vph;
-			    /*
-			      ldouble xxvec[4],xxvecBL[4];
-			      get_xx(ix,iy,iz,xxvec);
-			      coco_N(xxvec,xxvecBL,MYCOORDS,BLCOORDS);
-			      printf("%d > %e %e %e\n",ix,r,th,ph);
-			      print_4vector(xxvec);
-			      print_4vector(xxvecBL);
-			      print_metric(geomBL.gg);
-			      print_metric(geom.gg);
-			      print_4vector(ucon);
-			    */
-
-			    //conv_vels(ucon,ucon,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
-			    //trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
-			    //conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
-			    //			  print_4vector(ucon);
-			    //getch();
 
 			    pp[VX]=ucon[1];
 			    pp[VY]=ucon[2];
@@ -6111,12 +6094,7 @@ correct_polaraxis_3d()
 			    vr/=sqrt(geom.gg[1][1]);
 			    vth/=sqrt(geom.gg[2][2]);
 			    vph/=sqrt(geom.gg[3][3]);
-			    //if(ic==0 && ix==10)
-			    //  printf("1 %d > %e %e | %e %e %e\n",iy,vth,sqrt(geom.gg[2][2]),vx,vy,vz);
 			    ucon[1]=vr; ucon[2]=vth; ucon[3]=vph;
-			    //conv_vels(ucon,ucon,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
-			    //trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
-			    //conv_vels(ucon,ucon,VEL4,VELPRIMRAD,geom.gg,geom.GG);
 			  
 			    pp[FX]=ucon[1];
 			    pp[FY]=ucon[2];

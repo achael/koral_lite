@@ -2,7 +2,7 @@
 
 ifneq ($(SERIAL),1)
 CC=mpicc 
-CFLAGS=-O3 -DMPI
+CFLAGS=-O3 -DMPI -fcommon
 
 else
 //CC=gcc
@@ -13,7 +13,7 @@ else
 -fsanitize=address -fno-omit-frame-pointer
 
 CC=/usr/bin/h5cc
-CFLAGS = -O3 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp -fcommon
+CFLAGS = -O3 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -w -fopenmp -fcommon
 
 endif
 

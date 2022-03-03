@@ -217,7 +217,12 @@
 
 //number of magneto-hydro variables
 #ifdef MAGNFIELD
+#ifdef FORCEFREE
+#define NVMHD (NVHD+6)
+#else
 #define NVMHD (NVHD+3)
+#endif 
+
 #else
 #define NVMHD (NVHD)
 #endif

@@ -923,7 +923,11 @@ solve_the_problem(ldouble tstart, char* folder)
           #if(SIMOUTPUT!=0) //sim files
 	  fprint_simplefile(tstart,nfout1,folder,"sim");
           #endif
-      
+
+          #if(PRIMOUTPUT!=0)  //prim output
+          fprint_primitive_file(t,nfout1,folder,"prim");
+          #endif
+
 	  #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum
           fprint_relel_spectrum(t,NTH_SPEC_IX,NTH_SPEC_IY,NTH_SPEC_IZ,nfout1,folder,"spe",0);
           #endif

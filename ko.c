@@ -112,6 +112,7 @@ main(int argc, char **argv)
 #endif 
 
   //print scalings GU->CGS
+  if(PROCID==0) printf("NVHD %d NVMHD %d NV %d\n",NVHD,NVMHD,NV); 
   if(PROCID==0) print_scalings();
   //exit(1);
 
@@ -466,6 +467,10 @@ main(int argc, char **argv)
       
     #if(SIMOUTPUT!=0) //simple files
     fprint_simplefile(tstart,nfout1,folder,"sim");
+    #endif
+
+    #if(PRIMOUTPUT!=0) // primitive file
+    fprint_primitive_file(tstart,nfout1,folder,"prim");
     #endif
 
     #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum

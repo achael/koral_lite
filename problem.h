@@ -144,13 +144,29 @@
 //140 RADSURVEY -- radiative parameter survey
 //141 KEPINF -- INFDISK modified for injecting keplerian 
 //142 PARTIALTDE -- INFDISK modified for partial TDE binding energy distribution non-constant
+//143 FFTESTS -- Force Free tests
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 140
+#define PROBLEM 132 //140
+
+
+#if(PROBLEM==143)
+#define PR_DEFINE "PROBLEMS/FFTESTS/define.h"
+#define PR_BC "PROBLEMS/FFTESTS/bc.c"
+#define PR_INIT "PROBLEMS/FFTESTS/init.c"
+#define PR_KAPPAES "PROBLEMS/FFTESTS/kappaes.c"
+#define PR_OUT2GIF_2D "PROBLEMS/FFTESTS/out2gif_2d.c"
+#define PR_OUT2GIF_1D "PROBLEMS/FFTESTS/out2gif_1d.c"
+#define PR_DUMP "PROBLEMS/FFTESTS/dump.c"
+#define PR_FINGER "PROBLEMS/FFTESTS/finger.c"
+#define PR_TOOLS "PROBLEMS/FFTESTS/tools.c"
+#define PR_PREPINIT "PROBLEMS/FFTESTS/prepinit.c"
+#define PR_POSTINIT "PROBLEMS/FFTESTS/postinit.c"
+#endif
 
 #if(PROBLEM==142)
 
@@ -294,7 +310,7 @@
 //#define PR_OUT2GIF_1D "PROBLEMS/MONOPOLE_2D/out2gif_1d.c"
 //#define PR_DUMP "PROBLEMS/MONOPOLE_2D/dump.c"
 //#define PR_TOOLS "PROBLEMS/MONOPOLE_2D/tools.c"
-//#define PR_POSTINIT "PROBLEMS/MAGDONUT/postinit.c"
+#define PR_POSTINIT "PROBLEMS/MONOPOLE_2D/postinit.c"
 #endif
 
 #if(PROBLEM==131)

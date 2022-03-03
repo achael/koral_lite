@@ -8,7 +8,7 @@
 /* calculate both magnetic field four-vectors and bsq knowing gas four-velocity ucov */
 //***********************************************************************
 
-void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+void calc_bcon_bcov_bsq_from_4vel(ldouble *pp, ldouble *ucon, ldouble *ucov, void* ggg,
 				  ldouble *bcon, ldouble *bcov, ldouble *bsq)
 {
 
@@ -17,23 +17,20 @@ void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, voi
   = (struct geometry *) ggg;
 
   // First calculate bcon0
-  bcon[0] = pr[B1]*ucov[1] + pr[B2] * ucov[2] + pr[B3] * ucov[3] ;
+  bcon[0] = pp[B1]*ucov[1] + pp[B2] * ucov[2] + pp[B3] * ucov[3] ;
   
   // Then spatial components of bcon
   
 #ifdef NONRELMHD
   for(j = 1; j < 4; j++)
-    bcon[j] = pr[B1-1+j]; //b^i=B^i
+    bcon[j] = pp[B1-1+j]; //b^i=B^i
 
 #else  // relativistic case
   
   ldouble u0inv = 1. / ucon[0];
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(j=1;j<4;j++)
-    bcon[j] = (pr[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
+    bcon[j] = (pp[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
   
 #endif //NONRELMHD
   
@@ -48,25 +45,22 @@ void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, voi
 /* calculate magnetic field four-vector knowing gas four-velocity ucov */
 //***********************************************************************
 
-void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon)
+void calc_bcon_4vel(double *pp, double *ucon, double *ucov, double *bcon)
 {
   int j;
   
-  bcon[0] = pr[B1]*ucov[1] + pr[B2]*ucov[2] + pr[B3]*ucov[3] ;
+  bcon[0] = pp[B1]*ucov[1] + pp[B2]*ucov[2] + pp[B3]*ucov[3] ;
 
 #ifdef NONRELMHD
   for(j=1;j<4;j++)
-    bcon[j] = pr[B1-1+j]; //b^i=B^i
+    bcon[j] = pp[B1-1+j]; //b^i=B^i
 
 #else  // relativistic case
 
   ldouble u0inv = 1. / ucon[0];
 
-#ifdef APPLY_OMP_SIMD
- //#pragma omp simd
-#endif
   for(j=1;j<4;j++)
-      bcon[j] = (pr[B1-1+j] + bcon[0]*ucon[j]) * u0inv ;
+      bcon[j] = (pp[B1-1+j] + bcon[0]*ucon[j]) * u0inv ;
   
 #endif //NONRELMHD
 
@@ -77,8 +71,8 @@ void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon)
 //***********************************************************************
 /* calculate B^i from bcon and gas four-velocity ucon */
 //***********************************************************************
-
-void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon)
+// ANDREW only used once
+void calc_Bcon_4vel(double *pp, double *ucon, double *bcon, double *Bcon)
 {
   int j;
   

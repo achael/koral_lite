@@ -1332,10 +1332,10 @@ implicit_apply_constraints(ldouble *pp, ldouble *uu, ldouble *uu0, void* ggg, in
     p2u_mhd(pp,uu,geom);
 
     //make opposite changes in the RAD conserved quantities
-    uu[EE0] = uu0[EE0] - (uu[1]-uu0[1]);
-    uu[FX0] = uu0[FX0] - (uu[2]-uu0[2]);
-    uu[FY0] = uu0[FY0] - (uu[3]-uu0[3]);
-    uu[FZ0] = uu0[FZ0] - (uu[4]-uu0[4]);
+    uu[EE0] = uu0[EE0] - (uu[UU]-uu0[UU]);
+    uu[FX0] = uu0[FX0] - (uu[VX]-uu0[VX]);
+    uu[FY0] = uu0[FY0] - (uu[VY]-uu0[VY]);
+    uu[FZ0] = uu0[FZ0] - (uu[VZ]-uu0[VZ]);
 
     //and invert back to primitives
     u2pret=u2p_rad(uu,pp,geom,corr);
@@ -1380,10 +1380,10 @@ implicit_apply_constraints(ldouble *pp, ldouble *uu, ldouble *uu0, void* ggg, in
     
     //make opposite changes in the MHD conserved quantities
     uu[RHO]=uu0[RHO];
-    uu[1] = uu0[1] - (uu[EE0]-uu0[EE0]);
-    uu[2] = uu0[2] - (uu[FX0]-uu0[FX0]);
-    uu[3] = uu0[3] - (uu[FY0]-uu0[FY0]);
-    uu[4] = uu0[4] - (uu[FZ0]-uu0[FZ0]);
+    uu[UU] = uu0[UU] - (uu[EE0]-uu0[EE0]);
+    uu[VX] = uu0[VX] - (uu[FX0]-uu0[FX0]);
+    uu[VY] = uu0[VY] - (uu[FY0]-uu0[FY0]);
+    uu[VZ] = uu0[VZ] - (uu[FZ0]-uu0[FZ0]);
 
     //copy B field to uu
     #ifdef MAGNFIELD
@@ -1676,13 +1676,13 @@ f_implicit_lab_4dprim_with_state(ldouble *uu, ldouble *pp, void *sss,
   //errors in momenta -- always in lab frame
   if(whichprim==MHD) //mhd-primitives
   {
-    f[1] = uu[2] - uu0[2] - dt * gdetu * Gi[1];
-    f[2] = uu[3] - uu0[3] - dt * gdetu * Gi[2];
-    f[3] = uu[4] - uu0[4] - dt * gdetu * Gi[3];
+    f[1] = uu[VX] - uu0[VX] - dt * gdetu * Gi[1];
+    f[2] = uu[VY] - uu0[VY] - dt * gdetu * Gi[2];
+    f[3] = uu[VZ] - uu0[VZ] - dt * gdetu * Gi[3];
     
-    if(fabs(f[1])>SMALL) err[1]=fabs(f[1])/(1.e-20*uu[UU]+fabs(uu[2])+fabs(uu0[2])+fabs(dt*gdetu*Gi[1])); else err[1]=0.;
-    if(fabs(f[2])>SMALL) err[2]=fabs(f[2])/(1.e-20*uu[UU]+fabs(uu[3])+fabs(uu0[3])+fabs(dt*gdetu*Gi[2])); else err[2]=0.;
-    if(fabs(f[3])>SMALL) err[3]=fabs(f[3])/(1.e-20*uu[UU]+fabs(uu[4])+fabs(uu0[4])+fabs(dt*gdetu*Gi[3])); else err[3]=0.;
+    if(fabs(f[1])>SMALL) err[1]=fabs(f[1])/(1.e-20*uu[UU]+fabs(uu[VX])+fabs(uu0[VX])+fabs(dt*gdetu*Gi[1])); else err[1]=0.;
+    if(fabs(f[2])>SMALL) err[2]=fabs(f[2])/(1.e-20*uu[UU]+fabs(uu[VY])+fabs(uu0[VY])+fabs(dt*gdetu*Gi[2])); else err[2]=0.;
+    if(fabs(f[3])>SMALL) err[3]=fabs(f[3])/(1.e-20*uu[UU]+fabs(uu[VZ])+fabs(uu0[VZ])+fabs(dt*gdetu*Gi[3])); else err[3]=0.;
   }
   else if(whichprim==RAD) //rad-primitives
   {
@@ -2711,9 +2711,6 @@ calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
   ldouble Ruu = Ehatrad;
    
   //Calculate G thermal in lab frame
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i = 0; i < 4; i++)
   {
     ldouble Ru = 0.;
@@ -2812,9 +2809,9 @@ calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], int 
   
   //the four-velocity of fluid in lab frame
   ldouble ucon[4],utcon[4],ucov[4],vpr[3],vgas[3];
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
   conv_vels_both(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
   vgas[0]=utcon[1];
   vgas[1]=utcon[2];
@@ -2822,7 +2819,7 @@ calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4], int 
   
   //gas properties
   ldouble rho=pp[RHO];
-  ldouble u=pp[1];
+  ldouble u=pp[UU];
   ldouble p= (gamma-1.)*(ldouble)u;
   ldouble Ti,Te;
   ldouble Tgas=calc_PEQ_Teifrompp(pp,&Te,&Ti,geom->ix,geom->iy,geom->iz);
@@ -3071,9 +3068,6 @@ calc_Ehat_from_Rij_ucov(double Rij[4][4], double uffcov[4], ldouble *Ehat)
   
   *Ehat = 0.;
   for(i=0;i<4;i++)
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
     for(j=0;j<4;j++)
       *Ehat+=Rij[i][j]*uffcov[i]*uffcov[j];
   
@@ -3540,9 +3534,9 @@ calc_ncompt_Thatrad_full(ldouble *pp, void* ggg)
 
   //the four-velocity of fluid 
   ldouble uffcon[4],utcon[4],uffcov[4],vpr[3];
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
   conv_vels_both(utcon,uffcon,uffcov,VELPRIM,VEL4,gg,GG);
   
   //R^ab u_a u_b = Erad in fluid frame
@@ -3580,9 +3574,9 @@ calc_ncompt_Thatrad(ldouble *pp, void* ggg, ldouble Ehatrad)
   
   //the four-velocity of fluid in lab frame
   ldouble uffcon[4],utcon[4],uffcov[4],vpr[3];
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
   conv_vels_both(utcon,uffcon,uffcov,VELPRIM,VEL4,gg,GG);
 
   //the four-velocity of radiation in lab frame
@@ -3688,9 +3682,9 @@ calc_ncompt_nphhat(ldouble *pp, void* ggg)
   
   //the four-velocity of fluid in lab frame
   ldouble uffcon[4],utcon[4],uffcov[4],vpr[3];
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
   conv_vels_both(utcon,uffcon,uffcov,VELPRIM,VEL4,gg,GG);
 
   //the four-velocity of radiation in lab frame
@@ -4806,9 +4800,6 @@ calc_Rij_visc(ldouble *pp, void* ggg, ldouble Rvisc[][4], int *derdir)
   
   for(i=0;i<4;i++)
   {
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
     for(j=0;j<4;j++)
     {
       Rvisc[i][j]=0.;
@@ -5256,15 +5247,15 @@ test_solve_implicit_lab()
   struct geometry geom;
   fill_geometry(TNX-1,TNY/2,0,&geom);
 
-  pp0[0]=1.e-21;
-  pp0[1]=1.e-23;//calc_PEQ_ufromTrho(1.e9,pp0[0]);
-  pp0[2]=0.00001;
-  pp0[3]=0.0;
-  pp0[4]=0.0;
-  pp0[5]=calc_Sfromu(pp0[0],pp0[1],TNX-1,TNY/2,0);
+  pp0[RHO]=1.e-21;
+  pp0[UU]=1.e-23;
+  pp0[VX]=0.00001;
+  pp0[VY]=0.0;
+  pp0[VZ]=0.0;
+  pp0[ENTR]=calc_Sfromu(pp0[RHO],pp0[UU],TNX-1,TNY/2,0);
 
   pp0[B1]=pp0[B2]=pp0[B3]=0.;
-  pp0[EE]=1.e-23;//calc_LTE_Efromurho(pp0[1],pp0[0]);//1.e-21;
+  pp0[EE]=1.e-23;
   pp0[FX]=0.00001;
   pp0[FY]=0.0;
   pp0[FZ]=0.0;
@@ -5287,7 +5278,7 @@ test_solve_implicit_lab()
   PLOOP(iv) pp[iv]=pp0[iv];
 
   print_primitives(pp0);
-  printf("gas temp: %e\nrad temp: %e\n",calc_PEQ_Tfromurho(pp0[1],pp0[0],geom.ix,geom.iy,geom.iz),calc_LTE_TfromE(pp0[EE]));
+  printf("gas temp: %e\nrad temp: %e\n",calc_PEQ_Tfromurho(pp0[UU],pp0[RHO],geom.ix,geom.iy,geom.iz),calc_LTE_TfromE(pp0[EE]));
 
   ldouble del4[NRADVAR];
   int verbose=0;
@@ -5331,7 +5322,6 @@ test_solve_implicit_lab()
   PLOOP(iv) pp[iv]=pp0[iv];
   if(1)
     { 
-  
       params[0]=MHD;
       params[1]=RADIMPLICIT_ENERGYEQ;
       params[2]=RADIMPLICIT_LAB;
@@ -5340,7 +5330,7 @@ test_solve_implicit_lab()
       params[6]=0; //ifelectron
       solve_implicit_lab_4dprim(uu0,pp0,&geom,dt,verbose,params,pp);
       print_primitives(pp);
-      //printf("gas temp: %e\nrad temp: %e\n",calc_PEQ_Tfromurho(pp[1],pp[0]),calc_LTE_TfromE(pp[EE]));
+      printf("gas temp: %e\nrad temp: %e\n",calc_PEQ_Tfromurho(pp[UU],pp[RHO]),calc_LTE_TfromE(pp[EE]));
     }
 #endif
   exit(1);
@@ -5379,12 +5369,12 @@ test_Gi()
   printf("Giff[0] = %.3e\n",Gic[0]*conv);
   exit(1);
 
-  pp0[0]=9.253e-9;
-  pp0[1]=calc_PEQ_ufromTrho(2.478e9,pp0[RHO],geom.ix,geom.iy,geom.iz);
+  pp0[RHO]=9.253e-9;
+  pp0[UU]=calc_PEQ_ufromTrho(2.478e9,pp0[RHO],geom.ix,geom.iy,geom.iz);
   pp0[VX]=-1.04792e-01; 
   pp0[VY]=2.69291e-03;
   pp0[VZ]=1.62996e-02;
-  pp0[5]=calc_Sfromu(pp0[0],pp0[1],geom.ix,geom.iy,geom.iz);
+  pp0[ENTR]=calc_Sfromu(pp0[RHO],pp0[UU],geom.ix,geom.iy,geom.iz);
   pp0[EE]=1.0*calc_LTE_Efromurho(pp0[UU],pp0[RHO]);
   pp0[FX]=0.01;
   pp0[FY]=0.;
@@ -5457,9 +5447,9 @@ test_solve_implicit_lab_file()
   ldouble vcon[4],ucon[4],ucov[4];
 
   //converting to 4-velocity
-  vcon[1]=pp0[2];
-  vcon[2]=pp0[3];
-  vcon[3]=pp0[4];
+  vcon[1]=pp0[VX];
+  vcon[2]=pp0[VY];
+  vcon[3]=pp0[VZ];
   vcon[0]=0.;  
   conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,geom.gg,geom.GG);
   print_4vector(ucon);
@@ -5533,7 +5523,7 @@ test_jon_solve_implicit_lab()
       ucon[3]=pp[VZ];
       conv_vels(ucon,ucon,VEL4,VEL4,geom.gg,geom.GG);
       geom.alpha=sqrt(-1./geom.GG[0][0]);
-      pp[5]=calc_Sfromu(pp[0],pp[1],geom.ix,geom.iy,geom.iz);
+      pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],geom.ix,geom.iy,geom.iz);
 
       //destroy magn field
       //uu[B1]=uu[B2]=uu[B3]=pp[B1]=pp[B2]=pp[B3]=0.;

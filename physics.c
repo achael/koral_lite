@@ -31,15 +31,13 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
 #ifndef FORCEGAMMAGASFIXED
 #ifdef CONSISTENTGAMMA
   gamma = pick_gammagas(geom->ix,geom->iy,geom->iz);
-  //ANDREW -- can we do this consistently instead?
-  //gamma = 1. + (state->pi+state->pe+state->penth)/(state->ue+state->ui+state->uenth);
 #endif
 #endif
   pgas = (gamma - 1.) * uint;
   state->gamma = gamma;
   state->pgas = pgas;
 
-  //ANDREW this is in different units than in pp[ENTR]!
+  //ANDREW gas entropy is in different units than in pp[ENTR]!
   Sgas = kB_over_mugas_mp*calc_Sfromu(rho, uint, geom->ix,geom->iy,geom->iz);
 
   Tgas = calc_PEQ_Teifrompp(pp,&Te,&Ti,geom->ix,geom->iy,geom->iz);
@@ -52,15 +50,11 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
   ldouble pnth=0.;
   ldouble unth=0.;
 #ifdef RELELECTRONS
-  nnth = calc_relel_ne(pp);
-  //if(nnth/netot > MAX_RELEL_FRAC_N) nnth = MAX_RELEL_FRAC_N*netot; 
- 
+  nnth = calc_relel_ne(pp); 
   unth = calc_relel_uint(pp);
-  //if (unth/uint > MAX_RELEL_FRAC_U) unth = MAX_RELEL_FRAC_U*uint;
-
   pnth = calc_relel_p(pp);
-  //if (pnth/pgas > MAX_RELEL_FRAC_P) pnth = MAX_RELEL_FRAC_P*pgas;
 #endif
+  
   state->nenth=nnth;
   state->uenth=unth;
   state->penth=pnth;
@@ -110,7 +104,7 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
 #ifdef MAGNFIELD
   
   calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
-  calc_Bcon_4vel(pp, ucon, bcon, Bcon);
+  calc_Bcon_4vel(pp,ucon, bcon, Bcon);
   
   DLOOPA(i)
   {
@@ -502,7 +496,7 @@ calc_wavespeeds_lr_pure(ldouble *pp,void *ggg,ldouble *aaa)
 
   ldouble vtot2; //total characteristic velocity
   vtot2=cs2 + va2 - cs2*va2;
-
+  
 #ifdef NONRELMHD //non-rel version
   
   ldouble vx,vy,vz,cs,csx,csy,csz;
@@ -819,10 +813,11 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   dlgdet[1]=gg[1][4]; //D[gdet,x2]/gdet
   dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
   
-  ldouble ut;
-  ldouble T[4][4];
+  
+  
 
   //calculating stress energy tensor components
+  ldouble T[4][4];
   calc_Tij(pp,geom,T);
   indices_2221(T,T,gg);
 
@@ -840,10 +835,10 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   ldouble rho=pp[RHO];
   ldouble u=pp[UU];
   ldouble vcon[4],ucon[4];
-  vcon[1]=pp[2];
-  vcon[2]=pp[3];
-  vcon[3]=pp[4];
-  ldouble S=pp[5];
+  vcon[1]=pp[VX];
+  vcon[2]=pp[VY];
+  vcon[3]=pp[VZ];
+  ldouble S=pp[ENTR];
 
   //converting to 4-velocity
   conv_vels(vcon,ucon,VELPRIM,VEL4,gg,GG);
@@ -862,10 +857,10 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   for(k=0;k<4;k++)
     for(l=0;l<4;l++)
       {
-	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
+	ss[UU]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
+	ss[VX]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
+	ss[VY]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
+	ss[VZ]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
 	ss[EE0]+=gdetu*Rij[k][l]*get_gKr(l,0,k,ix,iy,iz);
 	ss[FX0]+=gdetu*Rij[k][l]*get_gKr(l,1,k,ix,iy,iz);
 	ss[FY0]+=gdetu*Rij[k][l]*get_gKr(l,2,k,ix,iy,iz);
@@ -884,12 +879,12 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
 
   for(l=1;l<4;l++)
     {
-      ss[0]+=-dlgdet[l-1]*rho*ucon[l];
-      ss[1]+=-dlgdet[l-1]*(T[l][0]+rho*ucon[l]);
-      ss[2]+=-dlgdet[l-1]*(T[l][1]);
-      ss[3]+=-dlgdet[l-1]*(T[l][2]);
-      ss[4]+=-dlgdet[l-1]*(T[l][3]);
-      ss[5]+=-dlgdet[l-1]*S*ucon[l];
+      ss[RHO]+=-dlgdet[l-1]*rho*ucon[l];
+      ss[UU]+=-dlgdet[l-1]*(T[l][0]+rho*ucon[l]);
+      ss[VX]+=-dlgdet[l-1]*(T[l][1]);
+      ss[VY]+=-dlgdet[l-1]*(T[l][2]);
+      ss[VZ]+=-dlgdet[l-1]*(T[l][3]);
+      ss[ENTR]+=-dlgdet[l-1]*S*ucon[l];
       ss[EE0]+=-dlgdet[l-1]*(Rij[l][0]);
       ss[FX0]+=-dlgdet[l-1]*(Rij[l][1]);
       ss[FY0]+=-dlgdet[l-1]*(Rij[l][2]);
@@ -913,32 +908,59 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
     }
 #endif //GDETIN
 
-#else //ndef RADIATION , pure hydro
+#else //no RADIATION , pure hydro
 
   //terms with Christoffels
   for(k=0;k<4;k++)
     for(l=0;l<4;l++)
       {
-	ss[1]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
-	ss[2]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
-	ss[3]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
-	ss[4]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
+	ss[UU]+=gdetu*T[k][l]*get_gKr(l,0,k,ix,iy,iz);
+	ss[VX]+=gdetu*T[k][l]*get_gKr(l,1,k,ix,iy,iz);
+	ss[VY]+=gdetu*T[k][l]*get_gKr(l,2,k,ix,iy,iz);
+	ss[VZ]+=gdetu*T[k][l]*get_gKr(l,3,k,ix,iy,iz);
       }
 
   //terms with dloggdet  
 #if (GDETIN==0)
   for(l=1;l<4;l++)
     {
-      ss[0]+=-dlgdet[l-1]*rho*ucon[l];
-      ss[1]+=-dlgdet[l-1]*(T[l][0]+rho*ucon[l]);
-      ss[2]+=-dlgdet[l-1]*(T[l][1]);
-      ss[3]+=-dlgdet[l-1]*(T[l][2]);
-      ss[4]+=-dlgdet[l-1]*(T[l][3]);
-      ss[5]+=-dlgdet[l-1]*S*ucon[l];
+      ss[RHO]+=-dlgdet[l-1]*rho*ucon[l];
+      ss[UU]+=-dlgdet[l-1]*(T[l][0]+rho*ucon[l]);
+      ss[VX]+=-dlgdet[l-1]*(T[l][1]);
+      ss[VY]+=-dlgdet[l-1]*(T[l][2]);
+      ss[VZ]+=-dlgdet[l-1]*(T[l][3]);
+      ss[ENTR]+=-dlgdet[l-1]*S*ucon[l];
     }   
 #endif
 #endif //RADIATION
 
+#ifdef FORCEFREE
+  //calculating stress energy tensor components
+  ldouble T_ff[4][4];
+  calc_Tij_ff(pp,geom,T_ff);
+  indices_2221(T_ff,T_ff,gg);
+
+  for(ii=0;ii<4;ii++)
+    for(jj=0;jj<4;jj++)
+      {
+	if(isnan(T_ff[ii][jj])) 
+	  {
+	    printf("%d %d %e\n",ii,jj,T[ii][jj]);
+	    my_err("nan in force free metric_source_terms\n");
+	  }
+      }
+
+  //terms with Christoffels
+  for(k=0;k<4;k++)
+    for(l=0;l<4;l++)
+      {
+	ss[VXFF]+=gdetu*T_ff[k][l]*get_gKr(l,1,k,ix,iy,iz);
+	ss[VYFF]+=gdetu*T_ff[k][l]*get_gKr(l,2,k,ix,iy,iz);
+	ss[VZFF]+=gdetu*T_ff[k][l]*get_gKr(l,3,k,ix,iy,iz);
+      }
+
+#endif //FORCEFREE
+  
 #ifdef SHEARINGBOX 
   //signs the same despite rho u^i u_t evolved because in koral source terms on lhs
   
@@ -1132,6 +1154,7 @@ int f_general_source_term(int ix, int iy, int iz,ldouble *ss)
 //***************************************************************
 // calculates fluxes at faces
 //***************************************************************
+
 int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int lr)
 {  
 
@@ -1153,60 +1176,58 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
   gdetu=1.;
   #endif
 
-  //calculating Tij
+  //calculating stress energy tensor Tij
   ldouble T[4][4];
   calc_Tij(pp,&geom,T);
   indices_2221(T,T,gg);//T^ij --> T^i_j
 
   //primitives
-#ifdef EVOLVEELECTRONS
+  #ifdef EVOLVEELECTRONS
   ldouble Se=pp[ENTRE]; //entropy of electrons
   ldouble Si=pp[ENTRI]; //entropy of ions
-#endif
+  #endif
   ldouble rho=pp[RHO];
   ldouble u=pp[UU];
-
+  ldouble S=pp[ENTR];
+  
   ldouble vcon[4],ucon[4],ucov[4],bcon[4],bcov[4],bsq=0.;
-
-  vcon[1]=pp[2];
-  vcon[2]=pp[3];
-  vcon[3]=pp[4];
-  ldouble S=pp[5];
+  vcon[1]=pp[VX];
+  vcon[2]=pp[VY];
+  vcon[3]=pp[VZ];
 
   //converting to 4-velocity
   conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 
-#ifdef NONRELMHD
+  #ifdef NONRELMHD
   ucon[0]=1.;
   ucov[0]=-1.;
-#endif
+  #endif
 
-#ifdef MAGNFIELD
+  #ifdef MAGNFIELD
   calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
-#endif
+  #endif
 
   ldouble gamma=GAMMA;
   #ifdef CONSISTENTGAMMA
   gamma=pick_gammagas(ix,iy,iz);
   #endif
-  ldouble gammam1=gamma-1.;
 
   ldouble pre=(gamma-1.)*u; 
   ldouble w=rho+u+pre;
   ldouble eta=w+bsq;
   ldouble etap = u+pre+bsq; //eta-rho
 
-  int ii, jj, irf;
+  int ii, jj;
   for(ii=0;ii<4;ii++)
     for(jj=0;jj<4;jj++)
     {
 	if(isnan(T[ii][jj])) 
 	{
 	    printf("%d > nan tmunu: %d %d %e at %d %d %d\n",PROCID,ii,jj,T[ii][jj],ix+TOI,iy+TOJ,iz+TOK);
-	    printf("%d > nan tmunu: %e %e %e %e\n",PROCID,gamma,pre,w,eta);
-	    print_4vector(ucon);
-	    print_metric(geom.gg);
-	    print_Nvector(pp,NV);
+	    //printf("%d > nan tmunu: %e %e %e %e\n",PROCID,gamma,pre,w,eta);
+	    //print_4vector(ucon);
+	    //print_metric(geom.gg);
+	    //print_Nvector(pp,NV);
 	    my_err("nan in flux_prime\n");
 	    exit(1);
 	}
@@ -1218,24 +1239,24 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
   //fluxes
   //***************************************
   //hydro fluxes
-  ff[0]= gdetu*rho*ucon[idim+1];
+  ff[RHO] = gdetu*rho*ucon[idim+1];
+  ff[ENTR]= gdetu*S*ucon[idim+1];
+ 
+#if defined(NONRELMHD)
+  ff[UU]= gdetu*T[idim+1][0];
+#else
+  //ff[UU]= gdetu*(T[idim+1][0]+rho*ucon[idim+1]);
+  //to avoid slow cancellation use the more explicit form: 
+  ff[UU]= gdetu*(etap*ucon[idim+1]*ucov[0] + rho*ucon[idim+1]*utp1);
+  #ifdef MAGNFIELD
+  ff[UU]+= -gdetu*bcon[idim+1]*bcov[0];
+  #endif
+#endif
+
+  ff[VX]= gdetu*(T[idim+1][1]);
+  ff[VY]= gdetu*(T[idim+1][2]); 
+  ff[VZ]= gdetu*(T[idim+1][3]);
   
-  //ff[1]= gdetu*(T[idim+1][0]+rho*ucon[idim+1]);
-  //to avoid slow cancellation:
-  ff[1]= gdetu*(etap*ucon[idim+1]*ucov[0] + rho*ucon[idim+1]*utp1);
-#ifdef MAGNFIELD
-  ff[1]+= -gdetu*bcon[idim+1]*bcov[0];
-#endif
-
-  ff[2]= gdetu*(T[idim+1][1]);
-  ff[3]= gdetu*(T[idim+1][2]); 
-  ff[4]= gdetu*(T[idim+1][3]);
-  ff[5]= gdetu*S*ucon[idim+1];
-
-#ifdef NONRELMHD
-  ff[1]= gdetu*T[idim+1][0];
-#endif
-
 #ifdef EVOLVEELECTRONS
   ff[ENTRE]= gdetu*Se*ucon[idim+1]; 
   ff[ENTRI]= gdetu*Si*ucon[idim+1]; 
@@ -1262,7 +1283,29 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
   ff[B1]+=suppfac*gdetu*eterm[1];
   ff[B2]+=suppfac*gdetu*eterm[2];
   ff[B3]+=suppfac*gdetu*eterm[3];
+#endif 
 #endif
+
+#ifdef FORCEFREE
+  ldouble T_ff[4][4];
+  calc_Tij_ff(pp,&geom,T_ff);
+  indices_2221(T_ff,T_ff,gg);
+
+  for(ii=0;ii<4;ii++)
+    for(jj=0;jj<4;jj++)
+    {
+	if(isnan(T_ff[ii][jj])) 
+	{
+	    printf("%d > nan tmunu_ff: %d %d %e at %d %d %d\n",PROCID,ii,jj,T_ff[ii][jj],ix+TOI,iy+TOJ,iz+TOK);
+	    my_err("nan in force free flux_prime\n");
+	    exit(1);
+	}
+    }
+  
+  ff[VXFF]= gdetu*(T_ff[idim+1][1]);
+  ff[VYFF]= gdetu*(T_ff[idim+1][2]); 
+  ff[VZFF]= gdetu*(T_ff[idim+1][3]);
+
 #endif
 #endif
 
@@ -1306,7 +1349,6 @@ calc_Tij(ldouble *pp, void* ggg, ldouble T[][4])
   ucov[0]=-1.;
 #endif
 
-
 #ifdef MAGNFIELD
   calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
 #else
@@ -1318,22 +1360,13 @@ calc_Tij(ldouble *pp, void* ggg, ldouble T[][4])
   #ifdef CONSISTENTGAMMA
   gamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
   #endif
-  ldouble gammam1=gamma-1.;
 
   ldouble p=(gamma-1.)*uu; 
   ldouble w=rho+uu+p;
   ldouble eta=w+bsq;
   ldouble ptot=p+0.5*bsq;
 
-#ifndef NONRELMHD  
-  for(i=0;i<4;i++)
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
-    for(j=0;j<4;j++)
-      T[i][j]=eta*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
-
-#else
+#if defined(NONRELMHD) // non-relativistic
   
   ldouble v2=dot3nr(ucon,ucov);
 
@@ -1347,8 +1380,50 @@ calc_Tij(ldouble *pp, void* ggg, ldouble T[][4])
    for(i=1;i<4;i++)
      T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
 
-#endif  // ifndef NONRELMHD
+#else //normal GRMHD
+  for(i=0;i<4;i++)
+    for(j=0;j<4;j++)
+      T[i][j]=eta*ucon[i]*ucon[j] + ptot*GG[i][j] - bcon[i]*bcon[j];
 
+#endif 
+
+  return 0;
+}
+
+// force-free, or EM part of the stress-energy tensor only
+int
+calc_Tij_ff(ldouble *pp, void* ggg, ldouble T[][4])
+{
+  struct geometry *geom
+    = (struct geometry *) ggg;
+
+#ifdef FORCEFREE
+  ldouble (*gg)[5],(*GG)[5];
+  gg=geom->gg;
+  GG=geom->GG;
+
+  int iv,i,j;
+  ldouble utcon[4],ucon[4],ucov[4];  
+  ldouble bcon[4],bcov[4],bsq=0.;
+
+  // ANDREW TODO : which 4-velocity to use here generally? 
+  //get 4-velocity
+
+  utcon[0]=0.;
+  utcon[1]=pp[VXFF]; // or pp[VX] ? 
+  utcon[2]=pp[VYFF]; // or pp[VY] ? 
+  utcon[3]=pp[VZFF]; // or pp[VZ] ? 
+
+  conv_vels_both(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
+
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
+  
+  for(i=0;i<4;i++)
+    for(j=0;j<4;j++)
+      T[i][j]=bsq*ucon[i]*ucon[j] + 0.5*bsq*GG[i][j] - bcon[i]*bcon[j];
+
+
+#endif // FORCEFREE
   return 0;
 }
 
@@ -1694,7 +1769,7 @@ calc_ufromS3rho(ldouble S3,ldouble rho,int type,int ix,int iy,int iz)
 
 
 //**********************************************************************
-//updates entropy in the specified cell (p[5]) basing on new primitives
+//updates entropy in the specified cell (p[ENTR]) basing on new primitives
 //or stays with the old one if entropy u2p solver was involved
 // Ramesh: This function is called by init.c in HIGHZBHS;
 // we should change all the others

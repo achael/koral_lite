@@ -487,6 +487,12 @@ main(int argc, char **argv)
   fprint_simplefile(t,no2,"analysis",prefix);
 #endif
 
+  //prim output
+#if(PRIMOUTPUT!=0)	  
+  sprintf(prefix,"primavg%s%04d-",suffix,no1);  
+  fprint_primitive_file(t,no2,"analysis",prefix);
+#endif
+
   //Relativisitc electron spectrum output
 #if(RELELSPECTRUMOUTPUT==1)
   int nfout1=no2;

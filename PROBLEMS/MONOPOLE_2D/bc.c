@@ -2,6 +2,8 @@
 //int calc_bc(int ix,int iy,int iz,ldouble t,
 //	ldouble *uu,ldouble *pp,int ifinit,int BCtype)
 
+#define BCCOORDS KSCOORDS
+
 /**********************/
 //geometries
 ldouble gdet_src,gdet_bc,Fx,Fy,Fz,ppback[NV];
@@ -11,16 +13,16 @@ struct geometry geom;
 fill_geometry(ix,iy,iz,&geom);
 
 struct geometry geomBL;
-fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
+fill_geometry_arb(ix,iy,iz,&geomBL,BCCOORDS);
 
-ldouble gg[4][5],GG[4][5],ggsrc[4][5],eup[4][4],elo[4][4];
+ldouble gg[4][5],GG[4][5];
 pick_g(ix,iy,iz,gg);
 pick_G(ix,iy,iz,GG);
 
 /**********************/
 
 //radius
-if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
+  if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
   {
     iix=NX-1;
     iiy=iy;
@@ -32,54 +34,62 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
 	pp[iv]=get_u(p,iv,iix,iiy,iiz);
       }
 
+    //ANDREW TODO what to do about outer BC
+    /*
     //!! begin rescale
     //first transform to BL
-    trans_pmhd_coco(pp, pp, MYCOORDS,BLCOORDS, geom.xxvec,&geom,&geomBL);
-    
+    trans_pmhd_coco(pp, pp, MYCOORDS,BCCOORDS, geom.xxvec,&geom,&geomBL);
+
+    // boundary cell and scale factors
     struct geometry geombdBL;
-    fill_geometry_arb(iix,iiy,iiz,&geombdBL,BLCOORDS);
+    fill_geometry_arb(iix,iiy,iiz,&geombdBL,BCCOORDS);
     ldouble rghost = geomBL.xx;
     ldouble rbound = geombdBL.xx;
     ldouble deltar = rbound - rghost;
-    ldouble scale1 =  rbound*rbound/rghost/rghost;
-    ldouble scale2 = rbound/rghost;
+    ldouble scale1 =  rbound/rghost; //r^-1
+    ldouble scale2 =  rbound*rbound/rghost/rghost; //r^-2
+    ldouble scale3 =  rbound*rbound*rbound/rghost/rghost/rghost; //r^-3 -- inital atm
 
-    pp[RHO]*=scale1;
-    pp[UU] *=scale1;
+    //  bsq = br*br + r^2bth^2 + r^2*sin^2(th)*bph^2
+      
+    pp[RHO]*=scale3;//scale2;
+    pp[UU] *=scale3;//scale2;
     #ifdef MAGNFIELD
-    pp[B1] *=scale1;
-    pp[B2] *=scale2;
-    pp[B3] *=scale2;
+    pp[B1] *=scale2;
+    pp[B2] *=scale1;
+    pp[B3] *=scale1;
     #endif
-    //pp[VX] *=1.;
+    pp[VX] *=1.;
     pp[VY] *=scale1;
     pp[VZ] *=scale1;
     #ifdef RADIATION
-    pp[EE0] *=scale1;
-    //pp[FX0] *=1.;
-    pp[FY0] *=scale1;
-    pp[FZ0] *=scale1;
+    pp[EE0] *=scale2;
+    pp[FX0] *=1.;
+    pp[FY0] *=scale2;
+    pp[FZ0] *=scale2;
     #endif
     //transform back after rescaling
-    trans_pmhd_coco(pp, pp,BLCOORDS, MYCOORDS, geomBL.xxvec,&geomBL, &geom);
-    //!! end rescale
+    trans_pmhd_coco(pp, pp,BCCOORDS, MYCOORDS, geomBL.xxvec,&geomBL, &geom);
 
-    //checking for the gas inflow
+    //!! end rescale
+    /*
+    //check for gas inflow
     ldouble ucon[4]={0.,pp[VX],pp[VY],pp[VZ]};    
     conv_vels(ucon,ucon,VELPRIM,VEL4,geom.gg,geom.GG);
-    trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BLCOORDS);
-    if(ucon[1]<0.) //inflow, resseting to atmosphere
+    trans2_coco(geom.xxvec,ucon,ucon,MYCOORDS,BCCOORDS);
+    if(ucon[1]<0.) //inflow, reset to zero velocity
       {
 	//atmosphere in rho,uint and velocities and zero magn. field
 	//set_hdatmosphere(pp,xxvec,gg,GG,4);
 	ucon[1]=0.;
-	trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+	trans2_coco(geomBL.xxvec,ucon,ucon,BCCOORDS,MYCOORDS);
 	conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
 	pp[VX]=ucon[1];
 	pp[VY]=ucon[2];
 	pp[VZ]=ucon[3];//atmosphere in rho,uint and velocities and zero magn. field
       }
-
+    */
+    
     p2u(pp,uu,&geom);
     return 0;  
   }
@@ -91,7 +101,7 @@ if(BCtype==XBCHI) //outflow in magn, atm in rad., atm. in HD
 
       for(iv=0;iv<NV;iv++)
        {
-	 pp[iv]=get_u(p,iv,0,iiy,iiz);
+	 pp[iv]=get_u(p,iv,iix,iiy,iiz);
        }
 
      p2u(pp,uu,&geom);

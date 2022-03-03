@@ -1993,7 +1993,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD //need to flip sign of fluxes and velocities across pole, theta and phi
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2034,7 +2038,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD //need to flip sign of fluxes and velocities across pole, theta and phi
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2097,7 +2105,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD //need to flip sign of fluxes and velocities across pole, theta and phi
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2138,7 +2150,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2180,7 +2196,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD //need to flip sign of fluxes and velocities across pole, theta and phi
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2221,7 +2241,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2311,7 +2335,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD //need to flip sign of fluxes and velocities across pole, theta and phi
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2353,7 +2381,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD //need to flip sign of fluxes and velocities across pole, theta and phi
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif 
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2394,7 +2426,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif 
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2438,7 +2474,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2480,7 +2520,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2521,7 +2565,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2563,7 +2611,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2604,7 +2656,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2645,7 +2701,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2686,7 +2746,11 @@ mpi_savedata()
               {
                 jp = -j + (2*NY + NG - 1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2728,7 +2792,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif
@@ -2769,7 +2837,11 @@ mpi_savedata()
               {
                 jp = -j - (NG+1);
                 #ifdef MAGNFIELD
+		#ifdef FORCEFREE
+                if(iv==VY || iv==B2 || iv==VYFF || iv==FY0 || iv==VZ || iv==B3 || iv==VZFF || iv==FZ0)
+		#else		
                 if(iv==VY || iv==B2 || iv==FY0 || iv==VZ || iv==B3 || iv==FZ0)
+		#endif
                 #else
                 if(iv==VY || iv==FY0 || iv==VZ || iv==FZ0)
                 #endif

@@ -180,9 +180,9 @@ calc_Lorentz_lab2ff(ldouble *pp, ldouble gg[][5], ldouble GG[][5], ldouble L[][4
 
   //calculating the four-velocity of fluid in lab frame
   ldouble utcon[4],ucon[4],ucov[4],vpr[3];
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
   conv_vels_both(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 
   if(verbose>0) print_4vector(ucon);
@@ -279,9 +279,9 @@ calc_Lorentz_ff2lab(ldouble *pp, ldouble gg[][5], ldouble GG[][5], ldouble L[][4
 
   //calculating the four-velocity of fluid in lab frame
   ldouble wcon[4],wtcon[4],wcov[4];
-  wtcon[1]=pp[2];
-  wtcon[2]=pp[3];
-  wtcon[3]=pp[4];
+  wtcon[1]=pp[VX];
+  wtcon[2]=pp[VY];
+  wtcon[3]=pp[VZ];
   conv_vels_both(wtcon,wcon,wcov,VELPRIM,VEL4,gg,GG);
  
   if(verbose>0) print_4vector(wcon);
@@ -468,9 +468,9 @@ boost22_rf2lab(ldouble T1[][4],ldouble T2[][4],ldouble *pp0,ldouble gg[][5],ldou
   //artificial and temporary substitution
   ldouble urf[4]={0.,pp[FX],pp[FY],pp[FZ]};
   conv_vels(urf,urf,VELPRIMRAD,VELPRIM,gg,GG);
-  pp[2]=urf[1];
-  pp[3]=urf[2];
-  pp[4]=urf[3];
+  pp[VX]=urf[1];
+  pp[VY]=urf[2];
+  pp[VZ]=urf[3];
 
   //Lorentz transformation matrix
   ldouble L[4][4];
@@ -547,9 +547,9 @@ boost22_lab2rf(ldouble T1[][4],ldouble T2[][4],ldouble *pp0,ldouble gg[][5],ldou
   //artificial and temporary substitution
   ldouble urf[4]={0.,pp[FX],pp[FY],pp[FZ]};
   conv_vels(urf,urf,VELPRIMRAD,VELPRIM,gg,GG);
-  pp[2]=urf[1];
-  pp[3]=urf[2];
-  pp[4]=urf[3];
+  pp[VX]=urf[1];
+  pp[VY]=urf[2];
+  pp[VZ]=urf[3];
 
   //Lorentz transformation matrix
   ldouble L[4][4];
@@ -719,9 +719,9 @@ boost2_lab2rf(ldouble A1[4],ldouble A2[4],ldouble *pp0,ldouble gg[][5],ldouble G
   //artificial and temporary substitution
   ldouble urf[4]={0.,pp[FX],pp[FY],pp[FZ]};
   conv_vels(urf,urf,VELPRIMRAD,VELPRIM,gg,GG);
-  pp[2]=urf[1];
-  pp[3]=urf[2];
-  pp[4]=urf[3];
+  pp[VX]=urf[1];
+  pp[VY]=urf[2];
+  pp[VZ]=urf[3];
 
   if(verbose>0) print_4vector(A1);
 
@@ -889,9 +889,6 @@ multiply2(ldouble *u1,ldouble *u2,ldouble A[][4])
   for(i=0;i<4;i++)
     ut[i]=u1[i];
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i=0;i<4;i++)
     {
       u2[i]=0.;
@@ -1456,9 +1453,6 @@ indices_2221(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
   for(i=0;i<4;i++)
   {
     int j;
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
     for(j=0;j<4;j++)
     {
       Tt[i][j]=0.;
@@ -1471,9 +1465,6 @@ indices_2221(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
     for(j=0;j<4;j++)
     {
       int k;
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
       for(k=0;k<4;k++)
       {
         Tt[i][j]+=T1[i][k]*gg[k][j];
@@ -1484,9 +1475,6 @@ indices_2221(ldouble T1[][4],ldouble T2[][4],ldouble gg[][5])
   for(i=0;i<4;i++)
   {
     int j;
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
     for(j=0;j<4;j++)
     {
       T2[i][j]=Tt[i][j];
@@ -1505,17 +1493,11 @@ indices_12(ldouble A1[4],ldouble A2[4],ldouble GG[][5])
 {
   int i;
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i = 0; i < 4; i++)
   {
     A2[i] = 0.;
   }
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i = 0; i < 4; i++)
   {
     int k;
@@ -1540,9 +1522,6 @@ indices_21(ldouble A1[4],ldouble A2[4],ldouble gg[][5])
   int i;
   ldouble At[4];
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i=0;i<4;i++)
   {
     At[i]=0.;
@@ -1551,18 +1530,12 @@ indices_21(ldouble A1[4],ldouble A2[4],ldouble gg[][5])
   for(i=0;i<4;i++)
   {
     int j;
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
     for(j = 0; j < 4; j++)
     {
       At[i] += A1[j] * gg[i][j];
     }
   }
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for (i=0; i<4; i++)
   {
     A2[i] = At[i];

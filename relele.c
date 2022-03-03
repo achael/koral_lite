@@ -313,9 +313,6 @@ calc_alpgam(ldouble *u1, ldouble gg[][5], ldouble GG[][5])
   int i, j;
   ldouble qsq=0.;
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i=1;i<4;i++)
   {
     for(j=1;j<4;j++)
@@ -422,15 +419,15 @@ conv_velsinprims(ldouble *pp,int which1, int which2,ldouble gg[][5],ldouble GG[]
   int ret=0;
   ldouble v1[4],v2[4];
   v1[0]=0.; //not considered
-  v1[1]=pp[2];
-  v1[2]=pp[3];
-  v1[3]=pp[4];
+  v1[1]=pp[VX];
+  v1[2]=pp[VY];
+  v1[3]=pp[VZ];
   ret=conv_vels(v1,v2,which1,which2,gg,GG);
   if(ret==0)
     {
-      pp[2]=v2[1];
-      pp[3]=v2[2];
-      pp[4]=v2[3];
+      pp[VX]=v2[1];
+      pp[VY]=v2[2];
+      pp[VZ]=v2[3];
       return 0;
     }
   else
@@ -539,16 +536,16 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       // to VELPRIM
       conv_vels(ucon,ucon,VEL4,VELPRIM,gg,GG);
 
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
 
       // density & pressure
       ldouble r=xx2[1];
       ldouble rout=1.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-1.5);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-1.5);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -566,9 +563,9 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       {
         conv_vels(ucon,ucon,VELR,VELPRIM,gg,GG);
       }
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
       
       // Bondi-like atmosphere
       coco_N(xx,xx2,MYCOORDS,BLCOORDS);
@@ -576,8 +573,8 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
 
       ldouble rout=2.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-1.5);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-1.5);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -595,9 +592,9 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       {
         conv_vels(ucon,ucon,VELR,VELPRIM,gg,GG);
       }
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
 
       // Bondi-like atmosphere
       coco_N(xx,xx2,MYCOORDS,BLCOORDS);
@@ -605,8 +602,8 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
 
       ldouble rout=2.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-2.0);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-2.0);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -624,11 +621,11 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       {
         conv_vels(ucon,ucon,VELR,VELPRIM,gg,GG);
       }
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
-      pp[0] = RHOATMMIN;
-      pp[1] = UINTATMMIN;
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
+      pp[RHO] = RHOATMMIN;
+      pp[UU] = UINTATMMIN;
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -657,7 +654,10 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       //corrected rho:
       rho=PAR_D/(r*r*sqrtl(2./r));    
 
-      pp[0]=rho; pp[1]=uint; pp[2]=-V; pp[3]=pp[4]=0.; 
+      pp[RHO]=rho;
+      pp[UU]=uint;
+      pp[VX]=-V;
+      pp[VY]=pp[VZ]=0.; 
       conv_velsinprims(pp,VEL3,VELPRIM,gg,GG);
   
       #ifdef MAGNFIELD
@@ -686,17 +686,17 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       // to VELPRIM
       conv_vels(ucon,ucon,VEL4,VELPRIM,gg,GG);
 
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
 
       //density etc.
       ldouble r=xx2[1];
 
       ldouble rout=2.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-1.5);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-1.5);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
   
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -1057,7 +1057,7 @@ pick_Gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
 int
 print_p(ldouble *p)
 {
-  printf("rho:   %10e\nuu:    %10e\nvr:    %10e\nvth:   %10e\nvph:   %10e\nS:     %10e\n",p[0],p[1],p[2],p[3],p[4],p[5]);
+  printf("rho:   %10e\nuu:    %10e\nvr:    %10e\nvth:   %10e\nvph:   %10e\nS:     %10e\n",p[RHO],p[UU],p[VX],p[VY],p[VZ],p[ENTR]);
 #ifdef RADIATION
   printf("E:     %10e\nFx:    %10e\nFy:    %10e\nFz:    %10e\n\n",p[EE0],p[FX0],p[FY0],p[FZ0]);
 #endif
@@ -1072,7 +1072,7 @@ print_p(ldouble *p)
 int
 print_u(ldouble *u)
 {
-  printf("rhout: %10e\nTtt:   %10e\nTtr:   %10e\nTtth:  %10e\nTtph:  %10e\nSut:   %10e\n",u[0],u[1]-u[0],u[2],u[3],u[4],u[5]);
+  printf("rhout: %10e\nTtt:   %10e\nTtr:   %10e\nTtth:  %10e\nTtph:  %10e\nSut:   %10e\n",u[RHO],u[UU]-u[RHO],u[VX],u[VY],u[VZ],u[ENTR]);
 #ifdef RADIATION
   printf("Rtt:   %10e\nRt1:   %10e\nRt2:   %10e\nRt3:   %10e\n\n",u[EE0],u[FX0],u[FY0],u[FZ0]);
 #endif

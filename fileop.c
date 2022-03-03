@@ -445,7 +445,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
 int 
 fprint_restartfile_bin(ldouble t, char* folder)
 {
-  printf("Entering fprint_restartfile_bin\n");
+  //printf("Entering fprint_restartfile_bin\n");
   char bufor[250];
   
   //header
@@ -2652,25 +2652,6 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
      	      //ANDREW put cell size code in a function with precompute option
               ldouble dxph[3],dx[3];
               get_cellsize_out(ix, iy, iz, dx);
-
-	      /*
-	      ldouble xx1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[1]=fabs(xx2[2]-xx1[2]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[2]=fabs(xx2[3]-xx1[3]);
-              */
 	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
 	      dxph[2]=dx[2]*sqrt(geomBL.gg[3][3]);
@@ -2790,8 +2771,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
                    trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
                    #endif
 
-		   rho=pp[0];
-		   uint=pp[1];
+		   rho=pp[RHO];
+		   uint=pp[UU];
 		   pgas=(gamma-1.)*uint;
                    ldouble vel[4],vcon[4],tauscarloc;
                    
@@ -3007,7 +2988,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 #elif defined(GRTRANSSIMOUTPUT_2)
 	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e ", bcon[0],bcon[1],bcon[2],bcon[3],bsq); 
 #else    
-	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bsq,bcon[1],bcon[2],bcon[3],phi,betamag);
+	       //fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bsq,bcon[1],bcon[2],bcon[3],phi,betamag);
+	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bcon[0],bcon[1],bcon[2],bcon[3],bsq,phi);
 #endif //GRTRANSSIMOUTPUT
 
 	       // (28) - (29) when rad and magn field on, (20) - (21) with no radiation (+3 with grtrans 3d)
@@ -3279,24 +3261,6 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
       	      //ANDREW put cell size code in a function with precompute option
               ldouble dxph[3],dx[3];
 	      get_cellsize_out(ix, iy, iz, dx);
-	      /*
-	      ldouble xx1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[1]=fabs(xx2[2]-xx1[2]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[2]=fabs(xx2[3]-xx1[3]);
-              */
 		
 	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
@@ -3377,8 +3341,8 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
                    trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
                    #endif
 
-		   rho=pp[0];
-		   uint=pp[1];
+		   rho=pp[RHO];
+		   uint=pp[UU];
 		   pgas=(gamma-1.)*uint;
 
 		   /*
@@ -3466,7 +3430,7 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
 
    return 0;
 }
-
+ 
 /*********************************************/
 /* print radius and phi dependent correlation functions in rho and betainv ASCII */
 /* see code comparison paper */
@@ -3528,25 +3492,8 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
 	   //cell dimensions
     	   //ANDREW put cell size code in a function with precompute option
            get_cellsize_out(ix, iy, iz, dx);
-	   /*
-	      ldouble x1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[1]=fabs(xx2[2]-xx1[2]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[2]=fabs(xx2[3]-xx1[3]);
-	   */
-	    if(doingavg)
+
+	   if(doingavg)
 	    {
 	     rho=get_uavg(pavg,RHO,ix,iy,iz);
 	     pgas=get_uavg(pavg,AVGPGAS,ix,iy,iz);
@@ -3559,8 +3506,8 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
 	    {
 	     for(iv=0;iv<NV;iv++)
 	       pp[iv]=get_u(p,iv,ix,iy,iz);
-	     rho=pp[0];
-	     uint=pp[1];
+	     rho=pp[RHO];
+	     uint=pp[UU];
 	     ldouble gamma=GAMMA; 
              #ifdef CONSISTENTGAMMA
 	     gamma=pick_gammagas(ix,iy,iz);
@@ -3617,12 +3564,103 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
    return 0;
 }
 
+ 
+/*********************************************/
+/* print primitives only to ASCII */
+/* outcoords argument controls whether output is in OUTCOORDS or in MYCOORDS */
+/*********************************************/
+
+int fprint_primitive_file(ldouble t, int nfile, char* folder, char* prefix)
+{
+   char bufor[50];
+   sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
+   fout1=fopen(bufor,"w");
+   printf("fopen %s in function fprint_primitive_file\n", bufor);
+
+   /***********************************/  
+   /** writing order is fixed  ********/  
+   /***********************************/  
+ 
+   int ix,iy,iz,iv;
+   int iix;
+   ldouble pp[NV];
+   int nz=NZ;
+   struct geometry geom,geomBL;
+
+   int xmin=0;
+
+   //HEADER
+   
+   // loop over all cells  
+   for(iix=xmin;iix<NX;iix++)
+   {
+     ix=iix;
+     for(iy=0;iy<NY;iy++)
+     {
+       for(iz=0;iz<nz;iz++)
+       {
+         ldouble r,th,ph;
+         ldouble x1,x2,x3;
+           
+	 fill_geometry(ix,iy,iz,&geom);
+	 fill_geometry_arb(ix,iy,iz,&geomBL,OUTCOORDS);
+
+	 r=geomBL.xx; th=geomBL.yy; ph=geomBL.zz;
+	 x1=geom.xx; x2=geom.yy;x3=geom.zz;
+ 
+	 //cell dimensions
+	 ldouble dxph[3],dx[3];
+	 get_cellsize_out(ix, iy, iz, dx);
+
+	 dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
+	 dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
+	 dxph[2]=dx[2]*sqrt(geomBL.gg[3][3]);
+
+	 ldouble gdet=geom.gdet;
+	 ldouble volume=gdet*get_size_x(ix,0)*get_size_x(iy,1)*get_size_x(iz,2);
+
+	 // fill in primitives
+	 for(iv=0;iv<NV;iv++)
+	 {
+	   if(doingavg)
+	     pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
+	   else
+	     pp[iv]=get_u(p,iv,ix,iy,iz);
+	 }
+
+	 // transfer to outcoords if desired
+	 #ifndef PRIMOUTPUTINMYCOORDS
+	      #ifdef PRECOMPUTE_MY2OUT
+	      trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+	      #else      
+	      trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+	      #endif
+ 	 #endif
+
+	 // print primitive profile
+	 fprintf(fout1,"%d %d %d ",ix,iy,iz);
+	 #ifndef PRIMOUTPUTINMYCOORDS
+	   fprintf(fout1,"%.5e %.5e %.5e",r,th,ph); 
+         #else
+	   fprintf(fout1,"%.5e %.5e %.5e",x1,x2,x3);
+         #endif
+	 int iv;
+	 for(iv=0;iv<NV;iv++)
+	   fprintf(fout1," %.5e",pp[iv]);
+	 fprintf(fout1,"\n");
+
+       } // end loop over z
+     } // iy loop
+   } // ix loop
+
+   fflush(fout1);
+   fclose(fout1);
+
+   return 0;
+
+}
 /////////////////////////////////////////////////       
-void get_prim_name
-  (
-   char* prim_name,
-  int iv
-   )
+void get_prim_name(char* prim_name,int iv)
 {
   if (iv == RHO)
     {
@@ -4330,8 +4368,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
           #endif
 
 	  // get scalars
-	  rho=pp[0];
-	  uint=pp[1];
+	  rho=pp[RHO];
+	  uint=pp[UU];
 	  pgas=(gamma-1.)*uint;
           temp=calc_PEQ_Tfromurho(uint,rho,ix,iy,iz);
           

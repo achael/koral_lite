@@ -87,15 +87,7 @@ void initialize_constants()
   two_third = 2. / 3.;
   log_2p6 = log(2.6);
   one_over_log_2p6 = 1. / log_2p6;
-
-  /*  
-  printf("Testing gammainterp\n");
-  printf("%e %e %e \n",calc_meanlorentz(1.e-3),calc_meanlorentz(1.1e-3),calc_meanlorentz(5.e-3));
-  printf("%e %e %e \n",calc_meanlorentz(0.74),calc_meanlorentz(1.23),calc_meanlorentz(7.54));
-  printf("%e %e %e \n",calc_meanlorentz(14.3),calc_meanlorentz(77.3),calc_meanlorentz(144.));
-  printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
-  exit(-1);
-  */
+  
   // Coordinate specific factors
   #if (MYCOORDS==JETCOORDS)
   //printf("Finding hypx1out\n");
@@ -107,10 +99,8 @@ void initialize_constants()
   #ifdef CYLINDRIFY
   set_cyl_params();
   #endif
-
   
   //ANDREW -- diagnostics for new jet coordinates/metric
-
   /*
   //printf("%.7f %.7f %.7f\n",hypx1in,hypx1brk,hypx1out);
 
@@ -189,6 +179,16 @@ void initialize_constants()
  
   exit(-1);
   */
+
+  /*  
+  printf("Testing gammainterp\n");
+  printf("%e %e %e \n",calc_meanlorentz(1.e-3),calc_meanlorentz(1.1e-3),calc_meanlorentz(5.e-3));
+  printf("%e %e %e \n",calc_meanlorentz(0.74),calc_meanlorentz(1.23),calc_meanlorentz(7.54));
+  printf("%e %e %e \n",calc_meanlorentz(14.3),calc_meanlorentz(77.3),calc_meanlorentz(144.));
+  printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
+  exit(-1);
+  */
+  
   #endif
   
   return;
@@ -356,6 +356,34 @@ if (NTZ % 2 != 0)
  printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 }
 #endif
+
+#ifdef FORCEFREE
+  printf("WARNING! FORCEFREE is untested and does not account for current sheets! use only with monopole!\n");
+  #ifdef NONRELMHD
+  printf("FORCEFREE does not work with NONRELMHD!\n");
+  exit(-1);
+  #endif
+  #ifdef RADIATION
+  printf("FORCEFREE does not work yet with RADIATION!\n");
+  exit(-1);
+  #endif
+  #ifndef MAGNFIELD
+  printf("FORCEFREE requires MAGNFIELD!\n");
+  exit(-1);
+  #endif
+  #if (VELPRIM!=VELR)
+  printf("FORCEFREE requries VELPRIM==VELR!\n");
+  exit(-1);
+  #endif
+  #if(GDETIN==0)
+  printf("FORCEFREE does not work with GDETIN==0!\n");
+  exit(-1);
+  #endif
+  #ifdef CORRECT_POLARAXIS_3D
+  printf("FORCEFREE does not work with CORRECT_POLARAXIS_3D!\n");
+  exit(-1);
+  #endif
+#endif
   
 #ifdef PWPOTENTIAL
   printf("PWPOTENTIAL has been removed!\n");
@@ -366,7 +394,7 @@ if (NTZ % 2 != 0)
   printf("NCOMPTONIZATION has been replaced by EVOLVEPHOTONNUMBER!\n");
   exit(-1);
 #endif
-
+  
 #ifdef RADIATION  
 #if defined(COMPTONIZATIONFLAG)
   if (PROCID == 0)
@@ -1447,6 +1475,11 @@ print_primitives(ldouble *p)
   printf("B^1 = %.15e\n",p[B1]);
   printf("B^2 = %.15e\n",p[B2]);
   printf("B^3 = %.15e\n",p[B3]);
+#ifdef FORCEFREE
+  printf("u^1 (ff) = %.15e\n",p[VXFF]);
+  printf("u^2 (ff) = %.15e\n",p[VYFF]);
+  printf("u^3 (ff) = %.15e\n",p[VZFF]);
+#endif
 #endif
 #ifdef RADIATION
   printf("Erf = %.15e\n",p[EE0]);
@@ -1490,6 +1523,11 @@ print_conserved(ldouble *u)
   printf("B^1 = %.15e\n",u[B1]);
   printf("B^2 = %.15e\n",u[B2]);
   printf("B^3 = %.15e\n",u[B3]);
+#ifdef FORCEFREE
+  printf("T^t_1 (ff) = %.15e\n",u[VXFF]);
+  printf("T^t_2 (ff) = %.15e\n",u[VYFF]);
+  printf("T^t_3 (ff) = %.15e\n",u[VZFF]);
+#endif
 #endif
 #ifdef RADIATION
   printf("R^t_t = %.15e\n",u[EE0]);

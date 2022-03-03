@@ -345,10 +345,6 @@ ldouble *u,*x,*ucent,*xb,*xout, *xbout_xface, *xbout_yface, *xbout_zface,
   *flbx,*flby,*flbz,*flLx,*flRx,*flLy,*flRy,*flLz,*flRz,
   *flbx2,*flby2,*flbz2,*flLx2,*flRx2,*flLy2,*flRy2,*flLz2,*flRz2,
   *gKr;
-  //*emuup,*emulo,*emuupbx,*emulobx,*emuupby,*emuloby,*emuupbz,*emulobz,
-  //*emuup2,*emulo2,*emuupbx2,*emulobx2,*emuupby2,*emuloby2,*emuupbz2,*emulobz2,
-  //*tmuup,*tmulo,*tmuupbx,*tmulobx,*tmuupby,*tmuloby,*tmuupbz,*tmulobz,
-  //*tmuup2,*tmulo2,*tmuupbx2,*tmulobx2,*tmuupby2,*tmuloby2,*tmuupbz2,*tmulobz2;
 
 int *cellflag;
 
@@ -1008,10 +1004,10 @@ int print_u(ldouble *p);
 // p2u.c //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-int p2u(ldouble *p, ldouble *u, void *ggg);
-int p2u_mhd(ldouble *p, ldouble *u, void *ggg);
+int p2u(ldouble *pp, ldouble *uu, void *ggg);
+int p2u_mhd(ldouble *pp, ldouble *uu, void *ggg);
 ldouble calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg);
-int p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg);
+int p2u_mhd_nonrel(ldouble *pp, ldouble *uu, void *ggg);
 int p2u_rad(ldouble *pp,ldouble *uu,void *ggg);
 int p2avg(int ix,int iy,int iz,ldouble *avg);
 int test_maginv();
@@ -1028,6 +1024,7 @@ int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose);
 int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
 
 int count_entropy(int *n, int *n2);
@@ -1086,9 +1083,6 @@ int set_x(int ic, int idim,ldouble val);
 int set_xb(int ic, int idim,ldouble val);
 ldouble calc_xb(int i,int idim);
 int calc_bc(int ix,int iy,int iz,ldouble t, ldouble *uu,ldouble *pp,int ifinit,int BCtype);
-//int set_g(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
-//int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
-//int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
 int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim);
 int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
 int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
@@ -1144,10 +1138,10 @@ int mix_entropies(ldouble dt);
 // magn.c /////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+void calc_bcon_bcov_bsq_from_4vel(ldouble *pp, ldouble *ucon, ldouble *ucov, void* ggg,
 				  ldouble *bcon, ldouble *bcov, double *bsq);
-void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon);
-void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon);
+void calc_bcon_4vel(double *pp, double *ucon, double *ucov, double *bcon);
+void calc_Bcon_4vel(double *pp, double *ucon, double *bcon, double *Bcon);
 void calc_bcon_prim(double *pp, double *bcon, void* ggg);
 void calc_Bcon_prim(double *pp, double *bcon,double *Bcon, void* ggg);
 
@@ -1306,6 +1300,7 @@ int f_general_source_term(int ix, int iy, int iz,ldouble *ss);
 
 int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int lr);
 int calc_Tij(ldouble *pp, void* ggg, ldouble T[][4]);
+int calc_Tij_ff(ldouble *pp, void* ggg, ldouble T[][4]);
 
 ldouble calc_ufromS(ldouble S,ldouble rho,int ix,int iy,int iz);
 ldouble calc_TfromS(ldouble S,ldouble rho,int ix,int iy,int iz);
@@ -1461,6 +1456,7 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix);
+int fprint_primitive_file(ldouble t, int nfile, char* folder, char* prefix);
 
 int fprint_restartfile_mpi_hdf5(ldouble t, char* folder);
 int fprint_restartfile_serial_hdf5(ldouble t, char* folder);

@@ -155,7 +155,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   #endif
   gdetu_inv = 1. / gdetu;
   
-  int verbose=0;
+  int verbose=1;
   int hdcorr=0;
   int radcor=0;
   corrected[0]=corrected[1]=0;
@@ -169,49 +169,34 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //************************************
   //magneto-hydro part
   //************************************
-  ldouble u0=pp[1];
+  ldouble u0=pp[UU];
   
   //************************************
   //hot hydro - conserving energy
   ret=0;
   u2pret=-1;
-  
-  //test
-  ldouble ppold[NV];
-  ldouble ppentr[NV];
-  PLOOP(iv)
-  {
-    ppold[iv]=pp[iv];
-    ppentr[iv]=-1.; // negative value indicates that entropy inversion not yet calculated
-  }
-  
-  //negative uu[0] = rho u^t
-  if(uu[0] * gdetu_inv < 0.)
+    
+  //negative uu[RHO] = rho u^t 
+  if(uu[RHO] * gdetu_inv < 0.)
   {
     int gix,giy,giz;
     mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
-    if(verbose) printf("%4d > %4d %4d %4d > NEGUU  > neg uu[0] - requesting fixup\n",PROCID,gix,giy,giz);
-    pp[0]=RHOFLOOR; //used when not fixing up
-    uu[0]=RHOFLOOR*gdetu;
-    ret=-2;    //to request fixup
-               //ANDREW -- but ret=-1 if energy inversion failes but entropy inversion does not!
-               //ANDREW -- do we always want a fixup if we have negative uu[0] ? 
-    u2pret=-1; // indicates that inversion is needed
+    if(verbose) printf("%4d > %4d %4d %4d > NEGUU  > neg rhout - requesting fixup\n",PROCID,gix,giy,giz);
+    pp[RHO]=RHOFLOOR; //used when not fixing up
+    uu[RHO]=RHOFLOOR*gdetu;
+    ret=-2;    // to request fixup in all cases
     
 #ifndef SWAPPAPC
-    global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  //but count as fixup
+    global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  // count as fixup
 #endif
   }
     
-  if(u2pret!=0)  // u2pret=-1 at this stage, so this is always satisfied
-  {
 #ifdef ENFORCEENTROPY  
-    u2pret=-1;  //skip hot energy-conserving inversion and go to entropy inversion
+  u2pret = -1;  //skip hot energy-conserving inversion and go to entropy inversion
 #else
-    u2pret = u2p_solver(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
+  u2pret = u2p_solver(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
 #endif //ENFORCEENTROPY
-  }
-  
+
   if(ALLOWENTROPYU2P)  // Inversion with entropy equation -- on by default (see choices.h)
   {
     if(u2pret<0)  // true if energy equation failed, or if energy equation was not required (because ENFORCEENTROPY is defined)
@@ -220,15 +205,12 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
       
       if(verbose>2 )
       {
-        printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[1]);
+        printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[UU]);
       }
       
       //************************************
-      //entropy solver - conserving entropy
-      if(ppentr[RHO]<0.) //if not yet calculated
-      {
-        u2pret=u2p_solver(uu,pp,ggg,U2P_ENTROPY,0);  // invert using entropy equation
-      }
+      //entropy solver - invert using entropy equation
+      u2pret = u2p_solver(uu,pp,ggg,U2P_ENTROPY,0);
       
       if(u2pret<0)
       {
@@ -236,18 +218,17 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
         
         if(verbose>1)
         {
-          printf("u2p_entr err No. %4d > %e %e %e > %e %e > %4d %4d %4d\n",u2pret,uu[0],uu[1],uu[5],pp[0],pp[1],geom->ix,geom->iy,geom->iz);
+          printf("u2p_entr err No. %4d > %e %e %e > %e %e > %4d %4d %4d\n",u2pret,uu[RHO],uu[UU],uu[ENTR],pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
         }
 	
       } // if(u2pret<0) // second time -- entropy eqn
     } // if(u2pret<0) // first time -- energy eqn
-  }  // if(ALLOWENTROPYU2P)
+  } // if(ALLOWENTROPYU2P)
   
   if(u2pret<0)  // entropy equation also failed
   {
- 
-    //leaving primitives unchanged - should not happen
-    if(verbose>1 || 1)
+    //leaving primitives unchanged
+    if(verbose > 1 || 1)
     {
       printf("%4d > %4d %4d %4d > MHDU2PFAIL > u2p prim. unchanged > %d \n",PROCID,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,u2pret);
     }
@@ -256,9 +237,9 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
       pp[u2pret]=ppbak[u2pret];
   }
   
-  if(ret<0) //to update conserved
+  if(ret<0)  // update conserved
     hdcorr=1;  
-  if(ret<-1) //request fixup when entropy failed
+  if(ret<-1) // request fixup when entropy failed
     fixups[0]=1;
   else
     fixups[0]=0;
@@ -345,24 +326,30 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
   ldouble uu[NV],pporg[NV];
   p2u_mhd(pp,uu,ggg);
- 
+
+  ldouble pgamma=GAMMA;
+  #ifdef CONSISTENTGAMMA
+  pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
+  #endif
+
   //**********************************************************************
   //rho too small
-  if(pp[0]<RHOFLOOR) 
+  if(pp[RHO]<RHOFLOOR) 
   {
       for(iv=0;iv<NVMHD;iv++)
       {
 	pporg[iv]=pp[iv];
       }
 
-      if(verbose ) printf("hd_floors CASE 1 at %d %d %d | %d %d %d (%e) | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[0],TI,TJ,TK);
-      pp[0]=RHOFLOOR; 
+      if(verbose ) printf("hd_floors CASE 1 at %d %d %d | %d %d %d (%e) | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[RHO],TI,TJ,TK);
+      pp[RHO]=RHOFLOOR; 
      
       ret=-1; 
   }
 
   //**********************************************************************
-  //rho too small, use floor scaling as r^-3/2
+  //rho too small,
+  // floor scaling as r^-3/2
 #ifdef RHOFLOOR_BH
   ldouble xxBL[4];
   #ifdef PRECOMPUTE_MY2OUT
@@ -373,22 +360,23 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
   ldouble rr = xxBL[1] / rhorizonBL;
   ldouble rhofloor = RHOFLOOR_BH_NORM / sqrt(rr*rr*rr);
-  if(pp[0]<rhofloor) 
+  if(pp[RHO]<rhofloor) 
   {
     for(iv=0;iv<NVMHD;iv++)
     {
       pporg[iv]=pp[iv];
     }
       
-      if(verbose ) printf("hd_floors BH CASE 1 at %d %d (%e)\n",geom->ix+TOI,geom->iy+TOJ,pp[0]);
-      pp[0]=rhofloor;
+      if(verbose ) printf("hd_floors BH CASE 1 at %d %d (%e)\n",geom->ix+TOI,geom->iy+TOJ,pp[RHO]);
+      pp[RHO]=rhofloor;
 
       ret=-1; 
   }
 #endif
 
   //***********************************************************************
-  //rho too small, BH-disk like: Here we use the initial atmosphere as the floor on both density and pressure
+  //rho too small, BH-disk like:
+  //Here we use the initial atmosphere as the floor on both density and pressure
 #ifdef RHOFLOOR_INIT
   ldouble xxBL[4], rout = 2.;
 
@@ -401,16 +389,16 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   ldouble rr = xxBL[1] / rout;
   ldouble rhofloor = RHOATMMIN / sqrt(rr*rr*rr);
   ldouble uintfloor = UINTATMMIN / sqrt(rr*rr*rr*rr*rr);
-  if(pp[0] < rhofloor || pp[1] < uintfloor)
+  if(pp[RHO] < rhofloor || pp[UU] < uintfloor)
   {
     for(iv = 0; iv < NVMHD; iv++)
     {
       pporg[iv] = pp[iv];
     }
     
-    if(verbose ) printf("hd_floors BH CASE INIT at %d %d (%e)\n",geom->ix+TOI, geom->iy+TOJ, pp[0]);
-    pp[0] = rhofloor;
-    pp[1] = uintfloor;
+    if(verbose ) printf("hd_floors BH CASE INIT at %d %d (%e)\n",geom->ix+TOI, geom->iy+TOJ, pp[RHO]);
+    pp[RHO] = rhofloor;
+    pp[UU] = uintfloor;
     
     ret=-1;
   }
@@ -418,15 +406,15 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   
   //**********************************************************************
   //too cold
-  if(pp[1]<UURHORATIOMIN*pp[0]) 
+  if(pp[UU]<UURHORATIOMIN*pp[RHO]) 
   {
     for(iv=0;iv<NVMHD;iv++)
     {
       pporg[iv]=pp[iv];
     }
 
-    if(verbose) {printf("hd_floors CASE 2 at (%d,%d,%d | %d,%d,%d): %e %e | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[0],pp[1],TI,TJ,TK);}//getchar();}
-      pp[1]=UURHORATIOMIN*pp[0]; //increasing uint
+    if(verbose) {printf("hd_floors CASE 2 at (%d,%d,%d | %d,%d,%d): %e %e | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[RHO],pp[UU],TI,TJ,TK);}//getchar();}
+      pp[UU]=UURHORATIOMIN*pp[UU]; //increasing uint
 
               
     ret=-1;
@@ -434,124 +422,232 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
   //**********************************************************************
   //too hot
-  if(pp[1]>UURHORATIOMAX*pp[0]) 
+  if(pp[UU]>UURHORATIOMAX*pp[RHO]) 
   {
     for(iv=0;iv<NVMHD;iv++)
     {
       pporg[iv]=pp[iv];
     }
 
-    pp[1]=UURHORATIOMAX*pp[0]; //decreasing uint
+    pp[UU]=UURHORATIOMAX*pp[RHO]; //decreasing uint
 
     ret=-1;      
-    if(verbose ) printf("hd_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[0],pp[1]);
+    if(verbose ) printf("hd_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],pp[UU]);
   }
   
   //**********************************************************************
   //too magnetized
 #ifdef MAGNFIELD
-  ldouble ucond[4],ucovd[4];
-  ldouble bcond[4],bcovd[4],bsq,magpre;
+  ldouble ucon[4],ucov[4];
+  ldouble bcon[4],bcov[4],bsq,magpre;
   ldouble etacon[4],etarel[4];
+  ldouble f=1.;
+  ldouble fuu=1.;
+  int rhofloored=0;
+  int uufloored=0;
+    
   for(iv=1;iv<4;iv++)
-    ucond[iv]=pp[1+iv];
-  calc_ucon_ucov_from_prims(pp, geom, ucond, ucovd);
-  calc_bcon_bcov_bsq_from_4vel(pp, ucond, ucovd, geom, bcond, bcovd, &bsq);
-  //magpre = 0.5 * bsq;
-  magpre = bsq; // ANDREW: B2RHORATIOMAX and B2UURATIOMAX make more sense with bsq, not .5bsq
-  
-  calc_normalobs_ncon(GG, geom->alpha, etacon);
-  conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
+    ucon[iv]=pp[1+iv];
+  calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
+  magpre = 0.5 * bsq;
+  //magpre = bsq; // ANDREW: B2RHORATIOMAX and B2UURATIOMAX make more sense with bsq, not 0.5 bsq
 
-  if(magpre>B2RHORATIOMAX*pp[RHO]) 
+  // check density vs bsq
+  if(bsq>B2RHORATIOMAX*pp[RHO]) 
   {
-    if(verbose) printf("mag_floors CASE 2 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],magpre);
-    ldouble f=magpre/(B2RHORATIOMAX*pp[RHO]);
+    if(verbose) printf("mag_floors CASE 1 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],bsq);
+    f=bsq/(B2RHORATIOMAX*pp[RHO]); //increase factor, f>1
+    rhofloored=1;
+  }
 
+  // check ugas vs bsq
+  if(bsq>B2UURATIOMAX*pp[UU]) 
+  {
+    if(verbose) printf("mag_floors CASE 2 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],bsq);
+    fuu=bsq/(B2UURATIOMAX*pp[UU]); //increase factor, fuu>1
+    uufloored=1;
+    //pp[UU]*=bsq/(B2UURATIOMAX*pp[UU]);
+  }
+
+  // floors were activated, apply them
+  if(rhofloored==1 || uufloored==1)
+  {
+    // backups
     for(iv=0;iv<NVMHD;iv++)
     {
       pporg[iv]=pp[iv];
     }
+    
+#if(B2RHOFLOORFRAME==DRIFTFRAME) // new mass in drift frame, Ressler+2017
 
-#if (B2RHOFLOORFRAME==ZAMOFRAME) //new mass in ZAMO
+    ldouble betapar,betasq,betasqmax,gammapar;
+    ldouble udotB,QdotB,Bsq,Bmag,wold,wnew;
+    ldouble xx,vpar;
+    ldouble Bcon[4],Bcov[4],ucondr[4],vcon[4],ucont[4];
 
-      ldouble dpp[NV],duu[NV];
-      ldouble drho=pp[RHO]*(f-1.);
+    // old enthalpy
+    wold = pporg[RHO] + pporg[UU]*pgamma;
+
+    // apply the floors
+    pp[RHO] = pporg[RHO]*f;
+    pp[UU] = pporg[UU]*fuu;
+
+    // new enthalpy
+    wnew = pp[RHO] + pp[UU]*pgamma;
+
+    // parallel velocity and Lorentz
+    betapar = -bcon[0]/((bsq)*ucon[0]);
+    betasq = betapar*betapar*bsq;
+    betasqmax = 1. - 1./(GAMMAMAXHD*GAMMAMAXHD);
+    if(betasq>betasqmax)
+    {
+      betasq=betasqmax;
+      printf("floored parallel velocity\n");
+    }
+    gammapar = 1./sqrt(1.-betasq);
+
+    // drift frame velocity
+    for(iv=0;iv<4;iv++)
+      ucondr[iv] = gammapar*(ucon[iv] + betapar*bcon[iv]);
+
+    // magnetic field 
+    Bcon[0]=0.;
+    Bcon[1]=pp[B1];
+    Bcon[2]=pp[B2];
+    Bcon[3]=pp[B3];
+    indices_21(Bcon,Bcov,gg);
+    Bsq = dot(Bcon,Bcov);
+    Bmag = sqrt(Bsq);
+
+    // conserved parallel momentum
+    udotB = dot(ucon,Bcov);
+    QdotB = udotB*wold*ucon[0];
+
+    // get new parallel velocity
+    xx = 2.*QdotB/(Bmag*wnew*ucondr[0]);
+    vpar = xx / (ucondr[0]*(1.+sqrt(1.+xx*xx)));
+
+    // new three velocity
+    vcon[0]=1.;
+    for(iv=1;iv<4;iv++)
+    {
+      vcon[iv]=vpar*Bcon[iv]/(Bmag) + ucondr[iv]/ucondr[0];
+    }
+
+    // to VELPRIM
+    conv_vels(vcon,ucont,VEL3,VELPRIM,gg,GG);
+    //conv_vels(uconout,uconout,VEL4,VELPRIM,gg,GG);
+    
+    pp[VX] = ucont[1];
+    pp[VY] = ucont[2];
+    pp[VZ] = ucont[3];
+
+    // check 
+    calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
+    calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
    
-      for(iv=0;iv<NVMHD;iv++)
-	dpp[iv]=0.0;
+    ldouble udotBnew=dot(ucon,Bcov);
+    //wnew = pp[RHO]+pp[UU]*pgamma;
+    ldouble QdotBnew = udotBnew*wnew*ucon[0];
+    ldouble reldiff = 2.*fabs(QdotBnew - QdotB)/(fabs(QdotBnew)+fabs(QdotB));
+    if(0 && reldiff > 1e-2 )
+    {
+      printf("(%d,%d,%d): %g %g QdotBold = %g, QdotBnew = %g, diff = %g\n",
+             geom->ix,geom->iy,geom->iz,f,fuu,
+             QdotB, QdotBnew, reldiff);
+    }
+#elif(B2RHOFLOORFRAME==ZAMOFRAME) //new mass in ZAMO
 
-      dpp[RHO]=drho;
-      //do not inject energy - just density
-      dpp[UU]=0.;
-      dpp[VX] = etarel[1];
-      dpp[VY] = etarel[2];
-      dpp[VZ] = etarel[3];
-      dpp[ENTR] = 0.;
-      dpp[B1] = dpp[B2] = dpp[B3] = 0.;
+    ldouble dpp[NV],duu[NV];
+    ldouble drho=pp[RHO]*(f-1.);
+    ldouble dugas=pp[UU]*(fuu-1.);
+    
+    for(iv=0;iv<NVMHD;iv++)
+      dpp[iv]=0.0;
 
-      p2u_mhd(dpp,duu,geom);
+    // normal observer
+    calc_normalobs_ncon(GG, geom->alpha, etacon);
+    conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
+    
+    dpp[RHO]=drho;
+    //ANDREW this is a change, used to keep UU fixed here
+    dpp[UU]=dugas;
+    //dpp[UU]=0.;    
+    dpp[VX] = etarel[1];
+    dpp[VY] = etarel[2];
+    dpp[VZ] = etarel[3];
+    dpp[ENTR] = 0.;
+    dpp[B1] = dpp[B2] = dpp[B3] = 0.;
+
+    // delta conserved in ZAMO
+    p2u_mhd(dpp,duu,geom);
  
-      for(iv=0;iv<NVMHD;iv++)
-      {
-	uu[iv]+=duu[iv];
-      }
+    for(iv=0;iv<NVMHD;iv++)
+    {
+      uu[iv]+=duu[iv];
+    }
 
-      int rettemp=0;
-      rettemp=u2p_solver(uu,pp,geom,U2P_HOT,0); 
-      if(rettemp<0)
-	rettemp=u2p_solver(uu,pp,geom,U2P_ENTROPY,0); 
+    // find new prims after adding delta conserved in ZAMO
+    int rettemp=0;
+    rettemp=u2p_solver(uu,pp,geom,U2P_HOT,0); 
+    if(rettemp<0)
+      rettemp=u2p_solver(uu,pp,geom,U2P_ENTROPY,0); 
       
-      if(rettemp<0) 
-      {
-#ifdef BHDISK_PROBLEMTYPE
-	//if(geom->ix+TOI>5) //report only outside horizon
-#endif
-	  printf("u2p failed after imposing bsq over rho floors at %d %d %d with gamma=%f\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,get_u_scalar(gammagas,geom->ix,geom->iy,geom->iz));
+    if(rettemp<0) // new mass in ZAMO frame failed
+    {
+      printf("u2p failed after imposing bsq over rho floors at %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
 
 #ifdef B2RHOFLOOR_BACKUP_FFFRAME
-       // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
-       for(iv=0;iv<NVMHD;iv++)
-         pp[iv]=pporg[iv];
-       pp[RHO]*=f;
-       pp[UU]*=f;
+      // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
+      for(iv=0;iv<NVMHD;iv++)
+	pp[iv]=pporg[iv];
+
+      pp[RHO]*=f;
+      pp[UU]*=fuu;
+      //ANDREW this is a change, used to increase UU by same factor f if rho floored
+      //pp[UU]*=f; // ANDREW changed
 #else
-       print_primitives(pp);
-       exit(-1);
+      // No backup, crash
+      print_primitives(pp);
+      exit(-1);
 #endif
-      }
+    }
     
 #elif(B2RHOFLOORFRAME==FFFRAME) //new mass in fluid frame
-      pp[RHO]*=f;
-      pp[UU]*=f;
+    pp[RHO]*=f;
+    pp[UU]*=fuu;
+    //ANDREW this is a change, used to increase UU by same factor f if rho floored
+    //but ZAMOFRAME is default, so this won't change most problems
+    //pp[UU]*=f; 
 
-#endif //B2RHOFLOORFRAME==ZAMOFRAME
+#endif //B2RHOFLOORFRAME
 
+      // ANDREW IS THIS RIGHT ?? 
 #ifdef EVOLVEELECTRONS
 
-      //keep energy density in ions and electrons fixed after modifying B
+      //keep energy density in ions and electrons fixed after applying the floors
       ldouble Tg,Te,Ti,ptot,uint,theta;
 
       //get temperatures after explicit
       Tg=calc_PEQ_Teifrompp(pporg,&Te,&Ti,geom->ix,geom->iy,geom->iz);
     
       ldouble ne=calc_thermal_ne(pporg); //thermal only
-      ldouble pe=K_BOLTZ*ne*Te;
-      ldouble gammae=GAMMAE;
-#ifdef CONSISTENTGAMMA
-#ifndef FIXEDGAMMASPECIES
-      gammae=calc_gammaintfromtemp(Te,ELECTRONS);
-#endif
-#endif
-      ldouble ue=pe/(gammae-1.);  
       ldouble ni=pporg[RHO]/MU_I/M_PROTON;
+
+      ldouble pe=K_BOLTZ*ne*Te;
       ldouble pi=K_BOLTZ*ni*Ti;
+      
+      ldouble gammae=GAMMAE;
       ldouble gammai=GAMMAI;
-#ifdef CONSISTENTGAMMA
-#ifndef FIXEDGAMMASPECIES
+      #ifdef CONSISTENTGAMMA
+      #ifndef FIXEDGAMMASPECIES
+      gammae=calc_gammaintfromtemp(Te,ELECTRONS);
       gammai=calc_gammaintfromtemp(Ti,IONS);
-#endif
-#endif
+      #endif
+      #endif
+
+      ldouble ue=pe/(gammae-1.);  
       ldouble ui=pi/(gammai-1.);
 
       //calculate new entropy using pp[]
@@ -562,55 +658,45 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       mass = M_ELECTR;
       gamma = GAMMAE;
       n = calc_thermal_ne(pp);
-#ifdef CONSISTENTGAMMA
+      #ifdef CONSISTENTGAMMA
       Tenew=solve_Teifromnmu(n, mass, ue,ELECTRONS); //solves in parallel for gamma and temperature
       theta=K_BOLTZ*Tenew/mass;  
-#ifndef FIXEDGAMMASPECIES
+      #ifndef FIXEDGAMMASPECIES
       gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
-#endif
-#endif
+      #endif
+      #endif
       pnew=(ue)*(gamma-1.);
       Tenew=pnew/K_BOLTZ/n;
-
-      ldouble rhoe=n*MU_E*M_PROTON;
-      Senew=calc_SefromrhoT(rhoe,Tenew,ELECTRONS);
-
+      Senew=calc_SefromrhoT(n*MU_E*M_PROTON,Tenew,ELECTRONS);
       pp[ENTRE]=Senew;
 
       //ions
       mass = M_PROTON;
       gamma = GAMMAI;
-      n = calc_thermal_ne(pp);
-#ifdef CONSISTENTGAMMA
+      n = pp[RHO]/MU_I/M_PROTON;//calc_thermal_ne(pp);
+      #ifdef CONSISTENTGAMMA
       Tinew=solve_Teifromnmu(n, mass, ui,IONS); //solves in parallel for gamma and temperature
       theta=K_BOLTZ*Tinew/mass;
-#ifndef FIXEDGAMMASPECIES
+      #ifndef FIXEDGAMMASPECIES
       gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
-#endif
-#endif
-      
+      #endif
+      #endif
       pnew=(ui)*(gamma-1.);
       Tinew=pnew/K_BOLTZ/n;
       Sinew=calc_SefromrhoT(pp[RHO],Tinew,IONS);
-      
       pp[ENTRI]=Sinew;
+      
 #endif  //EVOLVEELECTRONS
 
       ret=-1;      
-  } //if(magpre>B2RHORATIOMAX*pp[RHO]) 
+  } //if(bsq>B2RHORATIOMAX*pp[RHO]) or (bsq>B2UURATIOMAX*pp[UU]) 
 
-  //independent check on ugas vs 
-  if(magpre>B2UURATIOMAX*pp[UU]) 
-  {
-      //if(verbose) printf("mag_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],magpre);
-      pp[UU]*=magpre/(B2UURATIOMAX*pp[UU]);
-      ret=-1;      
-  }
 
 #endif //MAGNFIELD
 
   //**********************************************************************
   //too fast
+  //TODO: implement checks for other VELPRIM
   if(VELPRIM==VELR) 
   {
       ldouble qsq=0.;
@@ -639,7 +725,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       }
   }
   
-  //TODO: implement checks for other VELPRIM
+  
 
   //**********************************************************************  
   //Species temperature floors/ceilings
@@ -758,7 +844,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   //ANDREW TODO do we want this? Is this inconsistent with keeping entropy as a backup until the very end of time step? 
   //updates entropy after floor corrections
   if(ret<0)
-    pp[5]=calc_Sfromu(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
+    pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
 
   return ret;
 }
@@ -1001,10 +1087,15 @@ f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,l
 int
 u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
-  #ifdef NONRELMHD
-  return u2p_solver_nonrel(uu,pp,ggg,Etype,verbose);
-  #endif
 
+#ifdef NONRELMHD
+  return u2p_solver_nonrel(uu,pp,ggg,Etype,verbose);
+#endif
+
+#ifdef FORCEFREE
+  return u2p_solver_ff(uu,pp,ggg,1);
+#endif
+  
   int (*solver)(ldouble*,ldouble*,void*,int,int);
   struct geometry *geom
     = (struct geometry *) ggg;
@@ -1105,7 +1196,6 @@ u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   //pure entropy evolution - updated only in the end of RK2
   pp[ENTR]= uu[ENTR] * gdetu_inv;
 
-
   #ifdef EVOLVEELECTRONS
   ldouble Se=uu[ENTRE] * gdetu_inv ;
   pp[ENTRE]=Se;
@@ -1118,7 +1208,6 @@ u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
    int ib;
    for(ib=0;ib<NRELBIN;ib++)
      pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv ;
-
   #endif
 
 
@@ -1184,25 +1273,25 @@ u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   alphasq=alpha*alpha;
 
   //D
-  D=uu[0] * gdetu_inv * alpha; //uu[0]=gdetu rho ut
+  D = uu[RHO] * gdetu_inv * alpha; // gdetu rho ut
 
   //conserved entropy "gdet S u^t"
-  Sc=uu[5] * gdetu_inv * alpha;
+  Sc = uu[ENTR] * gdetu_inv * alpha;
 
   //Qp_mu=alpha T^t_mu 
-  Qcovp[0]=uu[1] * gdetu_inv * alpha;
-  Qcovp[1]=uu[2] * gdetu_inv * alpha;
-  Qcovp[2]=uu[3] * gdetu_inv * alpha;
-  Qcovp[3]=uu[4] * gdetu_inv * alpha;
+  Qcovp[0]=uu[UU] * gdetu_inv * alpha;
+  Qcovp[1]=uu[VX] * gdetu_inv * alpha;
+  Qcovp[2]=uu[VY] * gdetu_inv * alpha;
+  Qcovp[3]=uu[VZ] * gdetu_inv * alpha;
 
   //Qp^mu
   indices_12(Qcovp,Qconp,GG);
 
   //Q_mu=alpha (T^t_mu - rho u^t delta(t,mu)) - avoid this one
-  Qcov[0]=(uu[1] * gdetu_inv -uu[0] * gdetu_inv ) * alpha;
-  Qcov[1]=uu[2] * gdetu_inv * alpha;
-  Qcov[2]=uu[3] * gdetu_inv * alpha;
-  Qcov[3]=uu[4] * gdetu_inv * alpha;
+  Qcov[0]=(uu[UU] * gdetu_inv - uu[RHO] * gdetu_inv ) * alpha;
+  Qcov[1]=uu[VX] * gdetu_inv * alpha;
+  Qcov[2]=uu[VY] * gdetu_inv * alpha;
+  Qcov[3]=uu[VZ] * gdetu_inv * alpha;
 
   //Q^mu
   indices_12(Qcov,Qcon,GG);
@@ -1266,12 +1355,12 @@ u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   FTYPE Qtsq = Qt2;
 
   //initial guess for Wp = w gamma**2 based on primitives
-  rho=pp[0];
-  uint=pp[1];
+  rho=pp[RHO];
+  uint=pp[UU];
   utcon[0]=0.;
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
   
   if (VELPRIM != VELR)
   {
@@ -1639,22 +1728,22 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   alpha = geom->alpha;
   
   //D
-  D = uu[0] * gdetu_inv * alpha; //uu[0]=gdetu rho ut
+  D = uu[RHO] * gdetu_inv * alpha; // gdetu rho ut
   
   //conserved entropy "S u^t"
-  Sc = uu[5] * gdetu_inv * alpha;
+  Sc = uu[ENTR] * gdetu_inv * alpha;
   
   //Q_mu=alpha T^t_mu
-  Qcov[0] = (uu[1] * gdetu_inv - uu[0] * gdetu_inv) * alpha;
-  Qcov[1] = uu[2] * gdetu_inv * alpha;
-  Qcov[2] = uu[3] * gdetu_inv * alpha;
-  Qcov[3] = uu[4] * gdetu_inv * alpha;
+  Qcov[0] = (uu[UU] * gdetu_inv - uu[RHO] * gdetu_inv) * alpha;
+  Qcov[1] = uu[VX] * gdetu_inv * alpha;
+  Qcov[2] = uu[VY] * gdetu_inv * alpha;
+  Qcov[3] = uu[VZ] * gdetu_inv * alpha;
   
   //Qp_mu=alpha T^t_mu
-  Qcovp[0] = uu[1] * gdetu_inv *alpha;
-  Qcovp[1] = uu[2] * gdetu_inv *alpha;
-  Qcovp[2] = uu[3] * gdetu_inv *alpha;
-  Qcovp[3] = uu[4] * gdetu_inv *alpha;
+  Qcovp[0] = uu[UU] * gdetu_inv *alpha;
+  Qcovp[1] = uu[VX] * gdetu_inv *alpha;
+  Qcovp[2] = uu[VY] * gdetu_inv *alpha;
+  Qcovp[3] = uu[VZ] * gdetu_inv *alpha;
   
   //Qp^mu
   indices_12(Qcovp,Qconp,GG);
@@ -1693,9 +1782,6 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   Qn = Qcon[0] * ncov[0];
   
   //j^mu_nu = delta^mu_nu +n^mu n_nu
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i=0;i<4;i++)
     for(j=0;j<4;j++)
       jmunu[i][j] = delta(i,j) + ncon[i]*ncov[j];
@@ -1704,9 +1790,6 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   for(i=0;i<4;i++)
   {
     Qtcon[i]=0.;
-#ifdef APPLY_OMP_SIMD
-    //#pragma omp simd
-#endif
     for(j=0;j<4;j++)
       Qtcon[i]+=jmunu[i][j]*Qcon[j];
   }
@@ -1726,12 +1809,12 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   ldouble Qdotnp = Qconp[0]*ncov[0] + D*(Dfactor) ; // -Qdotn - W = -Qdotnp-Wp
   
   //initial guess for W = w gamma**2 based on current primitives
-  rho=pp[0];
-  uint=pp[1];
+  rho=pp[RHO];
+  uint=pp[UU];
   utcon[0]=0.;
-  utcon[1]=pp[2];
-  utcon[2]=pp[3];
-  utcon[3]=pp[4];
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
   
   if (VELPRIM != VELR)
   {
@@ -1740,9 +1823,6 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   
   ldouble qsq=0.;
   for(i=1;i<4;i++)
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
     for(j=1;j<4;j++)
       qsq+=utcon[i]*utcon[j]*gg[i][j];
   ldouble gamma2=1.+qsq;
@@ -1988,6 +2068,197 @@ u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg)
   
   return 0; //always succeeds
 }  // int u2p_solver_Bonly
+
+
+
+//**********************************************************************
+//force-free solver 
+//**********************************************************************
+int
+u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
+{
+  
+#ifdef FORCEFREE
+  int i,j,k;
+  ldouble alpha,alphasq;
+  ldouble rho,entr,uint,gamma2,gamma,D,Sc,Bsq,Esq;
+  ldouble betavec[4];
+  ldouble utcon[4],Econ[4],Ecov[4],Bcon[4],Bcov[4];
+  ldouble Qcov[4],Qtildecov[4],Qtildecon[4];
+  
+  /****************************/
+  //prepare geometry
+  struct geometry *geom
+    = (struct geometry *) ggg;
+
+  ldouble (*gg)[5], (*GG)[5], gdet, gdetu, gdetu_inv;
+  gg=geom->gg;  GG=geom->GG;
+  gdet=geom->gdet;gdetu=gdet;
+
+  #if (GDETIN==0) //gdet out of derivatives
+  gdetu=1.;
+  #endif
+  gdetu_inv = 1. / gdetu;
+
+  ldouble pgamma=GAMMA;
+  #ifdef CONSISTENTGAMMA
+  pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
+  #endif
+
+  /****************************/
+  //conserved quantities etc
+  
+  //alpha
+  alpha   = geom->alpha;
+  alphasq = alpha*alpha;
+
+  //beta vector components
+  betavec[0] = 0.;
+  betavec[1] = alphasq * GG[0][1];
+  betavec[2] = alphasq * GG[0][2];
+  betavec[3] = alphasq * GG[0][3];
+    
+  //McKinney B^mu = B^mu HARM * alpha 
+  Bcon[0]=0.;
+  Bcon[1]=uu[B1] * alpha * gdetu_inv;
+  Bcon[2]=uu[B2] * alpha * gdetu_inv;
+  Bcon[3]=uu[B3] * alpha * gdetu_inv;
+
+  indices_21(Bcon,Bcov,gg);
+  Bsq = dot(Bcon,Bcov);
+
+  //Q_mu= alpha*T^t_mu 
+  Qcov[0] = 0.; // this is not the actual Qcov[0] for FF, since we only conserve spatial comps
+  //Qcov[0] = uu[UU] * alpha * gdetu_inv;
+  Qcov[1] = uu[VXFF] * alpha * gdetu_inv;
+  Qcov[2] = uu[VYFF] * alpha * gdetu_inv;
+  Qcov[3] = uu[VZFF] * alpha * gdetu_inv;
+  
+  //Qtilde_mu = Q_mu + n_mu (n.Q)
+  Qtildecov[0] = Qcov[1]*betavec[1] + Qcov[2]*betavec[2] + Qcov[3]*betavec[3];
+  Qtildecov[1] = Qcov[1];
+  Qtildecov[2] = Qcov[2];
+  Qtildecov[3] = Qcov[3];
+  indices_12(Qtildecov,Qtildecon,GG);  
+
+  // get three velocity
+  utcon[0] = 0.;
+  utcon[1] = Qtildecon[1]/Bsq;
+  utcon[2] = Qtildecon[2]/Bsq;
+  utcon[3] = Qtildecon[3]/Bsq;
+
+  // get Lorentz factor
+  int ll,mm; 
+  ldouble vsq=0.;
+  ldouble vsqmax = 1. - 1./(GAMMAMAXFF*GAMMAMAXFF);
+  int hitgammaceil=0;
+  for(ll=1;ll<4;ll++)
+  {
+    for(mm=1;mm<4;mm++)
+    {
+      vsq += gg[ll][mm]*utcon[ll]*utcon[mm];
+    }
+  }
+
+  ldouble vsq_orig = vsq;
+
+  // limiter
+  if(vsq>vsqmax)
+  {
+    hitgammaceil=1;
+    ldouble vfac = sqrt(vsqmax/vsq);
+    utcon[1] *= vfac;
+    utcon[2] *= vfac;
+    utcon[3] *= vfac;
+    vsq = 0.;
+    for(ll=1;ll<4;ll++)
+    {
+      for(mm=1;mm<4;mm++)
+      {
+        vsq += gg[ll][mm]*utcon[ll]*utcon[mm];
+      }
+    }
+  }
+
+  gamma2 = 1./(1-vsq);
+  gamma = sqrt(gamma2);
+
+  utcon[1] *= gamma;	
+  utcon[2] *= gamma;	
+  utcon[3] *= gamma;
+ 
+  
+  // convert VELR to VELPRIM if necessary
+  if(VELPRIM != VELR)
+  {
+    conv_vels(utcon,utcon,VELR,VELPRIM,gg,GG);
+  }
+
+  if(hitgammaceil==1)
+  {
+    //ldouble alpgam = calc_alpgam(utcon,gg,GG);
+    //printf("LIMITER vsq orig: %e | new: %e | gammma %e \n",vsq_orig,vsq,gamma); getch();
+  }
+  
+  if(!isfinite(utcon[1]))
+  {
+    if(verbose>0) printf("utcon[1] not finite in u2p_solver_ff %e %e %e \n",Bsq,Esq,gamma); getchar();
+    return -104;
+  }
+
+
+  //**************************************
+  // Return new primitives
+  pp[VXFF]=utcon[1];
+  pp[VYFF]=utcon[2];
+  pp[VZFF]=utcon[3];
+
+  pp[B1]=uu[B1] * gdetu_inv;
+  pp[B2]=uu[B2] * gdetu_inv;
+  pp[B3]=uu[B3] * gdetu_inv;
+  
+  //////////////////////////////////////////////////////////////////////////////////////////
+  // Hydro part
+  // ANDREW TODO -- replace with more sophisticated version
+  /////////////////////////////////////////////////////////////////////////////////////////
+
+  //**************************************
+  // Get density, entropy, and energy density
+
+  D  = uu[RHO] * alpha * gdetu_inv; // gdet rho ut, so D = gamma * rho
+  Sc = uu[ENTR] * alpha * gdetu_inv; // gdet S ut, so Sc = gamma * S
+
+  rho = D/gamma;
+  entr = Sc/gamma;
+  uint = calc_ufromS(entr,rho,geom->ix,geom->iy,geom->iz);
+  
+  if(rho<0. || !isfinite(rho)) 
+  {
+    if(verbose>0) printf("neg rho in u2p_solver_ff %e %e %e \n",rho,D,gamma); //getchar();
+    return -105;
+  }
+  
+  if(uint<0. || !isfinite(uint)) 
+  {
+    if(verbose>0) printf("neg uint in u2p_solver_ff %e %e %e\n",uint,entr,rho); //getchar();
+    return -107;
+  }
+  
+  //***************************************
+  //return new primitives
+  pp[RHO]=rho;
+  pp[UU]=uint;
+  pp[ENTR]=entr;
+
+  // set velocities equal
+  pp[VX] = pp[VXFF];
+  pp[VY] = pp[VYFF];
+  pp[VZ] = pp[VZFF];
+  
+  //if(verbose>0) printf("u2p_solver_ff returns 0\n");
+  return 0; //ok
+#endif
+}
 
 
 //**********************************************************************

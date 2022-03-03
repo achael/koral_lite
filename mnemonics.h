@@ -34,6 +34,12 @@
 #define B2 (NVHD+1)
 #define B3 (NVHD+2)
 
+#ifdef FORCEFREE
+#define VXFF (NVHD+3)
+#define VYFF (NVHD+4)
+#define VZFF (NVHD+5)
+#endif
+
 #define EE (NVMHD)
 #define FX (NVMHD+1)
 #define FY (NVMHD+2)
@@ -167,6 +173,7 @@
 //frames
 #define ZAMOFRAME 0
 #define FFFRAME 1
+#define DRIFTFRAME 2
 
 //avg quantities
 #define AVGBSQ (NV+0)
