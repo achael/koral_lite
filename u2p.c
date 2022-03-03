@@ -414,7 +414,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     }
 
     if(verbose) {printf("hd_floors CASE 2 at (%d,%d,%d | %d,%d,%d): %e %e | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[RHO],pp[UU],TI,TJ,TK);}//getchar();}
-      pp[UU]=UURHORATIOMIN*pp[UU]; //increasing uint
+      pp[UU]=UURHORATIOMIN*pp[RHO]; //increasing uint
 
               
     ret=-1;
