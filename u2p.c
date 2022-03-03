@@ -2246,9 +2246,9 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
   
   //***************************************
   //return new primitives
-  pp[RHO]=rho;
-  pp[UU]=uint;
-  pp[ENTR]=entr;
+  pp[RHO] = rho;
+  pp[UU] = uint;
+  pp[ENTR] = entr;
 
   // set velocities equal
   pp[VX] = pp[VXFF];

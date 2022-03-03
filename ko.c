@@ -112,7 +112,10 @@ main(int argc, char **argv)
 #endif 
 
   //print scalings GU->CGS
-  if(PROCID==0) printf("NVHD %d NVMHD %d NV %d\n",NVHD,NVMHD,NV); 
+  #ifdef FORCEFREE
+  if(PROCID==0) printf("NVHD %d NVMHD %d NV %d\n",NVHD,NVMHD,NV);
+  if(PROCID==0) printf("%d %d %d %d %d %d %d %d %d %d %d %d\n",RHO,UU,VX,VY,VZ,ENTR,B1,B2,B3,VXFF,VYFF,VZFF);
+  #endif
   if(PROCID==0) print_scalings();
   //exit(1);
 

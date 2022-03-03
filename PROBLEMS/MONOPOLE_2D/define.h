@@ -13,10 +13,9 @@
 #define MAGNFIELD
 #define GDETIN 1    //must be 1 for MAGNFIELD
 #define VECPOTGIVEN
-//#define INIT_MAGN_CORNERS //initialize magnetic field on corners/edges (which?)
+//#define INIT_MAGN_CORNERS
 
 //#define FORCEFREE
-
 //#define NOLOGINS 
 
 /************************************/
@@ -33,8 +32,8 @@
 //rmhd floors
 /************************************/
 
-#define B2RHORATIOMAXINIT 500 
-#define B2UURATIOMAXINIT 500
+#define B2RHORATIOMAXINIT 1.e5//500 
+#define B2UURATIOMAXINIT 1.e5//500
 //#define SIGMAWCONSTINIT 1.e4
 
 #if defined(FORCEFREE)
@@ -62,7 +61,7 @@
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME ZAMOFRAME 
+#define B2RHOFLOORFRAME DRIFTFRAME // ZAMOFRAME 
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50.
 #define B2UURATIOMIN 0.
@@ -76,7 +75,7 @@
 //blackhole
 /************************************/
 #define MASS 10.
-#define BHSPIN 0.5 // 0.9375
+#define BHSPIN 0.9375
 #define RHOR (1.+sqrt(1. - BHSPIN*BHSPIN))
 
 /************************************/

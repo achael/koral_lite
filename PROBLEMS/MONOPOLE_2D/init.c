@@ -21,6 +21,12 @@ pp[2]=0.; //zero initial velocity in co-rotating frame
 pp[3]=0.;
 pp[4]=0.;
 
+#ifdef FORCEFREE
+pp[VXFF]=0.;
+pp[VYFF]=0.;
+pp[VZFF]=0.;
+#endif
+
 //entropy
 pp[5]=calc_Sfromu(pp[0],pp[1],geom.ix,geom.iy,geom.iz);
 

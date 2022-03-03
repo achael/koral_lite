@@ -52,13 +52,15 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
 
   ldouble rho=pp[RHO];
   ldouble ugas=pp[UU];
+  ldouble S=pp[ENTR];
+  
   ldouble vcon[4],vcov[4],ucon[4],ucov[4];
   ldouble bcon[4]={0.,0.,0.,0.}, bcov[4]={0.,0.,0.,0.}, bsq=0.;
   vcon[0]=0.;
   vcon[1]=pp[VX];
   vcon[2]=pp[VY];
-  vcon[3]=pp[VX];
-  ldouble S=pp[ENTR];
+  vcon[3]=pp[VZ];
+
 
   conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 
@@ -94,7 +96,17 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   ldouble Ttr  =eta*ucon[0]*ucov[1] - bcon[0]*bcov[1];
   ldouble Ttth =eta*ucon[0]*ucov[2] - bcon[0]*bcov[2];
   ldouble Ttph =eta*ucon[0]*ucov[3] - bcon[0]*bcov[3];
+  /*
+#ifdef FORCEFREE
+  // ANDREW TODO -- we should get rid of this part
 
+  //ldouble Tttt_ff = bsq*ucon[0]*ucov[0] - bcon[0]*bcov[0] + 0.5*bsq + rho*ucon[0];  
+  Ttr  = bsq*ucon[0]*ucov[1] - bcon[0]*bcov[1];
+  Ttth = bsq*ucon[0]*ucov[2] - bcon[0]*bcov[2];
+  Ttph = bsq*ucon[0]*ucov[3] - bcon[0]*bcov[3];
+
+#endif
+  */
   uu[RHO]=gdetu*rhout;
   uu[UU]=gdetu*Tttt;
   uu[VX]=gdetu*Ttr;
@@ -102,6 +114,7 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   uu[VZ]=gdetu*Ttph;
   uu[ENTR]=gdetu*Sut;
 
+  
 #ifdef EVOLVEELECTRONS
   ldouble Seut=pp[ENTRE]*ut;
   uu[ENTRE]= gdetu*Seut;
@@ -126,6 +139,16 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   uu[B3]=gdetu*pp[B3];
 
 #ifdef FORCEFREE
+
+  // ANDREW TODO -- necessary to recompute ucon, etc?
+  vcon[0]=0.;
+  vcon[1]=pp[VXFF];
+  vcon[2]=pp[VYFF];
+  vcon[3]=pp[VZFF];
+
+  conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
+
   //ldouble Tttt_ff = bsq*ucon[0]*ucov[0] - bcon[0]*bcov[0] + 0.5*bsq + rho*ucon[0];  
   ldouble Ttr_ff  = bsq*ucon[0]*ucov[1] - bcon[0]*bcov[1];
   ldouble Ttth_ff = bsq*ucon[0]*ucov[2] - bcon[0]*bcov[2];

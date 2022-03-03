@@ -1269,6 +1269,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 #endif
 
   //magnetic fluxes
+  // ANDREW TODO -- how to modify for FORCEFREE?  
 #ifdef MAGNFIELD
   ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
   ff[B2]=gdetu*(bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
@@ -1296,7 +1297,8 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
     {
 	if(isnan(T_ff[ii][jj])) 
 	{
-	    printf("%d > nan tmunu_ff: %d %d %e at %d %d %d\n",PROCID,ii,jj,T_ff[ii][jj],ix+TOI,iy+TOJ,iz+TOK);
+	    printf("%d > nan tmunu_ff: %d %d %e at %d %d %d\n",PROCID,ii,jj,T_ff[ii][jj],
+		   ix+TOI,iy+TOJ,iz+TOK);
 	    my_err("nan in force free flux_prime\n");
 	    exit(1);
 	}
@@ -1380,6 +1382,12 @@ calc_Tij(ldouble *pp, void* ggg, ldouble T[][4])
    for(i=1;i<4;i++)
      T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
 
+   /*
+#elif defined(FORCEFREE) // ANDREW get rid of this part
+  for(i=0;i<4;i++)
+    for(j=0;j<4;j++)
+      T[i][j]=bsq*ucon[i]*ucon[j] + 0.5*bsq*GG[i][j] - bcon[i]*bcon[j];
+   */
 #else //normal GRMHD
   for(i=0;i<4;i++)
     for(j=0;j<4;j++)
