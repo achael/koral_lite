@@ -15,7 +15,7 @@
 #define VECPOTGIVEN
 //#define INIT_MAGN_CORNERS
 
-//#define FORCEFREE
+#define FORCEFREE
 //#define NOLOGINS 
 
 /************************************/
@@ -32,12 +32,11 @@
 //rmhd floors
 /************************************/
 
-#define B2RHORATIOMAXINIT 1.e5//500 
-#define B2UURATIOMAXINIT 1.e5//500
+#define B2RHORATIOMAXINIT 500 
+#define B2UURATIOMAXINIT 500
 //#define SIGMAWCONSTINIT 1.e4
 
 #if defined(FORCEFREE)
-
 
 //DIFTFRAME not compatible with FORCEFREE yet
 #define B2RHOFLOORFRAME FFFRAME // ZAMOFRAME 
@@ -53,7 +52,7 @@
 #define B2RHORATIOMAX 1.e10
 
 #define GAMMAMAXFF 1000. //lower than GAMMAMAXHD? 
-#define GAMMAMAXHD 1000. //why can't this be pushed higher on the monopole? 
+#define GAMMAMAXHD 10000. //why can't this be pushed higher on the monopole? 
 
 #define ALLOWENTROPYU2P 0
 
@@ -61,7 +60,7 @@
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME ZAMOFRAME 
+#define B2RHOFLOORFRAME DRIFTFRAME //ZAMOFRAME 
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50.
 #define B2UURATIOMIN 0.
@@ -93,8 +92,8 @@
 #define MAXX (log(RMAX - MKSR0))
 #define MINY 0.01*M_PI/2.
 #define MAXY M_PI - 0.01*M_PI/2.
-#define TNX 128//256
-#define TNY 128//256
+#define TNX 128
+#define TNY 64//256
 #define TNZ 1
 
 #elif defined(myMKS2COORDS) //modified Kerr-Shild

@@ -15,6 +15,9 @@ static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,
 static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
 static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
 
+static ldouble u2p_solver_ff_parallel(ldouble Wguess,ldouble* cons, int verbose);
+static int f_u2p_parallel(ldouble W, ldouble* cons,ldouble *f,ldouble *df,ldouble *err);
+  
 //**********************************************************************
 //calculates primitives in given cell basing on global array u[]
 // type: not used
@@ -1083,6 +1086,7 @@ f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,l
 //**********************************************************************
 // solver wrapper
 //**********************************************************************
+//ANDREW TODO do we need function pointers?
 
 int
 u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
@@ -2081,10 +2085,19 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
 #ifdef FORCEFREE
   int i,j,k;
   ldouble alpha,alphasq;
-  ldouble rho,entr,uint,gamma2,gamma,D,Sc,Bsq,Esq;
+  ldouble rho,entr,uint,Bsq,Bmag;
+  ldouble gamma2_perp,gamma_perp,gamma2_par,gamma_par,gamma2,gamma;
   ldouble betavec[4];
-  ldouble utcon[4],Econ[4],Ecov[4],Bcon[4],Bcov[4];
-  ldouble Qcov[4],Qtildecov[4],Qtildecon[4];
+  ldouble Econ[4],Ecov[4],Bcon[4],Bcov[4];
+  ldouble Qcov[4],Qcon[4],Qtildecov[4],Qtildecon[4];
+  ldouble vcon_perp[4],vcon_par[4];
+
+  // convert VELR to VELPRIM if necessary
+  if(VELPRIM != VELR)
+  {
+    printf("u2p_solver_ff requires VELPRIM==VELR!!\n");
+    exit(-1);
+  }
   
   /****************************/
   //prepare geometry
@@ -2105,9 +2118,6 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
   pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
   #endif
 
-  /****************************/
-  //conserved quantities etc
-  
   //alpha
   alpha   = geom->alpha;
   alphasq = alpha*alpha;
@@ -2117,8 +2127,12 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
   betavec[1] = alphasq * GG[0][1];
   betavec[2] = alphasq * GG[0][2];
   betavec[3] = alphasq * GG[0][3];
-    
-  //McKinney B^mu = B^mu HARM * alpha 
+
+  //////////////////////////////////////////////////////////////////////////////////////////
+  // Force-Free EM part
+  /////////////////////////////////////////////////////////////////////////////////////////
+
+  //McKinney defn of B^mu = B^mu HARM * alpha 
   Bcon[0]=0.;
   Bcon[1]=uu[B1] * alpha * gdetu_inv;
   Bcon[2]=uu[B2] * alpha * gdetu_inv;
@@ -2126,7 +2140,8 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
 
   indices_21(Bcon,Bcov,gg);
   Bsq = dot(Bcon,Bcov);
-
+  Bmag = sqrt(Bsq);
+  
   //Q_mu= alpha*T^t_mu 
   Qcov[0] = 0.; // this is not the actual Qcov[0] for FF, since we only conserve spatial comps
   //Qcov[0] = uu[UU] * alpha * gdetu_inv;
@@ -2142,95 +2157,186 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
   indices_12(Qtildecov,Qtildecon,GG);  
 
   // get three velocity
-  utcon[0] = 0.;
-  utcon[1] = Qtildecon[1]/Bsq;
-  utcon[2] = Qtildecon[2]/Bsq;
-  utcon[3] = Qtildecon[3]/Bsq;
+  vcon_perp[0] = 0.;
+  vcon_perp[1] = Qtildecon[1]/Bsq;
+  vcon_perp[2] = Qtildecon[2]/Bsq;
+  vcon_perp[3] = Qtildecon[3]/Bsq;
 
   // get Lorentz factor
   int ll,mm; 
-  ldouble vsq=0.;
+  ldouble vsq_perp=0.;
   ldouble vsqmax = 1. - 1./(GAMMAMAXFF*GAMMAMAXFF);
   int hitgammaceil=0;
   for(ll=1;ll<4;ll++)
   {
     for(mm=1;mm<4;mm++)
     {
-      vsq += gg[ll][mm]*utcon[ll]*utcon[mm];
+      vsq_perp += gg[ll][mm]*vcon_perp[ll]*vcon_perp[mm];
     }
   }
 
-  ldouble vsq_orig = vsq;
+  ldouble vsq_perp_orig = vsq_perp;
 
-  // limiter
-  if(vsq>vsqmax)
+  // lorentz factor limiter
+  if(vsq_perp>vsqmax)
   {
     hitgammaceil=1;
-    ldouble vfac = sqrt(vsqmax/vsq);
-    utcon[1] *= vfac;
-    utcon[2] *= vfac;
-    utcon[3] *= vfac;
-    vsq = 0.;
-    for(ll=1;ll<4;ll++)
-    {
-      for(mm=1;mm<4;mm++)
-      {
-        vsq += gg[ll][mm]*utcon[ll]*utcon[mm];
-      }
-    }
+    ldouble vfac = sqrt(vsqmax/vsq_perp);
+    vcon_perp[1] *= vfac;
+    vcon_perp[2] *= vfac;
+    vcon_perp[3] *= vfac;
+    vsq_perp = vsqmax;
   }
 
-  gamma2 = 1./(1-vsq);
-  gamma = sqrt(gamma2);
-
-  utcon[1] *= gamma;	
-  utcon[2] *= gamma;	
-  utcon[3] *= gamma;
+  gamma2_perp = 1./(1-vsq_perp);
+  gamma_perp = sqrt(gamma2_perp);
  
-  
-  // convert VELR to VELPRIM if necessary
-  if(VELPRIM != VELR)
-  {
-    conv_vels(utcon,utcon,VELR,VELPRIM,gg,GG);
-  }
-
   if(hitgammaceil==1)
   {
     //ldouble alpgam = calc_alpgam(utcon,gg,GG);
     //printf("LIMITER vsq orig: %e | new: %e | gammma %e \n",vsq_orig,vsq,gamma); getch();
   }
   
-  if(!isfinite(utcon[1]))
+  if(!isfinite(gamma_perp))
   {
-    if(verbose>0) printf("utcon[1] not finite in u2p_solver_ff %e %e %e \n",Bsq,Esq,gamma); getchar();
+    if(verbose>0) printf("gamma_perp not finite in u2p_solver_ff %e \n",Bsq);
+    //getchar();
     return -104;
   }
 
 
   //**************************************
   // Return new primitives
-  pp[VXFF]=utcon[1];
-  pp[VYFF]=utcon[2];
-  pp[VZFF]=utcon[3];
+  pp[VXFF]=vcon_perp[1]*gamma_perp;
+  pp[VYFF]=vcon_perp[2]*gamma_perp;
+  pp[VZFF]=vcon_perp[3]*gamma_perp;
 
-  pp[B1]=uu[B1] * gdetu_inv;
+  pp[B1]=uu[B1] * gdetu_inv; // TODO or Bcon[1]/alpha;
   pp[B2]=uu[B2] * gdetu_inv;
   pp[B3]=uu[B3] * gdetu_inv;
-  
+
   //////////////////////////////////////////////////////////////////////////////////////////
-  // Hydro part
-  // ANDREW TODO -- replace with more sophisticated version
+  // Hydro part -- solve for parallel velocity
   /////////////////////////////////////////////////////////////////////////////////////////
 
-  //**************************************
-  // Get density, entropy, and energy density
+  ldouble gammam2_perp=1./gamma2_perp;
+  ldouble afac=(pgamma-1.)/pgamma;
 
-  D  = uu[RHO] * alpha * gdetu_inv; // gdet rho ut, so D = gamma * rho
-  Sc = uu[ENTR] * alpha * gdetu_inv; // gdet S ut, so Sc = gamma * S
+  // MHD conserveds
+  ldouble D  = uu[RHO] * alpha * gdetu_inv; // gdet rho ut, so D = gamma * rho
+  ldouble Sc = uu[ENTR] * alpha * gdetu_inv; // gdet S ut, so Sc = gamma * S
+  ldouble W = -1.;
+  ldouble Y=0;
+  ldouble Z=0;
+  
+#ifdef FORCEFREE_SOLVE_PARALLEL
+  Qcov[0] = uu[UU] * alpha * gdetu_inv;
+  Qcov[1] = uu[VX] * alpha * gdetu_inv;
+  Qcov[2] = uu[VY] * alpha * gdetu_inv;
+  Qcov[3] = uu[VZ] * alpha * gdetu_inv;
+  
+  indices_12(Qcov,Qcon,GG);  
 
-  rho = D/gamma;
-  entr = Sc/gamma;
-  uint = calc_ufromS(entr,rho,geom->ix,geom->iy,geom->iz);
+  ldouble QdotB = Bcon[1]*Qcov[1] + Bcon[2]*Qcov[2] + Bcon[3]*Qcov[3]; // TODO verify
+  ldouble QdotEta = -alpha * Qcon[0];
+
+  Y = QdotB / Bmag;
+  Z = QdotEta + 0.5*Bsq*vsq_perp;
+
+  ldouble cons[5];
+  cons[0] = D;
+  cons[1] = Y;
+  cons[2] = Z;
+  cons[3] = gammam2_perp;
+  cons[4] = afac;
+
+  // initial guess is based on current primitives TODO
+  // note force free requires VELPRIM = VELR
+  ldouble utcon_prev[4];
+  utcon_prev[0]=0.;
+  utcon_prev[1]=pp[VX];
+  utcon_prev[2]=pp[VY];
+  utcon_prev[3]=pp[VZ];
+  
+  ldouble qsq=0.;
+  for(i=1;i<4;i++)
+    for(j=1;j<4;j++)
+      qsq+=utcon_prev[i]*utcon_prev[j]*gg[i][j];
+  ldouble gamma2_prev=1.+qsq;
+
+  Wguess = (pp[RHO] + pgamma*pp[UU])*gamma2_prev;
+
+  // solve for W
+  W = u2p_solver_ff_parallel(Wguess,cons,1);
+#endif // FORCEFREE_SOLVE_PARALLEL
+  
+  // acceptable solution on parallel momentum solver
+  // TODO other conditions? 
+  if(W>0)
+  {
+    // parallel three-velocity
+    ldouble vpar = Y / W;
+ 
+    vcon_par[0] = 0.;
+    vcon_par[1] = vpar*(Bcon[1]/Bmag);
+    vcon_par[2] = vpar*(Bcon[2]/Bmag);
+    vcon_par[3] = vpar*(Bcon[3]/Bmag);
+
+    // get parallel Lorentz factor
+    ldouble vsq_par=0.;
+    vsqmax = 1. - 1./(GAMMAMAXFF*GAMMAMAXFF);
+    hitgammaceil=0;
+    for(ll=1;ll<4;ll++)
+    {
+      for(mm=1;mm<4;mm++)
+      {
+       vsq_par += gg[ll][mm]*vcon_par[ll]*vcon_par[mm];
+      }
+    }
+
+   // limiter
+   if(vsq_par>vsqmax)
+   {
+     hitgammaceil=1;
+     ldouble vfac = sqrt(vsqmax/vsq_par);
+     vcon_par[1] *= vfac;
+     vcon_par[2] *= vfac;
+     vcon_par[3] *= vfac;
+     vsq_par = vsqmax;
+   }
+
+   gamma2_par = 1./(1-vsq_par);
+   gamma_par = sqrt(gamma2_par);
+
+   gamma2 = 1./(1 - vsq_perp - vsq_par);
+   gamma = sqrt(gamma2);
+
+   // total velocity (VELR)
+   pp[VX]=(vcon_perp[1] + vcon_par[1])*gamma;
+   pp[VY]=(vcon_perp[2] + vcon_par[2])*gamma;
+   pp[VZ]=(vcon_perp[3] + vcon_par[3])*gamma;
+   
+   // density, entropy, energy density
+   rho = D/gamma;
+   entr = Sc/gamma;
+   uint = (W/gamma2 - rho)/pgamma;
+   
+  }
+
+  // unacceptable solution, do adiabatic with NO parallel velocity
+  else //(W<0)
+  {
+    if(verbose>1) printf("reverting to adiabatic in FF+MHD solver!\n");
+
+    // total velocity (VELR) has no parallel component
+    pp[VX] = pp[VXFF];
+    pp[VY] = pp[VYFF];
+    pp[VZ] = pp[VZFF];
+
+    rho = D/gamma_perp;
+    entr = Sc/gamma_perp;
+    uint = calc_ufromS(entr,rho,geom->ix,geom->iy,geom->iz);
+  }
   
   if(rho<0. || !isfinite(rho)) 
   {
@@ -2245,19 +2351,205 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
   }
   
   //***************************************
-  //return new primitives
+  //final new primitives
   pp[RHO] = rho;
   pp[UU] = uint;
   pp[ENTR] = entr;
-
-  // set velocities equal
-  pp[VX] = pp[VXFF];
-  pp[VY] = pp[VYFF];
-  pp[VZ] = pp[VZFF];
   
   //if(verbose>0) printf("u2p_solver_ff returns 0\n");
   return 0; //ok
 #endif
+}
+
+//*********************************************************************
+//parallel momentum part of the force-free solver
+//*********************************************************************
+// TODO solve for W? Wp? vparallel^2?
+// TODO exact solution?
+// TODO entropy version? 
+// TODO what to do about variable adiabatic index? 
+static ldouble
+u2p_solver_ff_parallel(ldouble Wguess,ldouble* cons, int verbose)
+{
+  ldouble CONV=U2PCONV;
+  ldouble EPS=1.e-4;
+  
+  ldouble W=Wguess;
+  
+  if(verbose>1) printf("initial W:%e\n",W);
+
+  // constants
+  ldouble D = cons[0];
+  ldouble Y = cons[1];
+  ldouble Z = cons[2];
+  ldouble gammam2_perp = cons[3];
+  ldouble afac = cons[4];
+
+  ldouble Ysq=Y*Y;
+  
+  ldouble f0,f1,dfdW,err,vpar2guess;
+  ldouble Wprev=W;
+  int i_increase = 0;
+  // Make sure that W is large enough so that v^2 < 1 :
+  // Test if initial guess is out of bounds and damp if so
+  do
+  {
+    f0=dfdW=0.;
+    
+    (*f_u2p_parallel)(W,cons,&f0,&dfdW,&err);
+
+    vpar2guess = Ysq/(W*W);
+    if(((gammam2_perp - vpar2guess) < 0
+       || !isfinite(f0) || !isfinite(dfdW) || !isfinite(dfdW))
+       && (i_increase < 50))
+    {
+      if(verbose>0) printf("init W : %e -> %e (%e %e)\n",W,100.*W,f0,dfdW);
+      W *= 10.;
+      i_increase++;
+      continue;
+    }
+    else
+      break;
+  }
+  while(1);
+  
+  if(i_increase>=50)
+  {
+    printf("failed to find initial W in parallel solver");
+    //printf("at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
+    //print_NVvector(uu);
+    //print_NVvector(pp);
+    getchar();
+    return -150;
+  }
+  
+  //1d Newton solver
+  int iter=0, fu2pret;
+  do
+  {
+    Wprev=W;
+    iter++;
+
+    fu2pret=(*f_u2p_parallel)(W,cons,&f0,&dfdW,&err);
+    
+    if(verbose>1) printf("parallel solver: %d %e %e %e %e\n",iter,W,f0,dfdW,err);
+    
+    //convergence test
+    if(err<CONV)
+      break;
+    
+    if(dfdW==0.)
+    {
+      W*=1.1;
+      continue;
+    }
+    
+    ldouble Wnew = W-f0/dfdW;
+
+    int idump=0;
+    ldouble dumpfac=1.;
+    
+    //test if goes out of bounds and damp solution if so
+    do
+    {
+      ldouble f0tmp,dfdWtmp,errtmp;
+      f0tmp=dfdWtmp=0.;
+      (*f_u2p_parallel)(Wnew,cons,&f0tmp,&dfdWtmp,&errtmp);
+    
+      vpar2guess = Ysq/(Wnew*Wnew);
+      if(((gammam2_perp - vpar2guess) < 0
+         || !isfinite(f0tmp) || !isfinite(dfdWtmp) || !isfinite(dfdWtmp))
+         && (idump < 100))
+      {
+        idump++;
+        dumpfac/=2.;
+        Wnew=W-dumpfac*f0/dfdW;
+        continue;
+      }
+      else
+        break;
+    }
+    while(1);
+    
+    if(idump>=100)
+    {
+      if(verbose>0) printf("damped unsuccessfuly in parallel solver\n");
+      getchar();
+      return -101;
+    }
+    
+    W=Wnew;
+    
+    if(fabs(W)>BIG)
+    {
+      if(verbose>1) printf("W has gone out of bounds in parallel solver\n");
+      getchar();
+      return -103;
+    }
+
+    // TODO right error? 
+    if(fabs((W-Wprev)/Wprev)<CONV && err<1.e-1) break;
+    
+  }
+  while(iter<50);
+  
+  if(iter>=50)
+  {
+    if(verbose>0) printf("iter exceeded in parallel u2p_solver \n");
+    getchar();
+    return -102;
+  }
+  
+  if(!isfinite(W))
+  {
+    if(verbose) printf("nan/inf W in parallel u2p_solver: %d\n");
+    getchar();
+    return -103;
+  }
+
+  vpar2guess = Ysq/(W*W);
+  if((gammam2_perp - vpar2guess) < 0)
+  {
+    if(verbose>0) printf("final W out of bounds in parallel solver\n");
+    getchar();
+    return -109;
+  }
+
+  return W;
+}
+
+// TODO variable adiabatic index? ? 
+static int
+f_u2p_parallel(ldouble W, ldouble* cons,ldouble *f,ldouble *df,ldouble *err)
+{
+
+  // constants
+  ldouble D = cons[0];
+  ldouble Y = cons[1];
+  ldouble Z = cons[2];
+  ldouble gammam2_perp = cons[3];
+  ldouble afac = cons[4];
+
+  ldouble Ysq = Y*Y;
+  ldouble Wsq = W*W;
+
+  
+  // root function
+  *f   = afac*W*(gammam2_perp - Ysq/Wsq) - afac*D*sqrt(gammam2_perp - Ysq/Wsq) - W - Z;
+
+  // error
+  *err = fabs(*f) / (fabs(afac*W*(gammam2_perp - Ysq/Wsq)) - fabs(afac*D*sqrt(gammam2_perp - Ysq/Wsq)) - fabs(W) - fabs(Z));
+
+
+  // derivitive
+  ldouble dterm1dW = afac*(gammam2_perp + Ysq/Wsq);
+  ldouble dterm2dW = -afac*D*Ysq / (W*W*W*sqrt(gammam2_perp - Ysq/Wsq));
+  ldouble dterm3dW = -1.;
+  ldouble dterm4dW = 0.;
+
+  *df = dterm1dW + dterm2dW + dterm3dW + dterm4dW;
+
+  return 0;  
 }
 
 
