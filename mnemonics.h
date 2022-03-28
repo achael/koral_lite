@@ -35,9 +35,10 @@
 #define B3 (NVHD+2)
 
 #ifdef FORCEFREE
-#define VXFF (NVHD+3)
-#define VYFF (NVHD+4)
-#define VZFF (NVHD+5)
+#define UUFF (NVHD+3)
+#define VXFF (NVHD+4)
+#define VYFF (NVHD+5)
+#define VZFF (NVHD+6)
 #endif
 
 #define EE (NVMHD)

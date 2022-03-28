@@ -20,7 +20,7 @@ endif
 LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt -lhdf5_serial
 
 RM=/bin/rm
-OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o frames.o p2u.o nonthermal.o
+OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o u2p_ff.o frames.o p2u.o nonthermal.o
 
 all: ko ana avg outavg phisli thsli phiavg regrid dumps2hdf5
 

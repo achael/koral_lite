@@ -6,7 +6,7 @@ struct geometry geom;
 fill_geometry(ix,iy,iz,&geom);
 
 struct geometry geomBL;
-fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
+fill_geometry_arb(ix,iy,iz,&geomBL,KSCOORDS);
 
 ldouble r = geomBL.xx;
 ldouble th = geomBL.yy;
@@ -17,11 +17,13 @@ uint = UINTATMMIN + (r/10./rhor)/pow(r,4)/B2UURATIOMAXINIT;
    
 pp[0]=rho;
 pp[1]=uint;
-pp[2]=0.; //zero initial velocity in co-rotating frame
+pp[2]=0.; 
 pp[3]=0.;
 pp[4]=0.;
 
+// These will be made consistent with B direction after init
 #ifdef FORCEFREE
+pp[UUFF]=uint;
 pp[VXFF]=0.;
 pp[VYFF]=0.;
 pp[VZFF]=0.;
@@ -35,6 +37,7 @@ pp[B1]=pp[B2]=pp[B3]=0.;
 #endif
 
 //transform primitives from BL to MYCOORDS
+trans_pmhd_coco(pp, pp, KSCOORDS,MYCOORDS, geomBL.xxvec,&geomBL,&geom);
 //trans_pall_coco(pp, pp, BLCOORDS, MYCOORDS,xxvecBL,&geomBL,&geom);
     
 #ifdef MAGNFIELD //calculate vector potential

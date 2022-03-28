@@ -532,6 +532,7 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
   int verbose=0;
   int ret=0;
 
+#if !defined(SKIPALLFLOORS)
   struct geometry *geom
     = (struct geometry *) ggg;
 
@@ -692,7 +693,7 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
   
 #endif //EVOLVEPHOTONNUMBER
 #endif //RADIATION
- 
+#endif //SKIPALLFLOORS
 
   return ret;
 

@@ -897,23 +897,6 @@ int trans_prad_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxv
 
 //deprecated
 int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg);
-//int prad_lab2ff(ldouble *pp1, ldouble *pp2, void *ggg);
-//int prad_on2lab(ldouble *pp1, ldouble *pp2, void* ggg);
-//int prad_lab2on(ldouble *pp1, ldouble *pp2, void *ggg);
-//int prad_ff2zamo(ldouble *pp1, ldouble *pp2, ldouble gg[][5], ldouble GG[][5], ldouble eup[][4]);
-//int prad_zamo2ff(ldouble *pp1, ldouble *pp2, ldouble gg[][5], ldouble GG[][5], ldouble eup[][4]);
-//int boost2_zamo2ff(ldouble* A1,ldouble* A2,ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int boost2_ff2zamo(ldouble A1[4],ldouble A2[4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int boost22_zamo2ff(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int boost22_ff2zamo(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int trans22_zamo2lab(ldouble T1[][4],ldouble T2[][4],ldouble elo[][4]);
-//int trans22_lab2zamo(ldouble T1[][4],ldouble T2[][4],ldouble eup[][4]);
-//int trans2_lab2zamo(ldouble *u1,ldouble *u2,ldouble eup[][4]);
-//int trans2_zamo2lab(ldouble *u1,ldouble *u2,ldouble elo[][4]);
-//int trans22_on2cc(ldouble T1[][4],ldouble T2[][4],ldouble tlo[][4]);
-//int trans22_cc2on(ldouble T1[][4],ldouble T2[][4],ldouble tup[][4]);
-//int trans2_cc2on(ldouble *u1,ldouble *u2,ldouble tup[][4]);
-//int trans2_on2cc(ldouble *u1,ldouble *u2,ldouble tlo[][4]);
 
 int calc_Lorentz_lab2ff(ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble L[][4]);
 int calc_Lorentz_lab2ff_4vel(ldouble *pp, ldouble gg[][5], ldouble GG[][5], ldouble L[][4], ldouble ucon[4], ldouble ucov[4]);
@@ -1024,8 +1007,10 @@ int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose);
 int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
+int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int update_ffprims();
+int update_ffprims_cell(ldouble *pp, ldouble *uu, void *gg);
 
 int count_entropy(int *n, int *n2);
 int copy_entropycount();

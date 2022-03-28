@@ -1476,6 +1476,7 @@ print_primitives(ldouble *p)
   printf("B^2 = %.15e\n",p[B2]);
   printf("B^3 = %.15e\n",p[B3]);
 #ifdef FORCEFREE
+  printf("uu (ff) = %.15e\n", p[UUFF]);
   printf("u^1 (ff) = %.15e\n",p[VXFF]);
   printf("u^2 (ff) = %.15e\n",p[VYFF]);
   printf("u^3 (ff) = %.15e\n",p[VZFF]);

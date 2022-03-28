@@ -145,14 +145,26 @@
 //141 KEPINF -- INFDISK modified for injecting keplerian 
 //142 PARTIALTDE -- INFDISK modified for partial TDE binding energy distribution non-constant
 //143 FFTESTS -- Force Free tests
+//144 FFTORUSTEST -- test of force-free torus
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 132 //140
+#define PROBLEM 132
+//#define PROBLEM 144
 
+#if(PROBLEM==144)
+
+#define PR_DEFINE "PROBLEMS/FFTORUSTEST/define.h"
+#define PR_BC "PROBLEMS/FFTORUSTEST/bc.c"
+#define PR_INIT "PROBLEMS/FFTORUSTEST/init.c"
+#define PR_KAPPAES "PROBLEMS/FFTORUSTEST/kappaes.c"
+#define PR_TOOLS "PROBLEMS/FFTORUSTEST/tools.c"
+#define PR_POSTINIT "PROBLEMS/FFTORUSTEST/postinit.c"
+
+#endif
 
 #if(PROBLEM==143)
 #define PR_DEFINE "PROBLEMS/FFTESTS/define.h"

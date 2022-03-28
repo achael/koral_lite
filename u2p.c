@@ -14,9 +14,6 @@ static FTYPE compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FT
 static FTYPE compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma);
 static FTYPE compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma);
 static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma);
-
-static ldouble u2p_solver_ff_parallel(ldouble Wguess,ldouble* cons, int verbose);
-static int f_u2p_parallel(ldouble W, ldouble* cons,ldouble *f,ldouble *df,ldouble *err);
   
 //**********************************************************************
 //calculates primitives in given cell basing on global array u[]
@@ -161,7 +158,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   int verbose=1;
   int hdcorr=0;
   int radcor=0;
-  corrected[0]=corrected[1]=0;
+  corrected[0]=corrected[1]=corrected[2]=0;
   fixups[0]=fixups[1]=0;
   
   int u2pret,u2pentrret,ret;
@@ -179,23 +176,25 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   ret=0;
   u2pret=-1;
     
-  //negative uu[RHO] = rho u^t 
+  //negative uu[RHO] = rho u^t -> set to floor 
   if(uu[RHO] * gdetu_inv < 0.)
   {
     int gix,giy,giz;
     mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
-    if(verbose) printf("%4d > %4d %4d %4d > NEGUU  > neg rhout - requesting fixup\n",PROCID,gix,giy,giz);
-    pp[RHO]=RHOFLOOR; //used when not fixing up
+    if(verbose)
+      printf("%4d > %4d %4d %4d > neg rhout - requesting fixup\n",PROCID,gix,giy,giz);
+
+    pp[RHO]=RHOFLOOR; 
     uu[RHO]=RHOFLOOR*gdetu;
-    ret=-2;    // to request fixup in all cases
+    ret=-2;  // to request fixup in all cases
     
-#ifndef SWAPPAPC
+    #ifndef SWAPPAPC
     global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  // count as fixup
-#endif
+    #endif
   }
-    
-#ifdef ENFORCEENTROPY  
-  u2pret = -1;  //skip hot energy-conserving inversion and go to entropy inversion
+
+#if defined(ENFORCEENTROPY) || defined(FORCEFREE)
+  u2pret = -1;  //skip hot energy-conserving inversion and go straight to entropy inversion
 #else
   u2pret = u2p_solver(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
 #endif //ENFORCEENTROPY
@@ -208,7 +207,8 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
       
       if(verbose>2 )
       {
-        printf("u2p_entr     >>> %d %d <<< %d >>> %e > %e\n",geom->ix + TOI, geom->iy + TOJ,u2pret,u0,pp[UU]);
+        printf("u2p_entr %d  > %d %d %d \n",
+	       u2pret, geom->ix + TOI, geom->iy + TOJ,geom->iz + TOK);
       }
       
       //************************************
@@ -221,7 +221,8 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
         
         if(verbose>1)
         {
-          printf("u2p_entr err No. %4d > %e %e %e > %e %e > %4d %4d %4d\n",u2pret,uu[RHO],uu[UU],uu[ENTR],pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
+          printf("u2p_entr err %4d > %4d %4d %4d\n",
+		 u2pret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
         }
 	
       } // if(u2pret<0) // second time -- entropy eqn
@@ -231,9 +232,10 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   if(u2pret<0)  // entropy equation also failed
   {
     //leaving primitives unchanged
-    if(verbose > 1 || 1)
+    if(verbose > 1 || 1) // TODO ANDREW
     {
-      printf("%4d > %4d %4d %4d > MHDU2PFAIL > u2p prim. unchanged > %d \n",PROCID,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,u2pret);
+      printf("%4d > MHDU2PFAIL %d > %4d %4d %4d > u2p prim. unchanged \n",
+	     PROCID,u2pret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
     }
     ret=-3;
     for(u2pret=0;u2pret<NV;u2pret++)
@@ -250,8 +252,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //************************************
   //radiation part
   //************************************
-  
-  corrected[2]=0;
   
 #ifdef RADIATION  
 #ifdef BALANCEENTROPYWITHRADIATION
@@ -316,10 +316,11 @@ int
 check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 {
 
-  int verbose=0;
+  int verbose=1;
   int ret=0;
   int iv;
 
+#if !defined(SKIPALLFLOORS)
   struct geometry *geom
     = (struct geometry *) ggg;
 
@@ -336,22 +337,27 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   #endif
 
   //**********************************************************************
-  //rho too small
+  // rho too small
   if(pp[RHO]<RHOFLOOR) 
   {
-      for(iv=0;iv<NVMHD;iv++)
-      {
-	pporg[iv]=pp[iv];
-      }
+    for(iv=0;iv<NVMHD;iv++)
+    {
+      pporg[iv]=pp[iv];
+    }
 
-      if(verbose ) printf("hd_floors CASE 1 at %d %d %d | %d %d %d (%e) | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[RHO],TI,TJ,TK);
-      pp[RHO]=RHOFLOOR; 
+    if(verbose)
+    {
+      printf("hd_floors CASE 1 at %d %d %d (%e)  \n",
+             geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO]);
+    }
+      
+    pp[RHO]=RHOFLOOR; 
      
-      ret=-1; 
+    ret=-1; 
   }
 
   //**********************************************************************
-  //rho too small,
+  // rho too small,
   // floor scaling as r^-3/2
 #ifdef RHOFLOOR_BH
   ldouble xxBL[4];
@@ -370,16 +376,21 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv]=pp[iv];
     }
       
-      if(verbose ) printf("hd_floors BH CASE 1 at %d %d (%e)\n",geom->ix+TOI,geom->iy+TOJ,pp[RHO]);
-      pp[RHO]=rhofloor;
+    if(verbose)
+    {
+      printf("hd_floors BH CASE 1 at %d %d %d (%e)\n",
+	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO]);
+    }
 
-      ret=-1; 
+    pp[RHO]=rhofloor;
+
+    ret=-1; 
   }
 #endif
 
   //***********************************************************************
-  //rho too small, BH-disk like:
-  //Here we use the initial atmosphere as the floor on both density and pressure
+  // rho too small, BH-disk like:
+  // Here we use the initial atmosphere as the floor on both density and pressure
 #ifdef RHOFLOOR_INIT
   ldouble xxBL[4], rout = 2.;
 
@@ -399,7 +410,12 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv] = pp[iv];
     }
     
-    if(verbose ) printf("hd_floors BH CASE INIT at %d %d (%e)\n",geom->ix+TOI, geom->iy+TOJ, pp[RHO]);
+    if(verbose)
+    {
+      printf("hd_floors INIT CASE 1 at %d %d %d (%e)\n",
+      geom->ix+TOI, geom->iy+TOJ, geom->iz+TOK,pp[RHO]);
+    }
+    
     pp[RHO] = rhofloor;
     pp[UU] = uintfloor;
     
@@ -416,10 +432,15 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv]=pp[iv];
     }
 
-    if(verbose) {printf("hd_floors CASE 2 at (%d,%d,%d | %d,%d,%d): %e %e | tijk: %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,geom->ix,geom->iy,geom->iz,pp[RHO],pp[UU],TI,TJ,TK);}//getchar();}
-      pp[UU]=UURHORATIOMIN*pp[RHO]; //increasing uint
+    if(verbose)
+    {
+      printf("hd_floors CASE 2 at %d,%d,%d (%e %e) \n",
+	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO],pp[UU]);
+      //getchar();
+    }
 
-              
+    pp[UU] = UURHORATIOMIN*pp[RHO]; //increasing uint
+          
     ret=-1;
   }
 
@@ -432,10 +453,17 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv]=pp[iv];
     }
 
-    pp[UU]=UURHORATIOMAX*pp[RHO]; //decreasing uint
+    if(verbose)
+    {
+      printf("hd_floors CASE 3 at %d,%d,%d (%e %e)\n",
+	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO],pp[UU]);
+      //getchar();
+    }
+    
+    pp[UU] = UURHORATIOMAX*pp[RHO]; //decreasing uint
 
     ret=-1;      
-    if(verbose ) printf("hd_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],pp[UU]);
+    
   }
   
   //**********************************************************************
@@ -451,6 +479,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     
   for(iv=1;iv<4;iv++)
     ucon[iv]=pp[1+iv];
+
   calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
   calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
   magpre = 0.5 * bsq;
@@ -459,7 +488,11 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   // check density vs bsq
   if(bsq>B2RHORATIOMAX*pp[RHO]) 
   {
-    if(verbose) printf("mag_floors CASE 1 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],bsq);
+    if(verbose)
+    {
+      printf("mag_floors CASE 1 at %d,%d,%d (%e %e)\n",
+	     geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],bsq);
+    }
     f=bsq/(B2RHORATIOMAX*pp[RHO]); //increase factor, f>1
     rhofloored=1;
   }
@@ -467,16 +500,19 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   // check ugas vs bsq
   if(bsq>B2UURATIOMAX*pp[UU]) 
   {
-    if(verbose) printf("mag_floors CASE 2 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],bsq);
+    if(verbose)
+    {
+      printf("mag_floors CASE 2 at (%d,%d,%d): %e %e\n",
+	     geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],bsq);
+    }
     fuu=bsq/(B2UURATIOMAX*pp[UU]); //increase factor, fuu>1
     uufloored=1;
-    //pp[UU]*=bsq/(B2UURATIOMAX*pp[UU]);
   }
 
   // floors were activated, apply them
   if(rhofloored==1 || uufloored==1)
   {
-    // backups
+    // save backups
     for(iv=0;iv<NVMHD;iv++)
     {
       pporg[iv]=pp[iv];
@@ -540,27 +576,12 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
     // to VELPRIM
     conv_vels(vcon,ucont,VEL3,VELPRIM,gg,GG);
-    //conv_vels(uconout,uconout,VEL4,VELPRIM,gg,GG);
     
     pp[VX] = ucont[1];
     pp[VY] = ucont[2];
     pp[VZ] = ucont[3];
 
-    // check 
-    calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
-    calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
-   
-    ldouble udotBnew=dot(ucon,Bcov);
-    //wnew = pp[RHO]+pp[UU]*pgamma;
-    ldouble QdotBnew = udotBnew*wnew*ucon[0];
-    ldouble reldiff = 2.*fabs(QdotBnew - QdotB)/(fabs(QdotBnew)+fabs(QdotB));
-    if(0 && reldiff > 1e-2 )
-    {
-      printf("(%d,%d,%d): %g %g QdotBold = %g, QdotBnew = %g, diff = %g\n",
-             geom->ix,geom->iy,geom->iz,f,fuu,
-             QdotB, QdotBnew, reldiff);
-    }
-#elif(B2RHOFLOORFRAME==ZAMOFRAME) //new mass in ZAMO
+#elif(B2RHOFLOORFRAME==ZAMOFRAME) //new mass in ZAMO frame
 
     ldouble dpp[NV],duu[NV];
     ldouble drho=pp[RHO]*(f-1.);
@@ -574,9 +595,9 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
     
     dpp[RHO]=drho;
-    //ANDREW this is a change, used to keep UU fixed here
+    //ANDREW this is a change,we used to keep UU fixed here
     dpp[UU]=dugas;
-    //dpp[UU]=0.;    
+    //dpp[UU]=0.;
     dpp[VX] = etarel[1];
     dpp[VY] = etarel[2];
     dpp[VZ] = etarel[3];
@@ -593,145 +614,143 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
     // find new prims after adding delta conserved in ZAMO
     int rettemp=0;
-    rettemp=u2p_solver(uu,pp,geom,U2P_HOT,0); 
+    rettemp = u2p_solver(uu,pp,geom,U2P_HOT,0); 
     if(rettemp<0)
-      rettemp=u2p_solver(uu,pp,geom,U2P_ENTROPY,0); 
+      rettemp = u2p_solver(uu,pp,geom,U2P_ENTROPY,0); 
       
     if(rettemp<0) // new mass in ZAMO frame failed
     {
-      printf("u2p failed after imposing bsq over rho floors at %d %d %d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      printf("u2p failed after imposing bsq over rho floors at %d %d %d\n",
+	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
 
-#ifdef B2RHOFLOOR_BACKUP_FFFRAME
-      // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
+      #ifdef B2RHOFLOOR_BACKUP_FFFRAME
+      // if zamo frame fails, do fluid frame instead of crashing 
       for(iv=0;iv<NVMHD;iv++)
 	pp[iv]=pporg[iv];
 
       pp[RHO]*=f;
       pp[UU]*=fuu;
       //ANDREW this is a change, used to increase UU by same factor f if rho floored
-      //pp[UU]*=f; // ANDREW changed
-#else
+      //pp[UU]*=f; 
+
+      #else
       // No backup, crash
       print_primitives(pp);
       exit(-1);
-#endif
+      #endif
     }
     
 #elif(B2RHOFLOORFRAME==FFFRAME) //new mass in fluid frame
     pp[RHO]*=f;
     pp[UU]*=fuu;
     //ANDREW this is a change, used to increase UU by same factor f if rho floored
-    //but ZAMOFRAME is default, so this won't change most problems
     //pp[UU]*=f; 
 
 #endif //B2RHOFLOORFRAME
 
-      // ANDREW IS THIS RIGHT ?? 
+    // ANDREW IS THIS RIGHT for species?
+    // TODO if uint changes above, will not have ue + ui = uint using this method!
 #ifdef EVOLVEELECTRONS
 
-      //keep energy density in ions and electrons fixed after applying the floors
-      ldouble Tg,Te,Ti,ptot,uint,theta;
-
-      //get temperatures after explicit
-      Tg=calc_PEQ_Teifrompp(pporg,&Te,&Ti,geom->ix,geom->iy,geom->iz);
+    //keep energy density in ions and electrons fixed after applying the floors
+    ldouble Tg,Te,Ti;
+    Tg=calc_PEQ_Teifrompp(pporg,&Te,&Ti,geom->ix,geom->iy,geom->iz);
     
-      ldouble ne=calc_thermal_ne(pporg); //thermal only
-      ldouble ni=pporg[RHO]/MU_I/M_PROTON;
+    ldouble ne=calc_thermal_ne(pporg); //thermal only
+    ldouble ni=pporg[RHO]/MU_I/M_PROTON;
 
-      ldouble pe=K_BOLTZ*ne*Te;
-      ldouble pi=K_BOLTZ*ni*Ti;
+    ldouble pe=K_BOLTZ*ne*Te;
+    ldouble pi=K_BOLTZ*ni*Ti;
       
-      ldouble gammae=GAMMAE;
-      ldouble gammai=GAMMAI;
-      #ifdef CONSISTENTGAMMA
-      #ifndef FIXEDGAMMASPECIES
-      gammae=calc_gammaintfromtemp(Te,ELECTRONS);
-      gammai=calc_gammaintfromtemp(Ti,IONS);
-      #endif
-      #endif
+    ldouble gammae=GAMMAE;
+    ldouble gammai=GAMMAI;
+    #ifdef CONSISTENTGAMMA
+    #ifndef FIXEDGAMMASPECIES
+    gammae=calc_gammaintfromtemp(Te,ELECTRONS);
+    gammai=calc_gammaintfromtemp(Ti,IONS);
+    #endif
+    #endif
 
-      ldouble ue=pe/(gammae-1.);  
-      ldouble ui=pi/(gammai-1.);
+    ldouble ue=pe/(gammae-1.);  
+    ldouble ui=pi/(gammai-1.);
 
-      //calculate new entropy using pp[]
-      ldouble mass, gamma, Tenew,Tinew, Senew, Sinew;
-      ldouble  n, pnew;
+    //calculate new entropy using updated pp[]
+    ldouble mass, gamma, theta;
+    ldouble Tenew,Tinew, Senew, Sinew;
+    ldouble n, pnew;
 
-      //electrons
-      mass = M_ELECTR;
-      gamma = GAMMAE;
-      n = calc_thermal_ne(pp);
-      #ifdef CONSISTENTGAMMA
-      Tenew=solve_Teifromnmu(n, mass, ue,ELECTRONS); //solves in parallel for gamma and temperature
-      theta=K_BOLTZ*Tenew/mass;  
-      #ifndef FIXEDGAMMASPECIES
-      gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
-      #endif
-      #endif
-      pnew=(ue)*(gamma-1.);
-      Tenew=pnew/K_BOLTZ/n;
-      Senew=calc_SefromrhoT(n*MU_E*M_PROTON,Tenew,ELECTRONS);
-      pp[ENTRE]=Senew;
+    //electrons
+    mass = M_ELECTR;
+    gamma = GAMMAE;
+    n = calc_thermal_ne(pp);
+    #ifdef CONSISTENTGAMMA
+    Tenew=solve_Teifromnmu(n, mass, ue,ELECTRONS); //solves in parallel for gamma and temperature
+    theta=K_BOLTZ*Tenew/mass;  
+    #ifndef FIXEDGAMMASPECIES
+    gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
+    #endif
+    #endif
+    pnew=(ue)*(gamma-1.);
+    Tenew=pnew/K_BOLTZ/n;
+    Senew=calc_SefromrhoT(n*MU_E*M_PROTON,Tenew,ELECTRONS);
+    pp[ENTRE]=Senew;
 
-      //ions
-      mass = M_PROTON;
-      gamma = GAMMAI;
-      n = pp[RHO]/MU_I/M_PROTON;//calc_thermal_ne(pp);
-      #ifdef CONSISTENTGAMMA
-      Tinew=solve_Teifromnmu(n, mass, ui,IONS); //solves in parallel for gamma and temperature
-      theta=K_BOLTZ*Tinew/mass;
-      #ifndef FIXEDGAMMASPECIES
-      gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
-      #endif
-      #endif
-      pnew=(ui)*(gamma-1.);
-      Tinew=pnew/K_BOLTZ/n;
-      Sinew=calc_SefromrhoT(pp[RHO],Tinew,IONS);
-      pp[ENTRI]=Sinew;
+    //ions
+    mass = M_PROTON;
+    gamma = GAMMAI;
+    n = pp[RHO]/MU_I/M_PROTON;//calc_thermal_ne(pp);
+    #ifdef CONSISTENTGAMMA
+    Tinew=solve_Teifromnmu(n, mass, ui,IONS); //solves in parallel for gamma and temperature
+    theta=K_BOLTZ*Tinew/mass;
+    #ifndef FIXEDGAMMASPECIES
+    gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
+    #endif
+    #endif
+    pnew=(ui)*(gamma-1.);
+    Tinew=pnew/K_BOLTZ/n;
+    Sinew=calc_SefromrhoT(pp[RHO],Tinew,IONS);
+    pp[ENTRI]=Sinew;
       
 #endif  //EVOLVEELECTRONS
 
-      ret=-1;      
-  } //if(bsq>B2RHORATIOMAX*pp[RHO]) or (bsq>B2UURATIOMAX*pp[UU]) 
+    ret=-1;
+      
+  } // if(rhofloored==1 || uufloored==1)
 
 
 #endif //MAGNFIELD
 
   //**********************************************************************
   //too fast
-  //TODO: implement checks for other VELPRIM
+  //TODO: implement GAMMAMAXHD for other VELPRIM
   if(VELPRIM==VELR) 
   {
-      ldouble qsq=0.;
-      int i,j;
-      for(i=1;i<4;i++)
-	for(j=1;j<4;j++)
-	  qsq+=pp[UU+i]*pp[UU+j]*gg[i][j];
-      ldouble gamma2=1.+qsq;
-      if(gamma2>GAMMAMAXHD*GAMMAMAXHD)
+    ldouble qsq=0.;
+    int i,j;
+    for(i=1;i<4;i++)
+      for(j=1;j<4;j++)
+	qsq+=pp[UU+i]*pp[UU+j]*gg[i][j];
+    ldouble gamma2=1.+qsq;
+
+    if(gamma2>GAMMAMAXHD*GAMMAMAXHD)
+    {
+      ldouble qsqmax=GAMMAMAXHD*GAMMAMAXHD-1.;
+      ldouble A=sqrt(qsqmax/qsq);
+      for(j=1;j<4;j++)
+	pp[UU+j]*=A;
+
+      if(verbose)
       {
-	  ldouble qsqmax=GAMMAMAXHD*GAMMAMAXHD-1.;
-	  ldouble A=sqrt(qsqmax/qsq);
-	  for(j=1;j<4;j++)
-	    pp[UU+j]*=A;
-	  ret=-1;
-	  if(verbose )
-	  {
-	      printf("hd_floors CASE 4 at (%d,%d,%d): %e",geom->ix+TOI,geom->iy+TOJ,geom->iz,sqrt(gamma2));
-	      qsq=0.;
-	      for(i=1;i<4;i++)
-		for(j=1;j<4;j++)
-		  qsq+=pp[UU+i]*pp[UU+j]*gg[i][j];
-	      gamma2=1.+qsq;
-	      printf(" -> %e\n",sqrt(gamma2));
-	  }
+	printf("hd_floors CASE 4 at %d,%d,%d (%e)",geom->ix+TOI,geom->iy+TOJ,geom->iz,sqrt(gamma2));
       }
+    }
+
+    ret = -1;
   }
   
-  
-
   //**********************************************************************  
   //Species temperature floors/ceilings
+  //TODO ANDREW will not keep them consistent ue + ui = ugas!
 #ifdef EVOLVEELECTRONS
   ldouble mue,mui;
   mui=MU_I;
@@ -780,7 +799,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   ldouble Timinimal=TEMPIMINIMALFRACTION*Tgas;
   if(Tiloc<Timinimal)
   {
-      Tiloc=Timinimal;
+    Tiloc=Timinimal;
   }
 
   // celing 
@@ -815,9 +834,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     }
   }
 
-  ldouble relfracn, relfracu,relfracp;
-  
   //Not too many rel. electrons
+  ldouble relfracn, relfracu,relfracp;
   ne_relel = calc_relel_ne(pp);
   ne_tot = pp[RHO]/MU_E/M_PROTON;
   relfracn = ne_relel/ne_tot;
@@ -844,380 +862,447 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 #endif //RELELECTRONS
 #endif //EVOLVEELECTRONS
 
-  //ANDREW TODO do we want this? Is this inconsistent with keeping entropy as a backup until the very end of time step? 
   //updates entropy after floor corrections
   if(ret<0)
+  {
     pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
-
+    #ifdef FORCEFREE
+    //ldouble uutmp[NV]; // ANDREW TODO why initial crash???
+    pp[UUFF] = pp[UU];
+    #endif
+  }
+#endif //SKIPALLFLOORS
+  
   return ret;
 }
 
 
 //**********************************************************************
-//**********************************************************************
-//**********************************************************************
-//routines for various types of inversions
-//**********************************************************************
-//**********************************************************************
-//**********************************************************************
-
-//********************************************
-//Harm u2p_hot
-//********************************************
-
-static FTYPE
-dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq, FTYPE gamma)
-{
-  FTYPE W=Wp+D;
-  return( (gamma - 1.) * (1. - vsq) /  gamma ) ;
-}
-
-// 1 / (d(u+p)/dp)
-static FTYPE
-compute_idwmrho0dp(FTYPE wmrho0, FTYPE gamma)
-{
-  return((gamma-1.)/gamma);
-}
-
-
-// 1 / (drho0/dp) holding wmrho0 fixed
-static FTYPE
-compute_idrho0dp(FTYPE wmrho0)
-{
-  return(0.0);
-}
-
-static int
-f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble pgamma)
-{
-
-  ldouble Qn=cons[0];
-  ldouble Qt2=cons[1];
-  ldouble D=cons[2];
-  ldouble QdotBsq=cons[3];
-  ldouble Bsq=cons[4];
-  ldouble Qdotnp=cons[6];
-  
-  ldouble W=Wp+D;
-
-  FTYPE W3,X3,Ssq,Wsq,X,X2,Xsq; 
-  FTYPE Qtsq = Qt2;
-  X = Bsq + W;
-  Wsq = W*W;
-  W3 = Wsq*W ;
-  X2 = X*X;
-  Xsq = X2;
-  X3 = X2*X;
-
-  ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
-  ldouble gamma2 = 1./(1.-v2);
-  ldouble gamma = sqrt(gamma2);
-  ldouble rho0 = D/gamma;
-  ldouble wmrho0 = Wp/gamma2 - D*v2/(1.+gamma);
-  ldouble u = wmrho0 / pgamma;
-  ldouble p = (pgamma-1)*u;
-
-  //original:
-#if (U2P_EQS==U2P_EQS_NOBLE)
-   *f = Qn + W - p + 0.5*Bsq*(1.+v2) - QdotBsq/2./Wsq;
- *err = fabs(*f) / (fabs(Qn) + fabs(W) + fabs(p) + fabs(0.5*Bsq*(1.+v2)) + fabs(QdotBsq/2./Wsq));
-#endif
-
-  //JONS:
-#if (U2P_EQS==U2P_EQS_JON)
-   *f = Qdotnp + Wp - p + 0.5*Bsq + (Bsq*Qtsq - QdotBsq)/X2;
- *err = fabs(*f) / (fabs(Qdotnp) + fabs(Wp) + fabs(p) + fabs(0.5*Bsq) + fabs((Bsq*Qtsq - QdotBsq)/X2));
-#endif
-
-  // dp/dWp = dp/dW + dP/dv^2 dv^2/dW  
-  ldouble dvsq=(-2.0/X3 * ( Qtsq  +  QdotBsq * (3.0*W*X + Bsq*Bsq)/W3));
-  ldouble dp1 = dpdWp_calc_vsq(Wp, D, v2 ,pgamma); // vsq can be unphysical
-
-  ldouble idwmrho0dp=compute_idwmrho0dp(wmrho0,pgamma);
-  ldouble dwmrho0dvsq = (D*(gamma*0.5-1.0) - Wp);
-
-  ldouble drho0dvsq = -D*gamma*0.5; // because \rho = D/\gamma
-  ldouble idrho0dp = compute_idrho0dp(wmrho0);
-
-  ldouble dp2 =   drho0dvsq *idrho0dp  +   dwmrho0dvsq *idwmrho0dp;
-
-  ldouble dpdW = dp1  + dp2*dvsq; // dp/dW = dp/dWp
-
-  //original:
-  #if (U2P_EQS==U2P_EQS_NOBLE)
-  *df=1.-dpdW + QdotBsq/(Wsq*W) + 0.5*Bsq*dvsq;
-  #endif
-
-  //JONS:
-  #if (U2P_EQS==U2P_EQS_JON)
-  *df=1. -dpdW + (Bsq*Qtsq - QdotBsq)/X3*(-2.0);
-  #endif
-
-  return 0;  
-}
-
-//********************************************
-//Harm u2p_entropy
-//********************************************
-
-// p(rho0, w-rho0 = u+p)
-static FTYPE
-pressure_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
-{
-  ldouble igammar = (gamma-1.)/gamma;
-  return(igammar*wmrho0) ;
-}
-
-// local aux function
-static FTYPE
-compute_inside_entropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
-{
-  FTYPE pressure,indexn,insideentropy;
-
-  pressure=pressure_wmrho0_idealgas(rho0,wmrho0,gamma);
-  indexn=1.0/(gamma-1.);  
-  insideentropy=pow(pressure,indexn)/pow(rho0,indexn+1.0);
-
-  return(insideentropy);
-}
-
-
-// specific entropy as function of rho0 and internal energy (u)
-// Ss(rho0,\chi=u+p)
-// specific entropy = \ln( p^n/\rho^{n+1} )
-static FTYPE
-compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
-{
-  FTYPE insideentropy,specificentropy;
-
-  insideentropy=compute_inside_entropy_wmrho0_idealgas(rho0, wmrho0,gamma);
-  specificentropy=log(insideentropy);
-
-  return(specificentropy);
-
-}
-
-// used for utoprim_jon when doing entropy evolution
-// dSspecific/d\chi
-static FTYPE
-compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
-{
-  FTYPE dSdchi;
-
-  dSdchi = 1.0/((gamma-1.)*wmrho0);
-  // Again, GAMMA->1 means dSdchi->\infty unless \chi->0 or rho0->0
-
-  return(dSdchi);
-
-}
-
-// dSspecific/drho0
-static FTYPE
-compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma)
-{
-  FTYPE dSdrho;
-  
-  dSdrho=gamma/((1.0-gamma)*rho0);
-
-  return(dSdrho);
-}
-
-static int
-f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma)
-{
-  ldouble Qn=cons[0];
-  ldouble Qt2=cons[1];
-  ldouble D=cons[2];
-  ldouble QdotBsq=cons[3];
-  ldouble Bsq=cons[4];
-  ldouble Sc=cons[5];
- 
-  ldouble W=Wp+D;
-
-  FTYPE W3,X3,Ssq,Wsq,X,X2,Xsq; 
-  FTYPE Qtsq = Qt2;
-  X = Bsq + W;
-  Wsq = W*W;
-  W3 = Wsq*W ;
-  X2 = X*X;
-  Xsq = X2;
-  X3 = X2*X;
-
-  ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
-  ldouble gamma2 = 1./(1.-v2);
-  ldouble gamma = sqrt(gamma2);
-  ldouble rho0 = D/gamma;
-  ldouble wmrho0 = Wp/gamma2 - D*v2/(1.+gamma);
-  ldouble u = wmrho0 / pgamma;
-  ldouble p = (pgamma-1)*u;
-
-  ldouble Ssofchi=compute_specificentropy_wmrho0_idealgas(rho0,wmrho0,pgamma);
-
-  *f= -Sc + D*Ssofchi;
-
-  *err = fabs(*f) / (fabs(Sc) + fabs(D*Ssofchi));
-
-  FTYPE dSsdW,dSsdvsq,dSsdWp,dScprimedWp,dSsdrho,dSsdchi;
-  FTYPE dvsq,dwmrho0dW,drho0dW;
-  FTYPE dwmrho0dvsq,drho0dvsq;
-
-  dSsdrho=compute_dspecificSdrho_wmrho0_idealgas(rho0,wmrho0,pgamma);
-  dSsdchi=compute_dspecificSdwmrho0_wmrho0_idealgas(rho0,wmrho0,pgamma);
-
-  dwmrho0dW = 1.0/gamma; // holding utsq fixed
-  drho0dW = 0.0; // because \rho=D/\gamma and holding utsq fixed
-  dwmrho0dvsq = (D*(gamma*0.5-1.0) - Wp); // holding Wp fixed
-  drho0dvsq = -D*gamma*0.5; // because \rho=D/\gamma and holding Wp fixed
-
-  dvsq=(-2.0/X3 * ( Qtsq  +  QdotBsq * (3.0*W*X + Bsq*Bsq)/W3));
-
-  dSsdW =   drho0dW   *dSsdrho +   dwmrho0dW   *dSsdchi; // dSs/dW' holding utsq fixed
-  dSsdvsq = drho0dvsq *dSsdrho +   dwmrho0dvsq *dSsdchi;
-  dSsdWp = dSsdW  + dSsdvsq*dvsq; // dSs/dW = dSs/dWp [total derivative]
-
-  dScprimedWp = D*dSsdWp;
-
-  *df = dScprimedWp;
-  
-  return 0;
- 
-}
-
-//**********************************************************************
 // solver wrapper
 //**********************************************************************
-//ANDREW TODO do we need function pointers?
+//ANDREW TODO do we need to use function pointers?
 
 int
 u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
+  struct geometry *geom
+      = (struct geometry *) ggg;
 
 #ifdef NONRELMHD
   return u2p_solver_nonrel(uu,pp,ggg,Etype,verbose);
 #endif
 
+  int do_u2p_ff=0;
 #ifdef FORCEFREE
-  return u2p_solver_ff(uu,pp,ggg,1);
-#endif
+  #ifndef HYBRID_FORCEFREE
+  do_u2p_ff=1;
+  #else
   
-  int (*solver)(ldouble*,ldouble*,void*,int,int);
-  struct geometry *geom
-    = (struct geometry *) ggg;
-  
-#if (U2P_SOLVER==U2P_SOLVER_WP)
-  solver = & u2p_solver_Wp;
-#endif
-  
-#if (U2P_SOLVER==U2P_SOLVER_W)  // this is the default
-  solver = & u2p_solver_W;
-#endif
+  //ANDREW TODO what should be the criterion here? local sigma from guess pp?
+  ldouble ucon0[4],ucov0[4],bcon0[4],bcov0[4];
+  ldouble bsq0,sigma0;
+  calc_ucon_ucov_from_prims(pp, geom, ucon0, ucov0);
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon0, ucov0, geom, bcon0, bcov0, &bsq0);
+  sigma0 = bsq0/pp[RHO];
+  if(sigma0 > HYBRID_FORCEFREE_SIGMACUT)
+    do_u2p_ff = 1;
+  #endif
+#endif //FORCEFREE
 
-  return (*solver)(uu,pp,ggg,Etype,verbose);
+  // use ff solver if not hybrid or if high sigma
+  if(do_u2p_ff)
+  {
+    return u2p_solver_ff(uu,pp,ggg,U2P_ENTROPY,verbose);
+  }
+  else
+  {
+  
+    //int (*solver)(ldouble*,ldouble*,void*,int,int);
+  
+    #if (U2P_SOLVER==U2P_SOLVER_WP)
+    //solver = & u2p_solver_Wp;
+    return u2p_solver_Wp(uu,pp,ggg,Etype,verbose);
+    #endif
+  
+    #if (U2P_SOLVER==U2P_SOLVER_W)  // this is the default
+    //solver = & u2p_solver_W;
+    return u2p_solver_W(uu,pp,ggg,Etype,verbose);
+    #endif
+  }
+
+  return -200;
+  //return (*solver)(uu,pp,ggg,Etype,verbose);
 } 
- 
+
+
 //**********************************************************************
-//non-relativistic, analytical, solver
+//Newton-Raphson solver 
+//iterates W, not Wp
+//Etype == 0 -> hot inversion (uses D,Ttt,Tti)
+//Etype == 1 -> entropy inversion (uses D,S,Tti)
 //**********************************************************************
 
 int
-u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
+u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
+  int i,j,k;
+  ldouble rho,uint,w,W,alpha,D,Sc;
+  ldouble ucon[4],ucov[4],utcon[4],utcov[4],ncov[4],ncon[4];
+  ldouble Qcon[4],Qcov[4],Qconp[4],Qcovp[4],jmunu[4][4],Qtcon[4],Qtcov[4],Qt2,Qn;
+  ldouble QdotB,QdotBsq,Bcon[4],Bcov[4],Bsq;
+  
+  /*******************************************************/
   //prepare geometry
   struct geometry *geom
-    = (struct geometry *) ggg;
-
+  = (struct geometry *) ggg;
+  
+  ldouble pgamma=GAMMA;
+#ifdef CONSISTENTGAMMA
+  pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
+#endif
+  ldouble pgammam1=pgamma-1.;
+  
   ldouble (*gg)[5], (*GG)[5], gdet, gdetu, gdetu_inv;
-  gg=geom->gg;  GG=geom->GG;
-  gdet=geom->gdet;gdetu=gdet;
+  gg=geom->gg; GG=geom->GG;
+  gdet=geom->gdet; gdetu=gdet;
 #if (GDETIN==0) //gdet out of derivatives
   gdetu=1.;
 #endif
   gdetu_inv = 1. / gdetu;
-
-  //density
-  ldouble rho=uu[RHO] * gdetu_inv;
-  pp[RHO]=rho;
-
-  //velocities u_i
-  ldouble ucov[4],ucon[4],vcov[4];
-  ucov[0]=-1.;
-  ucov[1]=uu[VX] * gdetu_inv / rho;
-  ucov[2]=uu[VY] * gdetu_inv / rho;
-  ucov[3]=uu[VZ] * gdetu_inv / rho;
-
-  indices_12(ucov,ucon,GG);
-
-  ucon[0]=1.;
-
-  ldouble v2=dot3nr(ucon,ucov);
-
-  pp[VX]=ucon[1];
-  pp[VY]=ucon[2];
-  pp[VZ]=ucon[3];
-
-  ldouble bsq=0.;
-
-#ifdef MAGNFIELD
- 
-  ldouble bcon[4],bcov[4],Bcon[4];
-
-  Bcon[0]=0.;
-  Bcon[1]=uu[B1] * gdetu_inv;
-  Bcon[2]=uu[B2] * gdetu_inv ;
-  Bcon[3]=uu[B3] * gdetu_inv ;
-
-  pp[B1]=Bcon[1];
-  pp[B2]=Bcon[2];
-  pp[B3]=Bcon[3];
-
-  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
-
-#endif
-
   
-  ldouble uint;
+  /****************************/
+  //equations choice
+  int (*f_u2p)(ldouble,ldouble*,ldouble*,ldouble*,ldouble*,ldouble);
   if(Etype==U2P_HOT)
+    f_u2p=&f_u2p_hot;
+  if(Etype==U2P_ENTROPY)
+    f_u2p=&f_u2p_entropy;
+  /****************************/
+  
+  if(verbose>1)
+  {
+    printf("********************\n");
+    print_conserved(uu);
+    print_primitives(pp);
+  }
+  
+  //conserved quantities etc
+  
+  //alpha=sqrt(-1./GG[0][0]);
+  alpha = geom->alpha;
+  
+  //D
+  D = uu[RHO] * gdetu_inv * alpha; // gdetu rho ut
+  
+  //conserved entropy "S u^t"
+  Sc = uu[ENTR] * gdetu_inv * alpha;
+  
+  //Q_mu=alpha T^t_mu
+  Qcov[0] = (uu[UU] * gdetu_inv - uu[RHO] * gdetu_inv) * alpha;
+  Qcov[1] = uu[VX] * gdetu_inv * alpha;
+  Qcov[2] = uu[VY] * gdetu_inv * alpha;
+  Qcov[3] = uu[VZ] * gdetu_inv * alpha;
+  
+  //Qp_mu=alpha T^t_mu
+  Qcovp[0] = uu[UU] * gdetu_inv *alpha;
+  Qcovp[1] = uu[VX] * gdetu_inv *alpha;
+  Qcovp[2] = uu[VY] * gdetu_inv *alpha;
+  Qcovp[3] = uu[VZ] * gdetu_inv *alpha;
+  
+  //Qp^mu
+  indices_12(Qcovp,Qconp,GG);
+  
+  //Q^mu
+  indices_12(Qcov,Qcon,GG);
+  
+#ifdef MAGNFIELD
+  //curly B^mu
+  Bcon[0]=0.;
+  Bcon[1]=uu[B1] * gdetu_inv * alpha;
+  Bcon[2]=uu[B2] * gdetu_inv * alpha;
+  Bcon[3]=uu[B3] * gdetu_inv * alpha;
+  
+  //B_mu
+  indices_21(Bcon,Bcov,gg);
+  
+  Bsq = dot(Bcon,Bcov);
+  QdotB = dot(Qcov,Bcon);
+  QdotBsq = QdotB*QdotB;
+
+#else
+  Bsq=QdotB=QdotBsq=0.;
+  Bcon[0]=Bcon[1]=Bcon[2]=Bcon[3]=0.;
+#endif  // MAGNFIELD
+
+  //normal observer velocity
+  //n_mu = (-alpha, 0, 0, 0)
+  ncov[0]=-alpha;
+  ncov[1]=ncov[2]=ncov[3]=0.;
+  
+  //n^mu
+  indices_12(ncov,ncon,GG);
+  
+  //Q_mu n^mu = Q^mu n_mu = -alpha*Q^t
+  Qn = Qcon[0] * ncov[0];
+  
+  //j^mu_nu = delta^mu_nu +n^mu n_nu
+  for(i=0;i<4;i++)
+    for(j=0;j<4;j++)
+      jmunu[i][j] = delta(i,j) + ncon[i]*ncov[j];
+  
+  //Qtilda^nu = j^nu_mu Q^mu
+  for(i=0;i<4;i++)
+  {
+    Qtcon[i]=0.;
+    for(j=0;j<4;j++)
+      Qtcon[i]+=jmunu[i][j]*Qcon[j];
+  }
+  
+  //Qtilda_nu
+  indices_21(Qtcon,Qtcov,gg);
+  
+  //Qt2=Qtilda^mu Qtilda_mu
+  Qt2=dot(Qtcon,Qtcov);
+  FTYPE Qtsq = Qt2;
+  
+  //\beta^i \beta_i / \alpha^2 = g^{ti} g_{ti}
+  ldouble betasqoalphasq=gg[0][1]*GG[0][1] + gg[0][2]*GG[0][2] + gg[0][3]*GG[0][3];
+  ldouble alphasq=alpha*alpha;
+  //Qdotnp=-E'=-E+D
+  ldouble Dfactor = (-geom->gttpert + alphasq*betasqoalphasq)/(alphasq+alpha);
+  ldouble Qdotnp = Qconp[0]*ncov[0] + D*(Dfactor) ; // -Qdotn - W = -Qdotnp-Wp
+  
+  //initial guess for W = w gamma**2 based on current primitives
+  rho=pp[RHO];
+  uint=pp[UU];
+  utcon[0]=0.;
+  utcon[1]=pp[VX];
+  utcon[2]=pp[VY];
+  utcon[3]=pp[VZ];
+  
+  if (VELPRIM != VELR)
+  {
+    conv_vels(utcon,utcon,VELPRIM,VELR,gg,GG);
+  }
+  
+  ldouble qsq=0.;
+  for(i=1;i<4;i++)
+    for(j=1;j<4;j++)
+      qsq+=utcon[i]*utcon[j]*gg[i][j];
+  ldouble gamma2=1.+qsq;
+  ldouble gamma=sqrt(gamma2);
+  
+  //W
+  W=(rho+pgamma*uint)*gamma2;
+  
+  if(verbose>1) printf("initial W:%e\n",W);
+  
+  // test if does not provide reasonable gamma2
+  // Make sure that W is large enough so that v^2 < 1 :
+  int i_increase = 0;
+  ldouble f0,f1,dfdW,err;
+  ldouble CONV=U2PCONV;
+  ldouble EPS=1.e-4;
+  ldouble Wprev=W;
+  ldouble cons[7]={Qn,Qt2,D,QdotBsq,Bsq,Sc,Qdotnp};
+  
+  do
+  {
+    f0=dfdW=0.;
+    
+    //if(Etype!=U2P_HOT) //entropy-like solvers require this additional check
+    //now invoked for all solvers:
+    (*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
+    
+    if( ((( W*W*W * ( W + 2.*Bsq )
+           - QdotBsq*(2.*W + Bsq) ) <= W*W*(Qtsq-Bsq*Bsq))
+         || !isfinite(f0) || !isfinite(f0)
+         || !isfinite(dfdW) || !isfinite(dfdW))
+       && (i_increase < 50))
     {
-      uint = -uu[UU] * gdetu_inv - bsq/2. - rho*v2/2.;
-
-      if(uint<NONRELMHDENTROPYCUT*rho || !isfinite(uint)) 
-	{
-	  //if(!isfinite(uint)) printf("%d %d > %e %e %e %e %e\n",geom->ix+TOI,geom->iy+TOI,uint,uu[UU]/gdetu,bsq/2.,rho*v2/2.,rho); 
-	  //printf("%e %e\n",uint,rho);
-	  //if(geom->ix>50) getch();
-	  return -1;
-	}
-
-      pp[UU]=uint;
+      if(verbose>0) printf("init W : %e -> %e (%e %e)\n",W,100.*W,f0,dfdW);
+      W *= 10.;
+      i_increase++;
+      continue;
     }
-  else if(Etype==U2P_ENTROPY)
+    else
+      break;
+  }
+  while(1);
+  
+  if(i_increase>=50)
+  {
+    return -150;
+    printf("failed to find initial W for Etype: %d\n",Etype);
+    printf("at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
+    print_NVvector(uu);
+    print_NVvector(pp);
+    //getchar();
+  }
+  
+  //1d Newton solver
+  int iter=0, fu2pret;
+  do
+  {
+    Wprev=W;
+    iter++;
+
+    fu2pret=(*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
+    
+    if(verbose>1) printf("%d %e %e %e %e\n",iter,W,f0,dfdW,err);
+    
+    //convergence test
+    if(err<CONV)
+      break;
+    
+    if(dfdW==0.) {W*=1.1; continue;}
+    
+    ldouble Wnew = W-f0/dfdW;
+    int idump=0;
+    ldouble dumpfac=1.;
+    
+    //test if goes out of bounds and damp solution if so
+    do
     {
-      ldouble S=uu[ENTR] * gdetu_inv ;
-      uint= calc_ufromS(S,rho,geom->ix,geom->iy,geom->iz);
-      pp[UU]=uint;
+      ldouble f0tmp,dfdWtmp,errtmp;
+      f0tmp=dfdWtmp=0.;
+      //now for all solvers
+      //if(Etype!=U2P_HOT) //entropy-like solvers require this additional check
+      (*f_u2p)(Wnew-D,cons,&f0tmp,&dfdWtmp,&errtmp,pgamma);
+      if(verbose>1) printf("sub (%d) :%d %e %e %e %e\n",idump,iter,Wnew,f0tmp,dfdWtmp,errtmp);
+      if( ((( Wnew*Wnew*Wnew * ( Wnew + 2.*Bsq )
+             - QdotBsq*(2.*Wnew + Bsq) ) <= Wnew*Wnew*(Qtsq-Bsq*Bsq))
+           || !isfinite(f0tmp) || !isfinite(f0tmp)
+           || !isfinite(dfdWtmp) || !isfinite(dfdWtmp))
+         && (idump<100))
+      {
+        idump++;
+        dumpfac/=2.;
+        Wnew=W-dumpfac*f0/dfdW;
+        continue;
+      }
+      else
+        break;
     }
+    while(1);
+    
+    if(idump>=100)
+    {
+      if(verbose>0) printf("damped unsuccessfuly\n");
+      return -101;
+    }
+    
+    W=Wnew;
+    
+    if(fabs(W)>BIG)
+    {
+      if(verbose>1) printf("W has gone out of bounds at %d,%d,%d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz);
+      return -103;
+    }
+    
+    if(fabs((W-Wprev)/Wprev)<CONV && err<1.e-1) break;
+    //if(fabs((W-Wprev)/Wprev)<CONV && err<sqrt(CONV)) break;
+  }
+  while(iter<50);
+  
+  if(iter>=50)
+  {
+    if(verbose>0) printf("iter exceeded in u2p_solver with Etype: %d\n",Etype); //getchar();
+    return -102;
+  }
+  
+  if(!isfinite(W))
+  {
+    if(verbose) printf("nan/inf W in u2p_solver with Etype: %d\n",Etype);
+    return -103;
+  }
+  
+  if(verbose>1)
+  {
+    fu2pret=(*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
+    printf("end: %d %e %e %e %e\n",iter,W,f0,dfdW,err);
+  }
+  
+  //W found, let's calculate v2 and the rest
+  ldouble Wsq,Xsq,v2,entr;
+  
+  Wsq = W*W ;
+  Xsq = (Bsq + W) * (Bsq + W);
+  v2 = ( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
+  
+  gamma2=1./(1.-v2);
+  gamma=sqrt(gamma2);
+  rho=D/gamma;
+  entr=Sc/gamma;
+  uint=1./pgamma*(W/gamma2-rho);
+  utcon[0]=0.;
+  utcon[1]=gamma/(W+Bsq)*(Qtcon[1]+QdotB*Bcon[1]/W);
+  utcon[2]=gamma/(W+Bsq)*(Qtcon[2]+QdotB*Bcon[2]/W);
+  utcon[3]=gamma/(W+Bsq)*(Qtcon[3]+QdotB*Bcon[3]/W);
 
+  if(verbose>1)
+    printf("end2: %e %e %e %e %e %e\n",W,D,pgamma,gamma2,rho,uint);  
+  if(!isfinite(utcon[1]))
+  {
+    return -120;
+  }
+  
+  if(uint<0. || gamma2<0. || isnan(W) || !isfinite(W))
+  {
+    if(verbose>0) printf("neg u in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);//getchar();
+    return -104;
+  }
+  
+  //converting to VELPRIM
+  if (VELR != VELPRIM)
+  {
+    conv_vels(utcon,utcon,VELR,VELPRIM,gg,GG);
+  }
+  
+  //returning new primitives
+  pp[RHO]=rho;
+  pp[UU]=uint;
+  pp[VX]=utcon[1];
+  pp[VY]=utcon[2];
+  pp[VZ]=utcon[3];
+  
+  if(rho<0.)
+  {
+    if(verbose>0) printf("neg rho in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);
+    //getchar();
+    return -105;
+  }
+  
+  //entropy based on Etype  
   //pure entropy evolution - updated only in the end of RK2
-  pp[ENTR]= uu[ENTR] * gdetu_inv;
-
-  #ifdef EVOLVEELECTRONS
-  ldouble Se=uu[ENTRE] * gdetu_inv ;
+  pp[ENTR]=entr;
+  
+#ifdef MAGNFIELD
+  //magnetic conserved=primitives
+  pp[B1]=uu[B1] * gdetu_inv;
+  pp[B2]=uu[B2] * gdetu_inv;
+  pp[B3]=uu[B3] * gdetu_inv;
+#endif
+  
+#ifdef EVOLVEELECTRONS
+  conv_vels(utcon,utcon,VELPRIM,VEL4,gg,GG);
+  ldouble Se=uu[ENTRE] * gdetu_inv / utcon[0];
   pp[ENTRE]=Se;
- 
-  ldouble Si=uu[ENTRI] * gdetu_inv ;
+  ldouble Si=uu[ENTRI] * gdetu_inv / utcon[0];
   pp[ENTRI]=Si;
-  #endif
-
-  #ifdef RELELECTRONS
-   int ib;
-   for(ib=0;ib<NRELBIN;ib++)
-     pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv ;
-  #endif
-
-
-  return 0;
-} //u2p_solver_nonrel
-
+  
+#ifdef RELELECTRONS
+  int ib;
+  for(ib=0;ib<NRELBIN;ib++)
+    pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv / utcon[0];
+#endif
+#endif
+  
+  if(verbose) print_primitives(pp);
+  
+  if(verbose>0) printf("u2p_solver returns 0\n");
+  return 0; //ok
+}
 
 //**********************************************************************
 //Newton-Raphson solver 
@@ -1675,374 +1760,107 @@ u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 }
 
 //**********************************************************************
-//old Newton-Raphson solver 
-//iterates W, not Wp
-//Etype == 0 -> hot inversion (uses D,Ttt,Tti)
-//Etype == 1 -> entropy inversion (uses D,S,Tti)
+//non-relativistic, analytical, solver
 //**********************************************************************
 
 int
-u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
+u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
-  int i,j,k;
-  ldouble rho,uint,w,W,alpha,D,Sc;
-  ldouble ucon[4],ucov[4],utcon[4],utcov[4],ncov[4],ncon[4];
-  ldouble Qcon[4],Qcov[4],Qconp[4],Qcovp[4],jmunu[4][4],Qtcon[4],Qtcov[4],Qt2,Qn;
-  ldouble QdotB,QdotBsq,Bcon[4],Bcov[4],Bsq;
-  
-  /*******************************************************/
   //prepare geometry
   struct geometry *geom
-  = (struct geometry *) ggg;
-  
-  ldouble pgamma=GAMMA;
-#ifdef CONSISTENTGAMMA
-  pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
-#endif
-  ldouble pgammam1=pgamma-1.;
-  
+    = (struct geometry *) ggg;
+
   ldouble (*gg)[5], (*GG)[5], gdet, gdetu, gdetu_inv;
-  gg=geom->gg; GG=geom->GG;
-  gdet=geom->gdet; gdetu=gdet;
+  gg=geom->gg;  GG=geom->GG;
+  gdet=geom->gdet;gdetu=gdet;
 #if (GDETIN==0) //gdet out of derivatives
   gdetu=1.;
 #endif
   gdetu_inv = 1. / gdetu;
-  
-  /****************************/
-  //equations choice
-  int (*f_u2p)(ldouble,ldouble*,ldouble*,ldouble*,ldouble*,ldouble);
-  if(Etype==U2P_HOT)
-    f_u2p=&f_u2p_hot;
-  if(Etype==U2P_ENTROPY)
-    f_u2p=&f_u2p_entropy;
-  /****************************/
-  
-  if(verbose>1)
-  {
-    printf("********************\n");
-    print_conserved(uu);
-    print_primitives(pp);
-  }
-  
-  //conserved quantities etc
-  
-  //alpha
-  //alpha=sqrt(-1./GG[0][0]);
-  alpha = geom->alpha;
-  
-  //D
-  D = uu[RHO] * gdetu_inv * alpha; // gdetu rho ut
-  
-  //conserved entropy "S u^t"
-  Sc = uu[ENTR] * gdetu_inv * alpha;
-  
-  //Q_mu=alpha T^t_mu
-  Qcov[0] = (uu[UU] * gdetu_inv - uu[RHO] * gdetu_inv) * alpha;
-  Qcov[1] = uu[VX] * gdetu_inv * alpha;
-  Qcov[2] = uu[VY] * gdetu_inv * alpha;
-  Qcov[3] = uu[VZ] * gdetu_inv * alpha;
-  
-  //Qp_mu=alpha T^t_mu
-  Qcovp[0] = uu[UU] * gdetu_inv *alpha;
-  Qcovp[1] = uu[VX] * gdetu_inv *alpha;
-  Qcovp[2] = uu[VY] * gdetu_inv *alpha;
-  Qcovp[3] = uu[VZ] * gdetu_inv *alpha;
-  
-  //Qp^mu
-  indices_12(Qcovp,Qconp,GG);
-  
-  //Q^mu
-  indices_12(Qcov,Qcon,GG);
-  
-#ifdef MAGNFIELD
-  //curly B^mu
-  Bcon[0]=0.;
-  Bcon[1]=uu[B1] * gdetu_inv * alpha;
-  Bcon[2]=uu[B2] * gdetu_inv * alpha;
-  Bcon[3]=uu[B3] * gdetu_inv * alpha;
-  
-  //B_mu
-  indices_21(Bcon,Bcov,gg);
-  
-  Bsq = dot(Bcon,Bcov);
-  QdotB = dot(Qcov,Bcon);
-  QdotBsq = QdotB*QdotB;
 
-#else
-  Bsq=QdotB=QdotBsq=0.;
-  Bcon[0]=Bcon[1]=Bcon[2]=Bcon[3]=0.;
-#endif  // MAGNFIELD
-
-  //normal observer velocity
-  //n_mu = (-alpha, 0, 0, 0)
-  ncov[0]=-alpha;
-  ncov[1]=ncov[2]=ncov[3]=0.;
-  
-  //n^mu
-  indices_12(ncov,ncon,GG);
-  
-  //Q_mu n^mu = Q^mu n_mu = -alpha*Q^t
-  Qn = Qcon[0] * ncov[0];
-  
-  //j^mu_nu = delta^mu_nu +n^mu n_nu
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
-      jmunu[i][j] = delta(i,j) + ncon[i]*ncov[j];
-  
-  //Qtilda^nu = j^nu_mu Q^mu
-  for(i=0;i<4;i++)
-  {
-    Qtcon[i]=0.;
-    for(j=0;j<4;j++)
-      Qtcon[i]+=jmunu[i][j]*Qcon[j];
-  }
-  
-  //Qtilda_nu
-  indices_21(Qtcon,Qtcov,gg);
-  
-  //Qt2=Qtilda^mu Qtilda_mu
-  Qt2=dot(Qtcon,Qtcov);
-  FTYPE Qtsq = Qt2;
-  
-  //\beta^i \beta_i / \alpha^2 = g^{ti} g_{ti}
-  ldouble betasqoalphasq=gg[0][1]*GG[0][1] + gg[0][2]*GG[0][2] + gg[0][3]*GG[0][3];
-  ldouble alphasq=alpha*alpha;
-  //Qdotnp=-E'=-E+D
-  ldouble Dfactor = (-geom->gttpert + alphasq*betasqoalphasq)/(alphasq+alpha);
-  ldouble Qdotnp = Qconp[0]*ncov[0] + D*(Dfactor) ; // -Qdotn - W = -Qdotnp-Wp
-  
-  //initial guess for W = w gamma**2 based on current primitives
-  rho=pp[RHO];
-  uint=pp[UU];
-  utcon[0]=0.;
-  utcon[1]=pp[VX];
-  utcon[2]=pp[VY];
-  utcon[3]=pp[VZ];
-  
-  if (VELPRIM != VELR)
-  {
-    conv_vels(utcon,utcon,VELPRIM,VELR,gg,GG);
-  }
-  
-  ldouble qsq=0.;
-  for(i=1;i<4;i++)
-    for(j=1;j<4;j++)
-      qsq+=utcon[i]*utcon[j]*gg[i][j];
-  ldouble gamma2=1.+qsq;
-  ldouble gamma=sqrt(gamma2);
-  
-  //W
-  W=(rho+pgamma*uint)*gamma2;
-  
-  if(verbose>1) printf("initial W:%e\n",W);
-  
-  // test if does not provide reasonable gamma2
-  // Make sure that W is large enough so that v^2 < 1 :
-  int i_increase = 0;
-  ldouble f0,f1,dfdW,err;
-  ldouble CONV=U2PCONV;
-  ldouble EPS=1.e-4;
-  ldouble Wprev=W;
-  ldouble cons[7]={Qn,Qt2,D,QdotBsq,Bsq,Sc,Qdotnp};
-  
-  do
-  {
-    f0=dfdW=0.;
-    
-    //if(Etype!=U2P_HOT) //entropy-like solvers require this additional check
-    //now invoked for all solvers:
-    (*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
-    
-    if( ((( W*W*W * ( W + 2.*Bsq )
-           - QdotBsq*(2.*W + Bsq) ) <= W*W*(Qtsq-Bsq*Bsq))
-         || !isfinite(f0) || !isfinite(f0)
-         || !isfinite(dfdW) || !isfinite(dfdW))
-       && (i_increase < 50))
-    {
-      if(verbose>0) printf("init W : %e -> %e (%e %e)\n",W,100.*W,f0,dfdW);
-      W *= 10.;
-      i_increase++;
-      continue;
-    }
-    else
-      break;
-  }
-  while(1);
-  
-  if(i_increase>=50)
-  {
-    return -150;
-    printf("failed to find initial W for Etype: %d\n",Etype);
-    printf("at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
-    print_NVvector(uu);
-    print_NVvector(pp);
-    //getchar();
-  }
-  
-  //1d Newton solver
-  int iter=0, fu2pret;
-  do
-  {
-    Wprev=W;
-    iter++;
-
-    fu2pret=(*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
-    
-    if(verbose>1) printf("%d %e %e %e %e\n",iter,W,f0,dfdW,err);
-    
-    //convergence test
-    if(err<CONV)
-      break;
-    
-    if(dfdW==0.) {W*=1.1; continue;}
-    
-    ldouble Wnew = W-f0/dfdW;
-    int idump=0;
-    ldouble dumpfac=1.;
-    
-    //test if goes out of bounds and damp solution if so
-    do
-    {
-      ldouble f0tmp,dfdWtmp,errtmp;
-      f0tmp=dfdWtmp=0.;
-      //now for all solvers
-      //if(Etype!=U2P_HOT) //entropy-like solvers require this additional check
-      (*f_u2p)(Wnew-D,cons,&f0tmp,&dfdWtmp,&errtmp,pgamma);
-      if(verbose>1) printf("sub (%d) :%d %e %e %e %e\n",idump,iter,Wnew,f0tmp,dfdWtmp,errtmp);
-      if( ((( Wnew*Wnew*Wnew * ( Wnew + 2.*Bsq )
-             - QdotBsq*(2.*Wnew + Bsq) ) <= Wnew*Wnew*(Qtsq-Bsq*Bsq))
-           || !isfinite(f0tmp) || !isfinite(f0tmp)
-           || !isfinite(dfdWtmp) || !isfinite(dfdWtmp))
-         && (idump<100))
-      {
-        idump++;
-        dumpfac/=2.;
-        Wnew=W-dumpfac*f0/dfdW;
-        continue;
-      }
-      else
-        break;
-    }
-    while(1);
-    
-    if(idump>=100)
-    {
-      if(verbose>0) printf("damped unsuccessfuly\n");
-      return -101;
-    }
-    
-    W=Wnew;
-    
-    if(fabs(W)>BIG)
-    {
-      if(verbose>1) printf("W has gone out of bounds at %d,%d,%d\n",geom->ix+TOI,geom->iy+TOJ,geom->iz);
-      return -103;
-    }
-    
-    if(fabs((W-Wprev)/Wprev)<CONV && err<1.e-1) break;
-    //if(fabs((W-Wprev)/Wprev)<CONV && err<sqrt(CONV)) break;
-  }
-  while(iter<50);
-  
-  if(iter>=50)
-  {
-    if(verbose>0) printf("iter exceeded in u2p_solver with Etype: %d\n",Etype); //getchar();
-    return -102;
-  }
-  
-  if(!isfinite(W))
-  {
-    if(verbose) printf("nan/inf W in u2p_solver with Etype: %d\n",Etype);
-    return -103;
-  }
-  
-  if(verbose>1)
-  {
-    fu2pret=(*f_u2p)(W-D,cons,&f0,&dfdW,&err,pgamma);
-    printf("end: %d %e %e %e %e\n",iter,W,f0,dfdW,err);
-  }
-  
-  //W found, let's calculate v2 and the rest
-  ldouble Wsq,Xsq,v2,entr;
-  
-  Wsq = W*W ;
-  Xsq = (Bsq + W) * (Bsq + W);
-  v2 = ( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
-  
-  gamma2=1./(1.-v2);
-  gamma=sqrt(gamma2);
-  rho=D/gamma;
-  entr=Sc/gamma;
-  uint=1./pgamma*(W/gamma2-rho);
-  utcon[0]=0.;
-  utcon[1]=gamma/(W+Bsq)*(Qtcon[1]+QdotB*Bcon[1]/W);
-  utcon[2]=gamma/(W+Bsq)*(Qtcon[2]+QdotB*Bcon[2]/W);
-  utcon[3]=gamma/(W+Bsq)*(Qtcon[3]+QdotB*Bcon[3]/W);
-
-  if(verbose>1)
-    printf("end2: %e %e %e %e %e %e\n",W,D,pgamma,gamma2,rho,uint);  
-  if(!isfinite(utcon[1]))
-  {
-    return -120;
-  }
-  
-  if(uint<0. || gamma2<0. || isnan(W) || !isfinite(W))
-  {
-    if(verbose>0) printf("neg u in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);//getchar();
-    return -104;
-  }
-  
-  //converting to VELPRIM
-  if (VELR != VELPRIM)
-  {
-    conv_vels(utcon,utcon,VELR,VELPRIM,gg,GG);
-  }
-  
-  //returning new primitives
+  //density
+  ldouble rho=uu[RHO] * gdetu_inv;
   pp[RHO]=rho;
-  pp[UU]=uint;
-  pp[VX]=utcon[1];
-  pp[VY]=utcon[2];
-  pp[VZ]=utcon[3];
-  
-  if(rho<0.)
-  {
-    if(verbose>0) printf("neg rho in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);
-    //getchar();
-    return -105;
-  }
-  
-  //entropy based on Etype  
-  //pure entropy evolution - updated only in the end of RK2
-  pp[ENTR]=entr;
-  
+
+  //velocities u_i
+  ldouble ucov[4],ucon[4],vcov[4];
+  ucov[0]=-1.;
+  ucov[1]=uu[VX] * gdetu_inv / rho;
+  ucov[2]=uu[VY] * gdetu_inv / rho;
+  ucov[3]=uu[VZ] * gdetu_inv / rho;
+
+  indices_12(ucov,ucon,GG);
+
+  ucon[0]=1.;
+
+  ldouble v2=dot3nr(ucon,ucov);
+
+  pp[VX]=ucon[1];
+  pp[VY]=ucon[2];
+  pp[VZ]=ucon[3];
+
+  ldouble bsq=0.;
+
 #ifdef MAGNFIELD
-  //magnetic conserved=primitives
-  pp[B1]=uu[B1] * gdetu_inv;
-  pp[B2]=uu[B2] * gdetu_inv;
-  pp[B3]=uu[B3] * gdetu_inv;
+ 
+  ldouble bcon[4],bcov[4],Bcon[4];
+
+  Bcon[0]=0.;
+  Bcon[1]=uu[B1] * gdetu_inv;
+  Bcon[2]=uu[B2] * gdetu_inv ;
+  Bcon[3]=uu[B3] * gdetu_inv ;
+
+  pp[B1]=Bcon[1];
+  pp[B2]=Bcon[2];
+  pp[B3]=Bcon[3];
+
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
+
 #endif
+
   
-#ifdef EVOLVEELECTRONS
-  conv_vels(utcon,utcon,VELPRIM,VEL4,gg,GG);
-  ldouble Se=uu[ENTRE] * gdetu_inv / utcon[0];
+  ldouble uint;
+  if(Etype==U2P_HOT)
+    {
+      uint = -uu[UU] * gdetu_inv - bsq/2. - rho*v2/2.;
+
+      if(uint<NONRELMHDENTROPYCUT*rho || !isfinite(uint)) 
+	{
+	  //if(!isfinite(uint)) printf("%d %d > %e %e %e %e %e\n",geom->ix+TOI,geom->iy+TOI,uint,uu[UU]/gdetu,bsq/2.,rho*v2/2.,rho); 
+	  //printf("%e %e\n",uint,rho);
+	  //if(geom->ix>50) getch();
+	  return -1;
+	}
+
+      pp[UU]=uint;
+    }
+  else if(Etype==U2P_ENTROPY)
+    {
+      ldouble S=uu[ENTR] * gdetu_inv ;
+      uint= calc_ufromS(S,rho,geom->ix,geom->iy,geom->iz);
+      pp[UU]=uint;
+    }
+
+  //pure entropy evolution - updated only in the end of RK2
+  pp[ENTR]= uu[ENTR] * gdetu_inv;
+
+  #ifdef EVOLVEELECTRONS
+  ldouble Se=uu[ENTRE] * gdetu_inv ;
   pp[ENTRE]=Se;
-  ldouble Si=uu[ENTRI] * gdetu_inv / utcon[0];
+ 
+  ldouble Si=uu[ENTRI] * gdetu_inv ;
   pp[ENTRI]=Si;
-  
-#ifdef RELELECTRONS
-  int ib;
-  for(ib=0;ib<NRELBIN;ib++)
-    pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv / utcon[0];
-#endif
-#endif
-  
-  if(verbose) print_primitives(pp);
-  
-  if(verbose>0) printf("u2p_solver returns 0\n");
-  return 0; //ok
-}
+  #endif
+
+  #ifdef RELELECTRONS
+   int ib;
+   for(ib=0;ib<NRELBIN;ib++)
+     pp[NEREL(ib)]=uu[NEREL(ib)] * gdetu_inv ;
+  #endif
+
+
+  return 0;
+} //u2p_solver_nonrel
 
 
 //**********************************************************************
@@ -2074,484 +1892,235 @@ u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg)
 }  // int u2p_solver_Bonly
 
 
+//**********************************************************************
+//**********************************************************************
+//**********************************************************************
+//routines for various types of inversions
+//**********************************************************************
+//**********************************************************************
+//**********************************************************************
 
-//**********************************************************************
-//force-free solver 
-//**********************************************************************
-int
-u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose)
+//********************************************
+//Harm u2p_hot
+//********************************************
+
+static FTYPE
+dpdWp_calc_vsq(FTYPE Wp, FTYPE D, FTYPE vsq, FTYPE gamma)
 {
-  
-#ifdef FORCEFREE
-  int i,j,k;
-  ldouble alpha,alphasq;
-  ldouble rho,entr,uint,Bsq,Bmag;
-  ldouble gamma2_perp,gamma_perp,gamma2_par,gamma_par,gamma2,gamma;
-  ldouble betavec[4];
-  ldouble Econ[4],Ecov[4],Bcon[4],Bcov[4];
-  ldouble Qcov[4],Qcon[4],Qtildecov[4],Qtildecon[4];
-  ldouble vcon_perp[4],vcon_par[4];
-
-  // convert VELR to VELPRIM if necessary
-  if(VELPRIM != VELR)
-  {
-    printf("u2p_solver_ff requires VELPRIM==VELR!!\n");
-    exit(-1);
-  }
-  
-  /****************************/
-  //prepare geometry
-  struct geometry *geom
-    = (struct geometry *) ggg;
-
-  ldouble (*gg)[5], (*GG)[5], gdet, gdetu, gdetu_inv;
-  gg=geom->gg;  GG=geom->GG;
-  gdet=geom->gdet;gdetu=gdet;
-
-  #if (GDETIN==0) //gdet out of derivatives
-  gdetu=1.;
-  #endif
-  gdetu_inv = 1. / gdetu;
-
-  ldouble pgamma=GAMMA;
-  #ifdef CONSISTENTGAMMA
-  pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
-  #endif
-
-  //alpha
-  alpha   = geom->alpha;
-  alphasq = alpha*alpha;
-
-  //beta vector components
-  betavec[0] = 0.;
-  betavec[1] = alphasq * GG[0][1];
-  betavec[2] = alphasq * GG[0][2];
-  betavec[3] = alphasq * GG[0][3];
-
-  //////////////////////////////////////////////////////////////////////////////////////////
-  // Force-Free EM part
-  /////////////////////////////////////////////////////////////////////////////////////////
-
-  //McKinney defn of B^mu = B^mu HARM * alpha 
-  Bcon[0]=0.;
-  Bcon[1]=uu[B1] * alpha * gdetu_inv;
-  Bcon[2]=uu[B2] * alpha * gdetu_inv;
-  Bcon[3]=uu[B3] * alpha * gdetu_inv;
-
-  indices_21(Bcon,Bcov,gg);
-  Bsq = dot(Bcon,Bcov);
-  Bmag = sqrt(Bsq);
-  
-  //Q_mu= alpha*T^t_mu 
-  Qcov[0] = 0.; // this is not the actual Qcov[0] for FF, since we only conserve spatial comps
-  //Qcov[0] = uu[UU] * alpha * gdetu_inv;
-  Qcov[1] = uu[VXFF] * alpha * gdetu_inv;
-  Qcov[2] = uu[VYFF] * alpha * gdetu_inv;
-  Qcov[3] = uu[VZFF] * alpha * gdetu_inv;
-  
-  //Qtilde_mu = Q_mu + n_mu (n.Q)
-  Qtildecov[0] = Qcov[1]*betavec[1] + Qcov[2]*betavec[2] + Qcov[3]*betavec[3];
-  Qtildecov[1] = Qcov[1];
-  Qtildecov[2] = Qcov[2];
-  Qtildecov[3] = Qcov[3];
-  indices_12(Qtildecov,Qtildecon,GG);  
-
-  // get three velocity
-  vcon_perp[0] = 0.;
-  vcon_perp[1] = Qtildecon[1]/Bsq;
-  vcon_perp[2] = Qtildecon[2]/Bsq;
-  vcon_perp[3] = Qtildecon[3]/Bsq;
-
-  // get Lorentz factor
-  int ll,mm; 
-  ldouble vsq_perp=0.;
-  ldouble vsqmax = 1. - 1./(GAMMAMAXFF*GAMMAMAXFF);
-  int hitgammaceil=0;
-  for(ll=1;ll<4;ll++)
-  {
-    for(mm=1;mm<4;mm++)
-    {
-      vsq_perp += gg[ll][mm]*vcon_perp[ll]*vcon_perp[mm];
-    }
-  }
-
-  ldouble vsq_perp_orig = vsq_perp;
-
-  // lorentz factor limiter
-  if(vsq_perp>vsqmax)
-  {
-    hitgammaceil=1;
-    ldouble vfac = sqrt(vsqmax/vsq_perp);
-    vcon_perp[1] *= vfac;
-    vcon_perp[2] *= vfac;
-    vcon_perp[3] *= vfac;
-    vsq_perp = vsqmax;
-  }
-
-  gamma2_perp = 1./(1-vsq_perp);
-  gamma_perp = sqrt(gamma2_perp);
- 
-  if(hitgammaceil==1)
-  {
-    //ldouble alpgam = calc_alpgam(utcon,gg,GG);
-    //printf("LIMITER vsq orig: %e | new: %e | gammma %e \n",vsq_orig,vsq,gamma); getch();
-  }
-  
-  if(!isfinite(gamma_perp))
-  {
-    if(verbose>0) printf("gamma_perp not finite in u2p_solver_ff %e \n",Bsq);
-    //getchar();
-    return -104;
-  }
-
-
-  //**************************************
-  // Return new primitives
-  pp[VXFF]=vcon_perp[1]*gamma_perp;
-  pp[VYFF]=vcon_perp[2]*gamma_perp;
-  pp[VZFF]=vcon_perp[3]*gamma_perp;
-
-  pp[B1]=uu[B1] * gdetu_inv; // TODO or Bcon[1]/alpha;
-  pp[B2]=uu[B2] * gdetu_inv;
-  pp[B3]=uu[B3] * gdetu_inv;
-
-  //////////////////////////////////////////////////////////////////////////////////////////
-  // Hydro part -- solve for parallel velocity
-  /////////////////////////////////////////////////////////////////////////////////////////
-
-  ldouble gammam2_perp=1./gamma2_perp;
-  ldouble afac=(pgamma-1.)/pgamma;
-
-  // MHD conserveds
-  ldouble D  = uu[RHO] * alpha * gdetu_inv; // gdet rho ut, so D = gamma * rho
-  ldouble Sc = uu[ENTR] * alpha * gdetu_inv; // gdet S ut, so Sc = gamma * S
-  ldouble W = -1.;
-  ldouble Y=0;
-  ldouble Z=0;
-  
-#ifdef FORCEFREE_SOLVE_PARALLEL
-  Qcov[0] = uu[UU] * alpha * gdetu_inv;
-  Qcov[1] = uu[VX] * alpha * gdetu_inv;
-  Qcov[2] = uu[VY] * alpha * gdetu_inv;
-  Qcov[3] = uu[VZ] * alpha * gdetu_inv;
-  
-  indices_12(Qcov,Qcon,GG);  
-
-  ldouble QdotB = Bcon[1]*Qcov[1] + Bcon[2]*Qcov[2] + Bcon[3]*Qcov[3]; // TODO verify
-  ldouble QdotEta = -alpha * Qcon[0];
-
-  Y = QdotB / Bmag;
-  Z = QdotEta + 0.5*Bsq*vsq_perp;
-
-  ldouble cons[5];
-  cons[0] = D;
-  cons[1] = Y;
-  cons[2] = Z;
-  cons[3] = gammam2_perp;
-  cons[4] = afac;
-
-  // initial guess is based on current primitives TODO
-  // note force free requires VELPRIM = VELR
-  ldouble utcon_prev[4];
-  utcon_prev[0]=0.;
-  utcon_prev[1]=pp[VX];
-  utcon_prev[2]=pp[VY];
-  utcon_prev[3]=pp[VZ];
-  
-  ldouble qsq=0.;
-  for(i=1;i<4;i++)
-    for(j=1;j<4;j++)
-      qsq+=utcon_prev[i]*utcon_prev[j]*gg[i][j];
-  ldouble gamma2_prev=1.+qsq;
-
-  Wguess = (pp[RHO] + pgamma*pp[UU])*gamma2_prev;
-
-  // solve for W
-  W = u2p_solver_ff_parallel(Wguess,cons,1);
-#endif // FORCEFREE_SOLVE_PARALLEL
-  
-  // acceptable solution on parallel momentum solver
-  // TODO other conditions? 
-  if(W>0)
-  {
-    // parallel three-velocity
-    ldouble vpar = Y / W;
- 
-    vcon_par[0] = 0.;
-    vcon_par[1] = vpar*(Bcon[1]/Bmag);
-    vcon_par[2] = vpar*(Bcon[2]/Bmag);
-    vcon_par[3] = vpar*(Bcon[3]/Bmag);
-
-    // get parallel Lorentz factor
-    ldouble vsq_par=0.;
-    vsqmax = 1. - 1./(GAMMAMAXFF*GAMMAMAXFF);
-    hitgammaceil=0;
-    for(ll=1;ll<4;ll++)
-    {
-      for(mm=1;mm<4;mm++)
-      {
-       vsq_par += gg[ll][mm]*vcon_par[ll]*vcon_par[mm];
-      }
-    }
-
-   // limiter
-   if(vsq_par>vsqmax)
-   {
-     hitgammaceil=1;
-     ldouble vfac = sqrt(vsqmax/vsq_par);
-     vcon_par[1] *= vfac;
-     vcon_par[2] *= vfac;
-     vcon_par[3] *= vfac;
-     vsq_par = vsqmax;
-   }
-
-   gamma2_par = 1./(1-vsq_par);
-   gamma_par = sqrt(gamma2_par);
-
-   gamma2 = 1./(1 - vsq_perp - vsq_par);
-   gamma = sqrt(gamma2);
-
-   // total velocity (VELR)
-   pp[VX]=(vcon_perp[1] + vcon_par[1])*gamma;
-   pp[VY]=(vcon_perp[2] + vcon_par[2])*gamma;
-   pp[VZ]=(vcon_perp[3] + vcon_par[3])*gamma;
-   
-   // density, entropy, energy density
-   rho = D/gamma;
-   entr = Sc/gamma;
-   uint = (W/gamma2 - rho)/pgamma;
-   
-  }
-
-  // unacceptable solution, do adiabatic with NO parallel velocity
-  else //(W<0)
-  {
-    if(verbose>1) printf("reverting to adiabatic in FF+MHD solver!\n");
-
-    // total velocity (VELR) has no parallel component
-    pp[VX] = pp[VXFF];
-    pp[VY] = pp[VYFF];
-    pp[VZ] = pp[VZFF];
-
-    rho = D/gamma_perp;
-    entr = Sc/gamma_perp;
-    uint = calc_ufromS(entr,rho,geom->ix,geom->iy,geom->iz);
-  }
-  
-  if(rho<0. || !isfinite(rho)) 
-  {
-    if(verbose>0) printf("neg rho in u2p_solver_ff %e %e %e \n",rho,D,gamma); //getchar();
-    return -105;
-  }
-  
-  if(uint<0. || !isfinite(uint)) 
-  {
-    if(verbose>0) printf("neg uint in u2p_solver_ff %e %e %e\n",uint,entr,rho); //getchar();
-    return -107;
-  }
-  
-  //***************************************
-  //final new primitives
-  pp[RHO] = rho;
-  pp[UU] = uint;
-  pp[ENTR] = entr;
-  
-  //if(verbose>0) printf("u2p_solver_ff returns 0\n");
-  return 0; //ok
-#endif
+  FTYPE W=Wp+D;
+  return( (gamma - 1.) * (1. - vsq) /  gamma ) ;
 }
 
-//*********************************************************************
-//parallel momentum part of the force-free solver
-//*********************************************************************
-// TODO solve for W? Wp? vparallel^2?
-// TODO exact solution?
-// TODO entropy version? 
-// TODO what to do about variable adiabatic index? 
-static ldouble
-u2p_solver_ff_parallel(ldouble Wguess,ldouble* cons, int verbose)
+// 1 / (d(u+p)/dp)
+static FTYPE
+compute_idwmrho0dp(FTYPE wmrho0, FTYPE gamma)
 {
-  ldouble CONV=U2PCONV;
-  ldouble EPS=1.e-4;
-  
-  ldouble W=Wguess;
-  
-  if(verbose>1) printf("initial W:%e\n",W);
-
-  // constants
-  ldouble D = cons[0];
-  ldouble Y = cons[1];
-  ldouble Z = cons[2];
-  ldouble gammam2_perp = cons[3];
-  ldouble afac = cons[4];
-
-  ldouble Ysq=Y*Y;
-  
-  ldouble f0,f1,dfdW,err,vpar2guess;
-  ldouble Wprev=W;
-  int i_increase = 0;
-  // Make sure that W is large enough so that v^2 < 1 :
-  // Test if initial guess is out of bounds and damp if so
-  do
-  {
-    f0=dfdW=0.;
-    
-    (*f_u2p_parallel)(W,cons,&f0,&dfdW,&err);
-
-    vpar2guess = Ysq/(W*W);
-    if(((gammam2_perp - vpar2guess) < 0
-       || !isfinite(f0) || !isfinite(dfdW) || !isfinite(dfdW))
-       && (i_increase < 50))
-    {
-      if(verbose>0) printf("init W : %e -> %e (%e %e)\n",W,100.*W,f0,dfdW);
-      W *= 10.;
-      i_increase++;
-      continue;
-    }
-    else
-      break;
-  }
-  while(1);
-  
-  if(i_increase>=50)
-  {
-    printf("failed to find initial W in parallel solver");
-    //printf("at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
-    //print_NVvector(uu);
-    //print_NVvector(pp);
-    getchar();
-    return -150;
-  }
-  
-  //1d Newton solver
-  int iter=0, fu2pret;
-  do
-  {
-    Wprev=W;
-    iter++;
-
-    fu2pret=(*f_u2p_parallel)(W,cons,&f0,&dfdW,&err);
-    
-    if(verbose>1) printf("parallel solver: %d %e %e %e %e\n",iter,W,f0,dfdW,err);
-    
-    //convergence test
-    if(err<CONV)
-      break;
-    
-    if(dfdW==0.)
-    {
-      W*=1.1;
-      continue;
-    }
-    
-    ldouble Wnew = W-f0/dfdW;
-
-    int idump=0;
-    ldouble dumpfac=1.;
-    
-    //test if goes out of bounds and damp solution if so
-    do
-    {
-      ldouble f0tmp,dfdWtmp,errtmp;
-      f0tmp=dfdWtmp=0.;
-      (*f_u2p_parallel)(Wnew,cons,&f0tmp,&dfdWtmp,&errtmp);
-    
-      vpar2guess = Ysq/(Wnew*Wnew);
-      if(((gammam2_perp - vpar2guess) < 0
-         || !isfinite(f0tmp) || !isfinite(dfdWtmp) || !isfinite(dfdWtmp))
-         && (idump < 100))
-      {
-        idump++;
-        dumpfac/=2.;
-        Wnew=W-dumpfac*f0/dfdW;
-        continue;
-      }
-      else
-        break;
-    }
-    while(1);
-    
-    if(idump>=100)
-    {
-      if(verbose>0) printf("damped unsuccessfuly in parallel solver\n");
-      getchar();
-      return -101;
-    }
-    
-    W=Wnew;
-    
-    if(fabs(W)>BIG)
-    {
-      if(verbose>1) printf("W has gone out of bounds in parallel solver\n");
-      getchar();
-      return -103;
-    }
-
-    // TODO right error? 
-    if(fabs((W-Wprev)/Wprev)<CONV && err<1.e-1) break;
-    
-  }
-  while(iter<50);
-  
-  if(iter>=50)
-  {
-    if(verbose>0) printf("iter exceeded in parallel u2p_solver \n");
-    getchar();
-    return -102;
-  }
-  
-  if(!isfinite(W))
-  {
-    if(verbose) printf("nan/inf W in parallel u2p_solver: %d\n");
-    getchar();
-    return -103;
-  }
-
-  vpar2guess = Ysq/(W*W);
-  if((gammam2_perp - vpar2guess) < 0)
-  {
-    if(verbose>0) printf("final W out of bounds in parallel solver\n");
-    getchar();
-    return -109;
-  }
-
-  return W;
+  return((gamma-1.)/gamma);
 }
 
-// TODO variable adiabatic index? ? 
+
+// 1 / (drho0/dp) holding wmrho0 fixed
+static FTYPE
+compute_idrho0dp(FTYPE wmrho0)
+{
+  return(0.0);
+}
+
 static int
-f_u2p_parallel(ldouble W, ldouble* cons,ldouble *f,ldouble *df,ldouble *err)
+f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble pgamma)
 {
 
-  // constants
-  ldouble D = cons[0];
-  ldouble Y = cons[1];
-  ldouble Z = cons[2];
-  ldouble gammam2_perp = cons[3];
-  ldouble afac = cons[4];
-
-  ldouble Ysq = Y*Y;
-  ldouble Wsq = W*W;
-
+  ldouble Qn=cons[0];
+  ldouble Qt2=cons[1];
+  ldouble D=cons[2];
+  ldouble QdotBsq=cons[3];
+  ldouble Bsq=cons[4];
+  ldouble Qdotnp=cons[6];
   
-  // root function
-  *f   = afac*W*(gammam2_perp - Ysq/Wsq) - afac*D*sqrt(gammam2_perp - Ysq/Wsq) - W - Z;
+  ldouble W=Wp+D;
 
-  // error
-  *err = fabs(*f) / (fabs(afac*W*(gammam2_perp - Ysq/Wsq)) - fabs(afac*D*sqrt(gammam2_perp - Ysq/Wsq)) - fabs(W) - fabs(Z));
+  FTYPE W3,X3,Ssq,Wsq,X,X2,Xsq; 
+  FTYPE Qtsq = Qt2;
+  X = Bsq + W;
+  Wsq = W*W;
+  W3 = Wsq*W ;
+  X2 = X*X;
+  Xsq = X2;
+  X3 = X2*X;
 
+  ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
+  ldouble gamma2 = 1./(1.-v2);
+  ldouble gamma = sqrt(gamma2);
+  ldouble rho0 = D/gamma;
+  ldouble wmrho0 = Wp/gamma2 - D*v2/(1.+gamma);
+  ldouble u = wmrho0 / pgamma;
+  ldouble p = (pgamma-1)*u;
 
-  // derivitive
-  ldouble dterm1dW = afac*(gammam2_perp + Ysq/Wsq);
-  ldouble dterm2dW = -afac*D*Ysq / (W*W*W*sqrt(gammam2_perp - Ysq/Wsq));
-  ldouble dterm3dW = -1.;
-  ldouble dterm4dW = 0.;
+  //original:
+#if (U2P_EQS==U2P_EQS_NOBLE)
+   *f = Qn + W - p + 0.5*Bsq*(1.+v2) - QdotBsq/2./Wsq;
+ *err = fabs(*f) / (fabs(Qn) + fabs(W) + fabs(p) + fabs(0.5*Bsq*(1.+v2)) + fabs(QdotBsq/2./Wsq));
+#endif
 
-  *df = dterm1dW + dterm2dW + dterm3dW + dterm4dW;
+  //JONS:
+#if (U2P_EQS==U2P_EQS_JON)
+   *f = Qdotnp + Wp - p + 0.5*Bsq + (Bsq*Qtsq - QdotBsq)/X2;
+ *err = fabs(*f) / (fabs(Qdotnp) + fabs(Wp) + fabs(p) + fabs(0.5*Bsq) + fabs((Bsq*Qtsq - QdotBsq)/X2));
+#endif
+
+  // dp/dWp = dp/dW + dP/dv^2 dv^2/dW  
+  ldouble dvsq=(-2.0/X3 * ( Qtsq  +  QdotBsq * (3.0*W*X + Bsq*Bsq)/W3));
+  ldouble dp1 = dpdWp_calc_vsq(Wp, D, v2 ,pgamma); // vsq can be unphysical
+
+  ldouble idwmrho0dp=compute_idwmrho0dp(wmrho0,pgamma);
+  ldouble dwmrho0dvsq = (D*(gamma*0.5-1.0) - Wp);
+
+  ldouble drho0dvsq = -D*gamma*0.5; // because \rho = D/\gamma
+  ldouble idrho0dp = compute_idrho0dp(wmrho0);
+
+  ldouble dp2 =   drho0dvsq *idrho0dp  +   dwmrho0dvsq *idwmrho0dp;
+
+  ldouble dpdW = dp1  + dp2*dvsq; // dp/dW = dp/dWp
+
+  //original:
+  #if (U2P_EQS==U2P_EQS_NOBLE)
+  *df=1. -dpdW + QdotBsq/(Wsq*W) + 0.5*Bsq*dvsq;
+  #endif
+
+  //JONS:
+  #if (U2P_EQS==U2P_EQS_JON)
+  *df=1. -dpdW + (Bsq*Qtsq - QdotBsq)/X3*(-2.0);
+  #endif
 
   return 0;  
 }
 
+//********************************************
+//Harm u2p_entropy
+//********************************************
+
+// p(rho0, w-rho0 = u+p)
+static FTYPE
+pressure_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  ldouble igammar = (gamma-1.)/gamma;
+  return(igammar*wmrho0) ;
+}
+
+// local aux function
+static FTYPE
+compute_inside_entropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  FTYPE pressure,indexn,insideentropy;
+
+  pressure=pressure_wmrho0_idealgas(rho0,wmrho0,gamma);
+  indexn=1.0/(gamma-1.);  
+  insideentropy=pow(pressure,indexn)/pow(rho0,indexn+1.0);
+
+  return(insideentropy);
+}
+
+
+// specific entropy as function of rho0 and internal energy (u)
+// Ss(rho0,\chi=u+p)
+// specific entropy = \ln( p^n/\rho^{n+1} )
+static FTYPE
+compute_specificentropy_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  FTYPE insideentropy,specificentropy;
+
+  insideentropy=compute_inside_entropy_wmrho0_idealgas(rho0, wmrho0,gamma);
+  specificentropy=log(insideentropy);
+
+  return(specificentropy);
+
+}
+
+// used for utoprim_jon when doing entropy evolution
+// dSspecific/d\chi
+static FTYPE
+compute_dspecificSdwmrho0_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0,FTYPE gamma)
+{
+  FTYPE dSdchi;
+
+  dSdchi = 1.0/((gamma-1.)*wmrho0);
+  // Again, GAMMA->1 means dSdchi->\infty unless \chi->0 or rho0->0
+
+  return(dSdchi);
+
+}
+
+// dSspecific/drho0
+static FTYPE
+compute_dspecificSdrho_wmrho0_idealgas(FTYPE rho0, FTYPE wmrho0, FTYPE gamma)
+{
+  FTYPE dSdrho;
+  
+  dSdrho=gamma/((1.0-gamma)*rho0);
+
+  return(dSdrho);
+}
+
+static int
+f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldouble *err,ldouble pgamma)
+{
+  ldouble Qn=cons[0];
+  ldouble Qt2=cons[1];
+  ldouble D=cons[2];
+  ldouble QdotBsq=cons[3];
+  ldouble Bsq=cons[4];
+  ldouble Sc=cons[5];
+ 
+  ldouble W=Wp+D;
+
+  FTYPE W3,X3,Ssq,Wsq,X,X2,Xsq; 
+  FTYPE Qtsq = Qt2;
+  X = Bsq + W;
+  Wsq = W*W;
+  W3 = Wsq*W ;
+  X2 = X*X;
+  Xsq = X2;
+  X3 = X2*X;
+
+  ldouble v2=( Wsq * Qtsq  + QdotBsq * (Bsq + 2.*W)) / (Wsq*Xsq);
+  ldouble gamma2 = 1./(1.-v2);
+  ldouble gamma = sqrt(gamma2);
+  ldouble rho0 = D/gamma;
+  ldouble wmrho0 = Wp/gamma2 - D*v2/(1.+gamma);
+  ldouble u = wmrho0 / pgamma;
+  ldouble p = (pgamma-1)*u;
+
+  ldouble Ssofchi=compute_specificentropy_wmrho0_idealgas(rho0,wmrho0,pgamma);
+
+  *f= -Sc + D*Ssofchi;
+
+  *err = fabs(*f) / (fabs(Sc) + fabs(D*Ssofchi));
+
+  FTYPE dSsdW,dSsdvsq,dSsdWp,dScprimedWp,dSsdrho,dSsdchi;
+  FTYPE dvsq,dwmrho0dW,drho0dW;
+  FTYPE dwmrho0dvsq,drho0dvsq;
+
+  dSsdrho=compute_dspecificSdrho_wmrho0_idealgas(rho0,wmrho0,pgamma);
+  dSsdchi=compute_dspecificSdwmrho0_wmrho0_idealgas(rho0,wmrho0,pgamma);
+
+  dwmrho0dW = 1.0/gamma; // holding utsq fixed
+  drho0dW = 0.0; // because \rho=D/\gamma and holding utsq fixed
+  dwmrho0dvsq = (D*(gamma*0.5-1.0) - Wp); // holding Wp fixed
+  drho0dvsq = -D*gamma*0.5; // because \rho=D/\gamma and holding Wp fixed
+
+  dvsq=(-2.0/X3 * ( Qtsq  +  QdotBsq * (3.0*W*X + Bsq*Bsq)/W3));
+
+  dSsdW =   drho0dW   *dSsdrho +   dwmrho0dW   *dSsdchi; // dSs/dW' holding utsq fixed
+  dSsdvsq = drho0dvsq *dSsdrho +   dwmrho0dvsq *dSsdchi;
+  dSsdWp = dSsdW  + dSsdvsq*dvsq; // dSs/dW = dSs/dWp [total derivative]
+
+  dScprimedWp = D*dSsdWp;
+
+  *df = dScprimedWp;
+  
+  return 0;
+ 
+}
 
 //**********************************************************************
 //count the number of entropy inversions
@@ -2645,37 +2214,148 @@ update_entropy()
 int
 test_inversion()
 {
-  ldouble pp[NV],pp2[NV],uu[NV],ucon[4]={0.,0.,0.,0.};
+  ldouble pp[NV],pp0[NV],uu[NV],vcon[4]={0.,0.,0.,0.},Bcon[4]={0.,0.,0.,0.};
+  ldouble Bcov[4];
   struct geometry geom,geomBL;
   int iv;
 
-  fill_geometry(NX-2,0,0,&geom);
-  fill_geometry_arb(NX-2,0,0,&geomBL,BLCOORDS);
-  ucon[1]=1.e-12;
-  conv_vels(ucon,ucon,VEL4,VEL4,geomBL.gg,geomBL.GG);
-  trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
-  conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
-  pp[RHO]=1.;
-  pp[UU]=1.;
-  pp[VX]=ucon[1];
-  pp[VY]=pp[VZ]=0.;
+  int ix=10, iy=8, iz=0;
+  fill_geometry(ix,iy,iz,&geom);
+  ldouble alpha=geom.alpha;
+  ldouble (*gg)[5];
+  gg=geom.gg;
+  //fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
 
+  ldouble rho=1.3;
+  ldouble uint=0.424;
+  
+  vcon[0]=0.;
+  vcon[1]=1.e-2;
+  vcon[2]=5.e-3;
+  vcon[3]=3.e-5;
+
+  Bcon[0]=0.;
+  Bcon[1]=10.*alpha;
+  Bcon[2]=1.e-2*alpha;
+  Bcon[3]=1.e-3*alpha;
+  
+  indices_21(Bcon,Bcov,gg);
+
+  ldouble Bsq=dot(Bcon,Bcov);
+  ldouble vpar=dot(vcon,Bcov)/sqrt(Bsq);
+
+  ldouble vcon_perp[4],vcon_par[4];
+  vcon_par[0] = 0.;
+  vcon_par[1] = vpar*Bcon[1]/sqrt(Bsq);
+  vcon_par[2] = vpar*Bcon[2]/sqrt(Bsq);
+  vcon_par[3] = vpar*Bcon[3]/sqrt(Bsq);
+  vcon_perp[0] = 0.;
+  vcon_perp[1] = vcon[1]-vcon_par[1];
+  vcon_perp[2] = vcon[2]-vcon_par[2];
+  vcon_perp[3] = vcon[3]-vcon_par[3];
+
+  printf("perptest! %e %e %e\n", dot(Bcov,vcon),dot(Bcov,vcon_par),dot(Bcov,vcon_perp));
+    
+  ldouble vsq=0.,vsq_perp=0.,vsq_par=0.;
+  int ll,mm;
+  for(ll=1;ll<4;ll++)
+  {
+    for(mm=1;mm<4;mm++)
+    {
+      vsq += gg[ll][mm]*vcon[ll]*vcon[mm];
+      vsq_perp += gg[ll][mm]*vcon_perp[ll]*vcon_perp[mm];
+      vsq_par += gg[ll][mm]*vcon_par[ll]*vcon_par[mm];
+    }
+  }
+  
+  ldouble gamma = sqrt(1./(1-vsq));
+  ldouble gamma_perp = sqrt(1./(1-vsq_perp));
+  ldouble gamma_par = sqrt(1./(1-vsq_par));
+  printf("gamma %e , gamma_perp %e, gamma_par %e, check %e\n",gamma,gamma_perp,gamma_par,1./(gamma_perp*gamma_perp)+1./(gamma_par*gamma_par)-1./(gamma*gamma));
+
+  ldouble afac=(GAMMA-1.)/GAMMA;
+  ldouble p = (GAMMA-1.)*uint;
+  ldouble D = rho*gamma;
+  ldouble W = (rho+GAMMA*uint)*gamma*gamma;
+  ldouble Y = W*vpar;
+  ldouble QdotEta = -0.5*Bsq*(1+vsq) - W + p + 0.5*vsq_par*Bsq;
+  ldouble Z = QdotEta + 0.5*Bsq*(1+vsq_perp);
+
+  ldouble Sc = gamma*calc_Sfromu(rho,uint,ix,iy,iz);
+  
+  printf("sigma %e\n",Bsq/(gamma_perp*gamma_perp)/rho);
+  printf("Bsq %e\n",Bsq);
+  printf("W %e\n",W);
+  printf("D %e Y %e Z %e\n",D,Y,Z);
+  printf("gammam2perp %e\n",1./gamma_perp/gamma_perp);
+  printf("Sc %e \n",Sc);
+  printf("check1 %e\n",Z-(p-W));
+  printf("check2 %e\n",(afac/(gamma*gamma)-1)*W - afac*D/gamma - Z);
+  
+  // put primitives in
+  pp[RHO]=rho;
+  pp[UU]=uint;
+  pp[ENTR] = calc_Sfromu(rho,uint,ix,iy,iz);
+    
+  pp[VX]=gamma*vcon[1];
+  pp[VY]=gamma*vcon[2];
+  pp[VZ]=gamma*vcon[3];
+
+  pp[B1] = Bcon[1]/alpha;
+  pp[B2] = Bcon[2]/alpha;
+  pp[B3] = Bcon[3]/alpha;
+
+  #ifdef FORCEFREE
+  pp[UUFF] = uint;
+  pp[VXFF] = gamma_perp*vcon_perp[1];
+  pp[VYFF] = gamma_perp*vcon_perp[2];
+  pp[VZFF] = gamma_perp*vcon_perp[3];
+  #endif
+
+
+  printf("input\n");
   print_primitives(pp);
   p2u(pp,uu,&geom);
 
-  pp[VX]*=100000.*M_PI;
-  pp[RHO]*=0.001245325124;
+  PLOOP(iv) pp0[iv]=pp[iv];
+
+  pp[RHO]*=3.1245325124;
   pp[UU]*=23.124124214421124;
+  //pp[ENTR] = calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);
   
-  PLOOP(iv) pp2[iv]=pp[iv];
+  pp[VX]*=12.3; 
+  pp[VY]*=21.1;
+  pp[VZ]*=.66;
   
 
-  
-  print_conserved(uu);
-  printf("gdet = %e\n",geom.gdet);
-  u2p_solver(uu,pp,&geom,U2P_HOT,0); 
+  #ifdef FORCEFREE
+  pp[UUFF]=pp[UU];
+  pp[VXFF]*=22.3;
+  pp[VYFF]*=12.1;
+  pp[VZFF]*=5.6;
+  #endif
+
+  //print_conserved(uu);
+  u2p_solver_ff(uu,pp,&geom,U2P_ENTROPY,2);
+  //u2p_solver(uu,pp,&geom,U2P_HOT,0);
+
+  printf("solved\n");
   print_primitives(pp);
 
+  ldouble pperr[NV];
+  PLOOP(iv) pperr[iv]=(pp[iv]-pp0[iv])/pp0[iv];
+
+  printf("error\n");
+  print_primitives(pperr);
+
+  printf("projection test....\n");
+  PLOOP(iv) pp[iv]=pp0[iv];
+  update_ffprims_cell(pp, uu, &geom);
+  print_primitives(pp);
+  PLOOP(iv) pperr[iv]=(pp[iv]-pp0[iv])/pp0[iv];
+  printf("projection error\n");
+  print_primitives(pperr);
+  
   return 0;
 
 }

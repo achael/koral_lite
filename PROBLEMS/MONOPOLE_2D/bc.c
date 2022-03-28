@@ -112,8 +112,7 @@ pick_G(ix,iy,iz,GG);
 //in 3D polar cells overwritten with #define CORRECT_POLARAXIS_3D
 if(BCtype==YBCLO) //upper spin axis 
   {      
-    
-    iiy=-iy-1;
+    iiy=-1*iy-1; 
     iiz=iz;
     iix=ix;
     gdet_src=get_g(g,3,4,iix,iiy,iiz);  
@@ -121,7 +120,11 @@ if(BCtype==YBCLO) //upper spin axis
     for(iv=0;iv<NV;iv++)
       {
 	//v_theta
+#ifdef FORCEFREE
+        if(iv==VY || iv==B2 || iv==VYFF || iv==FY0)
+#else
 	if(iv==VY || iv==B2 || iv==FY0)
+#endif
 	  pp[iv]=-get_u(p,iv,iix,iiy,iiz);
 	else
 	  pp[iv]=get_u(p,iv,iix,iiy,iiz);
@@ -142,7 +145,11 @@ if(BCtype==YBCHI) //lower spin axis
   	  
     for(iv=0;iv<NV;iv++)
       {
+#ifdef FORCEFREE
+        if(iv==VY || iv==B2 || iv==VYFF || iv==FY0)
+#else
 	if(iv==VY || iv==B2 || iv==FY0)
+#endif
 	  pp[iv]=-get_u(p,iv,iix,iiy,iiz);
 	else
 	  pp[iv]=get_u(p,iv,iix,iiy,iiz);

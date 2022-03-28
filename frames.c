@@ -51,8 +51,8 @@ trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
   }
   else
   {
-    pp2[0]=pp1[0];
-    pp2[1]=pp1[1];
+    pp2[RHO]=pp1[RHO];
+    pp2[UU]=pp1[UU];
     
     //bcon in CO1
     ldouble ucon[4], ucov[4],uconback[4];    
@@ -80,10 +80,10 @@ trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
     //to VELPRIM
     conv_vels_ut(ucon,ucon,VEL4,VELPRIM,geom2->gg,geom2->GG);
     
-    pp2[2]=ucon[1];
-    pp2[3]=ucon[2];
-    pp2[4]=ucon[3];
-    
+    pp2[VX]=ucon[1];
+    pp2[VY]=ucon[2];
+    pp2[VZ]=ucon[3];
+
 #ifdef MAGNFIELD
 
     //coming back to primitive B^i
@@ -93,7 +93,26 @@ trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
     {
       pp2[B1+i] = Bcon[1+i];
     }
+
+#ifdef FORCEFREE
+    pp2[UUFF]=pp1[UUFF];
+      
+    ldouble uconff[4];
+    uconff[0]=0.;
+    uconff[1]=pp1[VXFF];
+    uconff[2]=pp1[VYFF];
+    uconff[3]=pp1[VZFF];
+    conv_vels(uconff,uconff,VELPRIM,VEL4,geom1->gg,geom1->GG);
+    trans2_coco(xxvec,uconff,uconff,CO1,CO2);
+    conv_vels(uconff,uconff,VEL4,VELPRIM,geom2->gg,geom2->GG);
+    pp2[VXFF]=uconff[1];
+    pp2[VYFF]=uconff[2];
+    pp2[VZFF]=uconff[3];
 #endif
+    
+#endif
+
+
   }
   
   for(i=0;i<NVMHD;i++)
@@ -1651,6 +1670,21 @@ trans_pmhd_coco_precompute(ldouble *ppin, ldouble *ppout, void* ggg1,void* ggg2,
     {
       pp2[B1+i] = Bcon[1+i];
     }
+
+#ifdef FORCEFREE
+    ldouble uconff[4];
+    uconff[0]=0.;
+    uconff[1]=pp1[VXFF];
+    uconff[2]=pp1[VYFF];
+    uconff[3]=pp1[VZFF];
+    conv_vels(uconff,uconff,VELPRIM,VEL4,geom1->gg,geom1->GG);
+    trans2_coco_precompute(uconff,uconff,geom1->ix,geom1->iy,geom1->iz,which);
+    conv_vels(uconff,uconff,VEL4,VELPRIM,geom2->gg,geom2->GG);
+    pp2[VXFF]=uconff[1];
+    pp2[VYFF]=uconff[2];
+    pp2[VZFF]=uconff[3];
+#endif
+
 #endif
   }
   

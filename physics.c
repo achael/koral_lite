@@ -813,9 +813,6 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   dlgdet[1]=gg[1][4]; //D[gdet,x2]/gdet
   dlgdet[2]=gg[2][4]; //D[gdet,x3]/gdet
   
-  
-  
-
   //calculating stress energy tensor components
   ldouble T[4][4];
   calc_Tij(pp,geom,T);
@@ -958,7 +955,7 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
 	ss[VYFF]+=gdetu*T_ff[k][l]*get_gKr(l,2,k,ix,iy,iz);
 	ss[VZFF]+=gdetu*T_ff[k][l]*get_gKr(l,3,k,ix,iy,iz);
       }
-
+  
 #endif //FORCEFREE
   
 #ifdef SHEARINGBOX 
@@ -1187,7 +1184,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
   ldouble Si=pp[ENTRI]; //entropy of ions
   #endif
   ldouble rho=pp[RHO];
-  ldouble u=pp[UU];
+  ldouble ugas=pp[UU];
   ldouble S=pp[ENTR];
   
   ldouble vcon[4],ucon[4],ucov[4],bcon[4],bcov[4],bsq=0.;
@@ -1212,10 +1209,10 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
   gamma=pick_gammagas(ix,iy,iz);
   #endif
 
-  ldouble pre=(gamma-1.)*u; 
-  ldouble w=rho+u+pre;
+  ldouble pre=(gamma-1.)*ugas; 
+  ldouble w=rho+ugas+pre;
   ldouble eta=w+bsq;
-  ldouble etap = u+pre+bsq; //eta-rho
+  ldouble etap = ugas+pre+bsq; //eta-rho
 
   int ii, jj;
   for(ii=0;ii<4;ii++)
@@ -1229,7 +1226,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 	    //print_metric(geom.gg);
 	    //print_Nvector(pp,NV);
 	    my_err("nan in flux_prime\n");
-	    exit(1);
+	    exit(-1);
 	}
     }
 
@@ -1288,6 +1285,13 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 #endif
 
 #ifdef FORCEFREE
+
+  // FF conserved parallel enthalpy
+  ldouble ugas_ff = pp[UUFF];
+  ldouble w_s = 1 + gamma*ugas_ff/rho; // specific enthalpy  
+  ff[UUFF]= gdetu*w_s*bcon[idim+1];
+
+  // FF magnetic fluxes
   ldouble T_ff[4][4];
   calc_Tij_ff(pp,&geom,T_ff);
   indices_2221(T_ff,T_ff,gg);
@@ -1415,12 +1419,13 @@ calc_Tij_ff(ldouble *pp, void* ggg, ldouble T[][4])
   ldouble bcon[4],bcov[4],bsq=0.;
 
   // ANDREW TODO : which 4-velocity to use here generally? 
-  //get 4-velocity
+  // as long as perp components are the same, it shouldn't matter,
+  // since parallel components cancel out
 
   utcon[0]=0.;
-  utcon[1]=pp[VXFF]; // or pp[VX] ? 
-  utcon[2]=pp[VYFF]; // or pp[VY] ? 
-  utcon[3]=pp[VZFF]; // or pp[VZ] ? 
+  utcon[1]=pp[VXFF]; // TODO or pp[VX] ? 
+  utcon[2]=pp[VYFF]; // TODO or pp[VY] ? 
+  utcon[3]=pp[VZFF]; // TODO or pp[VZ] ? 
 
   conv_vels_both(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 

@@ -114,10 +114,11 @@ main(int argc, char **argv)
   //print scalings GU->CGS
   #ifdef FORCEFREE
   if(PROCID==0) printf("NVHD %d NVMHD %d NV %d\n",NVHD,NVMHD,NV);
-  if(PROCID==0) printf("%d %d %d %d %d %d %d %d %d %d %d %d\n",RHO,UU,VX,VY,VZ,ENTR,B1,B2,B3,VXFF,VYFF,VZFF);
+  if(PROCID==0) printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",
+		       RHO,UU,VX,VY,VZ,ENTR,B1,B2,B3,UUFF,VXFF,VYFF,VZFF);
   #endif
+
   if(PROCID==0) print_scalings();
-  //exit(1);
 
   //**************
   //tests
@@ -245,6 +246,9 @@ main(int argc, char **argv)
       }
       calc_BfromA(p,1);
 
+#ifdef FORCEFREE
+      update_ffprims(); // make force-free primitives consistent
+#endif
       //exchange magn. field calculated in domain
       mpi_exchangedata();
       calc_avgs_throughout();

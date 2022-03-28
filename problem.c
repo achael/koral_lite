@@ -193,7 +193,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    calc_u2p(0,1);
         
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[0],&nentr2[0]);
+	    //count_entropy(&nentr[0],&nentr2[0]);
         
             // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -217,7 +217,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    global_expdt=dt;
  
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[1],&nentr2[1]);
+	    //count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
 
 	    // Calculate 1st explicit deriv
@@ -261,7 +261,7 @@ solve_the_problem(ldouble tstart, char* folder)
 #pragma omp barrier
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[2],&nentr2[2]);
+	    //count_entropy(&nentr[2],&nentr2[2]);
 	    
             // Implicit evolution of radiation terms
 	    op_implicit (t,gamma*dt); //U(2) in *u
@@ -272,7 +272,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,p,ppostimplicit);
         
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[3],&nentr2[3]);
+	    //count_entropy(&nentr[3],&nentr2[3]);
 
 	    #if(AVGOUTPUT>0) // Save to avg arrays
             #ifdef DTAVG //Dont save every step
@@ -310,7 +310,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    calc_u2p(0,1);
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-            count_entropy(&nentr[4],&nentr2[4]);
+            //count_entropy(&nentr[4],&nentr2[4]);
 
             // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -333,7 +333,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    global_expdt=dt;
 	    
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[5],&nentr2[5]);
+	    //count_entropy(&nentr[5],&nentr2[5]);
 
 	    // Calculate 2nd explicit deriv
 	    // F(U(2)) in *dut2;
@@ -381,7 +381,7 @@ solve_the_problem(ldouble tstart, char* folder)
             #endif
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[6],&nentr2[6]);
+	    //count_entropy(&nentr[6],&nentr2[6]);
 
 	    // ANDREW should the next 3 steps be moved to start of loop?  
             // Special treatment near axis (or inner surface)
@@ -397,6 +397,9 @@ solve_the_problem(ldouble tstart, char* folder)
 
             // Compute new entropy from rho and uint over the domain
 	    update_entropy();
+            #ifdef FORCEFREE
+            update_ffprims();
+	    #endif
 
       }  // else if(TIMESTEPPING==RK2IMEX)
 
@@ -416,7 +419,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copy_u(1.,p,ptm1);
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[0],&nentr2[0]);
+	    //count_entropy(&nentr[0],&nentr2[0]);
  
 	    // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -435,7 +438,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t, dt);
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[1],&nentr2[1]);
+	    //count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
 
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
@@ -473,7 +476,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    do_correct();
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[2],&nentr2[2]);
+	    //count_entropy(&nentr[2],&nentr2[2]);
 
 	    // Exchange mpi data for boundaries
 	    mpi_exchangedata();
@@ -486,7 +489,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t,dt);
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[3],&nentr2[3]);
+	    //count_entropy(&nentr[3],&nentr2[3]);
         
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
@@ -535,6 +538,10 @@ solve_the_problem(ldouble tstart, char* folder)
 
 	    // Update entropy from rho and uint over the domain
 	    update_entropy();
+            #ifdef FORCEFREE
+            update_ffprims();
+	    #endif
+	    
 	    t+=dt;
       }  // else if(TIMESTEPPING==RK2HEUN)
 
@@ -554,7 +561,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copy_u(1.,p,ptm1); 
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[0],&nentr2[0]);
+	    //count_entropy(&nentr[0],&nentr2[0]);
  
 	    // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -573,7 +580,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t,.5*dt);
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[1],&nentr2[1]);
+	    //count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
 
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
@@ -611,7 +618,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    do_correct();
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[2],&nentr2[2]);
+	    //count_entropy(&nentr[2],&nentr2[2]);
 
 	    // Exchange MPI data for boundaries
 	    mpi_exchangedata();
@@ -624,7 +631,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t,dt);
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[3],&nentr2[3]);
+	    //count_entropy(&nentr[3],&nentr2[3]);
         
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
@@ -673,7 +680,9 @@ solve_the_problem(ldouble tstart, char* folder)
 
 	    // Compute entropy from rho and uint over the domain
 	    update_entropy();
-
+            #ifdef FORCEFREE
+            update_ffprims();
+	    #endif
 	    t+=dt;
       }  // else if(TIMESTEPPING==RK2)
 
@@ -688,7 +697,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,u,ut0);
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[0],&nentr2[0]);
+	    //count_entropy(&nentr[0],&nentr2[0]);
  
 	    // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -707,7 +716,8 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t,1.*dt); 
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    count_entropy(&nentr[1],&nentr2[1]); copy_entropycount();
+	    //count_entropy(&nentr[1],&nentr2[1]);
+	    copy_entropycount();
 
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
@@ -751,6 +761,12 @@ solve_the_problem(ldouble tstart, char* folder)
 	    heat_electronions_with_state(dt);
             #endif
 
+	    // Compute entropy from rho and uint over the domain
+	    update_entropy();
+            #ifdef FORCEFREE
+            update_ffprims();
+	    #endif
+	    
 	    // Update to new time: t+dt
 	    t+=dt;
       }  // else if(TIMESTEPPING==RK1)

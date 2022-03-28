@@ -68,6 +68,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *rho = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *entr = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *uint = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+    ldouble *uintff = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *temp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *trad = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *tradlte = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -83,8 +84,15 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *u1 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *u2 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *u3 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *lorentz = (ldouble*)malloc(nx*ny*nz*sizeof(double));
 
-  ldouble *lorentz = (ldouble*)malloc(nx*ny*nz*sizeof(double));  
+  ldouble *u0_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *u1_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *u2_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *u3_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *lorentz_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *lorentz_par = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  
   ldouble *vx = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vy = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vz = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -740,6 +748,28 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       u2[zonalindex]=vel[2];
       u3[zonalindex]=vel[3];
 
+#ifdef FORCEFREE // must have VELPRIM=VELR
+      ldouble velff[4];
+      velff[0] = 0.;
+      velff[1]=pp[VXFF];
+      velff[2]=pp[VYFF];
+      velff[3]=pp[VZFF];
+      conv_vels(velff,velff,VELR,VEL4,geomout.gg,geomout.GG);
+      lorentz_perp[zonalindex]=fabs(velff[0])/sqrt(fabs(geomout.GG[0][0]));
+      lorentz_par[zonalindex]=1./sqrt(1+pow(lorentz[zonalindex],-2)-pow(lorentz_perp[zonalindex],-2));
+
+      u0_perp[zonalindex]=velff[0];
+      u1_perp[zonalindex]=velff[1];
+      u2_perp[zonalindex]=velff[2];
+      u3_perp[zonalindex]=velff[3];
+
+      uintff[zonalindex]=pp[UUFF];
+#else
+      //TODO actually get || and perp velocities here
+      lorentz_perp[zonalindex]=-1;
+      lorentz_par[zonalindex]=-1;
+#endif
+      
       #ifdef EVOLVEELECTRONS
       tempi[zonalindex]=tempiloc; //ion temperature
       tempe[zonalindex]=tempeloc;  //electron temperature
@@ -1531,6 +1561,32 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
+#ifdef FORCEFREE
+  DBPutQuadvar1(file, "uint_ff","mesh1", uintff,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+
+  DBPutQuadvar1(file, "u0_perp","mesh1", u0_perp,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+  DBPutQuadvar1(file, "u1_perp","mesh1", u1_perp,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+  DBPutQuadvar1(file, "u2_perp","mesh1", u2_perp,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+  DBPutQuadvar1(file, "u3_perp","mesh1", u3_perp,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+#endif
+  DBPutQuadvar1(file, "lorentz_perp","mesh1", lorentz_perp,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+  DBPutQuadvar1(file, "lorentz_par","mesh1", lorentz_par,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+
+
   DBPutQuadvar1(file, "muBe","mesh1", muBe,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
@@ -1911,6 +1967,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
   free(rho);
   free(uint);
+  free(uintff);
   free(entr);
   free(temp);
   free(Omega);
@@ -1924,6 +1981,12 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   free(u2);
   free(u3);
   free(lorentz);
+  free(u0_perp);
+  free(u1_perp);
+  free(u2_perp);
+  free(u3_perp);
+  free(lorentz_perp);
+  free(lorentz_par);
   free(vx);
   free(vy);
   free(vz);

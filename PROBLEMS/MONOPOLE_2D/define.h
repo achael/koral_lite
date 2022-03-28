@@ -3,6 +3,7 @@
 /************************************/
 #define RESTART
 #define RESTARTNUM -1
+#define BHDISK_PROBLEMTYPE
 
 //#define RADIATION
 
@@ -13,7 +14,10 @@
 #define MAGNFIELD
 #define GDETIN 1    //must be 1 for MAGNFIELD
 #define VECPOTGIVEN
+#define MONOPOLE_FIELD_CORNERS
 //#define INIT_MAGN_CORNERS
+
+//#define U2PCONV 1.e-14
 
 #define FORCEFREE
 //#define NOLOGINS 
@@ -32,35 +36,37 @@
 //rmhd floors
 /************************************/
 
-#define B2RHORATIOMAXINIT 500 
-#define B2UURATIOMAXINIT 500
-//#define SIGMAWCONSTINIT 1.e4
+#define B2RHORATIOMAXINIT 200
+#define B2UURATIOMAXINIT 200
 
 #if defined(FORCEFREE)
 
-//DIFTFRAME not compatible with FORCEFREE yet
-#define B2RHOFLOORFRAME FFFRAME // ZAMOFRAME 
+#define HYBRID_FORCEFREE
+#define HYBRID_FORCEFREE_SIGMACUT 50
+#define FORCEFREE_SOLVE_PARALLEL
+//#define FORCEFREE_SOLVE_PARALLEL_OLD
 
+//#define SKIPALLFLOORS // TODO seems critical for SOLVE_PARALLEL? 
+#define B2RHOFLOORFRAME ZAMOFRAME //DRIFTFRAME
 //#define CORRECT_POLARAXIS
 //#define NCCORRECTPOLAR 2
 
 #define UURHORATIOMIN 0.
-#define UURHORATIOMAX 50.
+#define UURHORATIOMAX 50. 
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 1.e10
 #define B2RHORATIOMIN 0.
 #define B2RHORATIOMAX 1.e10
 
-#define GAMMAMAXFF 1000. //lower than GAMMAMAXHD? 
+#define GAMMAMAXFF 1000.  //lower than GAMMAMAXHD? 
 #define GAMMAMAXHD 10000. //why can't this be pushed higher on the monopole? 
 
-#define ALLOWENTROPYU2P 0
-
 #else
+
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME DRIFTFRAME //ZAMOFRAME 
+#define B2RHOFLOORFRAME ZAMOFRAME 
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50.
 #define B2UURATIOMIN 0.
@@ -90,8 +96,8 @@
 #define MYCOORDS MKS1COORDS
 #define MINX (log(RMIN - MKSR0))
 #define MAXX (log(RMAX - MKSR0))
-#define MINY 0.01*M_PI/2.
-#define MAXY M_PI - 0.01*M_PI/2.
+#define MINY 0.001*M_PI
+#define MAXY M_PI - 0.001*M_PI
 #define TNX 128
 #define TNY 64//256
 #define TNZ 1
@@ -139,7 +145,7 @@
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
 #define NSTEPSTOP 1.e10
-#define NOUTSTOP 100
+#define NOUTSTOP 102
 #define SILOOUTPUT 1
 #define PRIMOUTPUT 1
 //#define PRIMOUTPUTINMYCOORDS
