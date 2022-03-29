@@ -36,8 +36,8 @@
 //rmhd floors
 /************************************/
 
-#define B2RHORATIOMAXINIT 200
-#define B2UURATIOMAXINIT 200
+#define B2RHORATIOMAXINIT 100
+#define B2UURATIOMAXINIT 100
 
 #if defined(FORCEFREE)
 
@@ -47,19 +47,19 @@
 //#define FORCEFREE_SOLVE_PARALLEL_OLD
 
 //#define SKIPALLFLOORS // TODO seems critical for SOLVE_PARALLEL? 
-#define B2RHOFLOORFRAME ZAMOFRAME //DRIFTFRAME
+#define B2RHOFLOORFRAME DRIFTFRAME //ZAMOFRAME //DRIFTFRAME
 //#define CORRECT_POLARAXIS
 //#define NCCORRECTPOLAR 2
 
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50. 
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX 1.e10
+#define B2UURATIOMAX 1.e100
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 1.e10
+#define B2RHORATIOMAX 1.e100
 
-#define GAMMAMAXFF 1000.  //lower than GAMMAMAXHD? 
-#define GAMMAMAXHD 10000. //why can't this be pushed higher on the monopole? 
+#define GAMMAMAXFF 500.  //lower than GAMMAMAXHD? 
+#define GAMMAMAXHD 500. //why can't this be pushed higher on the monopole? 
 
 #else
 
@@ -72,7 +72,7 @@
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 2500.
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 500.
+#define B2RHORATIOMAX 200.
 #define GAMMAMAXHD 50.
 #endif
 
@@ -89,7 +89,7 @@
 #define myMKS1COORDS
 #define METRICAXISYMMETRIC
 #define RMIN 0.7*RHOR //1.8<->6 ANDREW
-#define RMAX 100.
+#define RMAX 200.
 #define MKS1R0 MKSR0
 
 #ifdef myMKS1COORDS //modified Kerr-Shild

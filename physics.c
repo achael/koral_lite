@@ -1266,7 +1266,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 #endif
 
   //magnetic fluxes
-  // ANDREW TODO -- how to modify for FORCEFREE?  
+  // ANDREW TODO -- need to modify for FORCEFREE? 
 #ifdef MAGNFIELD
   ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
   ff[B2]=gdetu*(bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
@@ -1288,7 +1288,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 
   // FF conserved parallel enthalpy
   ldouble ugas_ff = pp[UUFF];
-  ldouble w_s = 1 + gamma*ugas_ff/rho; // specific enthalpy  
+  ldouble w_s = 1. + gamma*ugas_ff/rho; // specific enthalpy  
   ff[UUFF]= gdetu*w_s*bcon[idim+1];
 
   // FF magnetic fluxes

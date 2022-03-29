@@ -247,7 +247,7 @@ main(int argc, char **argv)
       calc_BfromA(p,1);
 
 #ifdef FORCEFREE
-      update_ffprims(); // make force-free primitives consistent
+      fill_ffprims(); // make force-free primitives consistent
 #endif
       //exchange magn. field calculated in domain
       mpi_exchangedata();

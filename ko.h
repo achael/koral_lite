@@ -1009,8 +1009,8 @@ int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
 int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
-int update_ffprims();
-int update_ffprims_cell(ldouble *pp, ldouble *uu, void *gg);
+int fill_ffprims();
+int fill_ffprims_cell(ldouble *pp, void *gg);
 
 int count_entropy(int *n, int *n2);
 int copy_entropycount();

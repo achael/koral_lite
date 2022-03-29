@@ -24,7 +24,7 @@ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldo
 int
 calc_primitives(int ix,int iy,int iz,int type,int setflags)
 {
-  int verbose=0;
+  int verbose=2;
   int iv,u2pret,u2pretav;
   ldouble uu[NV],uuav[NV],pp[NV],ppav[NV];
   ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
@@ -193,7 +193,9 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     #endif
   }
 
-#if defined(ENFORCEENTROPY) || defined(FORCEFREE)
+  // TODO ANDREW MAKE THIS CLEANER
+#if defined(ENFORCEENTROPY) || (defined(FORCEFREE) && !defined(HYBRID_FORCEFREE))
+  printf("TESTTEST\n");
   u2pret = -1;  //skip hot energy-conserving inversion and go straight to entropy inversion
 #else
   u2pret = u2p_solver(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
@@ -312,11 +314,12 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
 //checks if hydro primitives make sense
 //**********************************************************************
 
+// ANDREW TODO major issues with floors in force-free
 int
 check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 {
 
-  int verbose=1;
+  int verbose=0;
   int ret=0;
   int iv;
 
@@ -345,7 +348,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv]=pp[iv];
     }
 
-    if(verbose)
+    if(verbose>0)
     {
       printf("hd_floors CASE 1 at %d %d %d (%e)  \n",
              geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO]);
@@ -376,7 +379,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv]=pp[iv];
     }
       
-    if(verbose)
+    if(verbose>0)
     {
       printf("hd_floors BH CASE 1 at %d %d %d (%e)\n",
 	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO]);
@@ -410,7 +413,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv] = pp[iv];
     }
     
-    if(verbose)
+    if(verbose>0)
     {
       printf("hd_floors INIT CASE 1 at %d %d %d (%e)\n",
       geom->ix+TOI, geom->iy+TOJ, geom->iz+TOK,pp[RHO]);
@@ -432,7 +435,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv]=pp[iv];
     }
 
-    if(verbose)
+    if(verbose>0)
     {
       printf("hd_floors CASE 2 at %d,%d,%d (%e %e) \n",
 	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO],pp[UU]);
@@ -453,7 +456,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       pporg[iv]=pp[iv];
     }
 
-    if(verbose)
+    if(verbose>0)
     {
       printf("hd_floors CASE 3 at %d,%d,%d (%e %e)\n",
 	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO],pp[UU]);
@@ -468,6 +471,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   
   //**********************************************************************
   //too magnetized
+#ifndef FORCEFREE //no floors for force-free evolution
 #ifdef MAGNFIELD
   ldouble ucon[4],ucov[4];
   ldouble bcon[4],bcov[4],bsq,magpre;
@@ -485,10 +489,11 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   magpre = 0.5 * bsq;
   //magpre = bsq; // ANDREW: B2RHORATIOMAX and B2UURATIOMAX make more sense with bsq, not 0.5 bsq
 
+    
   // check density vs bsq
   if(bsq>B2RHORATIOMAX*pp[RHO]) 
   {
-    if(verbose)
+    if(verbose>0)
     {
       printf("mag_floors CASE 1 at %d,%d,%d (%e %e)\n",
 	     geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],bsq);
@@ -500,7 +505,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   // check ugas vs bsq
   if(bsq>B2UURATIOMAX*pp[UU]) 
   {
-    if(verbose)
+    if(verbose>0)
     {
       printf("mag_floors CASE 2 at (%d,%d,%d): %e %e\n",
 	     geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],bsq);
@@ -719,7 +724,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
 
 #endif //MAGNFIELD
-
+#endif //ndef FORCEFREE
+  
   //**********************************************************************
   //too fast
   //TODO: implement GAMMAMAXHD for other VELPRIM
@@ -739,15 +745,16 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       for(j=1;j<4;j++)
 	pp[UU+j]*=A;
 
-      if(verbose)
+      if(verbose>0)
       {
 	printf("hd_floors CASE 4 at %d,%d,%d (%e)",geom->ix+TOI,geom->iy+TOJ,geom->iz,sqrt(gamma2));
       }
+
+      ret = -1;
     }
 
-    ret = -1;
   }
-  
+
   //**********************************************************************  
   //Species temperature floors/ceilings
   //TODO ANDREW will not keep them consistent ue + ui = ugas!
@@ -867,8 +874,9 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   {
     pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
     #ifdef FORCEFREE
-    //ldouble uutmp[NV]; // ANDREW TODO why initial crash???
-    pp[UUFF] = pp[UU];
+    //if(verbose>0) printf("updating ff in check_floors\n");
+    //update_ffprims_cell(pp, &geom);
+    //pp[UUFF] = pp[UU];
     #endif
   }
 #endif //SKIPALLFLOORS
@@ -2350,7 +2358,7 @@ test_inversion()
 
   printf("projection test....\n");
   PLOOP(iv) pp[iv]=pp0[iv];
-  update_ffprims_cell(pp, uu, &geom);
+  fill_ffprims_cell(pp, &geom);
   print_primitives(pp);
   PLOOP(iv) pperr[iv]=(pp[iv]-pp0[iv])/pp0[iv];
   printf("projection error\n");

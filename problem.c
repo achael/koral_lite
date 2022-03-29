@@ -398,7 +398,7 @@ solve_the_problem(ldouble tstart, char* folder)
             // Compute new entropy from rho and uint over the domain
 	    update_entropy();
             #ifdef FORCEFREE
-            update_ffprims();
+            fill_ffprims();
 	    #endif
 
       }  // else if(TIMESTEPPING==RK2IMEX)
@@ -539,7 +539,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Update entropy from rho and uint over the domain
 	    update_entropy();
             #ifdef FORCEFREE
-            update_ffprims();
+            fill_ffprims();
 	    #endif
 	    
 	    t+=dt;
@@ -681,7 +681,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Compute entropy from rho and uint over the domain
 	    update_entropy();
             #ifdef FORCEFREE
-            update_ffprims();
+            fill_ffprims();
 	    #endif
 	    t+=dt;
       }  // else if(TIMESTEPPING==RK2)
@@ -764,7 +764,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Compute entropy from rho and uint over the domain
 	    update_entropy();
             #ifdef FORCEFREE
-            update_ffprims();
+            fill_ffprims();
 	    #endif
 	    
 	    // Update to new time: t+dt

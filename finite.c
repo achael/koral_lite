@@ -196,7 +196,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
         ul[i] = u0[i] - 0.5*slope;
       }
       
-      if(isnan(ur[i]) || isnan (ul[i])) printf("%d %e %e %e %e %e\n",i,um2[i],um1[i],u0[i],up1[i],up2[i]);
+      if(isnan(ur[i]) || isnan (ul[i])) printf("interperr %d %e %e %e %e %e\n",i,um2[i],um1[i],u0[i],up1[i],up2[i]);
       //u0 remains intact - in linear reconstruction cell averaged equals cell centered
     } // for(i=0;i<NV;i++)
   }  // else if(INT_ORDER==1)
