@@ -155,16 +155,16 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   #endif
   gdetu_inv = 1. / gdetu;
   
-  int verbose=1;
+  int verbose=0;
   int hdcorr=0;
   int radcor=0;
   corrected[0]=corrected[1]=corrected[2]=0;
   fixups[0]=fixups[1]=0;
   
-  int u2pret,u2pentrret,ret;
+
   ldouble ppbak[NV];
-  for(u2pret=0;u2pret<NV;u2pret++)
-    ppbak[u2pret]=pp[u2pret];
+  for(iv=0;iv<NV;iv++)
+    ppbak[iv]=pp[iv];
 
   //************************************
   //magneto-hydro part
@@ -172,20 +172,23 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   ldouble u0=pp[UU];
   
   //************************************
-  //hot hydro - conserving energy
-  ret=0;
-  u2pret=-1;
+  // hot hydro - conserving energy
+  int ret=0;
+  int u2pret=-1;
     
-  //negative uu[RHO] = rho u^t -> set to floor 
-  if(uu[RHO] * gdetu_inv < 0.)
+  // negative uu[RHO] = rho u^t -> set rho to floor
+  ldouble alpha=geom->alpha;
+  //if(uu[RHO] * gdetu_inv < 0.)
+  if(uu[RHO] * alpha * gdetu_inv < 0.)    // ANDREW -- change, since uu[RHO]=rho*gamma*gdet/alpha. What if alpha<0? 
   {
     int gix,giy,giz;
     mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
-    if(verbose)
+    if(1 || verbose)
       printf("%4d > %4d %4d %4d > neg rhout - requesting fixup\n",PROCID,gix,giy,giz);
 
     pp[RHO]=RHOFLOOR; 
-    uu[RHO]=RHOFLOOR*gdetu;
+    //uu[RHO]=RHOFLOOR*gdetu;
+    uu[RHO]=RHOFLOOR*gdetu/alpha; // ANDREW -- change, since uu[RHO]=rho*gamma*gdet/alpha. What if alpha<0? 
     ret=-2;  // to request fixup in all cases
     
     #ifndef SWAPPAPC
@@ -193,64 +196,109 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     #endif
   }
 
-  // TODO ANDREW MAKE THIS CLEANER
-#if defined(ENFORCEENTROPY) || (defined(FORCEFREE) && !defined(HYBRID_FORCEFREE))
-  printf("TESTTEST\n");
-  u2pret = -1;  //skip hot energy-conserving inversion and go straight to entropy inversion
-#else
-  u2pret = u2p_solver(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
-#endif //ENFORCEENTROPY
+  // force-free inversion
+  int ffflag=0;
+#ifdef FORCEFREE
+  ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
+#endif
 
-  if(ALLOWENTROPYU2P)  // Inversion with entropy equation -- on by default (see choices.h)
+  // use ff solver if not hybrid or if high sigma
+  if(ffflag>0)
   {
-    if(u2pret<0)  // true if energy equation failed, or if energy equation was not required (because ENFORCEENTROPY is defined)
+    u2pret = u2p_solver_ff(uu,pp,ggg,verbose);
+  }
+  else // MHD inversion
+  {
+
+    #ifdef ENFORCEENTROPY
+    u2pret = -1;  //skip hot energy-conserving inversion and go straight to entropy inversion
+    #else
+    u2pret = u2p_solver_mhd(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
+    #endif //ENFORCEENTROPY
+
+    if(ALLOWENTROPYU2P)  // Inversion with entropy equation -- on by default (see choices.h)
     {
-      ret=-1;
-      
-      if(verbose>2 )
+      if(u2pret<0)  // true if energy equation failed, or if energy equation was not required (because ENFORCEENTROPY is defined)
       {
-        printf("u2p_entr %d  > %d %d %d \n",
-	       u2pret, geom->ix + TOI, geom->iy + TOJ,geom->iz + TOK);
-      }
+        ret=-1;
       
-      //************************************
-      //entropy solver - invert using entropy equation
-      u2pret = u2p_solver(uu,pp,ggg,U2P_ENTROPY,0);
-      
-      if(u2pret<0)
-      {
-        ret=-2;
-        
-        if(verbose>1)
+        if(verbose>2 )
         {
-          printf("u2p_entr err %4d > %4d %4d %4d\n",
-		 u2pret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+          printf("%4d > u2p_entr %d %d %d > %d %d %d \n",
+		 PROCID, u2pret, ret,ffflag,geom->ix + TOI, geom->iy + TOJ,geom->iz + TOK);
         }
+      
+        //entropy solver - invert using entropy equation
+        u2pret = u2p_solver_mhd(uu,pp,ggg,U2P_ENTROPY,0);
+      
+        if(u2pret<0)
+        {
+          ret=-2;
+        
+          if(verbose>1)
+          {
+            printf("%4d > u2p_entr ERROR %4d %d %d > %4d %4d %4d\n",
+		   PROCID,u2pret,ret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+          }
 	
-      } // if(u2pret<0) // second time -- entropy eqn
-    } // if(u2pret<0) // first time -- energy eqn
-  } // if(ALLOWENTROPYU2P)
+        } // if(u2pret<0) // second time -- entropy eqn
+      } // if(u2pret<0) // first time -- energy eqn
+    } // if(ALLOWENTROPYU2P)
+  }
+
+  // if entropy equation failed, check if we can try force-free
+#if defined(FORCEFREE) && defined(HYBRID_FORCEFREE)
+    if(ffflag==0 && u2pret<0)
+    {
+      ldouble ucon[4],ucov[4],bcon[4],bcov[4];
+      ldouble bsq;
+      calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
+      calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
+      if(bsq> pp[RHO]*HYBRID_FORCEFREE_SIGMACUT)
+      {
+	ffflag=1;
+	u2pret = u2p_solver_ff(uu,pp,ggg,verbose);
+        set_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz,ffflag);
+	if(u2pret>=0)
+	  ret=0;
+        if(verbose > 1)
+	  printf("%4d > MHD->FF %d %d %d > %4d %4d %4d \n",
+          PROCID,ret ,u2pret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      }
+    }
+#endif
   
   if(u2pret<0)  // entropy equation also failed
   {
-    //leaving primitives unchanged
-    if(verbose > 1 || 1) // TODO ANDREW
+    
+    //leave primitives unchanged
+    if(1 || verbose) // TODO ANDREW
     {
-      printf("%4d > MHDU2PFAIL %d > %4d %4d %4d > u2p prim. unchanged \n",
-	     PROCID,u2pret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      printf("%4d > MHDU2PFAIL %d %d %d > %4d %4d %4d > u2p prim. unchanged \n",
+	     PROCID,u2pret,ret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
     }
     ret=-3;
-    for(u2pret=0;u2pret<NV;u2pret++)
-      pp[u2pret]=ppbak[u2pret];
+    for(iv=0;iv<NV;iv++)
+      pp[iv]=ppbak[iv];
   }
   
-  if(ret<0)  // update conserved
+  if(ret<0) // update conserved
+  {
     hdcorr=1;  
+  }
   if(ret<-1) // request fixup when entropy failed
+  {
     fixups[0]=1;
+    if(verbose > 1)
+    {
+      printf("%4d > FIXUPS %d %d %d > %4d %4d %4d \n",
+             PROCID,u2pret,ret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+    }
+  }
   else
+  {
     fixups[0]=0;
-  
+  }
   //************************************
   //radiation part
   //************************************
@@ -471,7 +519,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   
   //**********************************************************************
   //too magnetized
-#ifndef FORCEFREE //no floors for force-free evolution
+
 #ifdef MAGNFIELD
   ldouble ucon[4],ucov[4];
   ldouble bcon[4],bcov[4],bsq,magpre;
@@ -489,7 +537,6 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   magpre = 0.5 * bsq;
   //magpre = bsq; // ANDREW: B2RHORATIOMAX and B2UURATIOMAX make more sense with bsq, not 0.5 bsq
 
-    
   // check density vs bsq
   if(bsq>B2RHORATIOMAX*pp[RHO]) 
   {
@@ -514,8 +561,13 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     uufloored=1;
   }
 
+  int ffflag=0;
+  #ifdef FORCEFREE
+  ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
+  #endif
+    
   // floors were activated, apply them
-  if(rhofloored==1 || uufloored==1)
+  if((rhofloored==1 || uufloored==1) && ffflag==0)
   {
     // save backups
     for(iv=0;iv<NVMHD;iv++)
@@ -619,9 +671,9 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
     // find new prims after adding delta conserved in ZAMO
     int rettemp=0;
-    rettemp = u2p_solver(uu,pp,geom,U2P_HOT,0); 
+    rettemp = u2p_solver_mhd(uu,pp,geom,U2P_HOT,0); 
     if(rettemp<0)
-      rettemp = u2p_solver(uu,pp,geom,U2P_ENTROPY,0); 
+      rettemp = u2p_solver_mhd(uu,pp,geom,U2P_ENTROPY,0); 
       
     if(rettemp<0) // new mass in ZAMO frame failed
     {
@@ -724,7 +776,6 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
 
 #endif //MAGNFIELD
-#endif //ndef FORCEFREE
   
   //**********************************************************************
   //too fast
@@ -873,11 +924,6 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   if(ret<0)
   {
     pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
-    #ifdef FORCEFREE
-    //if(verbose>0) printf("updating ff in check_floors\n");
-    //update_ffprims_cell(pp, &geom);
-    //pp[UUFF] = pp[UU];
-    #endif
   }
 #endif //SKIPALLFLOORS
   
@@ -886,60 +932,27 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
 
 //**********************************************************************
-// solver wrapper
+// MHD solver wrapper
 //**********************************************************************
-//ANDREW TODO do we need to use function pointers?
 
 int
-u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
+u2p_solver_mhd(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
 {
-  struct geometry *geom
-      = (struct geometry *) ggg;
 
-#ifdef NONRELMHD
+  #ifdef NONRELMHD
   return u2p_solver_nonrel(uu,pp,ggg,Etype,verbose);
-#endif
-
-  int do_u2p_ff=0;
-#ifdef FORCEFREE
-  #ifndef HYBRID_FORCEFREE
-  do_u2p_ff=1;
-  #else
-  
-  //ANDREW TODO what should be the criterion here? local sigma from guess pp?
-  ldouble ucon0[4],ucov0[4],bcon0[4],bcov0[4];
-  ldouble bsq0,sigma0;
-  calc_ucon_ucov_from_prims(pp, geom, ucon0, ucov0);
-  calc_bcon_bcov_bsq_from_4vel(pp, ucon0, ucov0, geom, bcon0, bcov0, &bsq0);
-  sigma0 = bsq0/pp[RHO];
-  if(sigma0 > HYBRID_FORCEFREE_SIGMACUT)
-    do_u2p_ff = 1;
   #endif
-#endif //FORCEFREE
+  
+  #if (U2P_SOLVER==U2P_SOLVER_WP)
+  return u2p_solver_Wp(uu,pp,ggg,Etype,verbose);
+  #endif
+  
+  #if (U2P_SOLVER==U2P_SOLVER_W)  // this is the default
+  return u2p_solver_W(uu,pp,ggg,Etype,verbose);
+  #endif
+ 
+  return -200; // no solver found 
 
-  // use ff solver if not hybrid or if high sigma
-  if(do_u2p_ff)
-  {
-    return u2p_solver_ff(uu,pp,ggg,U2P_ENTROPY,verbose);
-  }
-  else
-  {
-  
-    //int (*solver)(ldouble*,ldouble*,void*,int,int);
-  
-    #if (U2P_SOLVER==U2P_SOLVER_WP)
-    //solver = & u2p_solver_Wp;
-    return u2p_solver_Wp(uu,pp,ggg,Etype,verbose);
-    #endif
-  
-    #if (U2P_SOLVER==U2P_SOLVER_W)  // this is the default
-    //solver = & u2p_solver_W;
-    return u2p_solver_W(uu,pp,ggg,Etype,verbose);
-    #endif
-  }
-
-  return -200;
-  //return (*solver)(uu,pp,ggg,Etype,verbose);
 } 
 
 
@@ -1257,7 +1270,8 @@ u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose)
   
   if(uint<0. || gamma2<0. || isnan(W) || !isfinite(W))
   {
-    if(verbose>0) printf("neg u in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);//getchar();
+    if(verbose>0) printf("neg u in u2p_solver %e %e %e %e\n",rho,uint,gamma2,W);
+    //getchar();
     return -104;
   }
   
@@ -2231,7 +2245,9 @@ test_inversion()
   fill_geometry(ix,iy,iz,&geom);
   ldouble alpha=geom.alpha;
   ldouble (*gg)[5];
+  ldouble (*GG)[5];
   gg=geom.gg;
+  GG=geom.GG;
   //fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
 
   ldouble rho=1.3;
@@ -2291,14 +2307,14 @@ test_inversion()
 
   ldouble Sc = gamma*calc_Sfromu(rho,uint,ix,iy,iz);
   
-  printf("sigma %e\n",Bsq/(gamma_perp*gamma_perp)/rho);
+  printf("\nsigma %e\n",Bsq/(gamma_perp*gamma_perp)/rho);
   printf("Bsq %e\n",Bsq);
   printf("W %e\n",W);
   printf("D %e Y %e Z %e\n",D,Y,Z);
   printf("gammam2perp %e\n",1./gamma_perp/gamma_perp);
   printf("Sc %e \n",Sc);
   printf("check1 %e\n",Z-(p-W));
-  printf("check2 %e\n",(afac/(gamma*gamma)-1)*W - afac*D/gamma - Z);
+  printf("check2 %e\n\n",(afac/(gamma*gamma)-1)*W - afac*D/gamma - Z);
   
   // put primitives in
   pp[RHO]=rho;
@@ -2313,40 +2329,67 @@ test_inversion()
   pp[B2] = Bcon[2]/alpha;
   pp[B3] = Bcon[3]/alpha;
 
+
+  // look at electric field
+  ldouble ucon[4],ucov[4],bcon[4],bcov[4],bsq;
+  calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
+  ldouble E1 = (bcov[2]*ucov[3]-bcov[3]*ucov[2])/geom.gdet;
+  ldouble E2 = (bcov[3]*ucov[1]-bcov[1]*ucov[3])/geom.gdet;
+  ldouble E3 = (bcov[1]*ucov[2]-bcov[2]*ucov[1])/geom.gdet;
+  printf("Efield: %e %e %e\n",E1,E2,E3);
+  
   #ifdef FORCEFREE
-  pp[UUFF] = uint;
+  pp[UUFF] = gamma_par*vpar; // ANDREW TODO ?? 
   pp[VXFF] = gamma_perp*vcon_perp[1];
   pp[VYFF] = gamma_perp*vcon_perp[2];
   pp[VZFF] = gamma_perp*vcon_perp[3];
   #endif
 
+  printf("RAISETEST\n");
+  ldouble ucon_velr[4];
+  ldouble ucov_velr[4];
+  ucon_velr[0] = 0;
+  ucon_velr[1] = pp[VX]; ucon_velr[2]=pp[VY]; ucon_velr[3]=pp[VZ];
+   
 
-  printf("input\n");
+
+  indices_21(ucon_velr,ucov_velr,gg);
+  printf("ucov: %e %e %e %e\n",ucov[0],ucov[1],ucov[2],ucov[3]);
+  printf("ucov_velr %e %e %e %e\n",ucov_velr[0],ucov_velr[1],ucov_velr[2],ucov_velr[3]);
+  printf("ucon: %e %e %e %e\n",ucon[0],ucon[1],ucon[2],ucon[3]);
+  printf("ucon_velr: %e %e %e %e\n",ucon_velr[0],ucon_velr[1],ucon_velr[2],ucon_velr[3]);
+  indices_12(ucov_velr,ucon_velr,GG);
+  printf("ucon_velr 2: %e %e %e %e\n",ucon_velr[0],ucon_velr[1],ucon_velr[2],ucon_velr[3]);
+  
+  printf("\n u2p input\n");
   print_primitives(pp);
   p2u(pp,uu,&geom);
 
+  printf("uu input\n");
+  print_conserved(uu);
+  
   PLOOP(iv) pp0[iv]=pp[iv];
+
 
   pp[RHO]*=3.1245325124;
   pp[UU]*=23.124124214421124;
-  //pp[ENTR] = calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);
+  pp[ENTR] = calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);
   
   pp[VX]*=12.3; 
   pp[VY]*=21.1;
   pp[VZ]*=.66;
   
-
   #ifdef FORCEFREE
-  pp[UUFF]=pp[UU];
+  pp[UUFF]*=.8;
   pp[VXFF]*=22.3;
   pp[VYFF]*=12.1;
   pp[VZFF]*=5.6;
   #endif
 
-  //print_conserved(uu);
-  u2p_solver_ff(uu,pp,&geom,U2P_ENTROPY,2);
-  //u2p_solver(uu,pp,&geom,U2P_HOT,0);
-
+  
+  u2p_solver_ff(uu,pp,&geom,2);
+  
   printf("solved\n");
   print_primitives(pp);
 
@@ -2359,7 +2402,7 @@ test_inversion()
   printf("projection test....\n");
   PLOOP(iv) pp[iv]=pp0[iv];
   fill_ffprims_cell(pp, &geom);
-  print_primitives(pp);
+  //print_primitives(pp);
   PLOOP(iv) pperr[iv]=(pp[iv]-pp0[iv])/pp0[iv];
   printf("projection error\n");
   print_primitives(pperr);
@@ -2411,7 +2454,7 @@ test_inversion_nonrel()
   print_conserved(uu);
   printf("gdet = %e\n",geom.gdet);
 
-  u2p_solver(uu,pp,&geom,U2P_HOT,0); 
+  u2p_solver_mhd(uu,pp,&geom,U2P_HOT,0); 
   print_primitives(pp);
 
   return 0;

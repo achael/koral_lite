@@ -753,7 +753,7 @@ solve_the_problem(ldouble tstart, char* folder)
             #endif
 	    
 	    // Calculate primitves
-	    // ANDREW is this excessive? Should be consistent after implicit!
+	    // ANDREW TODO is this excessive? Should be consistent after implicit!
 	    calc_u2p(0,1); //do not calculate visc. heating, do count entropy inversions
 	    
 	    // Heat species at end
@@ -783,10 +783,11 @@ solve_the_problem(ldouble tstart, char* folder)
       
       //for outputs - use what came out of 2nd implicit: 
       //ANDREW why?? try current prims instead
+      // ANDREW: try saving out current prims instead of postimplicit
       
       // Set uforget = p and p = ppostimplicit over domain
       copy_u(1.,p,uforget); //backup current primitives
-      //copy_u(1.,ppostimplicit,p); // ANDREW: try saving out current prims
+      //copy_u(1.,ppostimplicit,p); 
    
       //counting faiures and average parameters of the implicit solver
       int nfailures[3],nfailuresloc[3]={global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFAILURES],
@@ -880,7 +881,7 @@ solve_the_problem(ldouble tstart, char* folder)
       
 	  //zero out avg values over domain
 
-    long long Navg = (long long) SX*SY*SZ*(NV+NAVGVARS); // RN: Apr 2, 2019
+          long long Navg = (long long) SX*SY*SZ*(NV+NAVGVARS); // RN: Apr 2, 2019
 	  copy_u_core(0., pavg, pavg, Navg);
 	  avgtime=0.;
 	  
@@ -912,6 +913,9 @@ solve_the_problem(ldouble tstart, char* folder)
 	  // Set boundary conditions on conserveds in the ghost cells
 	  set_bc(t,0);
 
+	  #ifdef FORCEFREE
+	  fill_ffprims();
+	  #endif
 	  //print restart file
 	  fprint_restartfile(t,folder);
 
@@ -952,7 +956,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
 
 	  nfout1++;
-
 	  
 	  #ifdef DTOUT_LOG
           dtout = pow(10, DTOUT1_LOG_INIT + DTOUT_LOG*(nfout1-1));

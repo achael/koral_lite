@@ -1394,10 +1394,10 @@ implicit_apply_constraints(ldouble *pp, ldouble *uu, ldouble *uu0, void* ggg, in
    
     //and invert back to primitives
     int rettemp=0;
-    rettemp=u2p_solver(uu,pp,geom,U2P_HOT,0); 
+    rettemp=u2p_solver_mhd(uu,pp,geom,U2P_HOT,0); 
     #ifdef ALLOWFORENTRINF4DPRIM
     if(rettemp<0)
-      rettemp=u2p_solver(uu,pp,geom,U2P_ENTROPY,0);
+      rettemp=u2p_solver_mhd(uu,pp,geom,U2P_ENTROPY,0);
     #endif
     //u2pret=rettemp;
     if(rettemp<0) u2pret=-2; 
@@ -5538,7 +5538,7 @@ test_jon_solve_implicit_lab()
       int corr[2],fixup[2],u2pret,radcor;
      
       //printf("inverting...\n");
-      u2pret=u2p_solver(uu,pp,&geom,U2P_HOT,0); //hd
+      u2pret=u2p_solver_mhd(uu,pp,&geom,U2P_HOT,0); //hd
       if(u2pret<0) printf("u2pret mhd: (%d)\n",u2pret);
       u2p_rad(uu,pp,&geom,&radcor); //rad
       if(radcor!=0) printf("u2pcor rad: (%d)\n",radcor);
@@ -5559,7 +5559,7 @@ test_jon_solve_implicit_lab()
       if(s2/s1 < 0.9 | u2pret<0.)
 	{ 
 	  printf("\n PROBLEM DETECTED IN ENTROPY OR U2P_HOT DID NOT SUCCEED!\n");
-	  u2pret=u2p_solver(uu,pp,&geom,U2P_ENTROPY,0); //hd
+	  u2pret=u2p_solver_mhd(uu,pp,&geom,U2P_ENTROPY,0); //hd
 	  if(u2pret<0) printf("u2pret mhd: (%d)\n",u2pret);
 	  printf("\n..........................\nafter u2p_ENTROPY:\n\n");
 	  print_Nvector(pp,NV);

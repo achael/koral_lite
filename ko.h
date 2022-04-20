@@ -177,6 +177,7 @@ ldouble min_dx,min_dy,min_dz;
 
 //precalculated metric parameters
 ldouble rhorizonBL,rISCOBL,rmboundBL,rphotonBL,etaNT;
+int cells_under_horizon;
 
 // jet coordinate specific
 #if (MYCOORDS==JETCOORDS)
@@ -676,6 +677,7 @@ int my_finger(ldouble t);
 ///////////////////////////////////////////////////////////////
 
 void initialize_constants();
+int calc_cells_under_horiz();
 int print_scalings();
 int set_initial_profile();
 void am_i_sane();
@@ -1003,15 +1005,16 @@ int calc_primitives(int ix,int iy,int iz,int type,int setflags);
 int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
 int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
 
-int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_mhd(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
-int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose);
 int fill_ffprims();
 int fill_ffprims_cell(ldouble *pp, void *gg);
-
+ldouble get_driftvel_velr(ldouble *pp,ldouble *velff,void* ggg);
+  
 int count_entropy(int *n, int *n2);
 int copy_entropycount();
 int update_entropy();
@@ -1334,6 +1337,8 @@ ldouble pick_ViscousHeating(int ix,int iy,int iz);
 int test_gammagas();
 int test_calcgamma();
 
+int calc_faraday(ldouble F[4][4],int ix,int iy,int iz,int when);
+int calc_current(void* ggg,ldouble jcon[4],int *derdir);
 ///////////////////////////////////////////////////////////////
 // nonthermal.c ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////

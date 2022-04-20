@@ -1266,7 +1266,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 #endif
 
   //magnetic fluxes
-  // ANDREW TODO -- need to modify for FORCEFREE? 
+
 #ifdef MAGNFIELD
   ff[B1]=gdetu*(bcon[1]*ucon[idim+1] - bcon[idim+1]*ucon[1]);
   ff[B2]=gdetu*(bcon[2]*ucon[idim+1] - bcon[idim+1]*ucon[2]);
@@ -1286,11 +1286,16 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 
 #ifdef FORCEFREE
 
-  // FF conserved parallel enthalpy
-  ldouble ugas_ff = pp[UUFF];
-  ldouble w_s = 1. + gamma*ugas_ff/rho; // specific enthalpy  
-  ff[UUFF]= gdetu*w_s*bcon[idim+1];
+  // ANDREW TODO modified to usue regular prims
 
+#ifdef FORCEFREE_PARALLEL_COLD // neglect pressure
+  ff[UUFF]= gdetu*bcon[idim+1];
+#else // adiabatic, with pressure
+  
+  ldouble w_s = 1. + gamma*ugas/rho; // specific enthalpy
+  ff[UUFF]= gdetu*w_s*bcon[idim+1];
+#endif
+  
   // FF magnetic fluxes
   ldouble T_ff[4][4];
   calc_Tij_ff(pp,&geom,T_ff);
@@ -1386,12 +1391,6 @@ calc_Tij(ldouble *pp, void* ggg, ldouble T[][4])
    for(i=1;i<4;i++)
      T[0][i]=T[i][0]=(T[0][0] + ptot) *ucon[i]*ucon[0] + ptot*GG[i][0] - bcon[i]*bcon[0];
 
-   /*
-#elif defined(FORCEFREE) // ANDREW get rid of this part
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
-      T[i][j]=bsq*ucon[i]*ucon[j] + 0.5*bsq*GG[i][j] - bcon[i]*bcon[j];
-   */
 #else //normal GRMHD
   for(i=0;i<4;i++)
     for(j=0;j<4;j++)
@@ -1418,14 +1417,14 @@ calc_Tij_ff(ldouble *pp, void* ggg, ldouble T[][4])
   ldouble utcon[4],ucon[4],ucov[4];  
   ldouble bcon[4],bcov[4],bsq=0.;
 
-  // ANDREW TODO : which 4-velocity to use here generally? 
+  // ANDREW TODO changed to regular prims
   // as long as perp components are the same, it shouldn't matter,
   // since parallel components cancel out
 
   utcon[0]=0.;
-  utcon[1]=pp[VXFF]; // TODO or pp[VX] ? 
-  utcon[2]=pp[VYFF]; // TODO or pp[VY] ? 
-  utcon[3]=pp[VZFF]; // TODO or pp[VZ] ? 
+  utcon[1]=pp[VX]; 
+  utcon[2]=pp[VY]; 
+  utcon[3]=pp[VZ]; 
 
   conv_vels_both(utcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 
@@ -1779,7 +1778,6 @@ calc_ufromS3rho(ldouble S3,ldouble rho,int type,int ix,int iy,int iz)
     
  return uint;
 }
-
 
 //**********************************************************************
 //updates entropy in the specified cell (p[ENTR]) basing on new primitives
@@ -3104,10 +3102,231 @@ pick_ViscousHeating(int ix,int iy,int iz)
 }
 
 
+//***********************************************************************************
+//calculates current 4-vector
+// if when=-1, use ptm1
+//derdir[] determines the type of derivative in each dimension (left,right,centered)
+//************************************************************************************
+int
+calc_faraday(ldouble Ft[4][4],int ix,int iy,int iz,int when)
+{
+  struct geometry geom;
+  fill_geometry(ix,iy,iz,&geom);
+
+  int iv;
+  ldouble pp[NV];
+  for(iv=0;iv<NV;iv++)
+  {
+    if(when==-1) pp[iv]=get_u(ptm1,iv,ix,iy,iz);
+    else pp[iv]=get_u(p,iv,ix,iy,iz);
+  }
+	      
+  //start with computing F^\mu\nu
+
+  ldouble ucon[4],ucov[4],bcon[4],bcov[4],bsq;
+  calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
+  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
+
+  ldouble Fstarcov[4][4];
+  int i,j,k,l;
+  for(i=0;i<4;i++)
+  {
+    for(j=0;j<4;j++)
+    {
+      Fstarcov[i][j] = bcov[i]*ucov[j] - bcov[j]*ucov[i];
+    }
+  }
+      
+  for(i=0;i<4;i++)
+  {
+    for(j=0;j<4;j++)
+    {
+      Ft[i][j]=0;
+      for(k=0;k<4;k++)
+      {
+	for(l=0;l<4;l++)
+	{
+	  int sign = epsilon_4d(i,j,k,l);
+	  //Ft[i][j] += sign*bcov[k]*ucov[l];
+	  Ft[i][j] += 0.5*sign*Fstarcov[k][l];
+	}
+      }
+    Ft[i][j] /= geom.gdet;
+    }
+  }
+
+  return 0;
+}
+
+
+int
+calc_current(void* ggg,ldouble jcon[4],int *derdir)
+{
+  int i,j,k,l,iv;
+
+  struct geometry *geomin
+    = (struct geometry *) ggg;
+
+  int ix,iy,iz;
+  ix=geomin->ix;
+  iy=geomin->iy;
+  iz=geomin->iz;
+
+  //lets get geometry again, just in case geomin is not in internal coordinates
+  struct geometry geom;
+  fill_geometry(ix,iy,iz,&geom);
+
+  ldouble dF[4];
+
+  //instead:
+  for(i=0;i<4;i++)
+  {
+    //force d/dt = 0 for now // ANDREW TODO
+    dF[i] = 0.;
+  }
+
+  ldouble Fm1[4][4],Fp1[4][4],Fc[4][4];
+  ldouble xxvec[4],xxvecm1[4],xxvecp1[4];
+  int idim;
+  calc_faraday(Fc,ix,iy,iz,0);
+  get_xx(ix,iy,iz,xxvec);
+
+  #ifdef CURRENTTIMEDERIV
+  if(!doingpostproc)
+  {
+    calc_faraday(Fm1,ix,iy,iz,-1); //Faraday tensor at previous timestep
+    for(i=0;i<4;i++)
+      dF[i] += (Fc[i][0] - Fm1[i][0])/dt; 
+  }
+  #endif
+
+  //derivatives
+  for(idim=1;idim<4;idim++)
+  {
+   
+
+      if(idim==1)
+      {
+	  get_xx(ix-1,iy,iz,xxvecm1);
+	  get_xx(ix+1,iy,iz,xxvecp1);
+	  calc_faraday(Fm1,ix-1,iy,iz,0);
+	  calc_faraday(Fp1,ix+1,iy,iz,0);
+      }
+
+      else if(idim==2)
+      {
+	  get_xx(ix,iy-1,iz,xxvecm1);
+	  get_xx(ix,iy+1,iz,xxvecp1);	  
+	  calc_faraday(Fm1,ix,iy-1,iz,0);
+	  calc_faraday(Fp1,ix,iy+1,iz,0);	    
+      }
+
+      else if(idim==3)
+      {
+	 get_xx(ix,iy,iz-1,xxvecm1);
+	 get_xx(ix,iy,iz+1,xxvecp1);
+	 calc_faraday(Fm1,ix,iy,iz-1,0);
+	 calc_faraday(Fp1,ix,iy,iz+1,0);	    
+      }
+
+     // if only one cedll
+     if(TNY==1 && idim==2) continue;
+     if(TNZ==1 && idim==3) continue;
+ 
+     ldouble dl,dr,dc;
+     
+     for(i=0;i<4;i++)
+     {
+
+	 dc=(Fp1[i][idim] -Fm1[i][idim]) / (xxvecp1[idim] - xxvecm1[idim]);
+	 dr=(Fp1[i][idim] -Fc[i][idim]) / (xxvecp1[idim] - xxvec[idim]);
+	 dl=(Fc[i][idim]  -Fm1[i][idim]) / (xxvec[idim] - xxvecm1[idim]);
+	 //TODO : whether MPI handles this properly
+	 //to avoid corners
+	 if(TNX==1 && idim==1)
+	 {
+	   dF[i] += 0;
+	 }
+	 else if(TNY==1 && idim==2)
+	 {
+	   dF[i] += 0;
+	 }
+	 else if(TNZ==1 && idim==3)
+	 {
+	   dF[i] += 0;
+	 }
+	 else if((ix<0 && iy==0 && iz==0 && idim!=1) ||
+	    (iy<0 && ix==0 && iz==0 && idim!=2) ||
+	    (iz<0 && ix==0 && iy==0 && idim!=3))
+	 {
+	     dF[i] += dr;
+	 }
+	 else if((ix<0 && iy==NY-1 && iz==NZ-1 && idim!=1) ||
+	    (iy<0 && ix==NX-1 && iz==NZ-1 && idim!=2) ||
+	    (iz<0 && ix==NX-1 && iy==NY-1 && idim!=3))
+	 {
+	     dF[i] += dl;
+	 }
+	 else if((ix>=NX && iy==0 && iz==0 && idim!=1) ||
+	    (iy>=NY && ix==0 && iz==0 && idim!=2) ||
+	    (iz>=NZ && ix==0 && iy==0 && idim!=3))
+	 {
+	     dF[i] += dr;
+	 }
+	 else if((ix>=NX && iy==NY-1 && iz==NZ-1 && idim!=1) ||
+	    (iy>=NY && ix==NX-1 && iz==NZ-1 && idim!=2) ||
+	    (iz>=NZ && ix==NX-1 && iy==NY-1 && idim!=3))
+	 {
+	     dF[i] += dl;
+	 }
+	 else
+	 {
+	     //choice of 1st order derivative
+	     if(derdir[idim-1]==0)
+	       {
+		 dF[i] += dc;
+	       }
+	     if(derdir[idim-1]==1)
+	       {
+		 dF[i] += dl;
+	       }
+	     if(derdir[idim-1]==2)
+	       {
+		 dF[i] += dr;
+	       }
+	 }
+     }  // loop over i     
+  } // loop over idim
+
+  //covariant derivative tensor du^i;j - only for expansion
+  ldouble dcu2[4][4];
+  ldouble Krsum[4];
+
+  for(i=0;i<4;i++)
+  {
+    Krsum[i]=0;
+    for(j=0;j<4;j++)
+    {
+      for(k=0;k<4;k++)
+      {
+	Krsum[i] += get_gKr(j,j,k,ix,iy,iz)*Fc[i][k];
+      }
+    }
+  }
+
+  //total current
+  for(i=0;i<4;i++)
+  {
+    jcon[i] = dF[i]+Krsum[i];
+  }
+
+  return 0;
+}
+
 
 //*********************************************************************************
 //tests
-//*********************************************************************************
+//******************************************************************x***************
 
 
 /*! int test_gammagas()

@@ -96,7 +96,8 @@ main(int argc, char **argv)
 
   //precalculates metric, Christoffels, etc.
   calc_metric();
-  
+  calc_cells_under_horiz();
+ 
   //save coordinate file
   #ifdef COORDOUTPUT
   fprint_coordfile(folder,"coord");
@@ -112,12 +113,6 @@ main(int argc, char **argv)
 #endif 
 
   //print scalings GU->CGS
-  #ifdef FORCEFREE
-  if(PROCID==0) printf("NVHD %d NVMHD %d NV %d\n",NVHD,NVMHD,NV);
-  if(PROCID==0) printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",
-		       RHO,UU,VX,VY,VZ,ENTR,B1,B2,B3,UUFF,VXFF,VYFF,VZFF);
-  #endif
-
   if(PROCID==0) print_scalings();
 
   //**************
@@ -177,6 +172,11 @@ main(int argc, char **argv)
         printf("Sending initial data... ");
 	fflush(stdout);
       }
+
+#ifdef FORCEFREE
+      fill_ffprims(); // make force-free primitives consistent
+#endif
+
       //exchange initial state
       mpi_exchangedata();  
       calc_avgs_throughout();
@@ -284,6 +284,7 @@ main(int argc, char **argv)
   int iix,iiy,iiz;
   struct geometry geom;
   ldouble PERTURBATION;
+
   
   // reset Te so that ue/ugas is constant
 #ifdef RESETELECTRONTEMPERATURETOUEUGASRATIO

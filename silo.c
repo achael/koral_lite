@@ -68,10 +68,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *rho = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *entr = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *uint = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-    ldouble *uintff = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+
   ldouble *temp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  ldouble *trad = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  ldouble *tradlte = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *Omega = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *muBe = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *Be = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -86,13 +84,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *u3 = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *lorentz = (ldouble*)malloc(nx*ny*nz*sizeof(double));
 
-  ldouble *u0_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  ldouble *u1_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  ldouble *u2_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  ldouble *u3_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *lorentz_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *lorentz_par = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  
+  int *ffinv = (int*)malloc(nx*ny*nz*sizeof(int));
+    
   ldouble *vx = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vy = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vz = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -118,6 +113,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *sigmaw = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *betainv = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *divB = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *jdens = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *OmegaF = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *Qtheta = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *Qphi = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -183,6 +179,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   #endif  
 
   #ifdef RADIATION
+  ldouble *trad = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+  ldouble *tradlte = (ldouble*)malloc(nx*ny*nz*sizeof(double));
+
   ldouble *taucoupling = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *tausca = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *tauabs = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -445,11 +444,13 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       
       if(doingavg==0) //using snapshot data
       {
+	
 	rho[zonalindex]  = pp[RHO];
 	entr[zonalindex] = pp[ENTR];
 	uint[zonalindex] = pp[UU];
 	pregas = (gamma-1.)*pp[UU];
-	
+
+	vel[0] = 0.;
 	vel[1]=pp[VX];
 	vel[2]=pp[VY];
 	vel[3]=pp[VZ];
@@ -479,10 +480,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	sigma[zonalindex] = bsq[zonalindex]/(rho[zonalindex]);
 	sigmaw[zonalindex] = bsq[zonalindex]/(rho[zonalindex] + gamma*uint[zonalindex]);
 
-	// field line angular velocity
-	// TODO why doesn't this look right? 
-	//OmegaF[zonalindex] = vel[3]/vel[0] - (vel[1]/vel[0])*(pp[B3]/pp[B1]);
-	OmegaF[zonalindex] = (Omega[zonalindex] - (vel[2]*B3comp[zonalindex])/(vel[0]*B2comp[zonalindex]));
         #endif		  
 
 	// stress energy
@@ -564,6 +561,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       }
       else //using averaged data
       {
+
 	 rho[zonalindex] = get_uavg(pavg,RHO,ix,iy,iz);
 	 entr[zonalindex] = get_uavg(pavg,ENTR,ix,iy,iz);
 	 uint[zonalindex] = get_uavg(pavg,UU,ix,iy,iz);
@@ -607,9 +605,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	 sigma[zonalindex]=bsq[zonalindex]/(rho[zonalindex] + uint[zonalindex] + pregas);
 	 sigmaw[zonalindex]=bsq[zonalindex]/(rho[zonalindex] + gamma*uint[zonalindex]);
 
-	 // field line angular velocity
-	 //OmegaF[zonalindex] = vel[3]/vel[0] - (vel[1]/vel[0])*(pp[B3]/pp[B1]);
-	 OmegaF[zonalindex] = (Omega[zonalindex] - (vel[2]*B3comp[zonalindex])/(vel[0]*B2comp[zonalindex]));
+     
          #endif		  
 	 
 	 // stress energy tensor
@@ -699,6 +695,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	 deltae[zonalindex]=-1.;
 	 dtauarr[zonalindex]=-1.;
 #endif //PRINTVISCHEATINGTOSILO	 
+
+
+	 
       } //doingavg
 
       
@@ -741,33 +740,47 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
       // put quantities into arrays
       expansion[zonalindex]=exploc;
-
       lorentz[zonalindex]=fabs(vel[0])/sqrt(fabs(geomout.GG[0][0]));
       u0[zonalindex]=fabs(vel[0]);
       u1[zonalindex]=vel[1];
       u2[zonalindex]=vel[2];
       u3[zonalindex]=vel[3];
 
-#ifdef FORCEFREE // must have VELPRIM=VELR
+#ifdef MAGNFIELD
+      //OmegaF[zonalindex] = Omega[zonalindex] - (u1[zonalindex]/u0[zonalindex])*(B3comp[zonalindex]/B1comp[zonalindex]);
+
+      OmegaF[zonalindex]=Omega[zonalindex];
+      if(fabs(u2[zonalindex]*B3comp[zonalindex])>1.e-8)
+	OmegaF[zonalindex] -= (u2[zonalindex]*B3comp[zonalindex])/(u0[zonalindex]*B2comp[zonalindex]);
+
       ldouble velff[4];
-      velff[0] = 0.;
-      velff[1]=pp[VXFF];
-      velff[2]=pp[VYFF];
-      velff[3]=pp[VZFF];
+      ldouble vpar;
+
+      vpar = get_driftvel_velr(pp,velff,&geomout);
       conv_vels(velff,velff,VELR,VEL4,geomout.gg,geomout.GG);
+      
       lorentz_perp[zonalindex]=fabs(velff[0])/sqrt(fabs(geomout.GG[0][0]));
       lorentz_par[zonalindex]=1./sqrt(1+pow(lorentz[zonalindex],-2)-pow(lorentz_perp[zonalindex],-2));
 
-      u0_perp[zonalindex]=velff[0];
-      u1_perp[zonalindex]=velff[1];
-      u2_perp[zonalindex]=velff[2];
-      u3_perp[zonalindex]=velff[3];
+#endif
 
-      uintff[zonalindex]=pp[UUFF];
+
+#ifdef FORCEFREE // must have VELPRIM=VELR
+
+      ffinv[zonalindex]=get_cflag(FFINVFLAG,ix,iy,iz);
+      
+      int derdir2[3] = {2,2,2};
+      ldouble jcon[4],jcov[4];
+      calc_current(&geom,jcon,derdir2);
+      indices_21(jcon,jcov,geom.gg); // not in lab frame
+
+      //ldouble FF[4][4];
+      //calc_faraday(FF,geom.ix,geom.iy,geom.iz,0);
+      jdens[zonalindex] = sqrt(fabs(dot(jcon,jcov)));
+
 #else
-      //TODO actually get || and perp velocities here
-      lorentz_perp[zonalindex]=-1;
-      lorentz_par[zonalindex]=-1;
+      jdens[zonalindex]=0.;      
+      ffinv[zonalindex]=0;
 #endif
       
       #ifdef EVOLVEELECTRONS
@@ -1527,7 +1540,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   DBPutQuadvar1(file, "entropyinv","mesh1", entropyinv,
   		dimensions, ndim, NULL, 0, 
 		DB_INT, DB_ZONECENT, optList);
-
+  
   DBPutQuadvar1(file, "uint","mesh1", uint,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
@@ -1540,9 +1553,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
-  DBPutQuadvar1(file, "omegaF","mesh1", OmegaF,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
 
   DBPutQuadvar1(file, "u0","mesh1", u0,
   		dimensions, ndim, NULL, 0, 
@@ -1557,32 +1567,20 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
+  
+  DBPutQuadvar1(file, "ffinv","mesh1", ffinv,
+  		dimensions, ndim, NULL, 0, 
+		DB_INT, DB_ZONECENT, optList);
+  
   DBPutQuadvar1(file, "lorentz","mesh1", lorentz,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
-
-#ifdef FORCEFREE
-  DBPutQuadvar1(file, "uint_ff","mesh1", uintff,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-
-  DBPutQuadvar1(file, "u0_perp","mesh1", u0_perp,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-  DBPutQuadvar1(file, "u1_perp","mesh1", u1_perp,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-  DBPutQuadvar1(file, "u2_perp","mesh1", u2_perp,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-  DBPutQuadvar1(file, "u3_perp","mesh1", u3_perp,
-  		dimensions, ndim, NULL, 0, 
-		DB_DOUBLE, DB_ZONECENT, optList);
-#endif
+  
   DBPutQuadvar1(file, "lorentz_perp","mesh1", lorentz_perp,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
   DBPutQuadvar1(file, "lorentz_par","mesh1", lorentz_par,
+		
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
@@ -1742,6 +1740,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 #endif
 
 #ifdef MAGNFIELD
+
   DBPutQuadvar1(file, "bsq","mesh1", bsq,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
@@ -1752,6 +1751,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
   DBPutQuadvar1(file, "B3","mesh1", B3comp,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+
+  DBPutQuadvar1(file, "OmegaF","mesh1", OmegaF,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
@@ -1782,6 +1785,10 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		DB_DOUBLE, DB_ZONECENT, optList);
 
   DBPutQuadvar1(file, "divB","mesh1", divB,
+  		dimensions, ndim, NULL, 0, 
+		DB_DOUBLE, DB_ZONECENT, optList);
+
+  DBPutQuadvar1(file, "jdens","mesh1", jdens,
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
 
@@ -1956,7 +1963,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   DBPutQuadvar(file, "rad_vel","mesh1", 3, names, vels, 
   		dimensions, ndim, NULL, 0, 
 		DB_DOUBLE, DB_ZONECENT, optList);
-  #endif
+#endif
  
   // Close the Silo file and free memory
   DBClose(file);
@@ -1967,24 +1974,23 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
   free(rho);
   free(uint);
-  free(uintff);
   free(entr);
   free(temp);
   free(Omega);
   free(muBe);
+  free(Be);
   free(expansion);
   free(NHr);
   free(entrlnT);
-
+  free(entropyinv);
+  
   free(u0);
   free(u1);
   free(u2);
   free(u3);
   free(lorentz);
-  free(u0_perp);
-  free(u1_perp);
-  free(u2_perp);
-  free(u3_perp);
+
+  free(ffinv);
   free(lorentz_perp);
   free(lorentz_par);
   free(vx);
@@ -1993,25 +1999,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   free(Edotx);
   free(Edoty);
   free(Edotz);
-
-#ifdef EVOLVEELECTRONS
-  free(tempe);
-  free(tempi);
-  free(ue);
-  free(ui);
-#ifdef RELELECTRONS
-  free(gammabrk);
-  free(urelel);
-  free(nrelel); 
-  free(neth);
-  free(uratio_tot);
-  free(uratio_th);
-  free(G0relel);
-  free(G0icrelel);
-  free(G0synrelel);
-#endif
-#endif
-
 
 #ifdef MAGNFIELD
   free(Bangle);
@@ -2029,6 +2016,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   free(sigmaw);
   free(betainv); 
   free(divB);
+  free(jdens);
   free(OmegaF);
   free(Qtheta);
   free(Qphi);
@@ -2064,18 +2052,37 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 #ifdef PRINTGAMMATOSILO
   free(gammag);
 #endif
- 
+
+
+#ifdef EVOLVEELECTRONS
+  free(tempe);
+  free(tempi);
+  free(ue);
+  free(ui);
+#ifdef RELELECTRONS
+  free(gammabrk);
+  free(urelel);
+  free(nrelel); 
+  free(neth);
+  free(uratio_tot);
+  free(uratio_th);
+  free(G0relel);
+  free(G0icrelel);
+  free(G0synrelel);
+#endif
+#endif
+
+
 #ifdef RADIATION
+  free(trad);
+  free(tradlte);
+
   free(tausca);
   free(tauabs);
   free(taueff);
   free(taucoupling);
   free(Erad);
-  free(trad);
-  free(tradlte);
   free(Ehat);
-  free(Gtff);
-  free(G0icth);
   
   free(Fx);
   free(Fy);
@@ -2084,6 +2091,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   free(uradx);
   free(urady);
   free(uradz);
+  free(Gtff);
+  free(G0icth);
 
   free(tauscar);
   free(tauabsr);

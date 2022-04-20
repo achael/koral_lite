@@ -109,7 +109,7 @@
 #define ZBCHI 6
 
 //cell flags
-#define NFLAGS 7
+#define NFLAGS 8
 
 //boolean
 #define ENTROPYFLAG 0
@@ -119,6 +119,7 @@
 #define ENTROPYFLAG2 4
 #define ENTROPYFLAG3 5
 #define RADSOURCETYPEFLAG 6
+#define FFINVFLAG 7
 
 //values for RADFIXUP
 #define RADSOURCETYPEEXPLICIT 1

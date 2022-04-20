@@ -15,6 +15,7 @@ int
 reduce_order_check(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *pp2,int ix,int iy,int iz)
 {
   int reconstrpar=0;
+
 #ifdef REDUCEORDERTEMP
   ldouble t0,tp1,tm1,tmin;
   t0 =calc_PEQ_Tfromurho(p0[UU], p0[RHO]);
@@ -31,7 +32,22 @@ reduce_order_check(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *p
   if(xxBL[1]<REDUCEORDERRADIUS)
     reconstrpar=1;
 #endif
-  
+
+  // ANDREW TODO -- different behavior on boundary vs interior of FF region? 
+#if defined(FORCEFREE) && defined(REDUCEORDERFF)
+  int ffflag;
+  ffflag = get_cflag(FFINVFLAG,ix,iy,iz);
+  if(ffflag>0)
+    reconstrpar=1;
+#endif
+
+#ifdef REDUCEORDERATBH
+  ldouble xxBL[4];
+  get_xx_arb(ix,iy,iz,xxBL,BLCOORDS);
+  if(xxBL[1]<rhorizonBL)
+    reconstrpar=1;
+#endif
+
   return reconstrpar;
 }
 
@@ -93,20 +109,19 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 {
   ldouble r0[NV],rm1[NV],rp1[NV];
 
-  if(param!=0) //overrule the standard reconstruction
-  {
-    int i;
-    if(param==1) //DONOR CELL
-    {
-      for(i=0;i<NV;i++)
-      {
-        ur[i]=u0[i];
-        ul[i]=u0[i];
-      }
-    }
-  }  // if(param!=0)
+  int int_order_local = INT_ORDER;
   
-  else if(INT_ORDER==0) //DONOR CELL
+  if(param!=0) //reduce integration order
+  {
+    //int_order_local = INT_ORDER-param;
+    int_order_local=0; // ANDREW TODO reduce directly to 0
+  }  // if(param!=0)
+
+  // default to donor cell
+  if(int_order_local<0)
+    int_order_local = 0;
+  
+  if(int_order_local==0) //DONOR CELL
   {
     int i;
     
@@ -117,7 +132,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
     }
   }  // else if(INT_ORDER==0)
   
-  else if(INT_ORDER==1) //linear
+  else if(int_order_local==1) //linear
   {
     ldouble diffpar=theta;
     int i;
@@ -201,7 +216,7 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
     } // for(i=0;i<NV;i++)
   }  // else if(INT_ORDER==1)
 
-  else if(INT_ORDER==2) //parabolic PPM
+  else if(int_order_local==2) //parabolic PPM
   {
     //The following is based on Colella & Woodward (J. Comp. Phys. 54, 174, 1984).
     //It uses five points: m2, m1, 0, p1, p2.
@@ -1876,7 +1891,7 @@ int
 set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
 {
   int i1,i2,ix,iy,iz;
-  ldouble mdx,mdy,mdz,dx,dy,dz,gloc[4][5],xx[4];
+  ldouble mdx,mdy,mdz,dx,dy,dz,gloc[4][5],xx[4],xxBL[4];
   mdx=mdy=mdz=-1;
   ldouble maxdt=-1;
 
@@ -1908,14 +1923,6 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
       if(i1>-NG) set_x(i1-1,2,.5*(get_xb(i1,2)+get_xb(i1-1,2)));
     }
 
-  //consistency check
-#if(MYCOORDS==BLCOORDS)
-  if(get_x(-1,0)<=rhorizonBL)
-    {
-      printf("ix %d > %f\n",-1,get_x(-1,0));
-      my_err("-1 cell inside horizon\n");
-    }
-#endif
 
   // what is the minimal cell size
   for(ix=ix1;ix<ix2;ix++)
@@ -2467,23 +2474,14 @@ int
 get_xx_arb(int ix,int iy,int iz,ldouble *xx,int COORDSOUT)
 {
   
-#ifdef PRECOMPUTE_MY2OUT // use precomputed coordinates if COORDS == OUTCOORDS
-  if(COORDSOUT == OUTCOORDS)
-  {
+#if defined(PRECOMPUTE_MY2OUT) && (COORDSOUT==OUTCOORDS) // use precomputed coordinates if COORDS == OUTCOORDS
     get_xxout(ix, iy, iz, xx); // time will be nonsense! seems ok everywhere this is used
-  }
-  else
-  {
-    ldouble xx0[4];
-    get_xx(ix,iy,iz,xx0);
-    coco_N(xx0,xx,MYCOORDS,COORDSOUT);
-  }
 #else
     ldouble xx0[4];
     get_xx(ix,iy,iz,xx0);
     coco_N(xx0,xx,MYCOORDS,COORDSOUT);
-#endif  
-  return 0;
+#endif
+    return 0;
 }
 
 
@@ -5187,8 +5185,7 @@ cell_fixup(int type)
 	  (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
 	)
 	{
-	  //ANDREW - I think maybe this should be here, to set the flag back to its default? 
-	  //this should not be here, should it?
+
 	  /*
 	  if(type==FIXUP_U2PMHD) set_cflag(HDFIXUPFLAG,ix,iy,iz,0); //try only once
 	  if(type==FIXUP_U2PRAD) set_cflag(RADFIXUPFLAG,ix,iy,iz,0); //try only once

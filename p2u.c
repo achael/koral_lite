@@ -116,7 +116,7 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   for(ib=0;ib<NRELBIN;ib++)
   {
     uu[NEREL(ib)]=gdetu*pp[NEREL(ib)]*ut;
-  }    
+  }    x
 #endif
 
   //************************************
@@ -127,32 +127,22 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   uu[B2]=gdetu*pp[B2];
   uu[B3]=gdetu*pp[B3];
 
+  // ANDREW TODO I changed to use regular prims instead of FF prims
 #ifdef FORCEFREE
-  // FF conserved parallel enthalpy
-  ldouble ugas_ff = pp[UUFF];
-  ldouble w_s = 1 + gamma*ugas_ff/rho; // specific enthalpy
+
+#ifdef FORCEFREE_PARALLEL_COLD // neglect pressure
+  uu[UUFF] = gdetu * bcon[0];
+#else // adiabatic, with pressure
+
+  ldouble w_s = 1 + gamma*pp[UU]/pp[RHO]; // specific enthalpy
   uu[UUFF] = gdetu * w_s * bcon[0];
+#endif
   
-  // TODO -- do we need to recompute these things?
-  // TODO -- T^\mu\nu EM should be invariant to any parallel velocity
-  ldouble vcon_ff[4],ucon_ff[4],ucov_ff[4];
-  ldouble bcon_ff[4],bcov_ff[4],bsq_ff;
+  ldouble Ttr_ff  = bsq*ucon[0]*ucov[1] - bcon[0]*bcov[1];
+  ldouble Ttth_ff = bsq*ucon[0]*ucov[2] - bcon[0]*bcov[2];
+  ldouble Ttph_ff = bsq*ucon[0]*ucov[3] - bcon[0]*bcov[3];
+
   
-  // FF stress-energy components
-  // ANDREW TODO -- necessary to recompute ucon, etc?
-  vcon_ff[0]=0.;
-  vcon_ff[1]=pp[VXFF];
-  vcon_ff[2]=pp[VYFF];
-  vcon_ff[3]=pp[VZFF];
-
-  conv_vels_both(vcon_ff,ucon_ff,ucov_ff,VELPRIM,VEL4,gg,GG);
-  calc_bcon_bcov_bsq_from_4vel(pp, ucon_ff, ucov_ff, geom, bcon_ff, bcov_ff, &bsq_ff);
-
-  //ldouble Tttt_ff = bsq*ucon[0]*ucov[0] - bcon[0]*bcov[0] + 0.5*bsq + rho*ucon[0];  
-  ldouble Ttr_ff  = bsq_ff*ucon_ff[0]*ucov_ff[1] - bcon_ff[0]*bcov_ff[1];
-  ldouble Ttth_ff = bsq_ff*ucon_ff[0]*ucov_ff[2] - bcon_ff[0]*bcov_ff[2];
-  ldouble Ttph_ff = bsq_ff*ucon_ff[0]*ucov_ff[3] - bcon_ff[0]*bcov_ff[3];
-
   uu[VXFF] = gdetu*Ttr_ff;
   uu[VYFF] = gdetu*Ttth_ff;
   uu[VZFF] = gdetu*Ttph_ff;

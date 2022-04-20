@@ -190,10 +190,55 @@ void initialize_constants()
   */
   
   #endif
+
   
   return;
 }
 
+//**********************************************************************
+/*! \fn int calc_cells_under_horiz()
+ \brief calculate the number of cells beneath the horizon for bhdisk problems
+*/
+//**********************************************************************
+
+int
+calc_cells_under_horiz()
+{
+    //consistency check -- how many cell centers are under horizon? 
+#ifdef BHDISK_PROBLEMTYPE
+  ldouble xx[4],xxBL[4];
+  int ix;
+  if(TOI==0 && TOJ==0 && TOK==0) // only do on 0th tile
+  {
+    cells_under_horizon=0;
+    for(ix=0;ix<NX;ix++)
+    {
+      get_xx(ix,0,0,xx); //BH problem types should have r coord independent of theta,phi
+      coco_N(xx,xxBL,MYCOORDS,BLCOORDS);
+      if(xxBL[1]>rhorizonBL)
+	break;
+      else
+	cells_under_horizon+=1;
+    }
+    
+    if(cells_under_horizon<3)
+    {
+      printf("There are only %d cells under horizon at rh=%.2f! increase to at least 4\n",
+	     cells_under_horizon,rhorizonBL);
+      exit(-1);
+    }
+    if(cells_under_horizon==NX)
+    {
+      printf("All cells on inner tile are under horizon! \n");
+      exit(-1);
+    }
+
+    printf("There are %d cells under the horizon at rh=%.2f\n",
+	   cells_under_horizon,rhorizonBL);
+  }
+#endif
+  return 0;
+}
 
 //**********************************************************************
 /*! \fn int print_scalings()
@@ -358,7 +403,6 @@ if (NTZ % 2 != 0)
 #endif
 
 #ifdef FORCEFREE
-  printf("WARNING! FORCEFREE is untested and does not account for current sheets! use only with monopole!\n");
   #ifdef NONRELMHD
   printf("FORCEFREE does not work with NONRELMHD!\n");
   exit(-1);
@@ -539,6 +583,8 @@ if (NTZ % 2 != 0)
   if(PROCID==0) printf("RESTARTFROMMHD\n");
   if(PROCID==0) printf("urad/uu: %e ue/uu: %e\n", INITURADFRAC, INITUEFRAC);
 #endif
+
+
   return;
 }
 
@@ -1476,7 +1522,7 @@ print_primitives(ldouble *p)
   printf("B^2 = %.15e\n",p[B2]);
   printf("B^3 = %.15e\n",p[B3]);
 #ifdef FORCEFREE
-  printf("uu (ff) = %.15e\n", p[UUFF]);
+  printf("upar (ff) = %.15e\n", p[UUFF]);
   printf("u^1 (ff) = %.15e\n",p[VXFF]);
   printf("u^2 (ff) = %.15e\n",p[VYFF]);
   printf("u^3 (ff) = %.15e\n",p[VZFF]);
@@ -1525,6 +1571,7 @@ print_conserved(ldouble *u)
   printf("B^2 = %.15e\n",u[B2]);
   printf("B^3 = %.15e\n",u[B3]);
 #ifdef FORCEFREE
+  printf("mu b^0 (ff) = %.15e\n",u[UUFF]);
   printf("T^t_1 (ff) = %.15e\n",u[VXFF]);
   printf("T^t_2 (ff) = %.15e\n",u[VYFF]);
   printf("T^t_3 (ff) = %.15e\n",u[VZFF]);
