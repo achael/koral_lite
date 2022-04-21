@@ -208,12 +208,12 @@ else // we are inside the donut
     #ifdef LIMOTORUS
     init_dsandvels_limotorus(r_mag, th_mag, BHSPIN, &rho, &u_av, &ell); // current loc
     init_dsandvels_limotorus(r_mag, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane
-    init_dsandvels_limotorus(rchop, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane at rchop
+    init_dsandvels_limotorus(rchop, M_PI/2., BHSPIN, &rho, &u_av_chop, &ell); // midplane at rchop
     rin = LT_RIN;
     #else
     init_dsandvels_fishbone_moncrief(r_mag, th_mag, BHSPIN, &rho, &u_av, &ell); // current loc
     init_dsandvels_fishbone_moncrief(r_mag, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane
-    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane at rchop
+    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_chop, &ell); // midplane at rchop
     rin = FM_rin;
     #endif
 
@@ -249,12 +249,12 @@ else // we are inside the donut
     #ifdef LIMOTORUS
     init_dsandvels_limotorus(r_mag, th_mag, BHSPIN, &rho, &u_av, &ell); // current loc
     init_dsandvels_limotorus(r_mag, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane
-    init_dsandvels_limotorus(rchop, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane at rchop
+    init_dsandvels_limotorus(rchop, M_PI/2., BHSPIN, &rho, &u_av_chop, &ell); // midplane at rchop
     rin = LT_RIN;
     #else
     init_dsandvels_fishbone_moncrief(r_mag, th_mag, BHSPIN, &rho, &u_av, &ell); // current loc
     init_dsandvels_fishbone_moncrief(r_mag, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane
-    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell); // midplane at rchop
+    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_chop, &ell); // midplane at rchop
     rin = FM_rin;
     #endif
 

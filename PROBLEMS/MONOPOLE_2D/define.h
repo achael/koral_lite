@@ -20,14 +20,14 @@
 //#define U2PCONV 1.e-14
 
 #define FORCEFREE
-//#define NOLOGINS 
+
 
 /************************************/
 //reconstruction / Courant
 /************************************/
-#define INT_ORDER 1 //TODO why is int_order 1 more stable???
+#define INT_ORDER 2 //TODO why is int_order 1 more stable???
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .9
+#define TSTEPLIM .8
 #define FLUXLIMITER 1
 #define FLUXMETHOD LAXF_FLUX
 #define MINMOD_THETA 1.5
@@ -35,22 +35,29 @@
 /************************************/
 //rmhd floors
 /************************************/
+#define SPLIT_MONOPOLE
 
-#define B2RHORATIOMAXINIT 100//100
-#define B2UURATIOMAXINIT 100//100
+#define RHOATMMIN  1.e-20
+#define UINTATMMIN 1.e-20
+
+#define B2RHORATIOMAXINIT 500//100//100
+#define B2UURATIOMAXINIT 500//100//100
 
 #if defined(FORCEFREE)
+#define NOLOGINS
 
 //#define ENFORCEENTROPY
-#define HYBRID_FORCEFREE
-#define HYBRID_FORCEFREE_SIGMACUT 25
+//#define HYBRID_FORCEFREE
+//#define HYBRID_FORCEFREE_SIGMACUT 25
 #define FORCEFREE_SOLVE_PARALLEL
-#//define FORCEFREE_SOLVE_PARALLEL_OLD
+#define FORCEFREE_PARALLEL_COLD
 
 //#define SKIPALLFLOORS // TODO seems critical for SOLVE_PARALLEL? 
-//#define CORRECT_POLARAXIS
-//#define NCCORRECTPOLAR 2
 
+#define CORRECT_POLARAXIS
+#define NCCORRECTPOLAR 2
+
+#define B2RHOFLOORFRAME FFFRAME
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50. 
 #define B2UURATIOMIN 0.
@@ -58,22 +65,23 @@
 #define B2RHORATIOMIN 0.
 #define B2RHORATIOMAX 1.e100
 
-#define GAMMAMAXFF 500.  //lower than GAMMAMAXHD? 
-#define GAMMAMAXHD 500. //why can't this be pushed higher on the monopole? 
+#define GAMMAMAXFF 10//100.  //lower than GAMMAMAXHD? 
+#define GAMMAMAXHD 100//100. //why can't this be pushed higher on the monopole? 
 
 #else
 
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME ZAMOFRAME 
+#define B2RHOFLOORFRAME DRIFTFRAME//ZAMOFRAME 
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50.
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX 2500.
+#define B2UURATIOMAX B2UURATIOMAXINIT
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 500.
-#define GAMMAMAXHD 500.
+#define B2RHORATIOMAX B2RHORATIOMAXINIT
+
+#define GAMMAMAXHD 100.
 #endif
 
 /************************************/
@@ -92,15 +100,16 @@
 #define RMAX 200.
 #define MKS1R0 MKSR0
 
+#define TNX 128
+#define TNY 256//128
+#define TNZ 1
+
 #ifdef myMKS1COORDS //modified Kerr-Shild
 #define MYCOORDS MKS1COORDS
 #define MINX (log(RMIN - MKSR0))
 #define MAXX (log(RMAX - MKSR0))
-#define MINY 0.001*M_PI
-#define MAXY M_PI - 0.001*M_PI
-#define TNX 128
-#define TNY 64//256
-#define TNZ 1
+#define MINY 0.005*M_PI
+#define MAXY M_PI - 0.005*M_PI
 
 #elif defined(myMKS2COORDS) //modified Kerr-Shild
 #define MYCOORDS MKS2COORDS
@@ -111,9 +120,6 @@
 #define MAXX (log(RMAX - MKSR0))
 #define MINY (0.001)
 #define MAXY (1.-0.001)
-#define TNX 128
-#define TNY 128
-#define TNZ 1
 
 #else //Schwarzschild
 #define MYCOORDS SCHWCOORDS
@@ -121,9 +127,6 @@
 #define MAXX (25.3)
 #define MINY (0.01*Pi/2.)
 #define MAXY (Pi-0.01*Pi/2.)
-#define TNX 64
-#define TNY 32
-#define TNZ 1
 #endif
 
 #define PHIWEDGE (M_PI/2.)
@@ -158,5 +161,3 @@
 #define GAMMA (4./3.)
 #define DTOUT1 1
 #define DTOUT2 1.e0
-#define RHOATMMIN  1.e-20
-#define UINTATMMIN 1.e-20

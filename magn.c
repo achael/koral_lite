@@ -631,6 +631,16 @@ calc_BfromA_core()
       B[2]=(dA[3][1] - dA[1][3])/geom.gdet;
       B[3]=(dA[1][2] - dA[2][1])/geom.gdet;
 
+#if PROBLEM==132 && defined(SPLIT_MONOPOLE)
+      ldouble xxBL[4];
+      get_xx_arb(ix,iy,iz,xxBL,BLCOORDS);
+      if(xxBL[2]>0.5*M_PI)
+      {
+	B[1]*=-1;
+	B[2]*=-2;
+	B[3]*=-3;
+      }
+#endif
       set_u(pvecpot,1,ix,iy,iz,B[1]);
       set_u(pvecpot,2,ix,iy,iz,B[2]);
       set_u(pvecpot,3,ix,iy,iz,B[3]);

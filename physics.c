@@ -1220,6 +1220,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
     {
 	if(isnan(T[ii][jj])) 
 	{
+            #if !(defined(FORCEFREE) && !defined(HYBRID_FORCEFREE))
 	    printf("%d > nan tmunu: %d %d %e at %d %d %d\n",PROCID,ii,jj,T[ii][jj],ix+TOI,iy+TOJ,iz+TOK);
 	    //printf("%d > nan tmunu: %e %e %e %e\n",PROCID,gamma,pre,w,eta);
 	    //print_4vector(ucon);
@@ -1227,6 +1228,7 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 	    //print_Nvector(pp,NV);
 	    my_err("nan in flux_prime\n");
 	    exit(-1);
+	    #endif
 	}
     }
 
