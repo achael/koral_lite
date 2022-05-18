@@ -113,8 +113,8 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
   
   if(param!=0) //reduce integration order
   {
-    //int_order_local = INT_ORDER-param;
-    int_order_local=0; // ANDREW TODO reduce directly to 0
+    int_order_local = INT_ORDER-param;
+    //int_order_local=0; // ANDREW TODO reduce directly to 0
   }  // if(param!=0)
 
   // default to donor cell

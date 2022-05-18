@@ -166,10 +166,16 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   for(iv=0;iv<NV;iv++)
     ppbak[iv]=pp[iv];
 
+  // ANDREW
+  // force-free inversion flag
+  int ffflag=0;
+#ifdef FORCEFREE
+  ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
+#endif
+  
   //************************************
   //magneto-hydro part
   //************************************
-  ldouble u0=pp[UU];
   
   //************************************
   // hot hydro - conserving energy
@@ -177,30 +183,23 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   int u2pret=-1;
     
   // negative uu[RHO] = rho u^t -> set rho to floor
+  // ANDREW -- implemented separate floor for FF regions
   ldouble alpha=geom->alpha;
-  //if(uu[RHO] * gdetu_inv < 0.)
-  if(uu[RHO] * alpha * gdetu_inv < 0.)    // ANDREW -- change, since uu[RHO]=rho*gamma*gdet/alpha. What if alpha<0? 
+  //if(uu[RHO] * gdetu_inv < 0. && ffflag==0)
+  if(uu[RHO] * alpha * gdetu_inv < 0. && ffflag==0)    // ANDREW -- changed, since uu[RHO]=rho*gamma*gdet/alpha. 
   {
     int gix,giy,giz;
     mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
     if(1 || verbose)
-      printf("%4d > %4d %4d %4d > neg rhout - requesting fixup\n",PROCID,gix,giy,giz);
+      printf("%4d > %4d %4d %4d > neg rhout (%e %e)- requesting fixup\n",PROCID,gix,giy,giz,pp[RHO],uu[RHO]*alpha*gdetu_inv);
 
     pp[RHO]=RHOFLOOR; 
     //uu[RHO]=RHOFLOOR*gdetu;
-    uu[RHO]=RHOFLOOR*gdetu/alpha; // ANDREW -- change, since uu[RHO]=rho*gamma*gdet/alpha. What if alpha<0? 
-    ret=-2;  // to request fixup in all cases
-    
-    #ifndef SWAPPAPC
-    global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  // count as fixup
-    #endif
-  }
+    uu[RHO]=RHOFLOOR*gdetu/alpha; // ANDREW -- changed, since uu[RHO]=rho*gamma*gdet/alpha.
 
-  // force-free inversion
-  int ffflag=0;
-#ifdef FORCEFREE
-  ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
-#endif
+    global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  // count as fixup
+    ret=-2;  // request fixup in all cases
+  }
 
   // use ff solver if not hybrid or if high sigma
   if(ffflag>0)
@@ -454,7 +453,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   ldouble rr = xxBL[1] / rout;
   ldouble rhofloor = RHOATMMIN / sqrt(rr*rr*rr);
   ldouble uintfloor = UINTATMMIN / sqrt(rr*rr*rr*rr*rr);
-  if(pp[RHO] < rhofloor || pp[UU] < uintfloor)
+  //if(pp[RHO] < rhofloor || pp[UU] < uintfloor && xxBL[1]<rhorizonBL) // ANDREW TODO
+  if((pp[RHO] < rhofloor || pp[UU] < uintfloor)) // ANDREW TODO
   {
     for(iv = 0; iv < NVMHD; iv++)
     {

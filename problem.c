@@ -97,7 +97,12 @@ solve_the_problem(ldouble tstart, char* folder)
       global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFIXUPS]=0; //counting number of critical failures
       global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]=0;    //counting mhd fixups
       global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]=0;    //counding rad fixups
- 
+
+      #ifdef FORCEFREE
+      global_int_slot[GLOBALINTSLOT_NTOTALU2PFF]=0; // counting number of cells inverted with forcefree
+      global_int_slot[GLOBALINTSLOT_NTOTALU2PFFRHOFLOOR]=0; // counting number of forcefree cells with absolute density floor
+      #endif
+      
       spitoutput=0;
       global_time=t;
       nstep++;
@@ -782,23 +787,22 @@ solve_the_problem(ldouble tstart, char* folder)
 
       
       //for outputs - use what came out of 2nd implicit: 
-      //ANDREW why?? try current prims instead
-      // ANDREW: try saving out current prims instead of postimplicit
+      // ANDREW why?? try current prims instead
       
       // Set uforget = p and p = ppostimplicit over domain
       copy_u(1.,p,uforget); //backup current primitives
-      //copy_u(1.,ppostimplicit,p); 
+      //copy_u(1.,ppostimplicit,p); // ANDREW: try saving out current prims instead of postimplicit
    
       //counting faiures and average parameters of the implicit solver
       int nfailures[3],nfailuresloc[3]={global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFAILURES],
 					global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS],
 					global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]};
       
-#ifdef MPI
+      #ifdef MPI
       MPI_Allreduce(nfailuresloc, nfailures, 3, MPI_INT, MPI_SUM, MPI_COMM_WORLD);      
-#else
+      #else
       for(i=0;i<3;i++) nfailures[i]=nfailuresloc[i];
-#endif
+      #endif
       
       //quit if we have exceeded maxiumum number of failures
       int maxfailures=TNX*TNY*TNZ/1;
@@ -808,6 +812,17 @@ solve_the_problem(ldouble tstart, char* folder)
 		 nfailures[0],nfailures[1],nfailures[2]);
 	  exit(-1);
       }
+
+#ifdef FORCEFREE
+      // counting number of forcefree inversions
+      int nu2pff[2],nu2pffloc[2]={global_int_slot[GLOBALINTSLOT_NTOTALU2PFF],
+	                          global_int_slot[GLOBALINTSLOT_NTOTALU2PFFRHOFLOOR]};
+      #ifdef MPI
+      MPI_Allreduce(nu2pffloc, nu2pff, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);      
+      #else
+      for(i=0;i<2;i++) nu2pff[i]=nu2pffloc[i];
+      #endif
+#endif //FORCEFREE
       
 #ifdef RADIATION
       //get average number of iterations in the implicit solver
@@ -835,16 +850,16 @@ solve_the_problem(ldouble tstart, char* folder)
       impnumsloc[5]=global_int_slot[GLOBALINTSLOT_NIMPENTRRAD];
       impnumsloc[6]=0;
 
-#ifdef MPI
+      #ifdef MPI
       MPI_Allreduce(impnumsloc, impnums, 7, MPI_INT, MPI_SUM,
 		    MPI_COMM_WORLD);  
       MPI_Allreduce(avimpitloc, avimpit, 5, MPI_LDOUBLE, MPI_MAX,
                    MPI_COMM_WORLD);  
-#else
+      #else
       for(i=0;i<5;i++) avimpit[i]=avimpitloc[i];
       for(i=0;i<7;i++) impnums[i]=impnumsloc[i];
-#endif 
-#endif  
+      #endif 
+#endif //RADIATION
       
       //time mark
       my_clock_gettime(&temp_clock);    
@@ -896,7 +911,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
       }  // if(lasttoutavg_floor!=floor(t/dtoutavg))
 #endif  // if(AVGOUTPUT>0)
-
 
       //save snapshot files
 #ifdef DTOUT_LOG
@@ -954,7 +968,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
 #endif  // ifndef MPI
 
-
 	  nfout1++;
 	  
 	  #ifdef DTOUT_LOG
@@ -982,12 +995,15 @@ solve_the_problem(ldouble tstart, char* folder)
 	  printf("st #%6d t=%12.5e dt=%.2e mpi=%3.1f znps=%.0f tgpd=%.2e fail# %1d %1d %1d "
 		 ,nstep,t,dt,2.*maxmp_time/(end_time-start_time),znps,tgpd,
 		  nfailures[0],nfailures[1],nfailures[2]);
-#ifdef RADIATION
-#ifndef SKIPRADSOURCE
+
+#ifdef FORCEFREE
+          printf("| ff# %d %d | ", nu2pff[0], nu2pff[1]);
+#endif
+
+#if defined(RADIATION) && !defined(SKIPRADSOURCE)
 	  printf("imp# %d %d %d %d %d %d %d | %.1f %.1f %.1f %.1f %.1f ",
 		  impnums[0],impnums[1],impnums[2],impnums[3],impnums[4],impnums[5],impnums[6],
 		  avimpit[0],avimpit[1],avimpit[2],avimpit[3],avimpit[4]);
-#endif
 #endif
 
 	  printf("\n");
