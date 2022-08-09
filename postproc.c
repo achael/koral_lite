@@ -1997,221 +1997,200 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
     }
       
 
-  if(NY==1 && NZ==1) //spherical symmetry
-  {
+  if(NY==1 && NZ==1){ //spherical symmetry
+    iz=0; 
+    iy=0;
+    ldouble dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
+    ldouble Rij[4][4],Rtt,ehat,ucongas[4];
+    ldouble tautot[3],tau=0.;
+    ldouble gdet;
+    ldouble lum,jet;
 
-      iz=0; 
-      iy=0;
-      ldouble dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
-      ldouble Rij[4][4],Rtt,ehat,ucongas[4];
-      ldouble tautot[3],tau=0.;
-      ldouble gdet;
-      ldouble lum,jet;
-
-      int iv;
-      for(iv=0;iv<NV;iv++)
-	pp[iv]=get_u(p,iv,ix,iy,iz);
-
-      struct geometry geomBL;
-      fill_geometry_arb(ix,iy,iz,&geomBL,KERRCOORDS);
-      struct geometry geom;
-      fill_geometry(ix,iy,iz,&geom);
-
-      if(doingavg)
-      {
-	  PLOOP(iv)
-	    pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
-
-	  ldouble ucont=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
-	  ldouble uconr=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);		  
-	  rhour=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz);
-	  uintur=get_uavg(pavg,AVGUUUCON(1),ix,iy,iz);
-	  Trt=get_uavg(pavg,AVGRHOUCONUCOV(1,0),ix,iy,iz)
-	    + GAMMA*get_uavg(pavg,AVGUUUCONUCOV(1,0),ix,iy,iz)
-	    + get_uavg(pavg,AVGBSQUCONUCOV(1,0),ix,iy,iz)
-	    - get_uavg(pavg,AVGBCONBCOV(1,0),ix,iy,iz); 
-
-	  Rrt=0.;
-#ifdef RADIATION
-
-	  int i,j;
-	  if(type==0) //R^r_t outside photosphere
-	    {
-	      Rrt=0.;
-	    }
-	  else if(type==1) //R^r_t everywhere
-	    {
-	      for(i=0;i<4;i++)
-		for(j=0;j<4;j++)
-		  Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
-		  
-	      Rrt=Rij[1][0];// + ehat*uconr);
-	      if(Rrt<0.) Rrt=0.;
-	    }
-	  else if(type==2) //R^r_t everywhere in outflow
-	    {
-	      for(i=0;i<4;i++)
-		for(j=0;j<4;j++)
-		  Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
-		  
-	      Rrt=Rij[1][0];// + ehat*uconr);
-	      if(uconr<0. || Rrt<0.) Rrt=0.;
-	    }
-	  else
-	    Rrt=0.;
-
-	  lum=-geom.gdet*Rrt*4.*M_PI;
-#else //RADIATION
-	  lum=-geom.gdet*uintur*4.*M_PI;    
-#endif
-	  jet=geomBL.gdet*(Trt+rhour+Rrt)*4.*M_PI;
-      }
-      else //doingavg
-      {
-	
-	  ucongas[1]=pp[2];
-	  ucongas[2]=pp[3];
-	  ucongas[3]=pp[4];	      
-	  conv_vels(ucongas,ucongas,VELPRIM,VEL4,geom.gg,geom.GG);
-
-	  rhour = pp[RHO]*ucongas[1];
-	  uintur = pp[UU]*ucongas[1];
-	  
-	  calc_Tij(pp,&geom,Tij);
-	  indices_2221(Tij,Tij,geom.gg);
-	  Trt=Tij[1][0];
-
-	  Rrt=0.;
-
-#ifdef RADIATION	      
-	  if(type==0) //R^r_t outside photosphere
-	    {
-	      Rrt=0.;
-	    }
-	  else if(type==1) //sum of positive R^r_t everywhere
-	    {
-	      calc_Rij(pp,&geom,Rij); 
-	      Rrt=Rij[1][0];
-	      if(Rrt<0.)
-		Rrt=0.;
-	    }
-	  else if(type==2) //R^r_t in the outflow region
-	    {
-	      calc_Rij(pp,&geom,Rij); 
-	      Rrt=Rij[1][0];
-	      if(Rrt<0. || ucongas[1]<0.)
-		Rrt=0.;
-	    }
-	  else if(type==3) //sum of R^r_t everywhere
-	    {
-	      calc_Rij(pp,&geom,Rij); 
-	      Rrt=Rij[1][0];
-	    }
-	  else
-	    Rrt=0.;
-	  lum=-geom.gdet*Rrt*4.*M_PI;
-#else //RADIATION 
-	  lum=-geom.gdet*uintur*4.*M_PI;    
-#endif
-	  jet=geom.gdet*(rhour+Trt+Rrt)*4.*M_PI;
-      }
-
-      *radlum=lum;
-      *totallum=jet;
-      return 0.;
-  }
-  else //non-sph symmetry
-  {
-
-      ldouble lum=0.;
-      ldouble jet=0.;
-      #pragma omp parallel for private(iy,iz) reduction(+:lum) reduction(+:jet)
-      for(iz=0;iz<NZ;iz++)
-      {
-        for(iy=0;iy<NY;iy++)
-	{
-	  ldouble xx[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
-          ldouble Rij[4][4],Rtt,ehat,ucongas[4],ucovgas[4];
-          ldouble tautot[3],tau=0.;
-          //ldouble gdet;
-
-	  int iv;
-	  for(iv=0;iv<NV;iv++)
+    int iv;
+    for(iv=0;iv<NV;iv++)
 	    pp[iv]=get_u(p,iv,ix,iy,iz);
 
-	  struct geometry geomBL;
-	  fill_geometry_arb(ix,iy,iz,&geomBL,KERRCOORDS);
-	  struct geometry geom;
-	  fill_geometry(ix,iy,iz,&geom);
+    struct geometry geomBL;
+    fill_geometry_arb(ix,iy,iz,&geomBL,KERRCOORDS);
+    struct geometry geom;
+    fill_geometry(ix,iy,iz,&geom);
+    if(doingavg){
+	    PLOOP(iv)
+	    pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
 
-	  //get_xx(ix,iy,iz,xx);
-	  //dx[0]=get_size_x(ix,0);
-	  //dx[1]=get_size_x(iy,1);
-	  //dx[2]=2.*M_PI;
-	  //gdet=geom.gdet;
+	    ldouble ucont=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
+	    ldouble uconr=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);		  
+	    rhour=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz);
+	    uintur=get_uavg(pavg,AVGUUUCON(1),ix,iy,iz);
+	    Trt=get_uavg(pavg,AVGRHOUCONUCOV(1,0),ix,iy,iz)
+	      + GAMMA*get_uavg(pavg,AVGUUUCONUCOV(1,0),ix,iy,iz)
+	      + get_uavg(pavg,AVGBSQUCONUCOV(1,0),ix,iy,iz)
+	      - get_uavg(pavg,AVGBCONBCOV(1,0),ix,iy,iz); 
 
-	  ldouble dxph[3],dxBL[3];
+	    Rrt=0.;
+      #ifdef RADIATION
+        int i,j;
+	      if(type==0){ //R^r_t outside photosphere
+	        Rrt=0.;
+	        }
+	      else if(type==1){ //R^r_t everywhere
+	        for(i=0;i<4;i++)
+		        for(j=0;j<4;j++)
+		          Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
+		  
+	        Rrt=Rij[1][0];// + ehat*uconr);
+	        if(Rrt<0.) Rrt=0.;
+	        }
+	      else if(type==2){ //R^r_t everywhere in outflow
+	        for(i=0;i<4;i++)
+		        for(j=0;j<4;j++)
+		          Rij[i][j]=get_uavg(pavg,AVGRIJ(i,j),ix,iy,iz);
+		      
+          Rrt=Rij[1][0];// + ehat*uconr);
+	        if(uconr<0. || Rrt<0.) Rrt=0.;
+	        }
+	      else
+	        Rrt=0.;
+
+	      lum=-geom.gdet*Rrt*4.*M_PI;
+      #else //RADIATION
+	      lum=-geom.gdet*uintur*4.*M_PI;    
+      #endif
+	    jet=geomBL.gdet*(Trt+rhour+Rrt)*4.*M_PI;
+      }
+    else{ //doingavg      	
+	    ucongas[1]=pp[2];
+	    ucongas[2]=pp[3];
+	    ucongas[3]=pp[4];	      
+	    conv_vels(ucongas,ucongas,VELPRIM,VEL4,geom.gg,geom.GG);
+
+	    rhour = pp[RHO]*ucongas[1];
+	    uintur = pp[UU]*ucongas[1];
 	  
-	  //cell dimensions
-	  //ANDREW put cell size code in a function with precompute option
-          get_cellsize_out(ix, iy, iz, dxBL);
-	  /*
-	  ldouble xx1[4],xx2[4];
-	  xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	  xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[0]=fabs(xx2[1]-xx1[1]);
-	  xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	  xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[1]=fabs(xx2[2]-xx1[2]);
-	  xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	  xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[2]=fabs(xx2[3]-xx1[3]);
-          */
-	  if(NZ==1) 
-          {
-            dxBL[2]=2.*M_PI;
-          }
-          else
-          {
-            #ifdef PHIWEDGE
-            dxBL[2] *= (2. * M_PI / PHIWEDGE);
-            #endif
-          }
-	  dxph[0]=dxBL[0]*sqrt(geomBL.gg[1][1]);
-	  dxph[1]=dxBL[1]*sqrt(geomBL.gg[2][2]);
-	  dxph[2]=dxBL[2]*sqrt(geomBL.gg[3][3]);
+	    calc_Tij(pp,&geom,Tij);
+	    indices_2221(Tij,Tij,geom.gg);
+	    Trt=Tij[1][0];
+
+	    Rrt=0.;
+
+      #ifdef RADIATION	      
+	      if(type==0){ //R^r_t outside photosphere
+	        Rrt=0.;
+	      }
+	      else if(type==1){ //sum of positive R^r_t everywhere	    
+	        calc_Rij(pp,&geom,Rij); 
+	        Rrt=Rij[1][0];
+	        if(Rrt<0.)
+		        Rrt=0.;
+	      }
+	      else if(type==2){ //R^r_t in the outflow region	    
+	        calc_Rij(pp,&geom,Rij); 
+	        Rrt=Rij[1][0];
+	        if(Rrt<0. || ucongas[1]<0.)
+		        Rrt=0.;
+	      }
+	      else if(type==3){ //sum of R^r_t everywhere	      
+	        calc_Rij(pp,&geom,Rij); 
+	        Rrt=Rij[1][0];
+	      }
+	      else
+	        Rrt=0.;
+	        lum=-geom.gdet*Rrt*4.*M_PI;
+      #else //RADIATION 
+	      lum=-geom.gdet*uintur*4.*M_PI;    
+      #endif
+	    jet=geom.gdet*(rhour+Trt+Rrt)*4.*M_PI;
+    }
+
+    *radlum=lum;
+    *totallum=jet;
+    return 0.;
+  }
+  else{ //non-sph symmetry
+    ldouble lum=0.;
+    ldouble jet=0.;
+    #pragma omp parallel for private(iy,iz) reduction(+:lum) reduction(+:jet)
+    for(iz=0;iz<NZ;iz++){
+      for(iy=0;iy<NY;iy++){
+	      ldouble xx[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
+        ldouble Rij[4][4],Rtt,ehat,ucongas[4],ucovgas[4];
+        ldouble tautot[3],tau=0.;
+        //ldouble gdet;
+
+	      int iv;
+	      for(iv=0;iv<NV;iv++)
+	        pp[iv]=get_u(p,iv,ix,iy,iz);
+
+	      struct geometry geomBL;
+	      fill_geometry_arb(ix,iy,iz,&geomBL,KERRCOORDS);
+	      struct geometry geom;
+	      fill_geometry(ix,iy,iz,&geom);
+
+	      //get_xx(ix,iy,iz,xx);
+	      //dx[0]=get_size_x(ix,0);
+	      //dx[1]=get_size_x(iy,1);
+	      //dx[2]=2.*M_PI;
+	      //gdet=geom.gdet;
+
+	      ldouble dxph[3],dxBL[3];
 	  
-	  if(doingavg)
-	  {
-	      PLOOP(iv)
-		pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
+	      //cell dimensions
+	      //ANDREW put cell size code in a function with precompute option
+              get_cellsize_out(ix, iy, iz, dxBL);
+	      /*
+	      ldouble xx1[4],xx2[4];
+	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
+	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dxBL[0]=fabs(xx2[1]-xx1[1]);
+	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
+	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dxBL[1]=fabs(xx2[2]-xx1[2]);
+	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
+	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
+	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
+	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
+	      dxBL[2]=fabs(xx2[3]-xx1[3]);
+              */
+	      if(NZ==1){
+          dxBL[2]=2.*M_PI;
+        }
+        else{
+          #ifdef PHIWEDGE
+          dxBL[2] *= (2. * M_PI / PHIWEDGE);
+          #endif
+        }
+	      dxph[0]=dxBL[0]*sqrt(geomBL.gg[1][1]);
+	      dxph[1]=dxBL[1]*sqrt(geomBL.gg[2][2]);
+	      dxph[2]=dxBL[2]*sqrt(geomBL.gg[3][3]);
+	  
+	      if(doingavg){
+	        PLOOP(iv)
+		      pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
 
-	      calc_tautot(pp,&geomBL,dxph,tautot);
+	        calc_tautot(pp,&geomBL,dxph,tautot);
 
-	      ldouble ucont=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
-	      ldouble uconr=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);		  
+	        ldouble ucont=get_uavg(pavg,AVGRHOUCON(0),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);
+	        ldouble uconr=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz)/get_uavg(pavg,RHO,ix,iy,iz);		  
 
-	      rhour=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz);
-	      uintur=get_uavg(pavg,AVGUUUCON(1),ix,iy,iz);
+	        rhour=get_uavg(pavg,AVGRHOUCON(1),ix,iy,iz);
+	        uintur=get_uavg(pavg,AVGUUUCON(1),ix,iy,iz);
 	      
-	      Trt=get_uavg(pavg,AVGRHOUCONUCOV(1,0),ix,iy,iz)
-		+ GAMMA*get_uavg(pavg,AVGUUUCONUCOV(1,0),ix,iy,iz)
-		+ get_uavg(pavg,AVGBSQUCONUCOV(1,0),ix,iy,iz)
-		- get_uavg(pavg,AVGBCONBCOV(1,0),ix,iy,iz); 
+	        Trt=get_uavg(pavg,AVGRHOUCONUCOV(1,0),ix,iy,iz)
+		      + GAMMA*get_uavg(pavg,AVGUUUCONUCOV(1,0),ix,iy,iz)
+		      + get_uavg(pavg,AVGBSQUCONUCOV(1,0),ix,iy,iz)
+		      - get_uavg(pavg,AVGBCONBCOV(1,0),ix,iy,iz); 
 
-	      tau+=ucont*tautot[1];
+	        tau+=ucont*tautot[1];
 
-	      Rrt=0.;
-#ifdef RADIATION
-	      int i,j;
-	      if(type==0) //R^r_t outside photosphere
-		{
+	        Rrt=0.;
+          #ifdef RADIATION
+	        int i,j;
+	        if(type==0){ //R^r_t outside photosphere
+		
 		  if(tau>1.) break;
 		  for(i=0;i<4;i++)
 		    for(j=0;j<4;j++)
