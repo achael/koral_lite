@@ -3,3 +3,5 @@
 *.orig
 #*
 *.nb
+.DS_Store
+PROBLEMS/.DS_Store
