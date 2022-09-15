@@ -582,8 +582,6 @@ calc_u2p(int type, int setflags)
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
 
-  printf("one u2p done\n");
-  exit(-1);
   return 0;
 } 
 

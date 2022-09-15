@@ -147,7 +147,10 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
 {
   struct geometry *geom
   = (struct geometry *) ggg;
-  
+
+  int gix,giy,giz;
+  mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
+
   ldouble uu[NV];
   int iv;
   PLOOP(iv) uu[iv]=uu0[iv];
@@ -168,7 +171,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   fixups[0]=fixups[1]=0;
   
   ldouble ppbak[NV];
-  ldouble ppff[NV],ppmhd[NV];
   for(iv=0;iv<NV;iv++)
     ppbak[iv]=pp[iv];
 
@@ -176,9 +178,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   int ffflag=0, mhdflag=1;
   ldouble ffval=0.;
 #ifdef FORCEFREE
-  if(geom->ifacedim==-1) // cell center // ANDREW SHOULD ALWAYS BE TRUE (?)
-  {
-
     ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
     mhdflag = get_cflag(MHDINVFLAG, geom->ix,geom->iy,geom->iz);
     ffval = get_u_scalar(ffinvarr, geom->ix,geom->iy,geom->iz);
@@ -198,57 +197,51 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
       printf("mhdflag inconsistent with ffval: %.2f %d!\n",ffval,mhdflag);
       exit(-1);
     }
-  }
-  else // cell wall
-  {
-    printf("CELL WALL IN u2p()!\n");
-    exit(-1);
-    //ffflag =  get_ffinv_flag_face(geom->ix, geom->iy, geom->iz,geom->ifacedim);
-  }
 #endif
 
   //************************************
   //magneto-hydro part
   //************************************
 
-  //flags
+  // initial flags
   //ANDREW - TODO - initial values?
   int ret=0;
-  int u2pret=0;
-  int u2pretff=0,u2pretmhd=0;
+  int u2pret=-1;
+  int u2pretff=-1,u2pretmhd=-1;
   int entropyinvmhd=0;
 
   //************************************
-  // hot hydro - conserving energy
-
-  // check for negative uu[RHO] = rho u^t -> set rho to floor
-  // and demand a fixup
-  // ANDREW -- should this not be applied for ff? 
-#ifndef FORCEFREE
-  ldouble alpha=geom->alpha;
-  if(uu[RHO] * alpha * gdetu_inv < 0.) 
-  {
-    int gix,giy,giz;
-    mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
-    if(1 || verbose)
-      printf("%4d > %4d %4d %4d > neg rhout (%e %e)- requesting fixup\n",
-	     PROCID,gix,giy,giz,pp[RHO],uu[RHO]*alpha*gdetu_inv);
-
-    pp[RHO]=RHOFLOOR; 
-    uu[RHO]=RHOFLOOR*gdetu/alpha; // ANDREW -- changed, since uu[RHO]=rho*gamma*gdet/alpha.
-
-    global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  // count as fixup
-    ret=-2;  // request fixup in all cases if density hits the floor
-  }
-#endif
-  
   // actual u2p inversion
+  ldouble ppff[NV],ppmhd[NV];
+  for(iv=0;iv<NV;iv++)
+  {
+    ppff[iv]=pp[iv];
+    ppmhd[iv]=pp[iv];
+  }
+ 
   if(ffflag==1) // FF inversion
   {
     u2pretff = u2p_solver_ff(uu,ppff,ggg,verbose);
   }
   if(mhdflag==1) // MHD inversion
   {
+    // check for negative uu[RHO], set rho to floor, and demand a fixup
+    // ANDREW -- moved this into the mhd inversion section
+    // ANDREW -- do we need to demand a fixup for hybrid?
+    // ANDREW -- is it a problem uu is updated in hybrid? 
+    ldouble alpha=geom->alpha;
+    if(uu[RHO] * alpha * gdetu_inv < 0.) 
+    {
+      if(1 || verbose)
+        printf("%4d > %4d %4d %4d > neg rhout (%e %e)- requesting fixup\n",
+	       PROCID,gix,giy,giz,pp[RHO],uu[RHO]*alpha*gdetu_inv);
+
+      ppmhd[RHO]=RHOFLOOR; 
+      uu[RHO]=RHOFLOOR*gdetu/alpha; // ANDREW -- changed, since uu[RHO]=rho*gamma*gdet/alpha.
+
+      global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  // count as fixup
+      ret=-2;  // request fixup in all cases if density hits the floor
+    }
     
     #ifdef ENFORCEENTROPY
     u2pretmhd = -1;  // go straight to entropy inversion
@@ -260,7 +253,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     {
       if(u2pretmhd<0)  // true if energy equation failed, or if ENFORCEENTROPY is defined
       {
-        //ret=-1;
+        ret=-1;
         entropyinvmhd=1;
 	
         if(verbose>2)
@@ -272,14 +265,10 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
         // invert using entropy equation
         u2pretmhd = u2p_solver_mhd(uu,ppmhd,ggg,U2P_ENTROPY,0);
       
-	   
-	  
         if(u2pretmhd<0) // entropy inversion also failed
         {
-	  printf("u2pretmhd ENTROPY %d, %d %d %d\n",u2pretmhd,
-		 geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
-
-          //ret=-2; 
+	  
+          ret=-2; 
           if(verbose>1)
           {
             printf("%4d > u2p_entr ERROR %4d > %4d %4d %4d\n",
@@ -381,7 +370,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     ret=-3;
   }
   
-  
   if(ret<-1) // request fixup when entropy failed or we hit the floor
   {
     fixups[0]=1;
@@ -396,11 +384,12 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     fixups[0]=0;
   }
 
-  if(entropyinvmhd==1) // add to counter if we used entropy in mhd inversion
+  // add to counter if we used entropy in mhd inversion
+  if(entropyinvmhd==1) 
   {
     mhdcor=1;  
   }
-
+  
   //************************************
   //radiation part
   //************************************
@@ -417,7 +406,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //************************************  
   //output
   //************************************
-      
+  
   if(mhdcor>0) corrected[0]=1;
   if(radcor>0) corrected[1]=1;
   // ANDREW REMOVED BALANCEENTROPYWITHRADIATION
