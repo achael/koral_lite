@@ -32,15 +32,7 @@ reduce_order_check(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *p
   if(xxBL[1]<REDUCEORDERRADIUS)
     reconstrpar=1;
 #endif
-
-  // ANDREW TODO -- different behavior on boundary vs interior of FF region? 
-#if defined(FORCEFREE) && defined(REDUCEORDERFF)
-  int ffflag;
-  ffflag = get_cflag(FFINVFLAG,ix,iy,iz);
-  if(ffflag>0)
-    reconstrpar=1;
-#endif
-
+  
 #ifdef REDUCEORDERATBH
   ldouble xxBL[4];
   get_xx_arb(ix,iy,iz,xxBL,BLCOORDS);
@@ -589,7 +581,9 @@ calc_u2p(int type, int setflags)
   //timer stop
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
+
+  printf("one u2p done\n");
+  exit(-1);
   return 0;
 } 
 
@@ -2924,11 +2918,18 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
 
   for(iv=0;iv<NV;iv++)
     pval[iv]=get_u(p,iv,iix,iiy,iiz);
-    
+  
   #ifdef CONSISTENTGAMMA
-  set_u_scalar(gammagas, ix, iy, ix, get_u_scalar(gammagas,iix,iiy,iiz));
+  set_u_scalar(gammagas, ix, iy, iz, get_u_scalar(gammagas,iix,iiy,iiz));
   #endif
 
+  set_cflag(RHOFLOORFLAG, ix, iy, iz, get_cflag(MHDINVFLAG, iix, iiy, iiz));
+  #ifdef FORCEFREE
+  set_u_scalar(ffinvarr, ix, iy, iz, get_u_scalar(ffinvarr, iix, iiy, iiz));
+  set_cflag(FFINVFLAG, ix, iy, iz, get_cflag(FFINVFLAG, iix, iiy, iiz));
+  set_cflag(MHDINVFLAG, ix, iy, iz, get_cflag(MHDINVFLAG, iix, iiy, iiz));
+  #endif
+  
   struct geometry geom;
   fill_geometry(ix,iy,iz,&geom);
   p2u(pval,uval,&geom);

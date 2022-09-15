@@ -19,8 +19,7 @@
 
 //#define U2PCONV 1.e-14
 
-#define FORCEFREE
-
+//#define FORCEFREE
 
 /************************************/
 //reconstruction / Courant
@@ -35,29 +34,29 @@
 /************************************/
 //rmhd floors
 /************************************/
-#define SPLIT_MONOPOLE
+//#define SPLIT_MONOPOLE
 
 #define RHOATMMIN  1.e-20
 #define UINTATMMIN 1.e-20
 
-#define B2RHORATIOMAXINIT 500//100//100
-#define B2UURATIOMAXINIT 500//100//100
+#define B2RHORATIOMAXINIT 50//100//100
+#define B2UURATIOMAXINIT 50//100//100
+//#define NOLOGINS
 
 #if defined(FORCEFREE)
-#define NOLOGINS
+
 
 //#define ENFORCEENTROPY
 //#define HYBRID_FORCEFREE
 //#define HYBRID_FORCEFREE_SIGMACUT 25
 #define FORCEFREE_SOLVE_PARALLEL
-#define FORCEFREE_PARALLEL_COLD
+#define FORCEFREE_PARALLEL_ENTROPY
 
 //#define SKIPALLFLOORS // TODO seems critical for SOLVE_PARALLEL? 
-
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME FFFRAME
+#define B2RHOFLOORFRAME ZAMOFRAME
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50. 
 #define B2UURATIOMIN 0.
@@ -65,7 +64,7 @@
 #define B2RHORATIOMIN 0.
 #define B2RHORATIOMAX 1.e100
 
-#define GAMMAMAXFF 10//100.  //lower than GAMMAMAXHD? 
+#define GAMMAMAXFF 50//100.  //lower than GAMMAMAXHD? 
 #define GAMMAMAXHD 100//100. //why can't this be pushed higher on the monopole? 
 
 #else
@@ -73,7 +72,7 @@
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME DRIFTFRAME//ZAMOFRAME 
+#define B2RHOFLOORFRAME DRIFTFRAME
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 50.
 #define B2UURATIOMIN 0.
@@ -101,7 +100,7 @@
 #define MKS1R0 MKSR0
 
 #define TNX 128
-#define TNY 256//128
+#define TNY 128
 #define TNZ 1
 
 #ifdef myMKS1COORDS //modified Kerr-Shild

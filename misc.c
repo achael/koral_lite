@@ -89,7 +89,7 @@ void initialize_constants()
   one_over_log_2p6 = 1. / log_2p6;
   
   // Coordinate specific factors
-  #if (MYCOORDS==JETCOORDS)
+#if (MYCOORDS==JETCOORDS)
   //printf("Finding hypx1out\n");
   hypx1in = log(RMIN-MKSR0);
   hypx1brk= log(HYPRBRK-MKSR0);
@@ -189,7 +189,27 @@ void initialize_constants()
   exit(-1);
   */
   
-  #endif
+#endif //MYCOORDS==JETCOORDS
+
+  // cutoff factors for hybrid force-free
+#ifdef FORCEFREE
+#ifdef HYBRID_FORCEFREE
+  ldouble sigcut = HYBRID_FORCEFREE_SIGMACUT;
+  ldouble tanhwidth = HYBRID_FORCEFREE_WIDTH;
+  if(tanhwidth<=0.) // step function cutoff
+  {
+    ffinv_lower_cutoff=sigcut;
+    ffinv_upper_cutoff=sigcut;
+  }
+  else //cutoff at f(sigma) = 1/64 and f(sigma) = 63/64 
+  {
+    ldouble fac=pow(3.,tanhwidth)*pow(7.,0.5*tanhwidth);
+    
+    ffinv_upper_cutoff = sigcut*fac;
+    ffinv_lower_cutoff = sigcut/fac;
+  }
+#endif
+#endif
 
   
   return;
@@ -731,14 +751,6 @@ initialize_arrays()
      //metric at cell z-faces
      if((gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
      if((Gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
-      
-     //LNRF basis one-forms and vectors
-     //if((emuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-     //if((emulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-
-     //tetrad one-forms and vectors
-     //if((tmuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
-     //if((tmulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
 
      //Fluxes and wavespeeds
      long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
@@ -824,7 +836,11 @@ initialize_arrays()
      long long EmfSize = Nemf*sizeof(ldouble);
      if((emf=(ldouble*)malloc(EmfSize))==NULL) my_err("malloc err.\n");
 #endif
-  
+
+#ifdef FORCEFREE
+     if((ffinvarr=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
+#endif
+	 
   }
 
   init_all_kappa_table();
@@ -974,7 +990,9 @@ free_arrays()
   //free(temperaturelog);
   //free(Lambdalog);
   //#endif
-  
+  #ifdef FORCEFREE
+  free(ffinvarr);
+  #endif
   return 0;
 }
 

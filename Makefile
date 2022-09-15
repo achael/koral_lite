@@ -6,18 +6,19 @@ CFLAGS=-O3 -DMPI -fcommon
 
 else
 //CC=gcc
-//CFLAGS=-O2 -Wno-unused-result -fopenmp -fsanitize=address -g -fno-omit-frame-pointer -Wunused-function 
+//CFLAGS=-O3 -Wno-unused-result -fopenmp -fsanitize=address -g -fno-omit-frame-pointer -Wunused-function 
 
 //CC=clang
-//CFLAGS = -O2 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp=libiomp5 -g 
+//CFLAGS = -O3 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -fopenmp=libiomp5 -g 
 -fsanitize=address -fno-omit-frame-pointer
 
 CC=/usr/bin/h5cc
-CFLAGS = -O3 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include -I/usr/include/hdf5/serial -Wunused-function -w -fopenmp -fcommon
+CFLAGS = -O3 -Wno-unused-result -I/usr/lib/gcc/x86_64-linux-gnu/11/include -I/usr/include/hdf5/serial -Wunused-function -w -fopenmp -fcommon 
 
 endif
 
-LIBS=-lm -lgsl -lgslcblas -lsiloh5 -lfftw3 -lrt -lhdf5_serial
+//LIBS=-lm -lgsl -lgslcblas -lfftw3 -lrt -lhdf5_serial 
+LIBS=-lm -lgsl -lgslcblas -lfftw3 -lrt -lhdf5_serial -lsiloh5 -lstdc++
 
 RM=/bin/rm
 OBJS = mpi.o u2prad.o magn.o silo.o postproc.o fileop.o misc.o physics.o finite.o problem.o metric.o relele.o rad.o opacities.o u2p.o u2p_ff.o frames.o p2u.o nonthermal.o

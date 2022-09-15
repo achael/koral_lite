@@ -24,7 +24,7 @@ static int f_u2p_entropy(ldouble Wp, ldouble* cons, ldouble *f, ldouble *df, ldo
 int
 calc_primitives(int ix,int iy,int iz,int type,int setflags)
 {
-  int verbose=2;
+
   int iv,u2pret,u2pretav;
   ldouble uu[NV],uuav[NV],pp[NV],ppav[NV];
   ldouble (*gg)[5],(*GG)[5],gdet,gdetu;
@@ -81,12 +81,15 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
   {
     floorret=check_floors_mhd(pp,VELPRIM,&geom);
   }
-  
+
+
+  //ANDREW not used
+  /*
   if(floorret<0.)
   {
     corrected[0]=1;
   }
-
+  */
   //check rad floors
 #ifdef RADIATION
   floorret=0;
@@ -94,11 +97,14 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
   {
     floorret=check_floors_rad(pp,VELPRIMRAD,&geom);
   }
-  
+
+  //ANDREW not used
+  /*
   if(floorret<0.)
   {
     corrected[1]=1;
   }
+  */
 #endif
   
   //set new primitives and conserved
@@ -156,202 +162,266 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   gdetu_inv = 1. / gdetu;
   
   int verbose=0;
-  int hdcorr=0;
+  int mhdcor=0;
   int radcor=0;
   corrected[0]=corrected[1]=corrected[2]=0;
   fixups[0]=fixups[1]=0;
   
-
   ldouble ppbak[NV];
+  ldouble ppff[NV],ppmhd[NV];
   for(iv=0;iv<NV;iv++)
     ppbak[iv]=pp[iv];
 
-  // ANDREW
   // force-free inversion flag
-  int ffflag=0;
+  int ffflag=0, mhdflag=1;
+  ldouble ffval=0.;
 #ifdef FORCEFREE
-  ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
+  if(geom->ifacedim==-1) // cell center // ANDREW SHOULD ALWAYS BE TRUE (?)
+  {
+
+    ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
+    mhdflag = get_cflag(MHDINVFLAG, geom->ix,geom->iy,geom->iz);
+    ffval = get_u_scalar(ffinvarr, geom->ix,geom->iy,geom->iz);
+
+    if(ffval>1 || ffval<0)
+    {
+      printf("ffval out of bounds %.2f!\n",ffval);
+      exit(-1);
+    }
+    if(ffval>0 && ffflag!=1)
+    {
+      printf("ffflag inconsistent with ffval: %.2f %d!\n",ffval,ffflag);
+      exit(-1);
+    }
+    if(ffval<1 && mhdflag!=1)
+    {
+      printf("mhdflag inconsistent with ffval: %.2f %d!\n",ffval,mhdflag);
+      exit(-1);
+    }
+  }
+  else // cell wall
+  {
+    printf("CELL WALL IN u2p()!\n");
+    exit(-1);
+    //ffflag =  get_ffinv_flag_face(geom->ix, geom->iy, geom->iz,geom->ifacedim);
+  }
 #endif
-  
+
   //************************************
   //magneto-hydro part
   //************************************
-  
+
+  //flags
+  //ANDREW - TODO - initial values?
+  int ret=0;
+  int u2pret=0;
+  int u2pretff=0,u2pretmhd=0;
+  int entropyinvmhd=0;
+
   //************************************
   // hot hydro - conserving energy
-  int ret=0;
-  int u2pret=-1;
-    
-  // negative uu[RHO] = rho u^t -> set rho to floor
-  // ANDREW -- implemented separate floor for FF regions
+
+  // check for negative uu[RHO] = rho u^t -> set rho to floor
+  // and demand a fixup
+  // ANDREW -- should this not be applied for ff? 
+#ifndef FORCEFREE
   ldouble alpha=geom->alpha;
-  //if(uu[RHO] * gdetu_inv < 0. && ffflag==0)
-  if(uu[RHO] * alpha * gdetu_inv < 0. && ffflag==0)    // ANDREW -- changed, since uu[RHO]=rho*gamma*gdet/alpha. 
+  if(uu[RHO] * alpha * gdetu_inv < 0.) 
   {
     int gix,giy,giz;
     mpi_local2globalidx(geom->ix,geom->iy,geom->iz,&gix,&giy,&giz);
     if(1 || verbose)
-      printf("%4d > %4d %4d %4d > neg rhout (%e %e)- requesting fixup\n",PROCID,gix,giy,giz,pp[RHO],uu[RHO]*alpha*gdetu_inv);
+      printf("%4d > %4d %4d %4d > neg rhout (%e %e)- requesting fixup\n",
+	     PROCID,gix,giy,giz,pp[RHO],uu[RHO]*alpha*gdetu_inv);
 
     pp[RHO]=RHOFLOOR; 
-    //uu[RHO]=RHOFLOOR*gdetu;
     uu[RHO]=RHOFLOOR*gdetu/alpha; // ANDREW -- changed, since uu[RHO]=rho*gamma*gdet/alpha.
 
     global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]++;  // count as fixup
-    ret=-2;  // request fixup in all cases
+    ret=-2;  // request fixup in all cases if density hits the floor
   }
-
-  // use ff solver if not hybrid or if high sigma
-  if(ffflag>0)
+#endif
+  
+  // actual u2p inversion
+  if(ffflag==1) // FF inversion
   {
-    u2pret = u2p_solver_ff(uu,pp,ggg,verbose);
+    u2pretff = u2p_solver_ff(uu,ppff,ggg,verbose);
   }
-  else // MHD inversion
+  if(mhdflag==1) // MHD inversion
   {
-
+    
     #ifdef ENFORCEENTROPY
-    u2pret = -1;  //skip hot energy-conserving inversion and go straight to entropy inversion
+    u2pretmhd = -1;  // go straight to entropy inversion
     #else
-    u2pret = u2p_solver_mhd(uu,pp,ggg,U2P_HOT,0);  // invert using the hot energy equation    
-    #endif //ENFORCEENTROPY
+    u2pretmhd = u2p_solver_mhd(uu,ppmhd,ggg,U2P_HOT,0);  // invert using the hot energy equation
+    #endif
 
     if(ALLOWENTROPYU2P)  // Inversion with entropy equation -- on by default (see choices.h)
     {
-      if(u2pret<0)  // true if energy equation failed, or if energy equation was not required (because ENFORCEENTROPY is defined)
+      if(u2pretmhd<0)  // true if energy equation failed, or if ENFORCEENTROPY is defined
       {
-        ret=-1;
-      
-        if(verbose>2 )
+        //ret=-1;
+        entropyinvmhd=1;
+	
+        if(verbose>2)
         {
-          printf("%4d > u2p_entr %d %d %d > %d %d %d \n",
-		 PROCID, u2pret, ret,ffflag,geom->ix + TOI, geom->iy + TOJ,geom->iz + TOK);
+          printf("%4d > u2p_entr START %d > %d %d %d \n",
+		 PROCID, u2pretmhd, geom->ix + TOI, geom->iy + TOJ,geom->iz + TOK);
         }
       
-        //entropy solver - invert using entropy equation
-        u2pret = u2p_solver_mhd(uu,pp,ggg,U2P_ENTROPY,0);
+        // invert using entropy equation
+        u2pretmhd = u2p_solver_mhd(uu,ppmhd,ggg,U2P_ENTROPY,0);
       
-        if(u2pret<0)
+	   
+	  
+        if(u2pretmhd<0) // entropy inversion also failed
         {
-          ret=-2;
-        
+	  printf("u2pretmhd ENTROPY %d, %d %d %d\n",u2pretmhd,
+		 geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+
+          //ret=-2; 
           if(verbose>1)
           {
-            printf("%4d > u2p_entr ERROR %4d %d %d > %4d %4d %4d\n",
-		   PROCID,u2pret,ret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+            printf("%4d > u2p_entr ERROR %4d > %4d %4d %4d\n",
+		   PROCID,u2pretmhd,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
           }
 	
-        } // if(u2pret<0) // second time -- entropy eqn
-      } // if(u2pret<0) // first time -- energy eqn
+        } // if(u2pretmhd<0) // second time -- entropy eqn
+      } // if(u2pretmhd<0) // first time -- energy eqn
     } // if(ALLOWENTROPYU2P)
+  } // if(mhdflag==1)
+
+  // combine ff and mhd inversions (or pick one)
+  // ANDREW TODO COUNTERS
+#ifdef FORCEFREE
+#ifdef FORCEFREE_HYBRID
+
+  // determine fallbacks for hybrid failures
+  if(ffflag==1 && mhdflag==1) 
+  {
+    if(u2pretmhd<0. && u2pretff<0.)
+    {
+      mhdflag=0;
+      ffflag=0;
+    }
+    else if(u2pretmhd<0)
+    {
+      mhdflag=0; // mhd inversion failed, revert to ff
+    }
+    else if(u2pretff<0.)
+    {
+      ffflag=0.; // ff inversion failed, revert to mhd
+    }
   }
 
-  // if entropy equation failed, check if we can try force-free
-#if defined(FORCEFREE) && defined(HYBRID_FORCEFREE)
-    if(ffflag==0 && u2pret<0)
-    {
-      ldouble ucon[4],ucov[4],bcon[4],bcov[4];
-      ldouble bsq;
-      calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
-      calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
-      if(bsq> pp[RHO]*HYBRID_FORCEFREE_SIGMACUT)
-      {
-	ffflag=1;
-	u2pret = u2p_solver_ff(uu,pp,ggg,verbose);
-        set_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz,ffflag);
-	if(u2pret>=0)
-	  ret=0;
-        if(verbose > 1)
-	  printf("%4d > MHD->FF %d %d %d > %4d %4d %4d \n",
-          PROCID,ret ,u2pret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
-      }
-    }
-#endif
-  
-  if(u2pret<0)  // entropy equation also failed
+  // copy inverted primitives to pp
+  if(ffflag==1 && mhdflag==1) //hybrid ff-mhd inversion
   {
+    if(u2pretmhd<0. || u2pretff<0.) u2pret=-2;
+    else u2pret = 1;
     
-    //leave primitives unchanged
-    if(1 || verbose) // TODO ANDREW
+    if(u2pret>=0)
     {
-      printf("%4d > MHDU2PFAIL %d %d %d > %4d %4d %4d > u2p prim. unchanged \n",
-	     PROCID,u2pret,ret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      for(iv=0;iv<NV;iv++) 
+        pp[iv] = ffval*ppff[iv] + (1.-ffval)*ppmhd[iv];
     }
-    ret=-3;
+  }
+  else if(mhdflag==1) //pure mhd inversion
+  {
+    u2pret = u2pretmhd;
+    if(u2pret>=0)
+    {
+      for(iv=0;iv<NV;iv++) 
+        pp[iv]=ppmhd[iv];
+    }
+  }
+  else if(ffflag==1) // pure force-free inversion
+  {
+    u2pret = u2pretff;
+    if(u2pret>=0)
+    {
+      for(iv=0;iv<NV;iv++) 
+        pp[iv]=ppff[iv];
+    }
+  }
+  else
+  {
+    u2pret=-2;
+  }
+  
+#else // FORCEFREE, not hybrid 
+  u2pret=u2pretff;
+  if(u2pret>=0)
+  {
+    for(iv=0;iv<NV;iv++) //pure force-free inversion
+      pp[iv]=ppff[iv];
+  }
+#endif // FORCEFREE_HYBRID
+#else // MHD only
+  u2pret = u2pretmhd;
+  if(u2pret>=0)
+  {
+    for(iv=0;iv<NV;iv++) //pure mhd inversion
+      pp[iv]=ppmhd[iv];
+  }
+#endif // FORCEFREE
+  
+  if(u2pret<0)  // inversion failed
+  {
+    //leave primitives unchanged
+    if(1 || verbose)
+    {
+      printf("%4d > MHDU2PFAIL %d %d > %4d %4d %4d > u2p prim. unchanged \n",
+	     PROCID,u2pret,ret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+    }
+    
     for(iv=0;iv<NV;iv++)
       pp[iv]=ppbak[iv];
+
+    ret=-3;
   }
   
-  if(ret<0) // update conserved
-  {
-    hdcorr=1;  
-  }
-  if(ret<-1) // request fixup when entropy failed
+  
+  if(ret<-1) // request fixup when entropy failed or we hit the floor
   {
     fixups[0]=1;
     if(verbose > 1)
     {
-      printf("%4d > FIXUPS %d %d %d > %4d %4d %4d \n",
-             PROCID,u2pret,ret,ffflag,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      printf("%4d > FIXUPS %d %d > %4d %4d %4d \n",
+             PROCID,u2pret,ret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
     }
   }
   else
   {
     fixups[0]=0;
   }
+
+  if(entropyinvmhd==1) // add to counter if we used entropy in mhd inversion
+  {
+    mhdcor=1;  
+  }
+
   //************************************
   //radiation part
   //************************************
   
 #ifdef RADIATION  
-#ifdef BALANCEENTROPYWITHRADIATION
-  
-  //trying to balance gain of energy because of entropy inversion
-  //by borrowing from the radiation field
-  if(ret==-1) //entropy u2p was used in MHD part
-  {
-    ldouble uunew[NV],ppnew[NV];
-    PLOOP(iv) { uunew[iv]=uu[iv]; ppnew[iv]=pp[iv]; }
-    p2u_mhd(pp,uunew,geom);
-    ldouble dugas = uunew[UU] - uu[UU];  //this much energy was introduced
-    if(fabs(dugas)<0.1*fabs(uunew[EE0])) //correction relatively small - is this general enough?
-    {
-      uunew[EE0]-=dugas; //balancing with radiation
-      u2p_rad(uunew,ppnew,geom,&radcor);
-    }
-    else
-      radcor=1;
-    
-    if(radcor==0) //there was enough energy to borrow from and uunew inverts with hot
-    {
-      PLOOP(iv)
-      uu[iv]=uunew[iv];
-      //printf("entropy correction worked at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
-    }
-    else
-    {
-      corrected[2]=1; //entropy correction didn't work
-      //printf("entropy correction didn't work at %d %d\n",geom->ix+TOI,geom->iy+TOJ);
-    }
-  }
-#endif //BALANCEENTROPYWITHRADIATION
 
   //Do the radiative inversion from u2p_rad.c
-  u2p_rad(uu,pp,geom,&radcor);
+  u2p_rad(uu,pp,geom,&radcor)
+  if(radcor>0)   //rad fixups only for critical failure in implicit    
+    fixups[1]=1;
 
 #endif // RADIATION
 
   //************************************  
   //output
   //************************************
-  
-  //rad fixups only for critical failure in implicit
-  if(radcor>0)     
-    fixups[1]=1;
-  else
-    fixups[1]=0;
-    
-  if(hdcorr>0) corrected[0]=1;
+      
+  if(mhdcor>0) corrected[0]=1;
   if(radcor>0) corrected[1]=1;
+  // ANDREW REMOVED BALANCEENTROPYWITHRADIATION
+  // so corrected[2] is always 0
   
   return ret;
 } 
@@ -361,9 +431,8 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
 //checks if hydro primitives make sense
 //**********************************************************************
 
-// ANDREW TODO major issues with floors in force-free
 int
-check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
+check_floors_mhd(ldouble *pp, int whichvel, void *ggg)
 {
 
   int verbose=0;
@@ -371,6 +440,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   int iv;
 
 #if !defined(SKIPALLFLOORS)
+  
   struct geometry *geom
     = (struct geometry *) ggg;
 
@@ -388,6 +458,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
   //**********************************************************************
   // rho too small
+
   if(pp[RHO]<RHOFLOOR) 
   {
     for(iv=0;iv<NVMHD;iv++)
@@ -397,12 +468,12 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
     if(verbose>0)
     {
-      printf("hd_floors CASE 1 at %d %d %d (%e)  \n",
+      printf("hd_floors CASE 1-0 at %d %d %d (%e)  \n",
              geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO]);
     }
       
     pp[RHO]=RHOFLOOR; 
-     
+      
     ret=-1; 
   }
 
@@ -428,7 +499,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       
     if(verbose>0)
     {
-      printf("hd_floors BH CASE 1 at %d %d %d (%e)\n",
+      printf("hd_floors CASE 1-1 at %d %d %d (%e)\n",
 	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,pp[RHO]);
     }
 
@@ -439,8 +510,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 #endif
 
   //***********************************************************************
-  // rho too small, BH-disk like:
-  // Here we use the initial atmosphere as the floor on both density and pressure
+  // rho too small, 
+  // use the initial atmosphere as the floor on both density and pressure
 #ifdef RHOFLOOR_INIT
   ldouble xxBL[4], rout = 2.;
 
@@ -453,8 +524,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   ldouble rr = xxBL[1] / rout;
   ldouble rhofloor = RHOATMMIN / sqrt(rr*rr*rr);
   ldouble uintfloor = UINTATMMIN / sqrt(rr*rr*rr*rr*rr);
-  //if(pp[RHO] < rhofloor || pp[UU] < uintfloor && xxBL[1]<rhorizonBL) // ANDREW TODO
-  if((pp[RHO] < rhofloor || pp[UU] < uintfloor)) // ANDREW TODO
+  if((pp[RHO] < rhofloor || pp[UU] < uintfloor)) 
   {
     for(iv = 0; iv < NVMHD; iv++)
     {
@@ -463,7 +533,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     
     if(verbose>0)
     {
-      printf("hd_floors INIT CASE 1 at %d %d %d (%e)\n",
+      printf("hd_floors CASE 1-3 at %d %d %d (%e)\n",
       geom->ix+TOI, geom->iy+TOJ, geom->iz+TOK,pp[RHO]);
     }
     
@@ -473,9 +543,16 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     ret=-1;
   }
 #endif
-  
+
+  // ANDREW -- added counter for absolute density floors 
+  if(geom->ifacedim==-1) // cell center
+  {
+    if(ret==-1) set_cflag(RHOFLOORFLAG,geom->ix,geom->iy,geom->iz,1);
+    else set_cflag(RHOFLOORFLAG,geom->ix,geom->iy,geom->iz,0);
+  }
+ 
   //**********************************************************************
-  //too cold
+  // uint too small (too cold)
   if(pp[UU]<UURHORATIOMIN*pp[RHO]) 
   {
     for(iv=0;iv<NVMHD;iv++)
@@ -496,7 +573,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   }
 
   //**********************************************************************
-  //too hot
+  // uint too large (too hot)
   if(pp[UU]>UURHORATIOMAX*pp[RHO]) 
   {
     for(iv=0;iv<NVMHD;iv++)
@@ -521,8 +598,10 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   //too magnetized
 
 #ifdef MAGNFIELD
+#ifndef FORCEFREE // NO magnetic floors for force-free or hybrid force-free
+
   ldouble ucon[4],ucov[4];
-  ldouble bcon[4],bcov[4],bsq,magpre;
+  ldouble bcon[4],bcov[4],bsq;
   ldouble etacon[4],etarel[4];
   ldouble f=1.;
   ldouble fuu=1.;
@@ -534,8 +613,6 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
   calc_ucon_ucov_from_prims(pp, geom, ucon, ucov);
   calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
-  magpre = 0.5 * bsq;
-  //magpre = bsq; // ANDREW: B2RHORATIOMAX and B2UURATIOMAX make more sense with bsq, not 0.5 bsq
 
   // check density vs bsq
   if(bsq>B2RHORATIOMAX*pp[RHO]) 
@@ -561,13 +638,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     uufloored=1;
   }
 
-  int ffflag=0;
-  #ifdef FORCEFREE
-  ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
-  #endif
-    
   // floors were activated, apply them
-  if((rhofloored==1 || uufloored==1) && ffflag==0)
+  if((rhofloored==1 || uufloored==1))
   {
     // save backups
     for(iv=0;iv<NVMHD;iv++)
@@ -585,7 +657,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     // old enthalpy
     wold = pporg[RHO] + pporg[UU]*pgamma;
 
-    // apply the floors
+    // apply the floors to the scalars
     pp[RHO] = pporg[RHO]*f;
     pp[UU] = pporg[UU]*fuu;
 
@@ -652,9 +724,9 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
     
     dpp[RHO]=drho;
-    //ANDREW this is a change,we used to keep UU fixed here
     dpp[UU]=dugas;
-    //dpp[UU]=0.;
+    //dpp[UU]=0.;     //ANDREW this is a change,we used to keep UU fixed here
+    
     dpp[VX] = etarel[1];
     dpp[VY] = etarel[2];
     dpp[VZ] = etarel[3];
@@ -674,10 +746,11 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     rettemp = u2p_solver_mhd(uu,pp,geom,U2P_HOT,0); 
     if(rettemp<0)
       rettemp = u2p_solver_mhd(uu,pp,geom,U2P_ENTROPY,0); 
-      
-    if(rettemp<0) // new mass in ZAMO frame failed
+
+    // adding new mass in ZAMO frame failed
+    if(rettemp<0) 
     {
-      printf("u2p failed after imposing bsq over rho floors at %d %d %d\n",
+      printf("u2p failed after imposing ZAMO bsq over rho floors at %d %d %d\n",
 	     geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
 
       #ifdef B2RHOFLOOR_BACKUP_FFFRAME
@@ -686,8 +759,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 	pp[iv]=pporg[iv];
 
       pp[RHO]*=f;
-      pp[UU]*=fuu;
-      //ANDREW this is a change, used to increase UU by same factor f if rho floored
+      pp[UU]*=fuu; //ANDREW this is a change, used to increase UU by same factor f
       //pp[UU]*=f; 
 
       #else
@@ -699,14 +771,16 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     
 #elif(B2RHOFLOORFRAME==FFFRAME) //new mass in fluid frame
     pp[RHO]*=f;
-    pp[UU]*=fuu;
-    //ANDREW this is a change, used to increase UU by same factor f if rho floored
+    pp[UU]*=fuu; //ANDREW this is a change, used to increase UU by same factor f
     //pp[UU]*=f; 
 
 #endif //B2RHOFLOORFRAME
 
-    // ANDREW IS THIS RIGHT for species?
-    // TODO if uint changes above, will not have ue + ui = uint using this method!
+    
+    // ANDREW
+    // TODO this seems wrong for species?
+    // TODO if uint changes above, we will not have ue + ui = uint using this method!
+    // TODO multiply both ui,ue by fuu? 
 #ifdef EVOLVEELECTRONS
 
     //keep energy density in ions and electrons fixed after applying the floors
@@ -774,12 +848,11 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       
   } // if(rhofloored==1 || uufloored==1)
 
-
+#endif //ndef FORCEFREE
 #endif //MAGNFIELD
   
   //**********************************************************************
   //too fast
-  //TODO: implement GAMMAMAXHD for other VELPRIM
   if(VELPRIM==VELR) 
   {
     ldouble qsq=0.;
@@ -798,17 +871,18 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
       if(verbose>0)
       {
-	printf("hd_floors CASE 4 at %d,%d,%d (%e)",geom->ix+TOI,geom->iy+TOJ,geom->iz,sqrt(gamma2));
+	printf("hd_floors CASE 4 at %d,%d,%d (%e)",
+	       geom->ix+TOI,geom->iy+TOJ,geom->iz,sqrt(gamma2));
       }
 
       ret = -1;
     }
-
   }
 
   //**********************************************************************  
   //Species temperature floors/ceilings
   //TODO ANDREW will not keep them consistent ue + ui = ugas!
+
 #ifdef EVOLVEELECTRONS
   ldouble mue,mui;
   mui=MU_I;
@@ -882,7 +956,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 #ifdef RELELECTRONS
   int ie;
   ldouble ne_relel,ne_tot,uint_relel,uint_tot,p_relel,p_tot;
- 
+
   //No negative rel. electron numbers
   for (ie=0; ie<NRELBIN; ie++)
   {
@@ -924,6 +998,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   if(ret<0)
   {
     pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],geom->ix,geom->iy,geom->iz);
+
+    if(verbose) printf("FLOORED %d %d %d\n",ret,geom->ix,geom->ifacedim);
   }
 #endif //SKIPALLFLOORS
   
@@ -1923,7 +1999,7 @@ u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg)
 //**********************************************************************
 
 //********************************************
-//Harm u2p_hot
+//Harm u2p_hot 2
 //********************************************
 
 static FTYPE
@@ -2011,7 +2087,7 @@ f_u2p_hot(ldouble Wp, ldouble* cons,ldouble *f,ldouble *df,ldouble *err,ldouble 
 
   //JONS:
   #if (U2P_EQS==U2P_EQS_JON)
-  *df=1. -dpdW + (Bsq*Qtsq - QdotBsq)/X3*(-2.0);
+  *df=1.-dpdW + (Bsq*Qtsq - QdotBsq)/X3*(-2.0);
   #endif
 
   return 0;  
@@ -2171,6 +2247,41 @@ int count_entropy(int *n, int *n2)
     
   *n = nentr;
   *n2 = nentr2;
+  return 0;
+}
+
+//**********************************************************************
+//count the number of ff and mhd inversions
+//**********************************************************************
+
+int count_ff(int *n, int *n2, int *n3)
+{
+  int nff=0,nmhd=0,nrhofloor=0;
+  int ii,ix,iy,iz;
+  int nffloc=0,nmhdloc=0,nrhofloorloc=0;
+
+  for(ix=0;ix<NX;ix++)
+    for(iy=0;iy<NY;iy++)
+      for(iz=0;iz<NZ;iz++)
+	{
+	  nffloc+=get_cflag(FFINVFLAG,ix,iy,iz); 
+	  nmhdloc+=get_cflag(MHDINVFLAG,ix,iy,iz);
+	  nrhofloorloc+=get_cflag(RHOFLOORFLAG,ix,iy,iz);
+	}
+
+#ifdef MPI
+  MPI_Allreduce(&nffloc, &nff, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);  
+  MPI_Allreduce(&nmhdloc, &nmhd, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);  
+  MPI_Allreduce(&nrhofloorloc, &nrhofloor, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);  									  
+#else
+  nff=nffloc;
+  nmhd=nmhdloc;
+  nrhofloor=nrhofloorloc;
+#endif
+    
+  *n = nff;
+  *n2 = nmhd;
+  *n3 = nrhofloor;
   return 0;
 }
 

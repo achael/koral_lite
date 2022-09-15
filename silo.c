@@ -86,7 +86,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
   ldouble *lorentz_perp = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *lorentz_par = (ldouble*)malloc(nx*ny*nz*sizeof(double));
-  int *ffinv = (int*)malloc(nx*ny*nz*sizeof(int));
+  ldouble *ffinv = (ldouble*)malloc(nx*ny*nz*sizeof(double));
     
   ldouble *vx = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   ldouble *vy = (ldouble*)malloc(nx*ny*nz*sizeof(double));
@@ -767,7 +767,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 #ifdef FORCEFREE // must have VELPRIM=VELR
 
-      ffinv[zonalindex]=get_cflag(FFINVFLAG,ix,iy,iz);
+      //ffinv[zonalindex]=get_cflag(FFINVFLAG,ix,iy,iz);
+      ffinv[zonalindex] = get_u_scalar(ffinvarr, geom.ix,geom.iy,geom.iz);
       
       int derdir2[3] = {2,2,2};
       ldouble jcon[4],jcov[4];
@@ -780,7 +781,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 #else
       jdens[zonalindex]=0.;      
-      ffinv[zonalindex]=0;
+      ffinv[zonalindex]=0.;
 #endif
       
       #ifdef EVOLVEELECTRONS
@@ -1570,7 +1571,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   
   DBPutQuadvar1(file, "ffinv","mesh1", ffinv,
   		dimensions, ndim, NULL, 0, 
-		DB_INT, DB_ZONECENT, optList);
+		DB_DOUBLE, DB_ZONECENT, optList);
   
   DBPutQuadvar1(file, "lorentz","mesh1", lorentz,
   		dimensions, ndim, NULL, 0, 

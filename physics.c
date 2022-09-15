@@ -496,6 +496,14 @@ calc_wavespeeds_lr_pure(ldouble *pp,void *ggg,ldouble *aaa)
 
   ldouble vtot2; //total characteristic velocity
   vtot2=cs2 + va2 - cs2*va2;
+
+  /*
+  //ANDREW TODO set wavespeed to c
+#ifdef FORCEFREE
+  int ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
+  if(ffflag==1) vtot2=1.; 
+#endif
+  */
   
 #ifdef NONRELMHD //non-rel version
   

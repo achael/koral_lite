@@ -51,7 +51,7 @@ solve_the_problem(ldouble tstart, char* folder)
   int ix,iy,iz,iv;
   int loopsallociter;
   int spitoutput,lastzone;
-  int nentr[8],nentr2[8];
+  //int nentr[8],nentr2[8];
   
   struct timespec temp_clock;
 
@@ -92,16 +92,18 @@ solve_the_problem(ldouble tstart, char* folder)
   
   nstep=0;
   while (t < t1 && nfout1<=NOUTSTOP && nstep<NSTEPSTOP)
-  {   
-      
+  {        
       global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFIXUPS]=0; //counting number of critical failures
       global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]=0;    //counting mhd fixups
-      global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]=0;    //counding rad fixups
+      global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]=0;    //counting rad fixups
 
+      /*
       #ifdef FORCEFREE
       global_int_slot[GLOBALINTSLOT_NTOTALU2PFF]=0; // counting number of cells inverted with forcefree
+      global_int_slot[GLOBALINTSLOT_NTOTALU2PMHD]=0; // counting number of cells inverted with mhd      
       global_int_slot[GLOBALINTSLOT_NTOTALU2PFFRHOFLOOR]=0; // counting number of forcefree cells with absolute density floor
       #endif
+      */
       
       spitoutput=0;
       global_time=t;
@@ -719,7 +721,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Explicit evolution (advection plus source terms) from t to t+dt
 	    global_expdt=dt;
 	    op_explicit (t,1.*dt); 
-
+	    
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
 	    //count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
@@ -815,13 +817,18 @@ solve_the_problem(ldouble tstart, char* folder)
 
 #ifdef FORCEFREE
       // counting number of forcefree inversions
-      int nu2pff[2],nu2pffloc[2]={global_int_slot[GLOBALINTSLOT_NTOTALU2PFF],
+      /*
+      int nu2pff[3],nu2pffloc[3]={global_int_slot[GLOBALINTSLOT_NTOTALU2PFF],
+	                          global_int_slot[GLOBALINTSLOT_NTOTALU2PMHD],
 	                          global_int_slot[GLOBALINTSLOT_NTOTALU2PFFRHOFLOOR]};
       #ifdef MPI
-      MPI_Allreduce(nu2pffloc, nu2pff, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);      
+      MPI_Allreduce(nu2pffloc, nu2pff, 3, MPI_INT, MPI_SUM, MPI_COMM_WORLD);      
       #else
-      for(i=0;i<2;i++) nu2pff[i]=nu2pffloc[i];
+      for(i=0;i<3;i++) nu2pff[i]=nu2pffloc[i];
       #endif
+      */
+      int nu2pff[3];
+      count_ff(&nu2pff[0], &nu2pff[1], &nu2pff[2]);
 #endif //FORCEFREE
       
 #ifdef RADIATION
@@ -989,7 +996,7 @@ solve_the_problem(ldouble tstart, char* folder)
       #ifdef PRINTEACHT
       printeacht = 1;
       #endif
-      if((end_time-fprintf_time>1.  || printeacht) && PROCID==0)
+      if((end_time-fprintf_time>1  || printeacht) && PROCID==0)
       {
 	  
 	  printf("st #%6d t=%12.5e dt=%.2e mpi=%3.1f znps=%.0f tgpd=%.2e fail# %1d %1d %1d "
@@ -997,7 +1004,10 @@ solve_the_problem(ldouble tstart, char* folder)
 		  nfailures[0],nfailures[1],nfailures[2]);
 
 #ifdef FORCEFREE
-          printf("| ff# %d %d | ", nu2pff[0], nu2pff[1]);
+	  ldouble ff_frac = nu2pff[0]/(TNX*TNY*TNZ);
+	  ldouble mhd_frac = nu2pff[1]/(TNX*TNY*TNZ);
+	  ldouble ff_floor_frac = nu2pff[2]/(TNX*TNY*TNZ);
+          printf("| ff# %.2f %.2f %.2f | ", ff_frac,mhd_frac,ff_floor_frac);
 #endif
 
 #if defined(RADIATION) && !defined(SKIPRADSOURCE)

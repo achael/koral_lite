@@ -191,6 +191,11 @@ ldouble sinthetaCYL;
 ldouble sinthetaAX;
 ldouble rmidcyl;
 #endif
+#ifdef FORCEFREE
+#ifdef HYBRID_FORCEFREE
+ldouble ffinv_lower_cutoff,ffinv_upper_cutoff;
+#endif
+#endif
 
 //tile specific
 int TI,TJ,TK; //tile order
@@ -345,7 +350,7 @@ ldouble *u,*x,*ucent,*xb,*xout, *xbout_xface, *xbout_yface, *xbout_zface,
   *pbLx,*pbRx,*pbLy,*pbRy,*pbLz,*pbRz,*sbLx,*sbRx,*sbLy,*sbRy,*sbLz,*sbRz,
   *flbx,*flby,*flbz,*flLx,*flRx,*flLy,*flRy,*flLz,*flRz,
   *flbx2,*flby2,*flbz2,*flLx2,*flRx2,*flLy2,*flRy2,*flLz2,*flRz2,
-  *gKr;
+  *gKr, *ffinvarr;
 
 int *cellflag;
 
@@ -1014,14 +1019,18 @@ int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose);
 int fill_ffprims();
 int fill_ffprims_cell(ldouble *pp, void *gg);
 ldouble get_driftvel_velr(ldouble *pp,ldouble *velff,void* ggg);
+int get_ffinv_flag_face(int ix, int iy, int iz,int ifacedim);
   
 int count_entropy(int *n, int *n2);
 int copy_entropycount();
 int update_entropy();
 
+int count_ff(int *n, int *n2, int *n3);
+
 int test_inversion();
 int test_inversion_nonrel();
 int test_inversion_5d();
+
 
 ///////////////////////////////////////////////////////////////
 // u2prad.c ///////////////////////////////////////////////////

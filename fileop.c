@@ -2589,7 +2589,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
    for(iz=0;iz<nz;iz++)
      {
        #ifndef RAD_INTEGRATION
-       for(iix=-2;iix<NX;iix++)
+       for(iix=0;iix<NX;iix++)
 	 {
 	   phi=0.;
 	   tausca=0.;
