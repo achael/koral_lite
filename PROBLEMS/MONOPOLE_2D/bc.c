@@ -29,11 +29,18 @@ pick_G(ix,iy,iz,GG);
     iiz=iz;
     
     //copying everything
+    //   for(iv=0;iv<NV;iv++)
+    // {
+    //	pp[iv]=get_u(p,iv,iix,iiy,iiz);
+    //  }
+   //copying everything
     for(iv=0;iv<NV;iv++)
       {
 	pp[iv]=get_u(p,iv,iix,iiy,iiz);
+	ppback[iv]=pp[iv];
       }
 
+ 
     //ANDREW TODO what to do about outer BC
     /*
     //!! begin rescale
@@ -70,7 +77,8 @@ pick_G(ix,iy,iz,GG);
     #endif
     //transform back after rescaling
     trans_pmhd_coco(pp, pp,BCCOORDS, MYCOORDS, geomBL.xxvec,&geomBL, &geom);
-
+    */
+    /*
     //!! end rescale
     /*
     //check for gas inflow

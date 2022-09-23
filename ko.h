@@ -1020,6 +1020,8 @@ int fill_ffprims();
 int fill_ffprims_cell(ldouble *pp, void *gg);
 ldouble get_driftvel_velr(ldouble *pp,ldouble *velff,void* ggg);
 int get_ffinv_flag_face(int ix, int iy, int iz,int ifacedim);
+ldouble calc_ffinv_val(ldouble sigma);
+ldouble calc_uuff_source(ldouble *pp0, void* ggg,int *derdir);
   
 int count_entropy(int *n, int *n2);
 int copy_entropycount();

@@ -1007,7 +1007,8 @@ solve_the_problem(ldouble tstart, char* folder)
 	  ldouble ff_frac = nu2pff[0]/(TNX*TNY*TNZ);
 	  ldouble mhd_frac = nu2pff[1]/(TNX*TNY*TNZ);
 	  ldouble ff_floor_frac = nu2pff[2]/(TNX*TNY*TNZ);
-          printf("| ff# %.2f %.2f %.2f | ", ff_frac,mhd_frac,ff_floor_frac);
+          //printf("| ff# %.2f %.2f %.2f | ", ff_frac,mhd_frac,ff_floor_frac);
+	  printf("| ff# %d %d %d | ", nu2pff[0],nu2pff[1],nu2pff[2]);
 #endif
 
 #if defined(RADIATION) && !defined(SKIPRADSOURCE)

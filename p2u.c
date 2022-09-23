@@ -134,6 +134,7 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   uu[UUFF] = gdetu * bcon[0];
 #else // adiabatic, with pressure
 
+  //ldouble w_s = (pp[RHO] + gamma*pp[UU])/pp[RHO];
   ldouble w_s = 1 + gamma*pp[UU]/pp[RHO]; // specific enthalpy
   uu[UUFF] = gdetu * w_s * bcon[0];
 #endif

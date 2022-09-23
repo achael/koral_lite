@@ -193,7 +193,7 @@ void initialize_constants()
 
   // cutoff factors for hybrid force-free
 #ifdef FORCEFREE
-#ifdef HYBRID_FORCEFREE
+#if defined(HYBRID_FORCEFREE) && !defined(HYBRID_FORCEFREE_XCUT)
   ldouble sigcut = HYBRID_FORCEFREE_SIGMACUT;
   ldouble tanhwidth = HYBRID_FORCEFREE_WIDTH;
   if(tanhwidth<=0.) // step function cutoff
@@ -208,6 +208,7 @@ void initialize_constants()
     ffinv_upper_cutoff = sigcut*fac;
     ffinv_lower_cutoff = sigcut/fac;
   }
+  printf("cutoffs %e %e\n",ffinv_lower_cutoff,ffinv_upper_cutoff);
 #endif
 #endif
 

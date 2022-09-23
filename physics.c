@@ -963,6 +963,18 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
 	ss[VYFF]+=gdetu*T_ff[k][l]*get_gKr(l,2,k,ix,iy,iz);
 	ss[VZFF]+=gdetu*T_ff[k][l]*get_gKr(l,3,k,ix,iy,iz);
       }
+
+  //parallel velocity/enthalpy term
+
+#ifndef FORCEFREE_PARALLEL_COLD // neglect pressure
+#ifndef NO_FORCEFREE_PARALLE_SOURCETERM
+  int derdir[3]={0,0,0};
+  ldouble uuffsource=calc_uuff_source(pp, geom,derdir);
+  ss[UUFF]=uuffsource;
+#endif
+#else 
+  
+#endif
   
 #endif //FORCEFREE
   

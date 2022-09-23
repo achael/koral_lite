@@ -152,8 +152,7 @@
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 132
-//#define PROBLEM 143
+#define PROBLEM 144
 
 #if(PROBLEM==144)
 

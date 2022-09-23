@@ -82,7 +82,6 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
     floorret=check_floors_mhd(pp,VELPRIM,&geom);
   }
 
-
   //ANDREW not used
   /*
   if(floorret<0.)
@@ -283,7 +282,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   // combine ff and mhd inversions (or pick one)
   // ANDREW TODO COUNTERS
 #ifdef FORCEFREE
-#ifdef FORCEFREE_HYBRID
+#ifdef HYBRID_FORCEFREE
 
   // determine fallbacks for hybrid failures
   if(ffflag==1 && mhdflag==1) 
@@ -323,6 +322,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
       for(iv=0;iv<NV;iv++) 
         pp[iv]=ppmhd[iv];
     }
+    //    if(u2pret==-1)printf("! %d %d %d %d %d \n",mhdflag,ffflag,u2pretmhd,u2pretff,u2pret);
   }
   else if(ffflag==1) // pure force-free inversion
   {
@@ -338,14 +338,14 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     u2pret=-2;
   }
   
-#else // FORCEFREE, not hybrid 
+#else // FORCEFREE, not hybrid
   u2pret=u2pretff;
   if(u2pret>=0)
   {
     for(iv=0;iv<NV;iv++) //pure force-free inversion
       pp[iv]=ppff[iv];
   }
-#endif // FORCEFREE_HYBRID
+#endif // HYBRID_FORCEFREE
 #else // MHD only
   u2pret = u2pretmhd;
   if(u2pret>=0)
@@ -360,8 +360,8 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     //leave primitives unchanged
     if(1 || verbose)
     {
-      printf("%4d > MHDU2PFAIL %d %d > %4d %4d %4d > u2p prim. unchanged \n",
-	     PROCID,u2pret,ret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      printf("%4d > MHDU2PFAIL %d %d > %4d %4d %4d > u2p prim. unchanged \n %d %d %.1f |u2pretmhd %d u2pretff %d\n\n",  PROCID,u2pret,ret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,
+	     mhdflag,ffflag,ffval,u2pretmhd,u2pretff);
     }
     
     for(iv=0;iv<NV;iv++)
@@ -2238,42 +2238,6 @@ int count_entropy(int *n, int *n2)
   *n2 = nentr2;
   return 0;
 }
-
-//**********************************************************************
-//count the number of ff and mhd inversions
-//**********************************************************************
-
-int count_ff(int *n, int *n2, int *n3)
-{
-  int nff=0,nmhd=0,nrhofloor=0;
-  int ii,ix,iy,iz;
-  int nffloc=0,nmhdloc=0,nrhofloorloc=0;
-
-  for(ix=0;ix<NX;ix++)
-    for(iy=0;iy<NY;iy++)
-      for(iz=0;iz<NZ;iz++)
-	{
-	  nffloc+=get_cflag(FFINVFLAG,ix,iy,iz); 
-	  nmhdloc+=get_cflag(MHDINVFLAG,ix,iy,iz);
-	  nrhofloorloc+=get_cflag(RHOFLOORFLAG,ix,iy,iz);
-	}
-
-#ifdef MPI
-  MPI_Allreduce(&nffloc, &nff, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);  
-  MPI_Allreduce(&nmhdloc, &nmhd, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);  
-  MPI_Allreduce(&nrhofloorloc, &nrhofloor, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);  									  
-#else
-  nff=nffloc;
-  nmhd=nmhdloc;
-  nrhofloor=nrhofloorloc;
-#endif
-    
-  *n = nff;
-  *n2 = nmhd;
-  *n3 = nrhofloor;
-  return 0;
-}
-
 //**********************************************************************
 //backups entropy count to spit it into a silo file
 //**********************************************************************
