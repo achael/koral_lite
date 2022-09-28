@@ -82,13 +82,6 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
     floorret=check_floors_mhd(pp,VELPRIM,&geom);
   }
 
-  //ANDREW not used
-  /*
-  if(floorret<0.)
-  {
-    corrected[0]=1;
-  }
-  */
   //check rad floors
 #ifdef RADIATION
   floorret=0;
@@ -97,13 +90,6 @@ calc_primitives(int ix,int iy,int iz,int type,int setflags)
     floorret=check_floors_rad(pp,VELPRIMRAD,&geom);
   }
 
-  //ANDREW not used
-  /*
-  if(floorret<0.)
-  {
-    corrected[1]=1;
-  }
-  */
 #endif
   
   //set new primitives and conserved
@@ -203,7 +189,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //************************************
 
   // initial flags
-  //ANDREW - TODO - initial values?
+  // ANDREW - TODO - initial values?
   int ret=0;
   int u2pret=-1;
   int u2pretff=-1,u2pretmhd=-1;
@@ -231,7 +217,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     ldouble alpha=geom->alpha;
     if(uu[RHO] * alpha * gdetu_inv < 0.) 
     {
-      if(1 || verbose)
+      if(verbose)
         printf("%4d > %4d %4d %4d > neg rhout (%e %e)- requesting fixup\n",
 	       PROCID,gix,giy,giz,pp[RHO],uu[RHO]*alpha*gdetu_inv);
 
@@ -358,9 +344,11 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   if(u2pret<0)  // inversion failed
   {
     //leave primitives unchanged
-    if(1 || verbose)
+    if(verbose>1)
     {
-      printf("%4d > MHDU2PFAIL %d %d > %4d %4d %4d > u2p prim. unchanged \n %d %d %.1f |u2pretmhd %d u2pretff %d\n\n",  PROCID,u2pret,ret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,
+      printf("%4d > MHDU2PFAIL %d %d > %4d %4d %4d > ",
+	     PROCID,u2pret,ret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+      printf("u2p prim. unchanged \n %d %d %.1f | u2pretmhd %d u2pretff %d\n\n",
 	     mhdflag,ffflag,ffval,u2pretmhd,u2pretff);
     }
     
@@ -375,7 +363,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
     fixups[0]=1;
     if(verbose > 1)
     {
-      printf("%4d > FIXUPS %d %d > %4d %4d %4d \n",
+      printf("%4d > MHD FIXUPS %d %d > %4d %4d %4d \n",
              PROCID,u2pret,ret,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
     }
   }
@@ -399,8 +387,14 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //Do the radiative inversion from u2p_rad.c
   u2p_rad(uu,pp,geom,&radcor)
   if(radcor>0)   //rad fixups only for critical failure in implicit    
+  {
     fixups[1]=1;
-
+    if(verbose > 1)
+    {
+      printf("%4d > RAD FIXUPS %d > %4d %4d %4d \n",
+             PROCID,radcor,geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK);
+    }
+  }
 #endif // RADIATION
 
   //************************************  

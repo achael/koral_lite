@@ -97,14 +97,6 @@ solve_the_problem(ldouble tstart, char* folder)
       global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]=0;    //counting mhd fixups
       global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]=0;    //counting rad fixups
 
-      /*
-      #ifdef FORCEFREE
-      global_int_slot[GLOBALINTSLOT_NTOTALU2PFF]=0; // counting number of cells inverted with forcefree
-      global_int_slot[GLOBALINTSLOT_NTOTALU2PMHD]=0; // counting number of cells inverted with mhd      
-      global_int_slot[GLOBALINTSLOT_NTOTALU2PFFRHOFLOOR]=0; // counting number of forcefree cells with absolute density floor
-      #endif
-      */
-      
       spitoutput=0;
       global_time=t;
       nstep++;
@@ -214,7 +206,6 @@ solve_the_problem(ldouble tstart, char* folder)
             // Explicit evolution (advection plus source terms) from t to t+dt
 	    op_explicit (t, dt);  //U(1) in *ut1;
 
-	    
             // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
         
@@ -817,16 +808,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
 #ifdef FORCEFREE
       // counting number of forcefree inversions
-      /*
-      int nu2pff[3],nu2pffloc[3]={global_int_slot[GLOBALINTSLOT_NTOTALU2PFF],
-	                          global_int_slot[GLOBALINTSLOT_NTOTALU2PMHD],
-	                          global_int_slot[GLOBALINTSLOT_NTOTALU2PFFRHOFLOOR]};
-      #ifdef MPI
-      MPI_Allreduce(nu2pffloc, nu2pff, 3, MPI_INT, MPI_SUM, MPI_COMM_WORLD);      
-      #else
-      for(i=0;i<3;i++) nu2pff[i]=nu2pffloc[i];
-      #endif
-      */
       int nu2pff[3];
       count_ff(&nu2pff[0], &nu2pff[1], &nu2pff[2]);
 #endif //FORCEFREE
@@ -1004,9 +985,9 @@ solve_the_problem(ldouble tstart, char* folder)
 		  nfailures[0],nfailures[1],nfailures[2]);
 
 #ifdef FORCEFREE
-	  ldouble ff_frac = nu2pff[0]/(TNX*TNY*TNZ);
-	  ldouble mhd_frac = nu2pff[1]/(TNX*TNY*TNZ);
-	  ldouble ff_floor_frac = nu2pff[2]/(TNX*TNY*TNZ);
+	  //ldouble ff_frac = nu2pff[0]/(TNX*TNY*TNZ);
+	  //ldouble mhd_frac = nu2pff[1]/(TNX*TNY*TNZ);
+	  //ldouble ff_floor_frac = nu2pff[2]/(TNX*TNY*TNZ);
           //printf("| ff# %.2f %.2f %.2f | ", ff_frac,mhd_frac,ff_floor_frac);
 	  printf("| ff# %d %d %d | ", nu2pff[0],nu2pff[1],nu2pff[2]);
 #endif

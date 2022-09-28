@@ -106,7 +106,6 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
   if(param!=0) //reduce integration order
   {
     int_order_local = INT_ORDER-param;
-    //int_order_local=0; // ANDREW TODO reduce directly to 0
   }  // if(param!=0)
 
   // default to donor cell
@@ -115,33 +114,33 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
   
   if(int_order_local==0) //DONOR CELL
   {
-    int i;
+    int iv;
     
-    for(i=0;i<NV;i++)
+    for(iv=0;iv<NV;iv++)
     {
-      ur[i]=u0[i];
-      ul[i]=u0[i];
+      ur[iv]=u0[iv];
+      ul[iv]=u0[iv];
     }
   }  // else if(INT_ORDER==0)
   
   else if(int_order_local==1) //linear
   {
     ldouble diffpar=theta;
-    int i;
+    int iv;
     
-    for(i=0;i<NV;i++)
+    for(iv=0;iv<NV;iv++)
     {
       // Slope limiter code rewritten by Ramesh. No function-calls, no divisions.
       ldouble slope;
-      ldouble deltam = u0[i]-um1[i];
-      ldouble deltap = up1[i]-u0[i];
+      ldouble deltam = u0[iv]-um1[iv];
+      ldouble deltap = up1[iv]-u0[iv];
       
       if (deltam * deltap <= 0.)
       {
         // We are at a local maximum or minimum. Use zero slope (i.e., donor cell)
         
-        ur[i] = u0[i];
-        ul[i] = u0[i];
+        ur[iv] = u0[iv];
+        ul[iv] = u0[iv];
       }
       else
       {
@@ -199,13 +198,13 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
           }
         }
         
-        ur[i] = u0[i] + 0.5*slope;
-        ul[i] = u0[i] - 0.5*slope;
+        ur[iv] = u0[iv] + 0.5*slope;
+        ul[iv] = u0[iv] - 0.5*slope;
       }
       
-      if(isnan(ur[i]) || isnan (ul[i])) printf("interperr %d %e %e %e %e %e\n",i,um2[i],um1[i],u0[i],up1[i],up2[i]);
+      if(isnan(ur[iv]) || isnan (ul[iv])) printf("interperr %d %e %e %e %e %e\n",iv,um2[iv],um1[iv],u0[iv],up1[iv],up2[iv]);
       //u0 remains intact - in linear reconstruction cell averaged equals cell centered
-    } // for(i=0;i<NV;i++)
+    } // for(iv=0;iv<NV;iv++)
   }  // else if(INT_ORDER==1)
 
   else if(int_order_local==2) //parabolic PPM
@@ -698,7 +697,9 @@ op_explicit(ldouble t, ldouble dtin)
       ldouble dx0, dxm2, dxm1, dxp1, dxp2;
       ldouble minmod_theta=MINMOD_THETA;
       int reconstrpar;
-      int i,dol,dor;
+      int dol,dor;
+      int iv;
+      //int i;
 
 
 
@@ -754,23 +755,7 @@ op_explicit(ldouble t, ldouble dtin)
 		  dol=0;
 		if((ix==NX-1 && is_cell_active(ix,iy,iz)==0) || (ix<NX-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix+1,iy,iz)==0))
 		  dor=0;
-		
-                // x0[0] is x of current cell        
-		//x0[0]=get_x(ix,0);
-
-                // xm1[0], xp1[0] are x of left and right cell centers. Are these quantities used anywhere?
-		//xm1[0]=get_x(ix-1,0);
-	        //xp1[0]=get_x(ix+1,0);
-		
-                // x0l[0,1,2] are x, y, z of left x-wall, x0r[0,1,2] are x, y, z of right x-wall,
-		//x0l[0]=get_xb(ix,0);
-		//x0l[1]=xm1[1]=get_x(iy,1); 
-		//x0l[2]=xm1[2]=get_x(iz,2);
-
-		//x0r[0]=get_xb(ix+1,0);
-		//x0r[1]=xp1[1]=get_x(iy,1);
-		//x0r[2]=xp1[2]=get_x(iz,2);
-	      
+			      
                 // dx0, dxm1, dxp1 are x-sizes (wall to wall) of cells ix, ix-1, ix+1, dxm2m, dxp2 are sizes of cells ix-2, ix+2		
 		dx0=get_size_x(ix,0);    
 		dxm1=get_size_x(ix-1,0);    
@@ -782,17 +767,17 @@ op_explicit(ldouble t, ldouble dtin)
 		  dxp2=get_size_x(ix+2,0);    
 		}
 	  
-		for(i=0;i<NV;i++)
+		for(iv=0;iv<NV;iv++)
 		{
 		  //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		  fd_p0[i] =get_u(p,i,ix,iy,iz);
-		  fd_pp1[i]=get_u(p,i,ix+1,iy,iz);
-		  fd_pm1[i]=get_u(p,i,ix-1,iy,iz);
+		  fd_p0[iv] =get_u(p,iv,ix,iy,iz);
+		  fd_pp1[iv]=get_u(p,iv,ix+1,iy,iz);
+		  fd_pm1[iv]=get_u(p,iv,ix-1,iy,iz);
             
 		  if(INT_ORDER>1)
 		  {
-		    fd_pm2[i]=get_u(p,i,ix-2,iy,iz);
-		    fd_pp2[i]=get_u(p,i,ix+2,iy,iz);
+		    fd_pm2[iv]=get_u(p,iv,ix-2,iy,iz);
+		    fd_pp2[iv]=get_u(p,iv,ix+2,iy,iz);
 		  }
 		}
 
@@ -830,19 +815,19 @@ op_explicit(ldouble t, ldouble dtin)
 		//save interpolated values to memory
                 //Note that l and r of a given cell ix are the left and right wall of that cell
 		//whereas L and R of given ix are quantities to the left and right of wall ix
-		for(i=0;i<NV;i++)
+		for(iv=0;iv<NV;iv++)
 		{
                   // Save fd_pl in array pbRx (Primitive_R) of wall ix
                   // Save fd_pr in array pbLx (Primitive_L) of wall ix+1
-		  set_ubx(pbRx,i,ix,iy,iz,fd_pl[i]);
-		  set_ubx(pbLx,i,ix+1,iy,iz,fd_pr[i]);
+		  set_ubx(pbRx,iv,ix,iy,iz,fd_pl[iv]);
+		  set_ubx(pbLx,iv,ix+1,iy,iz,fd_pr[iv]);
 		    
 		  if(dol)
                   // Save ffl in array flRx (F_R) of wall ix
-		  set_ubx(flRx,i,ix,iy,iz,ffl[i]);
+		  set_ubx(flRx,iv,ix,iy,iz,ffl[iv]);
 		  if(dor)
                   // Save ffr in array flLx (F_L) of wall ix+1 
-		  set_ubx(flLx,i,ix+1,iy,iz,ffr[i]);
+		  set_ubx(flLx,iv,ix+1,iy,iz,ffr[iv]);
 		} 
        }  // if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
       
@@ -910,22 +895,6 @@ op_explicit(ldouble t, ldouble dtin)
 		if((iy==NY-1 && is_cell_active(ix,iy,iz)==0) || (iy<NY-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy+1,iz)==0))
 		  dor=0;
         
-                // x0[1] is y of current cell        
-	        //x0[1]=get_x(iy,1);
-
-                // xm1[1], xp1[1] are y of left and right cell centers. Are these quantities used anywhere?
-		//xm1[1]=get_x(iy-1,1);
-                //xp1[1]=get_x(iy+1,1);
-		
-                // x0l[0,1,2] are x, y, z of left y-wall, x0r[0,1,2] are x, y, z of right y-wall,		
-	 	//x0l[1]=get_xb(iy,1);
-		//x0l[0]=xm1[0]=get_x(ix,0); 
-		//x0l[2]=xm1[2]=get_x(iz,2);
-
-		//x0r[1]=get_xb(iy+1,1);
-		//x0r[0]=xp1[0]=get_x(ix,0);
-		//x0r[2]=xp1[2]=get_x(iz,2);
-
                 // dx0, dxm1, dxp1 are y-sizes (wall to wall) of cells iy, iy-1, iy+1, dxm2m, dxp2 are sizes of cells iy-2, iy+2
 		dx0=get_size_x(iy,1);    
 		dxm1=get_size_x(iy-1,1);    
@@ -937,16 +906,16 @@ op_explicit(ldouble t, ldouble dtin)
 		  dxp2=get_size_x(iy+2,1);
 		}    
 		  
-		for(i=0;i<NV;i++)
+		for(iv=0;iv<NV;iv++)
 		{
                   //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		  fd_p0[i]=get_u(p,i,ix,iy,iz);
-		  fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
-		  fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		  fd_p0[iv]=get_u(p,iv,ix,iy,iz);
+		  fd_pp1[iv]=get_u(p,iv,ix,iy+1,iz);
+		  fd_pm1[iv]=get_u(p,iv,ix,iy-1,iz);
 		  if(INT_ORDER>1)
 		  {
-		    fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
-		    fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    fd_pm2[iv]=get_u(p,iv,ix,iy-2,iz);
+		    fd_pp2[iv]=get_u(p,iv,ix,iy+2,iz);
 		  }
 		}
 	  
@@ -984,19 +953,19 @@ op_explicit(ldouble t, ldouble dtin)
                 //save interpolated values to memory
                 //Note that l and r of a given cell iy are the left and right wall of that cell,
 		//whereas L and R of given iy are quantities to the left and right of wall iy
-		for(i=0;i<NV;i++)
+		for(iv=0;iv<NV;iv++)
 		{
                   // Save fd_pl in array pbRy (Primitive_R) of wall iy
                   // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
-		  set_uby(pbRy,i,ix,iy,iz,fd_pl[i]);
-		  set_uby(pbLy,i,ix,iy+1,iz,fd_pr[i]);
+		  set_uby(pbRy,iv,ix,iy,iz,fd_pl[iv]);
+		  set_uby(pbLy,iv,ix,iy+1,iz,fd_pr[iv]);
 
 		  if(dol)
                   // Save ffl in array flRy (F_R) of wall iy
-		  set_uby(flRy,i,ix,iy,iz,ffl[i]);
+		  set_uby(flRy,iv,ix,iy,iz,ffl[iv]);
 		  if(dor)
                   // Save ffr in array flLy (F_R) of wall iy+1
-		  set_uby(flLy,i,ix,iy+1,iz,ffr[i]);
+		  set_uby(flLy,iv,ix,iy+1,iz,ffr[iv]);
 		}
       }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
 
@@ -1061,23 +1030,7 @@ op_explicit(ldouble t, ldouble dtin)
                   dol=0;
                 if((iz==NZ-1 && is_cell_active(ix,iy,iz)==0) || (iz<NZ-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy,iz+1)==0))
                   dor=0;
-         
-                // x0[2] is z of current cell        
-	        //x0[2]=get_x(iz,2);
-
-                // xm1[2], xp1[2] are z of left and right cell centers. Are these quantities used anywhere?
-		//xm1[2]=get_x(iz-1,2);
-                //xp1[2]=get_x(iz+1,2);
-
-                // x0l[0,1,2] are x, y, z of left z-wall, x0r[0,1,2] are x, y, z of right z-wall,		
-                //x0l[2]=get_xb(iz,2);
-                //x0l[0]=xm1[0]=get_x(ix,0);
-                //x0l[1]=xm1[1]=get_x(iy,1);
-         
-                //x0r[2]=get_xb(iz+1,2);
-                //x0r[0]=xp1[0]=get_x(ix,0);
-                //x0r[1]=xp1[1]=get_x(iy,1);
-         
+                  
                 // dx0, dxm1, dxp1 are z-sizes (wall to wall) of cells iz, iz-1, iz+1, dxm2m, dxp2 are sizes of cells iz-2, iz+2
                 dx0=get_size_x(iz,2);
                 dxm1=get_size_x(iz-1,2);
@@ -1089,17 +1042,17 @@ op_explicit(ldouble t, ldouble dtin)
                   dxp2=get_size_x(iz+2,2);
                 }
          
-                for(i=0;i<NV;i++)
+                for(iv=0;iv<NV;iv++)
                 {
                   //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-                  fd_p0[i]=get_u(p,i,ix,iy,iz);
-                  fd_pp1[i]=get_u(p,i,ix,iy,iz+1);
-                  fd_pm1[i]=get_u(p,i,ix,iy,iz-1);
+                  fd_p0[iv]=get_u(p,iv,ix,iy,iz);
+                  fd_pp1[iv]=get_u(p,iv,ix,iy,iz+1);
+                  fd_pm1[iv]=get_u(p,iv,ix,iy,iz-1);
            
                   if(INT_ORDER>1)
                   {
-                    fd_pm2[i]=get_u(p,i,ix,iy,iz-2);
-                    fd_pp2[i]=get_u(p,i,ix,iy,iz+2);
+                    fd_pm2[iv]=get_u(p,iv,ix,iy,iz-2);
+                    fd_pp2[iv]=get_u(p,iv,ix,iy,iz+2);
                   }
                 }
          
@@ -1137,19 +1090,19 @@ op_explicit(ldouble t, ldouble dtin)
                 //save interpolated values to memory
                 //Note that l and r of a given cell iy are the left and right wall of that cell,
                 //whereas L and R of given iy are quantities to the left and right of wall iy
-                for(i=0;i<NV;i++)
+                for(iv=0;iv<NV;iv++)
                 {
                   // Save fd_pl in array pbRz (Primitive_R) of wall iz
                   // Save fd_pr in array pbLz (Primitive_L) of wall iz+1
-                  set_ubz(pbRz,i,ix,iy,iz,fd_pl[i]);
-                  set_ubz(pbLz,i,ix,iy,iz+1,fd_pr[i]);
+                  set_ubz(pbRz,iv,ix,iy,iz,fd_pl[iv]);
+                  set_ubz(pbLz,iv,ix,iy,iz+1,fd_pr[iv]);
            
                   if(dol)
                   // Save ffl in array flRz (F_R) of wall iz
-                  set_ubz(flRz,i,ix,iy,iz,ffl[i]);
+                  set_ubz(flRz,iv,ix,iy,iz,ffl[iv]);
                   if(dor)
                   // Save ffr in array flLz (F_R) of wall iz+1
-                  set_ubz(flLz,i,ix,iy,iz+1,ffr[i]);   
+                  set_ubz(flLz,iv,ix,iy,iz+1,ffr[iv]);   
                 }
       }  // if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY...)
 	     
@@ -2921,7 +2874,7 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
   set_u_scalar(gammagas, ix, iy, iz, get_u_scalar(gammagas,iix,iiy,iiz));
   #endif
 
-  set_cflag(RHOFLOORFLAG, ix, iy, iz, get_cflag(MHDINVFLAG, iix, iiy, iiz));
+  set_cflag(RHOFLOORFLAG, ix, iy, iz, get_cflag(RHOFLOORFLAG, iix, iiy, iiz));
   #ifdef FORCEFREE
   set_u_scalar(ffinvarr, ix, iy, iz, get_u_scalar(ffinvarr, iix, iiy, iiz));
   set_cflag(FFINVFLAG, ix, iy, iz, get_cflag(FFINVFLAG, iix, iiy, iiz));
