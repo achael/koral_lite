@@ -208,7 +208,7 @@ void initialize_constants()
     ffinv_upper_cutoff = sigcut*fac;
     ffinv_lower_cutoff = sigcut/fac;
   }
-  printf("cutoffs %e %e\n",ffinv_lower_cutoff,ffinv_upper_cutoff);
+  if(PROCID==0) printf("ff cutoffs %e %e\n",ffinv_lower_cutoff,ffinv_upper_cutoff);
 #endif
 #endif
 

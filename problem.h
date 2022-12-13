@@ -146,13 +146,29 @@
 //142 PARTIALTDE -- INFDISK modified for partial TDE binding energy distribution non-constant
 //143 FFTESTS -- Force Free tests
 //144 FFTORUSTEST -- test of force-free torus
+//145 FFALFVEN -- hybrid mhd/ff alfven wave test from Komissarov 99
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 144
+#define PROBLEM 145
+
+#if(PROBLEM==145)
+#define PR_DEFINE "PROBLEMS/FFALFVEN/define.h"
+#define PR_BC "PROBLEMS/FFALFVEN/bc.c"
+#define PR_INIT "PROBLEMS/FFALFVEN/init.c"
+#define PR_KAPPAES "PROBLEMS/FFALFVEN/kappaes.c"
+#define PR_OUT2GIF_2D "PROBLEMS/FFALFVEN/out2gif_2d.c"
+#define PR_OUT2GIF_1D "PROBLEMS/FFALFVEN/out2gif_1d.c"
+#define PR_DUMP "PROBLEMS/FFALFVEN/dump.c"
+#define PR_FINGER "PROBLEMS/FFALFVEN/finger.c"
+#define PR_TOOLS "PROBLEMS/FFALFVEN/tools.c"
+#define PR_PREPINIT "PROBLEMS/FFALFVEN/prepinit.c"
+#define PR_POSTINIT "PROBLEMS/FFALFVEN/postinit.c"
+#endif
+
 
 #if(PROBLEM==144)
 
