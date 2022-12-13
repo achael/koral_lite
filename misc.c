@@ -87,9 +87,17 @@ void initialize_constants()
   two_third = 2. / 3.;
   log_2p6 = log(2.6);
   one_over_log_2p6 = 1. / log_2p6;
-  
+
+  /*  
+  printf("Testing gammainterp\n");
+  printf("%e %e %e \n",calc_meanlorentz(1.e-3),calc_meanlorentz(1.1e-3),calc_meanlorentz(5.e-3));
+  printf("%e %e %e \n",calc_meanlorentz(0.74),calc_meanlorentz(1.23),calc_meanlorentz(7.54));
+  printf("%e %e %e \n",calc_meanlorentz(14.3),calc_meanlorentz(77.3),calc_meanlorentz(144.));
+  printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
+  exit(-1);
+  */
   // Coordinate specific factors
-#if (MYCOORDS==JETCOORDS)
+  #if (MYCOORDS==JETCOORDS)
   //printf("Finding hypx1out\n");
   hypx1in = log(RMIN-MKSR0);
   hypx1brk= log(HYPRBRK-MKSR0);
@@ -99,8 +107,10 @@ void initialize_constants()
   #ifdef CYLINDRIFY
   set_cyl_params();
   #endif
+
   
   //ANDREW -- diagnostics for new jet coordinates/metric
+
   /*
   //printf("%.7f %.7f %.7f\n",hypx1in,hypx1brk,hypx1out);
 
@@ -179,87 +189,11 @@ void initialize_constants()
  
   exit(-1);
   */
-
-  /*  
-  printf("Testing gammainterp\n");
-  printf("%e %e %e \n",calc_meanlorentz(1.e-3),calc_meanlorentz(1.1e-3),calc_meanlorentz(5.e-3));
-  printf("%e %e %e \n",calc_meanlorentz(0.74),calc_meanlorentz(1.23),calc_meanlorentz(7.54));
-  printf("%e %e %e \n",calc_meanlorentz(14.3),calc_meanlorentz(77.3),calc_meanlorentz(144.));
-  printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
-  exit(-1);
-  */
-  
-#endif //MYCOORDS==JETCOORDS
-
-  // cutoff factors for hybrid force-free
-#ifdef FORCEFREE
-#if defined(HYBRID_FORCEFREE) && !defined(HYBRID_FORCEFREE_XCUT)
-  ldouble sigcut = HYBRID_FORCEFREE_SIGMACUT;
-  ldouble tanhwidth = HYBRID_FORCEFREE_WIDTH;
-  if(tanhwidth<=0.) // step function cutoff
-  {
-    ffinv_lower_cutoff=sigcut;
-    ffinv_upper_cutoff=sigcut;
-  }
-  else //cutoff at f(sigma) = 1/64 and f(sigma) = 63/64 
-  {
-    ldouble fac=pow(3.,tanhwidth)*pow(7.,0.5*tanhwidth);
-    
-    ffinv_upper_cutoff = sigcut*fac;
-    ffinv_lower_cutoff = sigcut/fac;
-  }
-  if(PROCID==0) printf("ff cutoffs %e %e\n",ffinv_lower_cutoff,ffinv_upper_cutoff);
-#endif
-#endif
-
+  #endif
   
   return;
 }
 
-//**********************************************************************
-/*! \fn int calc_cells_under_horiz()
- \brief calculate the number of cells beneath the horizon for bhdisk problems
-*/
-//**********************************************************************
-
-int
-calc_cells_under_horiz()
-{
-    //consistency check -- how many cell centers are under horizon? 
-#ifdef BHDISK_PROBLEMTYPE
-  ldouble xx[4],xxBL[4];
-  int ix;
-  if(TOI==0 && TOJ==0 && TOK==0) // only do on 0th tile
-  {
-    cells_under_horizon=0;
-    for(ix=0;ix<NX;ix++)
-    {
-      get_xx(ix,0,0,xx); //BH problem types should have r coord independent of theta,phi
-      coco_N(xx,xxBL,MYCOORDS,BLCOORDS);
-      if(xxBL[1]>rhorizonBL)
-	break;
-      else
-	cells_under_horizon+=1;
-    }
-    
-    if(cells_under_horizon<3)
-    {
-      printf("There are only %d cells under horizon at rh=%.2f! increase to at least 4\n",
-	     cells_under_horizon,rhorizonBL);
-      exit(-1);
-    }
-    if(cells_under_horizon==NX)
-    {
-      printf("All cells on inner tile are under horizon! \n");
-      exit(-1);
-    }
-
-    printf("There are %d cells under the horizon at rh=%.2f\n",
-	   cells_under_horizon,rhorizonBL);
-  }
-#endif
-  return 0;
-}
 
 //**********************************************************************
 /*! \fn int print_scalings()
@@ -422,33 +356,6 @@ if (NTZ % 2 != 0)
  printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 }
 #endif
-
-#ifdef FORCEFREE
-  #ifdef NONRELMHD
-  printf("FORCEFREE does not work with NONRELMHD!\n");
-  exit(-1);
-  #endif
-  #ifdef RADIATION
-  printf("FORCEFREE does not work yet with RADIATION!\n");
-  exit(-1);
-  #endif
-  #ifndef MAGNFIELD
-  printf("FORCEFREE requires MAGNFIELD!\n");
-  exit(-1);
-  #endif
-  #if (VELPRIM!=VELR)
-  printf("FORCEFREE requries VELPRIM==VELR!\n");
-  exit(-1);
-  #endif
-  #if(GDETIN==0)
-  printf("FORCEFREE does not work with GDETIN==0!\n");
-  exit(-1);
-  #endif
-  #ifdef CORRECT_POLARAXIS_3D
-  printf("FORCEFREE does not work with CORRECT_POLARAXIS_3D!\n");
-  exit(-1);
-  #endif
-#endif
   
 #ifdef PWPOTENTIAL
   printf("PWPOTENTIAL has been removed!\n");
@@ -459,7 +366,7 @@ if (NTZ % 2 != 0)
   printf("NCOMPTONIZATION has been replaced by EVOLVEPHOTONNUMBER!\n");
   exit(-1);
 #endif
-  
+
 #ifdef RADIATION  
 #if defined(COMPTONIZATIONFLAG)
   if (PROCID == 0)
@@ -604,8 +511,6 @@ if (NTZ % 2 != 0)
   if(PROCID==0) printf("RESTARTFROMMHD\n");
   if(PROCID==0) printf("urad/uu: %e ue/uu: %e\n", INITURADFRAC, INITUEFRAC);
 #endif
-
-
   return;
 }
 
@@ -752,6 +657,14 @@ initialize_arrays()
      //metric at cell z-faces
      if((gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
      if((Gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
+      
+     //LNRF basis one-forms and vectors
+     //if((emuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((emulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+
+     //tetrad one-forms and vectors
+     //if((tmuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((tmulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
 
      //Fluxes and wavespeeds
      long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
@@ -837,11 +750,7 @@ initialize_arrays()
      long long EmfSize = Nemf*sizeof(ldouble);
      if((emf=(ldouble*)malloc(EmfSize))==NULL) my_err("malloc err.\n");
 #endif
-
-#ifdef FORCEFREE
-     if((ffinvarr=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
-#endif
-	 
+  
   }
 
   init_all_kappa_table();
@@ -991,9 +900,7 @@ free_arrays()
   //free(temperaturelog);
   //free(Lambdalog);
   //#endif
-  #ifdef FORCEFREE
-  free(ffinvarr);
-  #endif
+  
   return 0;
 }
 
@@ -1540,12 +1447,6 @@ print_primitives(ldouble *p)
   printf("B^1 = %.15e\n",p[B1]);
   printf("B^2 = %.15e\n",p[B2]);
   printf("B^3 = %.15e\n",p[B3]);
-#ifdef FORCEFREE
-  printf("upar (ff) = %.15e\n", p[UUFF]);
-  printf("u^1 (ff) = %.15e\n",p[VXFF]);
-  printf("u^2 (ff) = %.15e\n",p[VYFF]);
-  printf("u^3 (ff) = %.15e\n",p[VZFF]);
-#endif
 #endif
 #ifdef RADIATION
   printf("Erf = %.15e\n",p[EE0]);
@@ -1589,12 +1490,6 @@ print_conserved(ldouble *u)
   printf("B^1 = %.15e\n",u[B1]);
   printf("B^2 = %.15e\n",u[B2]);
   printf("B^3 = %.15e\n",u[B3]);
-#ifdef FORCEFREE
-  printf("mu b^0 (ff) = %.15e\n",u[UUFF]);
-  printf("T^t_1 (ff) = %.15e\n",u[VXFF]);
-  printf("T^t_2 (ff) = %.15e\n",u[VYFF]);
-  printf("T^t_3 (ff) = %.15e\n",u[VZFF]);
-#endif
 #endif
 #ifdef RADIATION
   printf("R^t_t = %.15e\n",u[EE0]);

@@ -51,7 +51,7 @@ solve_the_problem(ldouble tstart, char* folder)
   int ix,iy,iz,iv;
   int loopsallociter;
   int spitoutput,lastzone;
-  //int nentr[8],nentr2[8];
+  int nentr[8],nentr2[8];
   
   struct timespec temp_clock;
 
@@ -92,11 +92,12 @@ solve_the_problem(ldouble tstart, char* folder)
   
   nstep=0;
   while (t < t1 && nfout1<=NOUTSTOP && nstep<NSTEPSTOP)
-  {        
+  {   
+      
       global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFIXUPS]=0; //counting number of critical failures
       global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS]=0;    //counting mhd fixups
-      global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]=0;    //counting rad fixups
-
+      global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]=0;    //counding rad fixups
+ 
       spitoutput=0;
       global_time=t;
       nstep++;
@@ -192,7 +193,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    calc_u2p(0,1);
         
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[0],&nentr2[0]);
+	    count_entropy(&nentr[0],&nentr2[0]);
         
             // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -206,6 +207,7 @@ solve_the_problem(ldouble tstart, char* folder)
             // Explicit evolution (advection plus source terms) from t to t+dt
 	    op_explicit (t, dt);  //U(1) in *ut1;
 
+	    
             // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
         
@@ -215,7 +217,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    global_expdt=dt;
  
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[1],&nentr2[1]);
+	    count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
 
 	    // Calculate 1st explicit deriv
@@ -259,7 +261,7 @@ solve_the_problem(ldouble tstart, char* folder)
 #pragma omp barrier
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[2],&nentr2[2]);
+	    count_entropy(&nentr[2],&nentr2[2]);
 	    
             // Implicit evolution of radiation terms
 	    op_implicit (t,gamma*dt); //U(2) in *u
@@ -270,7 +272,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,p,ppostimplicit);
         
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[3],&nentr2[3]);
+	    count_entropy(&nentr[3],&nentr2[3]);
 
 	    #if(AVGOUTPUT>0) // Save to avg arrays
             #ifdef DTAVG //Dont save every step
@@ -308,7 +310,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    calc_u2p(0,1);
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-            //count_entropy(&nentr[4],&nentr2[4]);
+            count_entropy(&nentr[4],&nentr2[4]);
 
             // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -331,7 +333,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    global_expdt=dt;
 	    
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[5],&nentr2[5]);
+	    count_entropy(&nentr[5],&nentr2[5]);
 
 	    // Calculate 2nd explicit deriv
 	    // F(U(2)) in *dut2;
@@ -379,7 +381,7 @@ solve_the_problem(ldouble tstart, char* folder)
             #endif
 
             // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[6],&nentr2[6]);
+	    count_entropy(&nentr[6],&nentr2[6]);
 
 	    // ANDREW should the next 3 steps be moved to start of loop?  
             // Special treatment near axis (or inner surface)
@@ -395,9 +397,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
             // Compute new entropy from rho and uint over the domain
 	    update_entropy();
-            #ifdef FORCEFREE
-            fill_ffprims();
-	    #endif
 
       }  // else if(TIMESTEPPING==RK2IMEX)
 
@@ -417,7 +416,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copy_u(1.,p,ptm1);
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[0],&nentr2[0]);
+	    count_entropy(&nentr[0],&nentr2[0]);
  
 	    // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -436,7 +435,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t, dt);
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[1],&nentr2[1]);
+	    count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
 
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
@@ -474,7 +473,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    do_correct();
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[2],&nentr2[2]);
+	    count_entropy(&nentr[2],&nentr2[2]);
 
 	    // Exchange mpi data for boundaries
 	    mpi_exchangedata();
@@ -487,7 +486,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t,dt);
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[3],&nentr2[3]);
+	    count_entropy(&nentr[3],&nentr2[3]);
         
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
@@ -536,10 +535,6 @@ solve_the_problem(ldouble tstart, char* folder)
 
 	    // Update entropy from rho and uint over the domain
 	    update_entropy();
-            #ifdef FORCEFREE
-            fill_ffprims();
-	    #endif
-	    
 	    t+=dt;
       }  // else if(TIMESTEPPING==RK2HEUN)
 
@@ -559,7 +554,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copy_u(1.,p,ptm1); 
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[0],&nentr2[0]);
+	    count_entropy(&nentr[0],&nentr2[0]);
  
 	    // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -578,7 +573,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t,.5*dt);
 
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[1],&nentr2[1]);
+	    count_entropy(&nentr[1],&nentr2[1]);
 	    copy_entropycount();
 
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
@@ -616,7 +611,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    do_correct();
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[2],&nentr2[2]);
+	    count_entropy(&nentr[2],&nentr2[2]);
 
 	    // Exchange MPI data for boundaries
 	    mpi_exchangedata();
@@ -629,7 +624,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    op_explicit (t,dt);
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[3],&nentr2[3]);
+	    count_entropy(&nentr[3],&nentr2[3]);
         
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
@@ -678,9 +673,7 @@ solve_the_problem(ldouble tstart, char* folder)
 
 	    // Compute entropy from rho and uint over the domain
 	    update_entropy();
-            #ifdef FORCEFREE
-            fill_ffprims();
-	    #endif
+
 	    t+=dt;
       }  // else if(TIMESTEPPING==RK2)
 
@@ -695,7 +688,7 @@ solve_the_problem(ldouble tstart, char* folder)
 	    copyi_u(1.,u,ut0);
         
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[0],&nentr2[0]);
+	    count_entropy(&nentr[0],&nentr2[0]);
  
 	    // Special treatment near axis (or inner surface)
 	    do_correct();
@@ -712,10 +705,9 @@ solve_the_problem(ldouble tstart, char* folder)
 	    // Explicit evolution (advection plus source terms) from t to t+dt
 	    global_expdt=dt;
 	    op_explicit (t,1.*dt); 
-	    
+
 	    // Count number of entropy inversions: ENTROPYFLAG, ENTROPYFLAG2
-	    //count_entropy(&nentr[1],&nentr2[1]);
-	    copy_entropycount();
+	    count_entropy(&nentr[1],&nentr2[1]); copy_entropycount();
 
 	    // Artifical dynamo (ifdef MIMICDYNAMO)
 	    apply_dynamo(t,dt);
@@ -751,7 +743,7 @@ solve_the_problem(ldouble tstart, char* folder)
             #endif
 	    
 	    // Calculate primitves
-	    // ANDREW TODO is this excessive? Should be consistent after implicit!
+	    // ANDREW is this excessive? Should be consistent after implicit!
 	    calc_u2p(0,1); //do not calculate visc. heating, do count entropy inversions
 	    
 	    // Heat species at end
@@ -759,12 +751,6 @@ solve_the_problem(ldouble tstart, char* folder)
 	    heat_electronions_with_state(dt);
             #endif
 
-	    // Compute entropy from rho and uint over the domain
-	    update_entropy();
-            #ifdef FORCEFREE
-            fill_ffprims();
-	    #endif
-	    
 	    // Update to new time: t+dt
 	    t+=dt;
       }  // else if(TIMESTEPPING==RK1)
@@ -780,22 +766,22 @@ solve_the_problem(ldouble tstart, char* folder)
 
       
       //for outputs - use what came out of 2nd implicit: 
-      // ANDREW why?? try current prims instead
+      //ANDREW why?? try current prims instead
       
       // Set uforget = p and p = ppostimplicit over domain
       copy_u(1.,p,uforget); //backup current primitives
-      //copy_u(1.,ppostimplicit,p); // ANDREW: try saving out current prims instead of postimplicit
+      //copy_u(1.,ppostimplicit,p); // ANDREW: try saving out current prims
    
       //counting faiures and average parameters of the implicit solver
       int nfailures[3],nfailuresloc[3]={global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFAILURES],
 					global_int_slot[GLOBALINTSLOT_NTOTALMHDFIXUPS],
 					global_int_slot[GLOBALINTSLOT_NTOTALRADFIXUPS]};
       
-      #ifdef MPI
+#ifdef MPI
       MPI_Allreduce(nfailuresloc, nfailures, 3, MPI_INT, MPI_SUM, MPI_COMM_WORLD);      
-      #else
+#else
       for(i=0;i<3;i++) nfailures[i]=nfailuresloc[i];
-      #endif
+#endif
       
       //quit if we have exceeded maxiumum number of failures
       int maxfailures=TNX*TNY*TNZ/1;
@@ -805,12 +791,6 @@ solve_the_problem(ldouble tstart, char* folder)
 		 nfailures[0],nfailures[1],nfailures[2]);
 	  exit(-1);
       }
-
-#ifdef FORCEFREE
-      // counting number of forcefree inversions
-      int nu2pff[3];
-      count_ff(&nu2pff[0], &nu2pff[1], &nu2pff[2]);
-#endif //FORCEFREE
       
 #ifdef RADIATION
       //get average number of iterations in the implicit solver
@@ -838,16 +818,16 @@ solve_the_problem(ldouble tstart, char* folder)
       impnumsloc[5]=global_int_slot[GLOBALINTSLOT_NIMPENTRRAD];
       impnumsloc[6]=0;
 
-      #ifdef MPI
+#ifdef MPI
       MPI_Allreduce(impnumsloc, impnums, 7, MPI_INT, MPI_SUM,
 		    MPI_COMM_WORLD);  
       MPI_Allreduce(avimpitloc, avimpit, 5, MPI_LDOUBLE, MPI_MAX,
                    MPI_COMM_WORLD);  
-      #else
+#else
       for(i=0;i<5;i++) avimpit[i]=avimpitloc[i];
       for(i=0;i<7;i++) impnums[i]=impnumsloc[i];
-      #endif 
-#endif //RADIATION
+#endif 
+#endif  
       
       //time mark
       my_clock_gettime(&temp_clock);    
@@ -884,7 +864,7 @@ solve_the_problem(ldouble tstart, char* folder)
       
 	  //zero out avg values over domain
 
-          long long Navg = (long long) SX*SY*SZ*(NV+NAVGVARS); // RN: Apr 2, 2019
+    long long Navg = (long long) SX*SY*SZ*(NV+NAVGVARS); // RN: Apr 2, 2019
 	  copy_u_core(0., pavg, pavg, Navg);
 	  avgtime=0.;
 	  
@@ -899,6 +879,7 @@ solve_the_problem(ldouble tstart, char* folder)
 
       }  // if(lasttoutavg_floor!=floor(t/dtoutavg))
 #endif  // if(AVGOUTPUT>0)
+
 
       //save snapshot files
 #ifdef DTOUT_LOG
@@ -915,9 +896,6 @@ solve_the_problem(ldouble tstart, char* folder)
 	  // Set boundary conditions on conserveds in the ghost cells
 	  set_bc(t,0);
 
-	  #ifdef FORCEFREE
-	  fill_ffprims();
-	  #endif
 	  //print restart file
 	  fprint_restartfile(t,folder);
 
@@ -945,18 +923,16 @@ solve_the_problem(ldouble tstart, char* folder)
           #if(SIMOUTPUT!=0) //sim files
 	  fprint_simplefile(tstart,nfout1,folder,"sim");
           #endif
-
-          #if(PRIMOUTPUT!=0)  //prim output
-          fprint_primitive_file(t,nfout1,folder,"prim");
-          #endif
-
+      
 	  #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum
           fprint_relel_spectrum(t,NTH_SPEC_IX,NTH_SPEC_IY,NTH_SPEC_IZ,nfout1,folder,"spe",0);
           #endif
 
 #endif  // ifndef MPI
 
+
 	  nfout1++;
+
 	  
 	  #ifdef DTOUT_LOG
           dtout = pow(10, DTOUT1_LOG_INIT + DTOUT_LOG*(nfout1-1));
@@ -977,25 +953,18 @@ solve_the_problem(ldouble tstart, char* folder)
       #ifdef PRINTEACHT
       printeacht = 1;
       #endif
-      if((end_time-fprintf_time>1  || printeacht) && PROCID==0)
+      if((end_time-fprintf_time>1.  || printeacht) && PROCID==0)
       {
 	  
 	  printf("st #%6d t=%12.5e dt=%.2e mpi=%3.1f znps=%.0f tgpd=%.2e fail# %1d %1d %1d "
 		 ,nstep,t,dt,2.*maxmp_time/(end_time-start_time),znps,tgpd,
 		  nfailures[0],nfailures[1],nfailures[2]);
-
-#ifdef FORCEFREE
-	  //ldouble ff_frac = nu2pff[0]/(TNX*TNY*TNZ);
-	  //ldouble mhd_frac = nu2pff[1]/(TNX*TNY*TNZ);
-	  //ldouble ff_floor_frac = nu2pff[2]/(TNX*TNY*TNZ);
-          //printf("| ff# %.2f %.2f %.2f | ", ff_frac,mhd_frac,ff_floor_frac);
-	  printf("| ff# %d %d %d | ", nu2pff[0],nu2pff[1],nu2pff[2]);
-#endif
-
-#if defined(RADIATION) && !defined(SKIPRADSOURCE)
+#ifdef RADIATION
+#ifndef SKIPRADSOURCE
 	  printf("imp# %d %d %d %d %d %d %d | %.1f %.1f %.1f %.1f %.1f ",
 		  impnums[0],impnums[1],impnums[2],impnums[3],impnums[4],impnums[5],impnums[6],
 		  avimpit[0],avimpit[1],avimpit[2],avimpit[3],avimpit[4]);
+#endif
 #endif
 
 	  printf("\n");

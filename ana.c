@@ -268,13 +268,6 @@ main(int argc, char **argv)
       sprintf(prefix,"sim%s",suffix);
       fprint_simplefile(t,nfout1,"analysis",prefix);
 #endif
-      
-      //prim output
-#if(PRIMOUTPUT!=0)	  
-      sprintf(prefix,"prim%s",suffix);  
-      fprint_primitive_file(t,nfout1,"analysis",prefix);
-#endif
-      
     }
     
     //th-sliced - these save files only make sense for phi-slices        
@@ -294,13 +287,6 @@ main(int argc, char **argv)
       sprintf(prefix,"sim%s",suffix);  
       fprint_simplefile(t,nfout1,"analysis",prefix);
 #endif
-
-      //prim output
-#if(PRIMOUTPUT!=0)	  
-      sprintf(prefix,"prim%s",suffix);  
-      fprint_primitive_file(t,nfout1,"analysis",prefix);
-#endif
-
     }
     
     //regular dump files
@@ -338,12 +324,6 @@ main(int argc, char **argv)
       fprint_simplefile(t,nfout1,"analysis",prefix);
 #endif
 
-      //prim output
-#if(PRIMOUTPUT!=0)	  
-      sprintf(prefix,"prim%s",suffix);  
-      fprint_primitive_file(t,nfout1,"analysis",prefix);
-#endif
-      
       //hdf5 analysis output (replaces sim)
 #ifdef ANAOUT_HDF5
       #ifdef ANAOUT_HDF5_V1

@@ -416,11 +416,11 @@ int calc_radialprofiles(ldouble profiles[][NX])
         }  // end if(doingavg)
         else //on the go from the primitives
         {
-          rho=pp[RHO];
-          uint=pp[UU];
-          utcon[1]=pp[VX];
-          utcon[2]=pp[VY];
-          utcon[3]=pp[VZ];
+          rho=pp[0];
+          uint=pp[1];
+          utcon[1]=pp[2];
+          utcon[2]=pp[3];
+          utcon[3]=pp[4];
           temp=calc_PEQ_Tfromurho(uint,rho,ix,iy,iz);
           
 #ifdef MAGNFIELD
@@ -1080,11 +1080,11 @@ int calc_thetaprofiles(ldouble profiles[][NY])
 	    }
 	  else
 	    { 
-	      rho=pp[RHO];
-	      uint=pp[UU];
-	      utcon[1]=pp[VX];
-	      utcon[2]=pp[VY];
-	      utcon[3]=pp[VZ];
+	      rho=pp[0];
+	      uint=pp[1];
+	      utcon[1]=pp[2];
+	      utcon[2]=pp[3];
+	      utcon[3]=pp[4];
 		  
 #ifdef MAGNFIELD
 	      calc_bcon_prim(pp,bcon,&geomBL);
@@ -1926,9 +1926,9 @@ calc_local_lum(int ix,int iy,int iz,ldouble *radlum, ldouble *totallum)
   else
     {
 	  
-      ucongas[1]=pp[VX];
-      ucongas[2]=pp[VY];
-      ucongas[3]=pp[VZ];	      
+      ucongas[1]=pp[2];
+      ucongas[2]=pp[3];
+      ucongas[3]=pp[4];	      
       conv_vels(ucongas,ucongas,VELPRIM,VEL4,geom.gg,geom.GG);
 
       rhour = pp[RHO]*ucongas[1];
@@ -2069,9 +2069,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       else //doingavg
       {
 	
-	  ucongas[1]=pp[VX];
-	  ucongas[2]=pp[VY];
-	  ucongas[3]=pp[VZ];	      
+	  ucongas[1]=pp[2];
+	  ucongas[2]=pp[3];
+	  ucongas[3]=pp[4];	      
 	  conv_vels(ucongas,ucongas,VELPRIM,VEL4,geom.gg,geom.GG);
 
 	  rhour = pp[RHO]*ucongas[1];
@@ -2271,9 +2271,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	      //hydro part may be inconsistent!
 	      calc_tautot(pp,&geomBL,dxph,tautot);
 
-	      ucongas[1]=pp[VX];
-	      ucongas[2]=pp[VY];
-	      ucongas[3]=pp[VZ];	      
+	      ucongas[1]=pp[2];
+	      ucongas[2]=pp[3];
+	      ucongas[3]=pp[4];	      
 	      conv_vels(ucongas,ucongas,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
 
 	      indices_21(ucongas,ucovgas,geomBL.gg);
@@ -2456,9 +2456,9 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
               trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
               #endif
 
-	      ucongas[1]=pp[VX];
-	      ucongas[2]=pp[VY];
-	      ucongas[3]=pp[VZ];	      
+	      ucongas[1]=pp[2];
+	      ucongas[2]=pp[3];
+	      ucongas[3]=pp[4];	      
 	      conv_vels(ucongas,ucongas,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
 
 	      indices_21(ucongas,ucovgas,geomBL.gg);
@@ -2917,10 +2917,10 @@ calc_mdot(ldouble radius, int type)
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
 
-        rho = pp[RHO];
-        ucon[1] = pp[VX];
-        ucon[2] = pp[VY];
-        ucon[3] = pp[VZ];
+        rho = pp[0];
+        ucon[1] = pp[2];
+        ucon[2] = pp[3];
+        ucon[3] = pp[4];
         
         conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
         rhouconr = rho * ucon[1];
@@ -3032,13 +3032,13 @@ calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max)
           pick_g(ix, iy, iz, gg);
           pick_G(ix, iy, iz, GG);
           
-          rho = pp[RHO];
+          rho = pp[0];
           uu = pp[UU];
           pressure = uu * (GAMMA - 1.);
           
-          ucon[1] = pp[VX];
-          ucon[2] = pp[VY];
-          ucon[3] = pp[VZ];
+          ucon[1] = pp[2];
+          ucon[2] = pp[3];
+          ucon[3] = pp[4];
           conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
           indices_21(ucon, ucov, geom.gg);
           
@@ -3156,12 +3156,12 @@ calc_Edot(ldouble radius)
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
         
-        rho = pp[RHO];
+        rho = pp[0];
         uu = pp[UU];
         
-        ucon[1] = pp[VX];
-        ucon[2] = pp[VY];
-        ucon[3] = pp[VZ];
+        ucon[1] = pp[2];
+        ucon[2] = pp[3];
+        ucon[3] = pp[4];
         conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
         indices_21(ucon, ucov, geom.gg);
         
@@ -3282,12 +3282,12 @@ calc_Ldot(ldouble radius)
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
         
-        rho = pp[RHO];
+        rho = pp[0];
         uu = pp[UU];
         
-        ucon[1] = pp[VX];
-        ucon[2] = pp[VY];
-        ucon[3] = pp[VZ];
+        ucon[1] = pp[2];
+        ucon[2] = pp[3];
+        ucon[3] = pp[4];
         conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
         indices_21(ucon, ucov, geom.gg);
         

@@ -3701,6 +3701,9 @@ dxdx_MKS22KS(ldouble *xx, ldouble dxdx[][4])
 #endif
 
   int i;
+#ifdef APPLY_OMP_SIMD
+  //#pragma omp simd
+#endif
   for(i=0;i<4;i++)
   {
     int j;

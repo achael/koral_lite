@@ -96,8 +96,7 @@ main(int argc, char **argv)
 
   //precalculates metric, Christoffels, etc.
   calc_metric();
-  calc_cells_under_horiz();
- 
+  
   //save coordinate file
   #ifdef COORDOUTPUT
   fprint_coordfile(folder,"coord");
@@ -114,6 +113,7 @@ main(int argc, char **argv)
 
   //print scalings GU->CGS
   if(PROCID==0) print_scalings();
+  //exit(1);
 
   //**************
   //tests
@@ -172,11 +172,6 @@ main(int argc, char **argv)
         printf("Sending initial data... ");
 	fflush(stdout);
       }
-
-#ifdef FORCEFREE
-      fill_ffprims(); // make force-free primitives consistent
-#endif
-
       //exchange initial state
       mpi_exchangedata();  
       calc_avgs_throughout();
@@ -246,9 +241,6 @@ main(int argc, char **argv)
       }
       calc_BfromA(p,1);
 
-#ifdef FORCEFREE
-      fill_ffprims(); // make force-free primitives consistent
-#endif
       //exchange magn. field calculated in domain
       mpi_exchangedata();
       calc_avgs_throughout();
@@ -284,7 +276,6 @@ main(int argc, char **argv)
   int iix,iiy,iiz;
   struct geometry geom;
   ldouble PERTURBATION;
-
   
   // reset Te so that ue/ugas is constant
 #ifdef RESETELECTRONTEMPERATURETOUEUGASRATIO
@@ -475,10 +466,6 @@ main(int argc, char **argv)
       
     #if(SIMOUTPUT!=0) //simple files
     fprint_simplefile(tstart,nfout1,folder,"sim");
-    #endif
-
-    #if(PRIMOUTPUT!=0) // primitive file
-    fprint_primitive_file(tstart,nfout1,folder,"prim");
     #endif
 
     #if(RELELSPECTRUMOUTPUT==1) //nonthermal spectrum

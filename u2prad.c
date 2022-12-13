@@ -532,7 +532,6 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
   int verbose=0;
   int ret=0;
 
-#if !defined(SKIPALLFLOORS)
   struct geometry *geom
     = (struct geometry *) ggg;
 
@@ -554,7 +553,7 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
   //absolute rad-frame EE:
   if(pp[EE0]<ERADFLOOR) 
     {
-      if(verbose) printf("rhd_floors CASE R0 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[RHO],pp[EE0]);
+      if(verbose) printf("rhd_floors CASE R0 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[0],pp[EE0]);
       pp[EE0]=ERADFLOOR;
       ret=-1;
      }
@@ -562,32 +561,32 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
 #ifndef SKIPRADSOURCE
 
   //Ehat/rho ratios 
-  if(Ehat<EERHORATIOMIN*pp[RHO]) 
+  if(Ehat<EERHORATIOMIN*pp[0]) 
     {
-      if(verbose) printf("hd_floors CASE R2 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[RHO],pp[EE0]);
-      pp[EE0]=Eratio*EERHORATIOMIN*pp[RHO];
+      if(verbose) printf("hd_floors CASE R2 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[0],pp[EE0]);
+      pp[EE0]=Eratio*EERHORATIOMIN*pp[0];
       ret=-1;
     }
 
-  if(Ehat>EERHORATIOMAX*pp[RHO]) 
+  if(Ehat>EERHORATIOMAX*pp[0]) 
     {
-      if(verbose) printf("hd_floors CASE R3 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[RHO],Ehat);
-      pp[RHO]=1./EERHORATIOMAX*Ehat;
+      if(verbose) printf("hd_floors CASE R3 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[0],Ehat);
+      pp[0]=1./EERHORATIOMAX*Ehat;
       ret=-1;
     }
   
   //Ehat/uint ratios  
-  if(Ehat<EEUURATIOMIN*pp[UU]) 
+  if(Ehat<EEUURATIOMIN*pp[1]) 
     {
-      if(verbose) printf("hd_floors CASE R4 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[UU],Ehat);
-      pp[EE0]=Eratio*EEUURATIOMIN*pp[UU];
+      if(verbose) printf("hd_floors CASE R4 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[1],Ehat);
+      pp[EE0]=Eratio*EEUURATIOMIN*pp[1];
       ret=-1;
     }
 
-  if(Ehat>EEUURATIOMAX*pp[UU]) 
+  if(Ehat>EEUURATIOMAX*pp[1]) 
     {
-      if(verbose) printf("hd_floors CASE R5 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[UU],Ehat);
-      pp[UU]=1./EEUURATIOMAX*Ehat;
+      if(verbose) printf("hd_floors CASE R5 at (%d,%d,%d): %e %e\n",geom->ix,geom->iy,geom->iz,pp[1],Ehat);
+      pp[1]=1./EEUURATIOMAX*Ehat;
       ret=-1;
     }
 
@@ -693,7 +692,7 @@ check_floors_rad(ldouble *pp, int whichvel,void *ggg)
   
 #endif //EVOLVEPHOTONNUMBER
 #endif //RADIATION
-#endif //SKIPALLFLOORS
+ 
 
   return ret;
 
