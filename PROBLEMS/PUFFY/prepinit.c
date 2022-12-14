@@ -6,11 +6,11 @@ int init_dsandvels_limotorus(FTYPE r, FTYPE th, FTYPE a, FTYPE *rhoout, FTYPE *u
 //ENTR positive if inside torus, negative if outside
 
 if(PROCID==0) {fflush(stdout);printf("Precalculating torus and the atmosphere...\n");}
-int iix,iiy,iiz;
-#pragma omp parallel for private(iix,iiy,iiz) schedule (dynamic)
-for(iiz=0;iiz<NZ;iiz++){
-	for(iiy=0;iiy<NY;iiy++){
-		for(iix=0;iix<NX;iix++){
+int pr_iix,pr_iiy,pr_iiz;
+#pragma omp parallel for private(pr_iix,pr_iiy,pr_iiz) schedule (dynamic)
+for(pr_iiz=0;pr_iiz<NZ;pr_iiz++){
+	for(pr_iiy=0;pr_iiy<NY;pr_iiy++){
+		for(pr_iix=0;pr_iix<NX;pr_iix++){
 
 	    	ldouble rho,mx,my,mz,m,E,uint,pgas,Fx,Fy,Fz,pLTE,ell;  
 	    	ldouble uu[NV], pp[NV],ppback[NV],T,uintorg;
@@ -19,11 +19,11 @@ for(iiz=0;iiz<NZ;iiz++){
 
 	    	// metric in code coords
 	    	struct geometry geom;
-	    	fill_geometry(iix,iiy,iiz,&geom);
+	    	fill_geometry(pr_iix,pr_iiy,pr_iiz,&geom);
 
 			// BL metric
 	    	struct geometry geomBL;
-	    	fill_geometry_arb(iix,iiy,iiz,&geomBL,KERRCOORDS);
+	    	fill_geometry_arb(pr_iix,pr_iiy,pr_iiz,&geomBL,KERRCOORDS);
 
 	    	ldouble r=geomBL.xx;
 	    	ldouble th=geomBL.yy;
@@ -94,7 +94,7 @@ for(iiz=0;iiz<NZ;iiz++){
 
 					E=calc_LTE_EfromT(T4);
 					Fx=Fy=Fz=0.;
-					uint=calc_PEQ_ufromTrho(T4,rho,iix,iiy,iiz);
+					uint=calc_PEQ_ufromTrho(T4,rho,pr_iix,pr_iiy,pr_iiz);
 
 					pp[UU]=my_max(uint,ppback[1]);
 					pp[EE0]=my_max(E,ppback[EE0]);
@@ -150,7 +150,7 @@ for(iiz=0;iiz<NZ;iiz++){
 	    	int iv;
 
 	    	for(iv=0;iv<NV;iv++){
-				set_u(ptemp1,iv,iix,iiy,iiz,pp[iv]);
+				set_u(ptemp1,iv,pr_iix,pr_iiy,pr_iiz,pp[iv]);
 	    	}
 
 		}

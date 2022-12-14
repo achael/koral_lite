@@ -455,8 +455,8 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   ldouble etacon[4],etarel[4];
   ldouble f = 1.;
   ldouble fuu = 1.;
-  int rhofloored = 1;
-  int uufloored = 1;
+  int rhofloored = 0;
+  int uufloored = 0;
 
   for(iv=1;iv<4;iv++){
     ucond[iv]=pp[1+iv];

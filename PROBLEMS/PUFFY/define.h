@@ -123,7 +123,7 @@
 // maybe try this (after it is implemented correctly) to avoid breaking of the simulations - can be also usefull after regridding 
 // when we want to force it to run until it relax a bit 
 //#define B2RHOFLOOR_BACKUP_FFFRAME
-#define B2RHOFLOORFRAME ZAMOFRAME //DRIFTFRAME
+#define B2RHOFLOORFRAME DRIFTFRAME
 
 #define B2RHORATIOMAX 50.
 
@@ -174,8 +174,8 @@
 #define MAXZ (PHIWEDGE/2.)
 
 //total resolution
-#define TNX 1 //384 //32*10
-#define TNY 1 //360 //64*5
+#define TNX 144 //384 //32*10
+#define TNY 144 //360 //64*5
 #define TNZ 1 //32 //2*8
 //number of tiles
 #define NTX 32
