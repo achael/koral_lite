@@ -210,6 +210,8 @@
 #define THPROFRAD1US 30
 #define SILO2D_XZPLANE
 
+#define PRINT_FIXUPS_TO_SILO
+
 /************************************/
 //common physics / torus / atmosphere
 /************************************/
