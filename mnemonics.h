@@ -1,7 +1,6 @@
 /*! \file ko.h
  \brief mnemonics for various indices
 */
-#pragma once
 
 //rad or hydro
 #define RAD 1
@@ -167,6 +166,7 @@
 //frames
 #define ZAMOFRAME 0
 #define FFFRAME 1
+#define DRIFTFRAME 2
 
 //avg quantities
 #define AVGBSQ (NV+0)
