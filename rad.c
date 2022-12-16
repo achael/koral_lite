@@ -241,7 +241,7 @@ solve_implicit_lab(int ix,int iy,int iz,ldouble dt,int verbose)
       set_cflag(RADFIXUPFLAG,ix,iy,iz,0);
       break;
     }
-    else if(ret!=0)  
+    else if(ret!=0) //failure 
     {
       set_cflag(RADFIXUPFLAG,ix,iy,iz,-1); // flag cell for fixups
       global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFIXUPS]++;      
@@ -249,7 +249,7 @@ solve_implicit_lab(int ix,int iy,int iz,ldouble dt,int verbose)
     }
  } //the end of the opdamp loop
 
- //report failure
+ //report failure after opdamp :(
  if(ret<0) 
  {
     //if(ix==0 && iy==0) printf("\n implicit solver failed at %i %i %i\n",ix,iy,iz);

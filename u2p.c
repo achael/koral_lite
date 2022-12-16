@@ -477,13 +477,14 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
       ldouble dpp[NV],duu[NV];
       ldouble drho=pp[RHO]*(f-1.);
-   
+      //ldouble duu =pp[UU]*(f-1.);
+	
       for(iv=0;iv<NVMHD;iv++)
 	dpp[iv]=0.0;
 
       dpp[RHO]=drho;
       //do not inject energy - just density
-      dpp[UU]=0.;
+      dpp[UU]=0.; //duu;
       dpp[VX] = etarel[1];
       dpp[VY] = etarel[2];
       dpp[VZ] = etarel[3];
@@ -599,7 +600,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       ret=-1;      
   } //if(magpre>B2RHORATIOMAX*pp[RHO]) 
 
-  //independent check on ugas vs 
+  //independent check on ugas vs bsq
   if(magpre>B2UURATIOMAX*pp[UU]) 
   {
       //if(verbose) printf("mag_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],magpre);
