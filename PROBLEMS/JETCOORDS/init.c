@@ -178,7 +178,7 @@ else // we are inside the donut
     //midplane at r_mag
     init_dsandvels_fishbone_moncrief(r_mag, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell);
     //midplane at rchop
-    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell);
+    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_chop, &ell);
     //vector potential follows contours of UU
     ldouble uchop = u_av - u_av_chop; //vpot->zero on contour of radius r=rchop
     ldouble uchopmid = u_av_mid - u_av_chop; //vpot->zero away from midplane
@@ -213,7 +213,7 @@ else // we are inside the donut
     //midplane at r_mag
     init_dsandvels_fishbone_moncrief(r_mag, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell);
     //midplane at rchop
-    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_mid, &ell);
+    init_dsandvels_fishbone_moncrief(rchop, M_PI/2., BHSPIN, &rho, &u_av_chop, &ell);
     //vector potential follows contours of UU
     ldouble uchop = u_av - u_av_chop; //vpot->zero on contour of radius r=rchop
     ldouble uchopmid = u_av_mid - u_av_chop; //vpot->zero away from midplane

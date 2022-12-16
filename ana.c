@@ -9,6 +9,10 @@
 #define INCLUDE_WRITE_OUTPUT
 #endif
 
+#ifdef PRINT_FIXUPS_TO_SILO
+  printf("PRINT_FIXUPS_TO_SILO works only on the run!\n\n");
+#endif
+
 int 
 main(int argc, char **argv)
 {  

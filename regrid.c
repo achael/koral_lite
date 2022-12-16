@@ -31,9 +31,9 @@ main(int argc, char **argv)
   omp_myinit();  
   #endif
 
-  if (argc!=18 && argc!=12)
+  if (argc!=19 && argc!=12)
     {
-      printf("usage: ./regrid NX1 NY1 NZ1 coord1.dat res0001.dat NX2 NY2 NZ2 coord2.dat res0002.dat NV [regridinx=1 regridiny=1 regridinz=1 periodicphi=1 pert=0.0 interpolate=0]\n");
+      printf("usage: ./regrid NX1 NY1 NZ1 coord1.dat res0001.dat NX2 NY2 NZ2 coord2.dat res0002.dat NV [regridinx=1 regridiny=1 regridinz=1 periodicphi=1 pert=0.0 interpolate=0 divBclean=1]\n");
       exit(1);
     }
 
@@ -64,6 +64,7 @@ main(int argc, char **argv)
   char file_coord1[100],file_coord2[100],file_res1[100],file_res2[100];
   int periodicphi,regridx,regridy,regridz,interpolate;
   double pert=0.0;
+  int divBclean = 1;
 
   //random number gen. initialization
   srand ( time(NULL) );
@@ -84,7 +85,7 @@ main(int argc, char **argv)
 
   //NV=atoi(argv[11]);
 
-  if(argc==18)
+  if(argc==19)
     {
       regridx=atoi(argv[12]);
       regridy=atoi(argv[13]);
@@ -94,6 +95,8 @@ main(int argc, char **argv)
       pert=atof(argv[16]);
 
       interpolate=atoi(argv[17]);
+
+      divBclean = atoi(argv[18]);
     }
   else
     {
@@ -103,6 +106,8 @@ main(int argc, char **argv)
       periodicphi=1;
       pert=0.0;
       interpolate=0;
+      divBclean = 1;
+      
     }
 
   printf("regrid - projects snap shot file onto a new grid\n");
@@ -115,6 +120,7 @@ main(int argc, char **argv)
   if(periodicphi) printf("periodic in phi\n");
   if(pert!=0.0) printf("pert=%f\n",pert);
   if(interpolate) printf("interpolating\n");
+  if(divBclean) printf("Divergence of B cleaning\n");
 
   //allocating memory
   double *x1,**y1,*z1,*x2,**y2,*z2;
@@ -723,22 +729,22 @@ main(int argc, char **argv)
 
            if(i1==0)// && i2==0)
            { 
-             printf("Filling xxvec...\n");
+             //printf("Filling xxvec...\n");
              get_xx(ix,iy,iz,xxvec);
-             printf("%f %f %f %f\n",xxvec[0],xxvec[1],xxvec[2],xxvec[3]);
+             //printf("%f %f %f %f\n",xxvec[0],xxvec[1],xxvec[2],xxvec[3]);
 
-             printf("Filling geomout\n");
+             //printf("Filling geomout\n");
 	     fill_geometry(ix,iy,iz,&geomout);
-             printf("Filling geomin\n");
+             //printf("Filling geomin\n");
 	     fill_geometry_arb(ix,iy,iz,&geomin,BLCOORDS);//MKS2COORDS);
-             printf("%f %f \n",geomin.gdet,geomout.gdet);
-             printf("%f %f %f \n",geomin.xx,geomin.yy,geomin.zz);
+             //printf("%f %f \n",geomin.gdet,geomout.gdet);
+             //printf("%f %f %f \n",geomin.xx,geomin.yy,geomin.zz);
            }
 
 	   if(pert>0.0) dataout[i1][i2][i3][VZ]*=(1.+((double)rand()/(double)RAND_MAX-0.5)*2.*pert);
 	 }
 
-   //printf("Interpolated/copied data. \n");
+   printf("Interpolated/copied data. \n");
 
    //writing to the new file
    FILE *fout = fopen(file_res2,"wb");
@@ -761,6 +767,7 @@ main(int argc, char **argv)
   //perform divergence cleaning (only in 2D) if simulation has B-field
   // (this is non-relativistic, may have to expand code to handle this properly
   #ifdef MAGNFIELD //Only use for MHD
+  if(divBclean == 1){
   for(ix=0;ix<NX2;ix++)
     for(iy=0;iy<NY2;iy++)
       for(iz=0;iz<NZ2;iz++)
@@ -839,6 +846,7 @@ main(int argc, char **argv)
           new_Eb += (Bxx*Bxx + Byy*Byy + Bzz*Bzz)*dxx*dyy*dzz*pick_gdet(ix,iy,iz);
 	}
    #endif
+  }
 
   //compute factor for rescaling B-field to maintain same total magnetic energy in domain
   alpha = 1.;
@@ -854,6 +862,7 @@ main(int argc, char **argv)
       for(iz=0;iz<NZ2;iz++)
 	{ 
           #ifdef MAGNFIELD
+          if(divBclean){
           //rescale magnetic field
           dataout[ix][iy][iz][B1] *= alpha;
           dataout[ix][iy][iz][B2] *= alpha;
@@ -875,13 +884,14 @@ main(int argc, char **argv)
           Bzz = dataout[ix][iy][iz][B3];
           newnew_Eb += (Bxx*Bxx + Byy*Byy + Bzz*Bzz)*dxx*dyy*dzz*pick_gdet(ix,iy,iz);
           #endif
-
+          }
 	  fwrite(dataout[ix][iy][iz],sizeof(double),NV,fout);
 	}
 
   #ifdef MAGNFIELD
-  //printf("old_Eb new_Eb newnew_Eb a a^2 : %e %e %e %e %e \n",old_Eb,new_Eb,newnew_Eb,alpha,alpha*alpha);
+  printf("old_Eb new_Eb newnew_Eb a a^2 : %e %e %e %e %e \n",old_Eb,new_Eb,newnew_Eb,alpha,alpha*alpha);
   #endif
+  
 
   fclose(fout);
 

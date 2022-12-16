@@ -1358,6 +1358,7 @@ calc_Tij(ldouble *pp, void* ggg, ldouble T[][4])
 //S1
 //Gas only, uses gamma from pick_gammagas
 //Note the units are scaled by K_BOLTZ/MU_GAS/M_PROTON compared to S2,S3
+
 ldouble
 calc_Sfromu(ldouble rho,ldouble u,int ix,int iy,int iz)
 {
@@ -2845,8 +2846,10 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
       delta=0.5; //default to equal heating
     }
   else if(delta<0.)
-    delta=0.;
-  
+  {
+    delta=0.5; //ANDREW changed to equal in this case too
+    //delta=0.;
+  }
   return delta;
 }
 

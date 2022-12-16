@@ -1,6 +1,5 @@
 //KORAL - problem.h
 //choice of the problem plus some definitions
-#pragma once
 
 //available problems:
 
@@ -144,13 +143,27 @@
 //140 RADSURVEY -- radiative parameter survey
 //141 KEPINF -- INFDISK modified for injecting keplerian 
 //142 PARTIALTDE -- INFDISK modified for partial TDE binding energy distribution non-constant
+//143 KKDISC
+// 144 PUFFY
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 140
+#define PROBLEM 144
+
+#if(PROBLEM==144)
+
+#define PR_DEFINE "PROBLEMS/PUFFY/define.h"
+#define PR_BC "PROBLEMS/PUFFY/bc.c"
+#define PR_INIT "PROBLEMS/PUFFY/init.c"
+#define PR_PREPINIT "PROBLEMS/PUFFY/prepinit.c"
+#define PR_POSTINIT "PROBLEMS/PUFFY/postinit.c"
+#define PR_KAPPAES "PROBLEMS/PUFFY/kappaes.c"
+#define PR_TOOLS "PROBLEMS/PUFFY/tools.c"
+
+#endif
 
 #if(PROBLEM==142)
 
@@ -750,7 +763,7 @@
 #define PR_DEFINE "PROBLEMS/THINDISK/define.h"
 #define PR_BC "PROBLEMS/THINDISK/bc.c"
 #define PR_INIT "PROBLEMS/THINDISK/init.c"
-#define PR_KAPPA "PROBLEMS/THINDISK/kappa.c"
+//#define PR_KAPPA "PROBLEMS/THINDISK/kappa.c"
 #define PR_KAPPAES "PROBLEMS/THINDISK/kappaes.c"
 #define PR_DUMP "PROBLEMS/THINDISK/dump.c"
 #define PR_TOOLS "PROBLEMS/THINDISK/tools.c"
