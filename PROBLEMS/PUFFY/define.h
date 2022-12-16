@@ -113,7 +113,7 @@
 #define UURHORATIOMAX 1.e0 // 1.e2 new from Brandon
 
 #define EERHORATIOMIN 1.e-20
-#define EERHORATIOMAX 1e4 //1.e20
+#define EERHORATIOMAX 1e4 //1.e20 - can go even lower after regridding to force it to relax
 
 #define EEUURATIOMIN 1.e-20
 #define EEUURATIOMAX 1.e20
@@ -121,9 +121,11 @@
 
 #define B2UURATIOMAX 50. //around the same as uu to rho
 // maybe try this (after it is implemented correctly) to avoid breaking of the simulations - can be also usefull after regridding 
-// when we want to force it to run until it relax a bit 
+// when we want to force it to run until it relaxes a bit (eg after regridding)
 //#define B2RHOFLOOR_BACKUP_FFFRAME
 #define B2RHOFLOORFRAME DRIFTFRAME
+//#define DUINTFROMDRHO - in ZAMOFRAME, maybe better than duint=0
+
 
 #define B2RHORATIOMAX 50.
 
@@ -143,8 +145,8 @@
 //coordinates / resolution
 /************************************/
 #define myMKS2COORDS
-#define MKSR0 0.
-#define MKSH0 0.8
+#define MKSR0 0.1
+#define MKSH0 0.9
 #define MKSMY1 0.001
 #define MKSMY2 0.2
 #define MKSMP0 1.5
@@ -174,8 +176,8 @@
 #define MAXZ (PHIWEDGE/2.)
 
 //total resolution
-#define TNX 144 //384 //32*10
-#define TNY 144 //360 //64*5
+#define TNX 384 //32*10
+#define TNY 360 //64*5
 #define TNZ 1 //32 //2*8
 //number of tiles
 #define NTX 32

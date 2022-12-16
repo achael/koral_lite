@@ -324,8 +324,8 @@ static int get_m1closure_urfconrel(int verbose,
   else{
     if(verbose) 
       {
-	printf("failure: %d %d %d %d %d\n",nonfailure,failure1,failure2,failure3,failure);
-	printf("%e %e %e\n",Erf,gammarel2,Avcov[0]);
+	printf("failure: %d %d %d %d %d at %d %d %d\n",nonfailure,failure1,failure2,failure3,failure,geom->ix,geom->iy,geom->iz);
+  printf("%e %e %e\n",Erf,gammarel2,Avcov[0]);
 	print_4vector(Avcon);
 	print_4vector(Avcov);
 	if(isnan(Erf))	getchar();

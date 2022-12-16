@@ -15,7 +15,8 @@ main(int argc, char **argv)
 {  
 
   #ifdef PRINT_FIXUPS_TO_SILO
-    fprintf("!!!!!\n PRINT_FIXUPS_TO_SILO works only on the run!\n\n")
+    printf("PRINT_FIXUPS_TO_SILO works only on the run!\n\n");
+  
   #endif
 
   #ifdef MPI

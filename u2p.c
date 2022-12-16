@@ -492,9 +492,9 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
     if (B2RHOFLOORFRAME==ZAMOFRAME){ //new mass in ZAMO
       if(verbose) printf ("mag_floors in zamo frame\n");
       ldouble dpp[NV],duu[NV];
-      ldouble drho=pp[RHO]*(f-1.);
-      ldouble duint = pp[UU]*(fuu-1.);
-   
+
+      ldouble drho =pp[RHO]*(f-1.);
+         
       for(iv=0;iv<NVMHD;iv++){
         dpp[iv]=0.0;
       }
@@ -502,9 +502,17 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       calc_normalobs_ncon(GG, geom->alpha, etacon);
       conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
 
-      dpp[RHO]=drho;
+      dpp[RHO] = drho;
       //do not inject energy - just density
-      dpp[UU]=duint;
+      dpp[UU] = 0;
+      
+      #ifdef DUINTFROMDRHO
+        if (fuu!=1){
+          ldouble duint = pp[UU]*drho/pp[RHO]; //Debora - from the acient thindisk works version
+          dpp[UU] = duint;
+        }
+      #endif
+      
       dpp[VX] = etarel[1];
       dpp[VY] = etarel[2];
       dpp[VZ] = etarel[3];
@@ -562,7 +570,7 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
       // apply the floors to the scalars
       pp[RHO] = pporg[RHO]*f;
-      pp[UU] = pporg[UU]*fuu;
+      //pp[UU] = pporg[UU]*fuu;
 
       // new enthalpy
       wnew = pp[RHO] + pp[UU]*pgamma;
