@@ -198,7 +198,16 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *entrrad = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   #endif //RADIATION
 
-    
+	
+	// Debora - print out where are the cells which needs fixups (any)
+	#ifdef PRINT_FIXUPS_TO_SILO
+		int *fixups_u2pmhd = (int*)malloc(nx*ny*nz*sizeof(int));
+		int *fixups_u2prad = (int*)malloc(nx*ny*nz*sizeof(int));
+		int *fixups_radimp = (int*)malloc(nx*ny*nz*sizeof(int));
+		int *fixups = (int*)malloc(nx*ny*nz*sizeof(int));
+	#endif
+
+
   //first fill coordinates on nodes
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
@@ -369,6 +378,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      ldouble th=xxvecsph[2];
 	      ldouble ph=xxvecsph[3];
 
+
+
 	      //gdet and coordinates of cells +- 1 in radius
 	      ldouble gdet1,gdet2,gdet,gdetu;
 	      gdet=geomout.gdet;
@@ -438,6 +449,9 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      //magnetic fields
               #ifdef MAGNFIELD
 	      ldouble bcon[4],bcov[4];
+
+
+
 	      if(doingavg==0)
 		{
 		  calc_bcon_prim(pp,bcon,&geomout);
@@ -599,10 +613,38 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	      #ifdef PRINTVISCHEATINGTOSILO
 	      deltae[zonalindex]=calc_ViscousElectronHeatingFraction(&get_u(p,0,ix,iy,iz),&geomout);
 	      vischeat[zonalindex]=get_u_scalar(vischeating,ix,iy,iz);
-	      vischeatnege[zonalindex]=get_u_scalar(vischeatingnegebalance,ix,iy,iz);; 
-	      vischeatnegi[zonalindex]=get_u_scalar(vischeatingnegibalance,ix,iy,iz);; 
+	      vischeatnege[zonalindex]=get_u_scalar(vischeatingnegebalance,ix,iy,iz); 
+	      vischeatnegi[zonalindex]=get_u_scalar(vischeatingnegibalance,ix,iy,iz);
               dtauarr[zonalindex]=-1.;
 	      #endif
+
+		#ifdef PRINT_FIXUPS_TO_SILO
+			fixups_u2pmhd[zonalindex] = 0;
+			fixups_u2prad[zonalindex] = 0;
+			fixups_radimp[zonalindex] = 0;
+			fixups[zonalindex] = 0;
+			int nfixMHD = 0;
+			int nfixRAD = 0;
+			int nfixRADimp = 0;
+			
+			nfixMHD = get_cflag(HDFIXUPFLAG,ix,iy,iz);
+			if (nfixMHD!=0){
+				fixups_u2pmhd[zonalindex]+=nfixMHD;
+				fixups++;
+			}
+			nfixRAD = get_cflag(RADFIXUPFLAG,ix,iy,iz);
+			if (nfixRAD!=0){
+				fixups_u2prad[zonalindex]+=nfixRAD;
+				fixups++;
+			}  
+			nfixRADimp = get_cflag(RADIMPFIXUPFLAG,ix,iy,iz);
+			if (nfixRADimp!=0){
+				fixups_radimp[zonalindex]+=nfixRADimp;
+				fixups++;
+			}
+		#endif	
+	
+	
 		}
 	      
 	      else //using averaged data
@@ -730,6 +772,8 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 		  deltae[zonalindex]=-1.;
 		  dtauarr[zonalindex]=-1.;
 #endif
+
+
 		} //doingavg
 
 
@@ -1783,7 +1827,18 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
 		DB_DOUBLE, DB_ZONECENT, optList);
 
   #endif
-  #endif
+  #endif // MAGFIELD
+
+	#ifdef PRINT_FIXUPS_TO_SILO
+		DBPutQuadvar1(file, "fixups_u2pmhd","mesh1", fixups_u2pmhd,
+  		dimensions, ndim, NULL, 0, DB_INT, DB_ZONECENT, optList);
+		DBPutQuadvar1(file, "fixups_u2prad","mesh1", fixups_u2prad,
+  		dimensions, ndim, NULL, 0, DB_INT, DB_ZONECENT, optList);
+		DBPutQuadvar1(file, "fixups_radimp","mesh1", fixups_radimp,
+  		dimensions, ndim, NULL, 0, DB_INT, DB_ZONECENT, optList);
+		DBPutQuadvar1(file, "fixups","mesh1", fixups,
+  		dimensions, ndim, NULL, 0, DB_INT, DB_ZONECENT, optList);
+	#endif  		
 
 
   // Write vectors to file
@@ -2065,6 +2120,13 @@ DBPutQuadvar1(file, "Gtff","mesh1", Gtff,
 
   free(entrrad);
   #endif
+
+	#ifdef PRINT_FIXUPS_TO_SILO
+		free(fixups_u2pmhd);
+  		free(fixups_u2prad);
+  		free(fixups_radimp);
+		free(fixups);
+	#endif  
 
   return (0);
 }

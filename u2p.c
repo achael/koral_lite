@@ -453,37 +453,66 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
   ldouble ucond[4],ucovd[4];
   ldouble bcond[4],bcovd[4],bsq,magpre;
   ldouble etacon[4],etarel[4];
-  for(iv=1;iv<4;iv++)
+  ldouble f = 1.;
+  ldouble fuu = 1.;
+  int rhofloored = 0;
+  int uufloored = 0;
+
+  for(iv=1;iv<4;iv++){
     ucond[iv]=pp[1+iv];
+  }
+  
   calc_ucon_ucov_from_prims(pp, geom, ucond, ucovd);
   calc_bcon_bcov_bsq_from_4vel(pp, ucond, ucovd, geom, bcond, bcovd, &bsq);
   //magpre = 0.5 * bsq;
   magpre = bsq; // ANDREW: B2RHORATIOMAX and B2UURATIOMAX make more sense with bsq, not .5bsq
-  
-  calc_normalobs_ncon(GG, geom->alpha, etacon);
-  conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
 
-  if(magpre>B2RHORATIOMAX*pp[RHO]) 
-  {
+
+  // check density vs bsq
+  if(magpre>B2RHORATIOMAX*pp[RHO]) {
     if(verbose) printf("mag_floors CASE 2 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[RHO],magpre);
-    ldouble f=magpre/(B2RHORATIOMAX*pp[RHO]);
+    f = magpre/(B2RHORATIOMAX*pp[RHO]);
+    rhofloored = 1;
+  }
 
-    for(iv=0;iv<NVMHD;iv++)
-    {
+  // check ugas vs bsq
+  if(magpre>B2UURATIOMAX*pp[UU]) {
+    if(verbose) printf("mag_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],magpre);
+    fuu=magpre/(B2UURATIOMAX*pp[UU]); //increase factor, fuu>1   
+    uufloored = 1;
+  }
+
+   // floors were activated, apply them
+  if((rhofloored==1 || uufloored==1)){
+    // save backups
+    for(iv=0;iv<NVMHD;iv++){
       pporg[iv]=pp[iv];
     }
-
-#if (B2RHOFLOORFRAME==ZAMOFRAME) //new mass in ZAMO
-
+    // Debora: updated to be consistent with driftframe
+    if (B2RHOFLOORFRAME==ZAMOFRAME){ //new mass in ZAMO
+      if(verbose) printf ("mag_floors in zamo frame\n");
       ldouble dpp[NV],duu[NV];
-      ldouble drho=pp[RHO]*(f-1.);
-   
-      for(iv=0;iv<NVMHD;iv++)
-	dpp[iv]=0.0;
 
-      dpp[RHO]=drho;
+      ldouble drho =pp[RHO]*(f-1.);
+         
+      for(iv=0;iv<NVMHD;iv++){
+        dpp[iv]=0.0;
+      }
+
+      calc_normalobs_ncon(GG, geom->alpha, etacon);
+      conv_vels_ut(etacon,etarel,VEL4,VELPRIM,gg,GG);
+
+      dpp[RHO] = drho;
       //do not inject energy - just density
-      dpp[UU]=0.;
+      dpp[UU] = 0;
+      
+      #ifdef DUINTFROMDRHO
+        if (fuu!=1){
+          ldouble duint = pp[UU]*drho/pp[RHO]; //Debora - from the acient thindisk works version
+          dpp[UU] = duint;
+        }
+      #endif
+      
       dpp[VX] = etarel[1];
       dpp[VY] = etarel[2];
       dpp[VZ] = etarel[3];
@@ -492,42 +521,112 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
 
       p2u_mhd(dpp,duu,geom);
  
-      for(iv=0;iv<NVMHD;iv++)
-      {
-	uu[iv]+=duu[iv];
+      for(iv=0;iv<NVMHD;iv++){
+	      uu[iv]+=duu[iv];
       }
 
       int rettemp=0;
       rettemp=u2p_solver(uu,pp,geom,U2P_HOT,0); 
       if(rettemp<0)
-	rettemp=u2p_solver(uu,pp,geom,U2P_ENTROPY,0); 
+	      rettemp=u2p_solver(uu,pp,geom,U2P_ENTROPY,0); 
       
-      if(rettemp<0) 
-      {
-#ifdef BHDISK_PROBLEMTYPE
-	//if(geom->ix+TOI>5) //report only outside horizon
-#endif
-	  printf("u2p failed after imposing bsq over rho floors at %d %d %d with gamma=%f\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,get_u_scalar(gammagas,geom->ix,geom->iy,geom->iz));
+      if(rettemp<0) {
+	      printf("u2p failed after imposing bsq over rho floors at %d %d %d with gamma=%f\n",geom->ix+TOI,geom->iy+TOJ,geom->iz+TOK,get_u_scalar(gammagas,geom->ix,geom->iy,geom->iz));
 
-#ifdef B2RHOFLOOR_BACKUP_FFFRAME
-       // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
-       for(iv=0;iv<NVMHD;iv++)
-         pp[iv]=pporg[iv];
-       pp[RHO]*=f;
-       pp[UU]*=f;
-#else
-       print_primitives(pp);
-       exit(-1);
-#endif
+        #ifdef B2RHOFLOOR_BACKUP_FFFRAME
+          // Backup bsq/rho floor -- if zamo frame fails, do fluid frame instead of crashing 
+          for(iv=0;iv<NVMHD;iv++)
+            pp[iv]=pporg[iv];
+          pp[RHO]*=f;
+          pp[UU]*=fuu;
+        #else
+          print_primitives(pp);
+          exit(-1);
+        #endif
       }
+    }
     
-#elif(B2RHOFLOORFRAME==FFFRAME) //new mass in fluid frame
+    else if(B2RHOFLOORFRAME==FFFRAME){ //new mass in fluid frame
+      if(verbose) printf ("mag_floors in fluid frame\n");
       pp[RHO]*=f;
-      pp[UU]*=f;
+      pp[UU]*=fuu;
+    }
 
-#endif //B2RHOFLOORFRAME==ZAMOFRAME
+    //Debora new from Andrew's force free version, similar to HARM
+    else if(B2RHOFLOORFRAME==DRIFTFRAME){ // new mass in drift frame, Ressler+2017
+      if(verbose) printf ("mag_floors in drift frame\n");
+      ldouble betapar,betasq,betasqmax,gammapar;
+      ldouble udotB,QdotB,Bsq,Bmag,wold,wnew;
+      ldouble xx,vpar;
+      ldouble Bcon[4],Bcov[4],ucondr[4],vcon[4],ucont[4];
+      ldouble pgamma = GAMMA;
+      #ifdef CONSISTENTGAMMA
+        pgamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
+      #endif
+      ldouble pgammam1=pgamma-1.;
 
-#ifdef EVOLVEELECTRONS
+      // old enthalpy
+      wold = pporg[RHO] + pporg[UU]*pgamma;
+
+      // apply the floors to the scalars
+      pp[RHO] = pporg[RHO]*f;
+      //pp[UU] = pporg[UU]*fuu;
+
+      // new enthalpy
+      wnew = pp[RHO] + pp[UU]*pgamma;
+
+      // parallel velocity and Lorentz¨
+      betapar = -bcond[0]/((bsq)*ucond[0]);
+      betasq = betapar*betapar*bsq;
+      betasqmax = 1. - 1./(GAMMAMAXHD*GAMMAMAXHD);
+      if(betasq>betasqmax){
+        betasq=betasqmax;
+        printf("floored parallel velocity\n");
+      }
+      gammapar = 1./sqrt(1.-betasq);
+
+      // drift frame velocity
+      for(iv=0;iv<4;iv++)
+        ucondr[iv] = gammapar*(ucond[iv] + betapar*bcond[iv]);
+
+      // magnetic field 
+      Bcon[0]=0.;
+      Bcon[1]=pp[B1];
+      Bcon[2]=pp[B2];
+      Bcon[3]=pp[B3];
+      indices_21(Bcon,Bcov,gg);
+      Bsq = dot(Bcon,Bcov);
+      Bmag = sqrt(Bsq);
+
+      // conserved parallel momentum
+      udotB = dot(ucond,Bcov);
+      QdotB = udotB*wold*ucond[0];
+
+      // get new parallel velocity
+      xx = 2.*QdotB/(Bmag*wnew*ucondr[0]);
+      vpar = xx / (ucondr[0]*(1.+sqrt(1.+xx*xx)));
+
+      // new three velocity
+      vcon[0]=1.;
+      for(iv=1;iv<4;iv++){
+        vcon[iv]=vpar*Bcon[iv]/(Bmag) + ucondr[iv]/ucondr[0];
+      }
+
+      // to VELPRIM
+      conv_vels(vcon,ucont,VEL3,VELPRIM,gg,GG);
+    
+      pp[VX] = ucont[1];
+      pp[VY] = ucont[2];
+      pp[VZ] = ucont[3];
+
+    }
+  
+
+    // ANDREW
+    // TODO this seems wrong for species?
+    // TODO if uint changes above, we will not have ue + ui = uint using this method!
+    // TODO multiply both ui,ue by fuu? 
+    #ifdef EVOLVEELECTRONS
 
       //keep energy density in ions and electrons fixed after modifying B
       ldouble Tg,Te,Ti,ptot,uint,theta;
@@ -538,20 +637,20 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       ldouble ne=calc_thermal_ne(pporg); //thermal only
       ldouble pe=K_BOLTZ*ne*Te;
       ldouble gammae=GAMMAE;
-#ifdef CONSISTENTGAMMA
-#ifndef FIXEDGAMMASPECIES
-      gammae=calc_gammaintfromtemp(Te,ELECTRONS);
-#endif
-#endif
+      #ifdef CONSISTENTGAMMA
+      #ifndef FIXEDGAMMASPECIES
+            gammae=calc_gammaintfromtemp(Te,ELECTRONS);
+      #endif
+      #endif
       ldouble ue=pe/(gammae-1.);  
       ldouble ni=pporg[RHO]/MU_I/M_PROTON;
       ldouble pi=K_BOLTZ*ni*Ti;
       ldouble gammai=GAMMAI;
-#ifdef CONSISTENTGAMMA
-#ifndef FIXEDGAMMASPECIES
-      gammai=calc_gammaintfromtemp(Ti,IONS);
-#endif
-#endif
+      #ifdef CONSISTENTGAMMA
+      #ifndef FIXEDGAMMASPECIES
+            gammai=calc_gammaintfromtemp(Ti,IONS);
+      #endif
+      #endif
       ldouble ui=pi/(gammai-1.);
 
       //calculate new entropy using pp[]
@@ -562,13 +661,13 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       mass = M_ELECTR;
       gamma = GAMMAE;
       n = calc_thermal_ne(pp);
-#ifdef CONSISTENTGAMMA
-      Tenew=solve_Teifromnmu(n, mass, ue,ELECTRONS); //solves in parallel for gamma and temperature
-      theta=K_BOLTZ*Tenew/mass;  
-#ifndef FIXEDGAMMASPECIES
-      gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
-#endif
-#endif
+      #ifdef CONSISTENTGAMMA
+            Tenew=solve_Teifromnmu(n, mass, ue,ELECTRONS); //solves in parallel for gamma and temperature
+            theta=K_BOLTZ*Tenew/mass;  
+      #ifndef FIXEDGAMMASPECIES
+            gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
+      #endif
+      #endif
       pnew=(ue)*(gamma-1.);
       Tenew=pnew/K_BOLTZ/n;
 
@@ -581,31 +680,24 @@ check_floors_mhd(ldouble *pp, int whichvel,void *ggg)
       mass = M_PROTON;
       gamma = GAMMAI;
       n = calc_thermal_ne(pp);
-#ifdef CONSISTENTGAMMA
-      Tinew=solve_Teifromnmu(n, mass, ui,IONS); //solves in parallel for gamma and temperature
-      theta=K_BOLTZ*Tinew/mass;
-#ifndef FIXEDGAMMASPECIES
-      gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
-#endif
-#endif
+      #ifdef CONSISTENTGAMMA
+            Tinew=solve_Teifromnmu(n, mass, ui,IONS); //solves in parallel for gamma and temperature
+            theta=K_BOLTZ*Tinew/mass;
+      #ifndef FIXEDGAMMASPECIES
+            gamma=calc_gammaintfromtheta(theta); //the same gamma as just solved     
+      #endif
+      #endif
       
       pnew=(ui)*(gamma-1.);
       Tinew=pnew/K_BOLTZ/n;
       Sinew=calc_SefromrhoT(pp[RHO],Tinew,IONS);
       
       pp[ENTRI]=Sinew;
-#endif  //EVOLVEELECTRONS
+    #endif  //EVOLVEELECTRONS
 
-      ret=-1;      
+    ret=-1;      
   } //if(magpre>B2RHORATIOMAX*pp[RHO]) 
 
-  //independent check on ugas vs 
-  if(magpre>B2UURATIOMAX*pp[UU]) 
-  {
-      //if(verbose) printf("mag_floors CASE 3 at (%d,%d,%d): %e %e\n",geom->ix+TOI,geom->iy+TOJ,geom->iz,pp[UU],magpre);
-      pp[UU]*=magpre/(B2UURATIOMAX*pp[UU]);
-      ret=-1;      
-  }
 
 #endif //MAGNFIELD
 
