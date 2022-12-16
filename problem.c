@@ -770,7 +770,7 @@ solve_the_problem(ldouble tstart, char* folder)
       
       // Set uforget = p and p = ppostimplicit over domain
       copy_u(1.,p,uforget); //backup current primitives
-      //copy_u(1.,ppostimplicit,p); // ANDREW: try saving out current prims
+      copy_u(1.,ppostimplicit,p); // ANDREW: try saving out current prims
    
       //counting faiures and average parameters of the implicit solver
       int nfailures[3],nfailuresloc[3]={global_int_slot[GLOBALINTSLOT_NTOTALRADIMPFAILURES],

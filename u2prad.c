@@ -113,10 +113,10 @@ u2p_rad_urf(ldouble *uu, ldouble *pp,void* ggg, int *corrected)
       return -1;
     }
 
-  if (VELR != VELPRIMRAD)
-  {
-    conv_vels(urfcon,urfcon,VELR,VELPRIMRAD,gg,GG);
-  }
+  //if (VELR != VELPRIMRAD)
+  //{
+  conv_vels(urfcon,urfcon,VELR,VELPRIMRAD,gg,GG);
+  //}
 
   //new primitives
   pp[EE]=Erf;
