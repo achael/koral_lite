@@ -1,13 +1,14 @@
 #define MASS 1.//(1./MSUNCM) //so that x-coordinate in centimeters
 
 // which problem
+#define LINEARALFVEN 0
 #define FASTWAVE 1  // works poorly in hybrid 
 #define ALFVEN 2    // works less well in hybrid
 #define ALFVEN2 3   // seems to work well in hybrid
 #define THREEWAVE 4
-#define LINEARALFVEN 0
+#define BREAKDOWN 5
 
-#define FFPROBLEM 3
+#define FFPROBLEM 5
 
 #if(FFPROBLEM==LINEARALFVEN)
 #define LINEARALFVENSINGLEPERIOD
@@ -35,9 +36,9 @@
 //#define NOLOGINS
 
 #define FORCEFREE
-#define HYBRID_FORCEFREE
-#define HYBRID_FORCEFREE_SIGMACUT 50
-#define HYBRID_FORCEFREE_WIDTH .25//0.25
+//#define HYBRID_FORCEFREE
+//#define HYBRID_FORCEFREE_SIGMACUT 50
+//#define HYBRID_FORCEFREE_WIDTH .25//0.25
 
 //#define HYBRID_FORCEFREE_XCUT 0.75
 //#define FORCEFREE_PARALLEL_COLD
@@ -54,7 +55,7 @@
 #define MAXY 2*LLL
 #define MINZ 0.
 #define MAXZ 1.
-#define TNX 320
+#define TNX 512
 #define TNY 1//256
 #define TNZ 1
 #define NTX 1
@@ -75,7 +76,7 @@
 #define OUTCOORDS MYCOORDS
 #define SIMOUTPUT 2
 #define OUTPUTINGU
-#define DTOUT1 0.05 //res
+#define DTOUT1 0.01 //res
 #define DTOUT2 1.e20 //avg
 
 /************************************/
@@ -86,7 +87,7 @@
 #define TSTEPLIM .5
 #define FLUXLIMITER 1
 #define MINMOD_THETA  1.5
-#define NOUTSTOP 40
+#define NOUTSTOP 2
 //#define NSTEPSTOP 1
 //#define ALLSTEPSOUTPUT 1
 
@@ -115,21 +116,20 @@
 //problem parameters
 /************************************/
 
+#define RHOINIT 1.
+#define UUINIT 1./(GAMMA-1.)
 
-#define SIGMAINIT 100
-
+//#define SIGMAINIT 100
+#ifdef SIGMAINIT
 //#define INIT_SIGMA_TANH
 #define INIT_SIGMA_LIN
 
-
 //#define INIT_SIGMA_HIGHLEFT
-
 #define SIGMAINITMIN 10
 #define SIGMAINITWIDTH 5
 #define SIGMAINITOFFSET -.5
-
-#define RHOINIT 1.
 #define THETAINIT .25
 //#define UUINIT RHOINIT*THETAINIT/(GAMMA-1.)/MU_GAS//endenCGS2GU(1.*CCC*CCC*1.e-3)
-#define UUINIT 1./(GAMMA-1.)
+#endif
+
 #define VGASINIT 0.

@@ -19,12 +19,16 @@ int i;
 #ifdef K07PROBLEM
 ldouble Bcon_lhs[4] = {0.,10.,1.,0.};
 ldouble ucon_lhs[4] = {1.,0.,0.,0.};
-#else
-//ldouble Bcon_lhs[4] = {0,3.,3.,0};
-//ldouble ucon_lhs[4] = {1.,0.,0.,0.};
-ldouble Bcon_lhs[4] = {0.,0,2.3094,0.};
-ldouble ucon_lhs[4] = {0.,0.57735,0.,0.};
 
+#else
+
+//ldouble Bcon_lhs[4] = {0,3.,3.,0};
+ldouble Bcon_lhs[4] = {0,7.,1.,0.};
+ldouble ucon_lhs[4] = {1.,0.,0.,0.};
+
+
+//ldouble Bcon_lhs[4] = {0.,0,2.3094,0.};
+//ldouble ucon_lhs[4] = {0.,0.57735,0.,0.};
 #endif
 
 
@@ -129,7 +133,7 @@ else
 #else
 theta_lhs = atan((bcon_wave_lhs[3]-bzc)/(bcon_wave_lhs[2]-byc));
 thetarot = M_PI;
-thetarot = 0.3;
+//thetarot = 0.3;
 if(geom.xx < x0)
 {
   theta = theta_lhs;
@@ -141,7 +145,7 @@ else if(geom.xx > x1)
 else
 {
   theta = theta_lhs + thetarot*pow(sin(M_PI*(geom.xx + 0.5*awidth)/(2*awidth)),2);
-  theta = theta_lhs + thetarot*0.5*(1+sin(5*M_PI*geom.xx));//??????
+ //theta = theta_lhs + thetarot*0.5*(1+sin(5*M_PI*geom.xx));//??????
 }
 #endif
 
@@ -189,7 +193,9 @@ pp[VX] = ucon[1];
 pp[VY] = ucon[2];
 pp[VZ] = ucon[3];
 
-printf("%d | %e\n",ix,pp[VX]*pp[B1]+pp[VY]*pp[B2]+pp[VZ]*pp[B3]);
+//printf("%d | %e\n",ix,pp[VX]*pp[B1]+pp[VY]*pp[B2]+pp[VZ]*pp[B3]);
+
+
 ////////////////////////////////////////////////////////////////////////////////////////
 // modify rho for linear sigma slope or tanh
 // currently working with ALFVEN problem

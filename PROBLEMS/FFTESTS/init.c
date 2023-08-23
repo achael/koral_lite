@@ -70,10 +70,11 @@ ldouble mu, gammamu;
 ldouble Ex,Ey,Ez,Bx,By,Bz,Bsq,Esq,gamma;
 ldouble xp, Epx, Epy, Epz, Bpx, Bpy, Bpz;
 
+// Fast wave test, Komissarov 2002
 #if(FFPROBLEM==FASTWAVE)
 if(ix==0) printf("FASTWAVE problem\n");
 
-// Fast wave test, Komissarov 2002
+
 mu=1;
 
 Bx=1.;
@@ -90,44 +91,11 @@ Ey = 0.;
 //Ez = 1.-mu*By; //McKinney06 pg 8 
 Ez = -mu*By; 
 
-#elif(FFPROBLEM==ALFVEN2)
-if(ix==0) printf("ALFVEN2 problem\n");
-
-// Degenerate Alfven wave test, Komissarov 2002
-mu=0.5; // wave speed (3-velocity)
-
-gammamu=1./sqrt(1-mu*mu);
-xp = geom.xx*gammamu; // Lorentz contraction 
-
-// Wave frame fields
-ldouble phi;
-if(xp<-0.1)
-  phi=0.;
-else if(xp>=-0.1 && xp<=0.1)
-  phi=2.5*M_PI*(xp+0.1);
-else if(xp>0.1)
-  phi=0.5*M_PI;
-
-Epx = 0;
-Epy = 0;
-Epz = 0;
-Bpx = 0;
-Bpy = 2*cos(phi);
-Bpz = 2*sin(phi);
-
-// Lorentz transformation to grid frame
-Ex = Epx;
-Ey = gammamu*(Epy + mu*Bpz);
-Ez = gammamu*(Epz - mu*Bpy);
-
-Bx = Bpx;
-By = gammamu*(Bpy - mu*Epz);
-Bz = gammamu*(Bpz + mu*Epy);
-
+// Alfven wave test, De Villiers and Hawley 2002
 #elif(FFPROBLEM==ALFVEN)
 if(ix==0) printf("ALFVEN problem\n");
 
-// Alfven wave test, De Villiers and Hawley 2002
+
 mu=-0.5; // wave speed (3-velocity)
 
 gammamu=1./sqrt(1-mu*mu);
@@ -158,10 +126,46 @@ Bx = Bpx;
 By = gammamu*(Bpy - mu*Epz);
 Bz = gammamu*(Bpz + mu*Epy);
 
+// Degenerate Alfven wave test, Komissarov 2002
+#elif(FFPROBLEM==ALFVEN2)
+if(ix==0) printf("ALFVEN2 problem\n");
+
+mu=0.5; // wave speed (3-velocity)
+
+gammamu=1./sqrt(1-mu*mu);
+xp = geom.xx*gammamu; // Lorentz contraction 
+
+// Wave frame fields
+ldouble phi;
+if(xp<-0.1)
+  phi=0.;
+else if(xp>=-0.1 && xp<=0.1)
+  phi=2.5*M_PI*(xp+0.1);
+else if(xp>0.1)
+  phi=0.5*M_PI;
+
+Epx = 0;
+Epy = 0;
+Epz = 0;
+Bpx = 0;
+Bpy = 2*cos(phi);
+Bpz = 2*sin(phi);
+
+// Lorentz transformation to grid frame
+Ex = Epx;
+Ey = gammamu*(Epy + mu*Bpz);
+Ez = gammamu*(Epz - mu*Bpy);
+
+Bx = Bpx;
+By = gammamu*(Bpy - mu*Epz);
+Bz = gammamu*(Bpz + mu*Epy);
+
+
+// Three wave test, Komissarov 2002
 #elif(FFPROBLEM==THREEWAVE)
 if(ix==0) printf("THREEWAVE problem\n");
 
-// three wave test, Komissarov 2004
+
 if(geom.xx<0)
 {
   Bx=1.0;
@@ -189,6 +193,37 @@ else
   Ey=2.0;
   Ez=-1.5;
 }
+
+//Force-free breakdown test, Komissarov 2002
+#elif(FFPROBLEM==BREAKDOWN)
+if(geom.xx<0)
+{
+  Bx=1.0;
+  By=1.0;
+  Bz=1.0;
+  Ex=0.0;
+  Ey=0.5;
+  Ez=-0.5;
+}
+else if(geom.xx>0.2)
+{
+  Bx=1.0;
+  By=-1.0;
+  Bz=-1.0;
+  Ex=0.0;
+  Ey=0.5;
+  Ez=-0.5;
+}
+else
+{
+  Bx=1.0;
+  By=1.0 - 10*geom.xx;
+  Bz=1.0 - 10*geom.xx;
+  Ex=0.0;
+  Ey=0.5;
+  Ez=-0.5;
+}
+
 
 #else
 printf("FFPROBLEM NOT RECOGNIZED!\n");

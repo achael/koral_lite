@@ -764,7 +764,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 
 #endif
 
-
+#ifdef MAGNFIELD
 #ifdef FORCEFREE // must have VELPRIM=VELR
 
       //ffinv[zonalindex]=get_cflag(FFINVFLAG,ix,iy,iz);
@@ -782,6 +782,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 #else
       jdens[zonalindex]=0.;      
       ffinv[zonalindex]=0.;
+#endif
 #endif
       
       #ifdef EVOLVEELECTRONS

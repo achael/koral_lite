@@ -832,17 +832,20 @@ fill_ffprims()
       ldouble ffval= 1.;
 	
       #ifdef HYBRID_FORCEFREE
+      
+      #ifdef HYBRID_FORCEFREE_XCUT //cut based on x-domain for test problems
+      //if(geom.xx < HYBRID_FORCEFREE_XCUT) ffval = 0.;
+      //else ffval = 1.;
+
+      ffval = calc_ffinv_val_x(geom.xx);
+
+#else // cut based on local sigma
       ldouble ucon[4],ucov[4],bcon[4],bcov[4];
       ldouble bsq, sigma;
       calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
       calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
       sigma = bsq/pp[RHO];
-      
-      #ifdef HYBRID_FORCEFREE_XCUT //cut based on x-domain for test problems
-      if(geom.xx < HYBRID_FORCEFREE_XCUT) ffval = 0.;
-      else ffval = 1.;
-      
-      #else // cut based on local sigma
+
       ffval = calc_ffinv_val(sigma);
       #endif
       #endif //HYBRID_FORCEFREE
@@ -1038,6 +1041,40 @@ calc_ffinv_val(ldouble sigma)
   }
   
   if(isnan(ffval) || ffval <0. || ffval>1. || isnan(sigma))
+  {
+    ffval = 0.; // default MHD inversion 
+  }
+#endif
+#endif
+  return ffval;
+}
+
+// calculate f(x), the value of the mixing function for hybrid force free MHD
+// (1D tests)
+ldouble
+calc_ffinv_val_x(ldouble x)
+{
+  ldouble ffval = 0.;
+#ifdef FORCEFREE
+  ffval = 1.; 
+
+#if defined(HYBRID_FORCEFREE) && defined(HYBRID_FORCEFREE_XCUT)
+  ldouble tanhwidth = HYBRID_FORCEFREE_WIDTH;
+  
+  if(tanhwidth<=0) // step function transition
+  {
+     if(x >= HYBRID_FORCEFREE_XCUT) ffval = 1.;
+     else ffval = 0.;
+  }
+  else //finite width transition
+  {
+     ldouble xcut = HYBRID_FORCEFREE_XCUT;
+     ffval = 0.5 + 0.5*tanh((x-xcut)/tanhwidth);
+     if(ffval<(1./64.)) ffval=0.;
+     if(ffval>(63./64.)) ffval=1.;
+  }
+  
+  if(isnan(ffval) || ffval <0. || ffval>1. || isnan(x))
   {
     ffval = 0.; // default MHD inversion 
   }

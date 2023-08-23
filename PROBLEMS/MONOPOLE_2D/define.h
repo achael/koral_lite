@@ -20,6 +20,7 @@
 //#define U2PCONV 1.e-14
 
 //#define FORCEFREE
+//#define HYBRID_FORCEFREE
 
 /************************************/
 //reconstruction / Courant
@@ -32,33 +33,35 @@
 #define MINMOD_THETA 1.5
 
 /************************************/
-//rmhd floors
+//mhd floors
 /************************************/
 //#define SPLIT_MONOPOLE
 
 #define RHOATMMIN  1.e-20
 #define UINTATMMIN 1.e-20
 
-#define B2RHORATIOMAXINIT 200//100//100
-#define B2UURATIOMAXINIT 200//100//100
+#define B2RHORATIOMAXINIT 100//200
+#define B2UURATIOMAXINIT 100//200
 //#define NOLOGINS
 //#define ENFORCEENTROPY
+
 
 #if defined(FORCEFREE)
 
 
-#define HYBRID_FORCEFREE
+#if defined(HYBRID_FORCEFREE)
 #define HYBRID_FORCEFREE_SIGMACUT 50
 #define HYBRID_FORCEFREE_WIDTH 0.05
 #define FORCEFREE_SOLVE_PARALLEL
-//#define FORCEFREE_PARALLEL_COLD
-#define FORCEFREE_PARALLEL_ENTROPY
+#define FORCEFREE_PARALLEL_COLD
+//#define FORCEFREE_PARALLEL_ENTROPY
+#endif
 
 //#define SKIPALLFLOORS // TODO seems critical for SOLVE_PARALLEL? 
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-//#define B2RHOFLOORFRAME DRIFTFRAME // not used
+#define B2RHOFLOORFRAME ZAMOFRAME //DRIFTFRAME // not used
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 100. 
 #define B2UURATIOMIN 0.
@@ -74,7 +77,7 @@
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME DRIFTFRAME
+#define B2RHOFLOORFRAME ZAMOFRAME //DRIFTFRAME
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 100.
 #define B2UURATIOMIN 0.
@@ -101,8 +104,8 @@
 #define RMAX 200.
 #define MKS1R0 MKSR0
 
-#define TNX 128
-#define TNY 128
+#define TNX 256
+#define TNY 256
 #define TNZ 1
 
 #ifdef myMKS1COORDS //modified Kerr-Shild
@@ -149,7 +152,7 @@
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
 #define NSTEPSTOP 1.e10
-#define NOUTSTOP 110
+#define NOUTSTOP 150
 #define SILOOUTPUT 1
 #define PRIMOUTPUT 1
 //#define PRIMOUTPUTINMYCOORDS
