@@ -248,11 +248,13 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     ldouble alpgam = calc_alpgam(u1, gg, GG);
     
     u2con[0]=-alpgam*GG[0][0];
-    //ANDREW this makes it compatible with Olek's version,
-    //but I'm not sure it's correct:
+    // ANDREW u^0 should be negative below horizon in BL coords!
+    /*
     if(u2con[0]<0)
+    {
       u2con[0] = fabs(u2con[0]);
-          
+    } 
+    */     
     u2con[1]=u1[1]-alpgam*GG[0][1];
     u2con[2]=u1[2]-alpgam*GG[0][2];
     u2con[3]=u1[3]-alpgam*GG[0][3];
@@ -264,21 +266,16 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     ldouble alpgam = calc_alpgam(u1, gg, GG);
 
     u2con[0]=-alpgam*GG[0][0];
-    //ANDREW this makes it compatible with Olek's version,
-    //but I'm not sure it's correct:
+    // ANDREW u^0 should be negative below horizon in BL coords!
+    /*
     if(u2con[0]<0)
+    {
       u2con[0] = fabs(u2con[0]);
-
-    //ANDREW's version
-    //u2con[1]=(u1[1]-alpgam*GG[0][1])/u2con[0];
-    //u2con[2]=(u1[2]-alpgam*GG[0][2])/u2con[0];
-    //u2con[3]=(u1[3]-alpgam*GG[0][3])/u2con[0];
-
-    //Identical to Olek's
+    }
+    */
     u2con[1]=u1[1]/u2con[0] + GG[0][1]/GG[0][0];
     u2con[2]=u1[2]/u2con[0] + GG[0][2]/GG[0][0];
     u2con[3]=u1[3]/u2con[0] + GG[0][3]/GG[0][0];
-
   }
 
   /*************** not supported  ***************/
@@ -325,7 +322,7 @@ calc_alpgam(ldouble *u1, ldouble gg[][5], ldouble GG[][5])
   ldouble alpha2=(-1./GG[0][0]);
   ldouble alpgam2=alpha2*gamma2;
   if(alpgam2<0.) {
-    //printf("alpgam2.lt.0 in VELR->VEL4\n");
+    printf("alpgam2.lt.0 in VELR->VEL4\n");
     return 1.;
   }
   ldouble alpgam=sqrt(alpgam2);
@@ -401,6 +398,9 @@ fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5])
   else //this is in ergoregion
   {
     //ANDREW THIS IS WRONG, should be minus sign everywhere
+    //it should definitly be minus below horizon in BL, since u^0<0 there
+    //but is this always true?
+    //I think -/+ choice here corresponds to +/- energy-at-infinity trajectories
     //u1[0] = (-b + sqrt(delta)) / a;
     u1[0] = (-b - sqrt(delta)) / a;
   }

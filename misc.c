@@ -241,13 +241,15 @@ calc_cells_under_horiz()
       else
 	cells_under_horizon+=1;
     }
+
     
     if(cells_under_horizon<3)
     {
       printf("There are only %d cells under horizon at rh=%.2f! increase to at least 4\n",
 	     cells_under_horizon,rhorizonBL);
-      exit(-1);
+      //exit(-1);
     }
+   
     if(cells_under_horizon==NX)
     {
       printf("All cells on inner tile are under horizon! \n");
