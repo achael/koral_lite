@@ -1,6 +1,7 @@
 #define MASS 1.//(1./MSUNCM) //so that x-coordinate in centimeters
-#define PULSEWIDTH 0.5;
-//#define K07PROBLEM
+//#define LINEARALFVEN
+#define PULSEWIDTH 1.//0.5;
+
 
 /************************************/
 //restart
@@ -23,7 +24,7 @@
 //#define ENFORCEENTROPY
 #define NOLOGINS
 
-#define FORCEFREE
+//#define FORCEFREE
 
 #ifdef FORCEFREE
 #define HYBRID_FORCEFREE
@@ -33,7 +34,7 @@
 #define HYBRID_FORCEFREE_WIDTH 0.1//0.25
 
 #define FORCEFREE_SOLVE_PARALLEL
-#define FORCEFREE_PARALLEL_COLD
+//#define FORCEFREE_PARALLEL_COLD
 #define FORCEFREE_PARALLEL_ENTROPY
 //#define FORCEFREE_PARALLEL_MHD
 //#define SKIPALLFLOORS
@@ -107,23 +108,14 @@
 //problem parameters
 /************************************/
 
+#define SIGMAINIT 100
+
+#ifdef SIGMAINIT
+#define THETAINIT 1.
+#else
 #define RHOINIT 1.
 #define PINIT 1.
 #define UUINIT PINIT/(GAMMA-1.)
+#endif
 
-
-//#define SIGMAINIT 100
-
-//#define INIT_SIGMA_TANH
-//#define INIT_SIGMA_LIN
-//#define SIGMAINIT 100
-
-//#define INIT_SIGMA_HIGHLEFT
-
-//#define SIGMAINITMIN 10
-//#define SIGMAINITWIDTH 5
-//#define SIGMAINITOFFSET -.5
-
-//#define THETAINIT .25
-//#define UUINIT RHOINIT*THETAINIT/(GAMMA-1.)/MU_GAS//endenCGS2GU(1.*CCC*CCC*1.e-3)
 

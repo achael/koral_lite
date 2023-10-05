@@ -11,25 +11,92 @@ struct geometry geomBL;
 fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
 ldouble pp[NV],uu[NV];
 
+////////////////////////////
+// Linear case
+////////////////////////////
+
+#ifdef LINEARALFVEN
+ldouble rho,ugas,Bsq;
+Bsq=1.;
+
+#ifndef SIGMAINIT
+rho = RHOINIT;
+ugas = UUINIT;
+#else
+rho=Bsq/SIGMAINIT;
+ugas=rho*THETAINIT/(GAMMA-1.)/MU_GAS;
+#endif
+
+ldouble va = sqrt(Bsq)/sqrt(Bsq + rho + GAMMA*ugas);
+
+ldouble k = 2*M_PI/LLL;
+ldouble omega = k*va;
+ldouble Delta=1.e-3;
+
+pp[B1] = Sqrt(Bsq);
+pp[B2] = -Sqrt(Bsq)*Delta*Sin(geom.xx*k);
+pp[B3] = Sqrt(Bsq)*Delta*(1+Cos(geom.xx*k));
+
+
+//#ifdef LINEARALFVENSINGLEPERIOD
+if(geom.xx>0.5*PULSEWIDTH*LLL || geom.xx < -0.5*PULSEWIDTH*LLL)
+{
+  pp[B2]=0;
+  pp[B3]=0;
+}
+//#endif
+
+pp[VX] = 0;
+pp[VY] = -va*pp[B2]/Sqrt(Bsq);
+pp[VZ] = -va*pp[B3]/Sqrt(Bsq);
+
+
+pp[RHO] = rho;
+pp[UU] = ugas;
+
+ldouble ucon[4],ucov[4],bcon[4],bcov[4],bsq;
+calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
+calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
+
+ldouble w = rho + GAMMA*ugas;
+ldouble va_v2 = (bcon[1] + ucon[1]*sqrt(w+bsq))/(bcon[0] + ucon[0]*sqrt(w+bsq));
+ldouble va_ff = (bcon[1] + ucon[1]*sqrt(bsq))/(bcon[0] + ucon[0]*sqrt(bsq));;
+if(geom.ix==0 && PROCID==0)
+{
+  printf("linearalfven: %e %e %e %e\n",k,omega,2*M_PI/omega,2*M_PI/omega/DTOUT1);
+  printf("alfvenspeeds: %e %e %e\n",va,va_v2,va_ff);
+  //printf("%e %e %e %e \n",ucon[0],ucon[1],ucon[2],ucon[3]);
+  //printf("%e %e\n",Bsq,bsq);
+  //exit(-1);
+}
+
+////////////////////////////
+// Nonlinear case
+////////////////////////////
+
+#else 
+
 // state on the LHS
 int i;
 
 // definition of the state on the LHS
 // all equations assume cartesian minkowski
-#ifdef K07PROBLEM
-ldouble Bcon_lhs[4] = {0.,10.,1.,0.};
-ldouble ucon_lhs[4] = {1.,0.,0.,0.};
 
-#else
-
+//Komissarov 1997
 //ldouble Bcon_lhs[4] = {0,3.,3.,0};
+//ldouble ucon_lhs[4] = {1.,0.,0.,0.};
+
+//Komissarov 2007
+//ldouble Bcon_lhs[4] = {0.,10.,1.,0.};
+//ldouble ucon_lhs[4] = {1.,0.,0.,0.};
+
+//Me (Check ?)
 ldouble Bcon_lhs[4] = {0,7.,1.,0.};
 ldouble ucon_lhs[4] = {1.,0.,0.,0.};
 
-
 //ldouble Bcon_lhs[4] = {0.,0,2.3094,0.};
 //ldouble ucon_lhs[4] = {0.,0.57735,0.,0.};
-#endif
+
 
 
 ucon_lhs[0] = sqrt(1 + dot3nr(ucon_lhs,ucon_lhs));
@@ -49,6 +116,7 @@ if(PROCID==0 && ix==0) printf("bsq_lhs: %e \n", bsq_lhs);
 // TODO: add density slope 
 // bsq should be constant everywhere in this setup (??)
 ldouble rho,ugas;
+
 #ifndef SIGMAINIT
 rho = RHOINIT;
 ugas = UUINIT;
@@ -107,7 +175,7 @@ bzc = c*az/dd;
 
 // calculate local rotation angle theta
 // TODO -- offset from origin center
-ldouble awidth = PULSEWIDTH;
+ldouble awidth = 0.5*PULSEWIDTH; //AC Changed for consistent defns in nonlinear/linear case
 ldouble x0 = -0.5*awidth;
 ldouble x1 = 0.5*awidth;
 ldouble theta_lhs, thetarot, theta;
@@ -145,7 +213,6 @@ else if(geom.xx > x1)
 else
 {
   theta = theta_lhs + thetarot*pow(sin(M_PI*(geom.xx + 0.5*awidth)/(2*awidth)),2);
- //theta = theta_lhs + thetarot*0.5*(1+sin(5*M_PI*geom.xx));//??????
 }
 #endif
 
@@ -195,51 +262,11 @@ pp[VZ] = ucon[3];
 
 //printf("%d | %e\n",ix,pp[VX]*pp[B1]+pp[VY]*pp[B2]+pp[VZ]*pp[B3]);
 
+#endif //LINEARALFVEN
 
-////////////////////////////////////////////////////////////////////////////////////////
-// modify rho for linear sigma slope or tanh
-// currently working with ALFVEN problem
-/*
-#if defined(INIT_SIGMA_TANH) || defined(INIT_SIGMA_LIN)
-//ldouble bsq=Bsq/(gamma*gamma); //this is true if gamma=gammaperp
-
-ldouble sigma;
-ldouble sigmaleft,sigmaright;
-#ifdef INIT_SIGMA_HIGHLEFT
-sigmaleft=SIGMAINIT;
-sigmaright=SIGMAINITMIN;
-#else
-sigmaleft=SIGMAINITMIN;
-sigmaright=SIGMAINIT;
-#endif
-
-#if defined(INIT_SIGMA_TANH)
-ldouble tw=SIGMAINITWIDTH;
-ldouble to=SIGMAINITOFFSET;
-sigma = sigmaleft + (sigmaright-sigmaleft)*0.5*(tanh(tw*(geom.xx-to))+1);
-
-#elif defined(INIT_SIGMA_LIN)
-
-if(geom.xx<-0.5*LLL)
-{
-  sigma = sigmaleft;
-}
-else if(geom.xx>0.5*LLL)
-{
-  sigma = sigmaright;
-}
-else
-{
-  sigma = (sigmaright-sigmaleft)*(geom.xx-0.5*LLL)/(LLL) + sigmaright;
-}
-
-#endif
-pp[RHO]=bsq/sigma;
-pp[UU]=pp[RHO]*THETAINIT/(GAMMA-1.)/MU_GAS;
-
-#endif // defined(INIT_SIGMA_TANH) || defined(INIT_SIGMA_LIN)
-*/
-
+////////////////////////
+// Finish initalization
+////////////////////////
 
 // get entropy
 pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);

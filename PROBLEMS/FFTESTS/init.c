@@ -10,61 +10,10 @@ struct geometry geomBL;
 fill_geometry_arb(ix,iy,iz,&geomBL,BLCOORDS);
 ldouble pp[NV],uu[NV];
 
-#if(FFPROBLEM==LINEARALFVEN)
-ldouble rho=RHOINIT;
-ldouble uint=UUINIT;
-ldouble Bsq=SIGMAINIT*rho;
-ldouble va = sqrt(Bsq)/sqrt(Bsq + rho + GAMMA*uint);
+///////////////////////
+// Komissarov 1999/2002 problems
+//////////////////////
 
-ldouble k = 2*M_PI/LLL;
-ldouble omega = k*va;
-ldouble Delta=1.e-3;
-
-pp[B1] = Sqrt(Bsq);
-pp[B2] = -Sqrt(Bsq)*Delta*Sin(geom.xx*k);
-pp[B3] = Sqrt(Bsq)*Delta*(1+Cos(geom.xx*k));
-
-
-#ifdef LINEARALFVENSINGLEPERIOD
-if(geom.xx>0.5*LLL || geom.xx < -0.5*LLL)
-{
-  pp[B2]=0;
-  pp[B3]=0;
-}
-#endif
-
-/*
-// these expressions for E work to give v when d is small
-// otherwise there is a nonzero vx
-Ex = 0.;
-Ey = Sqrt(Bsq)*Delta*va*(1+Cos(geom.xx*k));
-Ez = Sqrt(Bsq)*Delta*va*Sin(geom.xx*k);
-*/
-
-pp[VX] = 0;
-pp[VY] = -va*pp[B2]/Sqrt(Bsq);
-pp[VZ] = -va*pp[B3]/Sqrt(Bsq);
-
-pp[RHO] = rho;
-pp[UU] = uint;
-
-ldouble ucon[4],ucov[4],bcon[4],bcov[4],bsq;
-calc_ucon_ucov_from_prims(pp, &geom, ucon, ucov);
-calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, &geom, bcon, bcov, &bsq);
-
-ldouble w = rho + GAMMA*uint;
-ldouble va_v2 = (bcon[1] + ucon[1]*sqrt(w+bsq))/(bcon[0] + ucon[0]*sqrt(w+bsq));
-ldouble va_ff = (bcon[1] + ucon[1]*sqrt(bsq))/(bcon[0] + ucon[0]*sqrt(bsq));;
-if(geom.ix==0 && PROCID==0)
-{
-  printf("linearalfven: %e %e %e %e\n",k,omega,2*M_PI/omega,2*M_PI/omega/DTOUT1);
-  printf("alfvenspeeds: %e %e %e\n",va,va_v2,va_ff);
-  //printf("%e %e %e %e \n",ucon[0],ucon[1],ucon[2],ucon[3]);
-  //printf("%e %e\n",Bsq,bsq);
-  //exit(-1);
-}
-
-#else // Komissarov 1999/2002 problems
 
 ldouble mu, gammamu;
 ldouble Ex,Ey,Ez,Bx,By,Bz,Bsq,Esq,gamma;
@@ -252,6 +201,9 @@ pp[B1] = Bx;
 pp[B2] = By;
 pp[B3] = Bz;
 
+////////////////////////////////////////////////////////////////////////////////////////
+// initial density set by sigma or rho,u
+
 //printf("%d | %e\n",ix,pp[VX]*pp[B1]+pp[VY]*pp[B2]+pp[VZ]*pp[B3]);x
 #ifndef SIGMAINIT
 
@@ -267,7 +219,6 @@ pp[UU]=pp[RHO]*THETAINIT/(GAMMA-1.)/MU_GAS;
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // modify rho for linear sigma slope or tanh
-// currently working with ALFVEN problem
 
 #if defined(INIT_SIGMA_TANH) || defined(INIT_SIGMA_LIN)
 //ldouble bsq=Bsq/(gamma*gamma); //this is true if gamma=gammaperp
@@ -306,12 +257,9 @@ else
 pp[RHO]=bsq/sigma;
 pp[UU]=pp[RHO]*THETAINIT/(GAMMA-1.)/MU_GAS;
 
-#endif // defined(INIT_SIGMA_TANH) || defined(INIT_SIGMA_LIN)
-#endif // ndef SIGMAINIT
-#endif // FFPROBLEM
+#endif // if defined(INIT_SIGMA_TANH) || defined(INIT_SIGMA_LIN)
+#endif // if ndef SIGMAINIT
 
-////////////////////////////////////////////////////////////////////////////////////////
-// modify rho for linear sigma slope
 
 // get entropy
 pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],ix,iy,iz);

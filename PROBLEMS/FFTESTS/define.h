@@ -2,13 +2,13 @@
 
 // which problem
 #define LINEARALFVEN 0
-#define FASTWAVE 1  // works poorly in hybrid 
-#define ALFVEN 2    // works less well in hybrid
-#define ALFVEN2 3   // seems to work well in hybrid
-#define THREEWAVE 4
-#define BREAKDOWN 5
+#define FASTWAVE 1    // works poorly in hybrid 
+#define ALFVEN 2      // works less well in hybrid
+#define ALFVEN2 3     // seems to work well in hybrid
+#define THREEWAVE 4   
+#define BREAKDOWN 5  
 
-#define FFPROBLEM 5
+#define FFPROBLEM 0
 
 #if(FFPROBLEM==LINEARALFVEN)
 #define LINEARALFVENSINGLEPERIOD
@@ -36,12 +36,13 @@
 //#define NOLOGINS
 
 #define FORCEFREE
-//#define HYBRID_FORCEFREE
+#define HYBRID_FORCEFREE
 //#define HYBRID_FORCEFREE_SIGMACUT 50
-//#define HYBRID_FORCEFREE_WIDTH .25//0.25
+#define HYBRID_FORCEFREE_WIDTH .25//0.25
 
-//#define HYBRID_FORCEFREE_XCUT 0.75
+#define HYBRID_FORCEFREE_XCUT 0.5
 //#define FORCEFREE_PARALLEL_COLD
+#define FORCEFREE_PARALLEL_ENTROPY
 //#define SKIPALLFLOORS
 
 /************************************/
@@ -87,7 +88,7 @@
 #define TSTEPLIM .5
 #define FLUXLIMITER 1
 #define MINMOD_THETA  1.5
-#define NOUTSTOP 2
+#define NOUTSTOP 150
 //#define NSTEPSTOP 1
 //#define ALLSTEPSOUTPUT 1
 
@@ -117,10 +118,15 @@
 /************************************/
 
 #define RHOINIT 1.
-#define UUINIT 1./(GAMMA-1.)
+#define PINIT 1.
+#define UUINIT PINIT/(GAMMA-1.)
 
-//#define SIGMAINIT 100
-#ifdef SIGMAINIT
+#define SIGMAINIT 100
+
+// vary initial sigma from left to right
+//#define SIGMARAMP
+#ifdef SIGMARAMP
+
 //#define INIT_SIGMA_TANH
 #define INIT_SIGMA_LIN
 
@@ -130,6 +136,4 @@
 #define SIGMAINITOFFSET -.5
 #define THETAINIT .25
 //#define UUINIT RHOINIT*THETAINIT/(GAMMA-1.)/MU_GAS//endenCGS2GU(1.*CCC*CCC*1.e-3)
-#endif
-
-#define VGASINIT 0.
+#endif //SIGMARAMP

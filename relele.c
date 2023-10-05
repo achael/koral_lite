@@ -249,6 +249,7 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     
     u2con[0]=-alpgam*GG[0][0];
     // ANDREW u^0 should be negative below horizon in BL coords!
+    // when energy-at-infinity is >0
     /*
     if(u2con[0]<0)
     {
@@ -267,6 +268,7 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
 
     u2con[0]=-alpgam*GG[0][0];
     // ANDREW u^0 should be negative below horizon in BL coords!
+    // when energy-at-infinity is >0
     /*
     if(u2con[0]<0)
     {
