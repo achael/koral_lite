@@ -17,7 +17,7 @@ ldouble pp[NV],uu[NV];
 
 #ifdef LINEARALFVEN
 ldouble rho,ugas,Bsq;
-Bsq=1.;
+Bsq=100.;
 
 #ifndef SIGMAINIT
 rho = RHOINIT;

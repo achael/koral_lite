@@ -1,18 +1,13 @@
 #define MASS 1.//(1./MSUNCM) //so that x-coordinate in centimeters
 
 // which problem
-#define LINEARALFVEN 0
 #define FASTWAVE 1    // works poorly in hybrid 
 #define ALFVEN 2      // works less well in hybrid
 #define ALFVEN2 3     // seems to work well in hybrid
 #define THREEWAVE 4   
 #define BREAKDOWN 5  
 
-#define FFPROBLEM 0
-
-#if(FFPROBLEM==LINEARALFVEN)
-#define LINEARALFVENSINGLEPERIOD
-#endif
+#define FFPROBLEM 2
 
 /************************************/
 //restart
@@ -63,11 +58,7 @@
 #define NTY 1
 #define NTZ 1
 
-#if (FFPROBLEM==LINEARALFVEN)// || (FFPROBLEM==ALFVEN2)
-#define PERIODIC_XBC
-#else
 #define COPY_XBC
-#endif
 #define PERIODIC_YBC
 #define PERIODIC_ZBC
 

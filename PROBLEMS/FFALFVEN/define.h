@@ -1,7 +1,6 @@
 #define MASS 1.//(1./MSUNCM) //so that x-coordinate in centimeters
-//#define LINEARALFVEN
+#define LINEARALFVEN
 #define PULSEWIDTH 1.//0.5;
-
 
 /************************************/
 //restart
@@ -68,7 +67,7 @@
 #define OUTCOORDS MYCOORDS
 #define SIMOUTPUT 2
 #define OUTPUTINGU
-#define DTOUT1 0.05 //res
+#define DTOUT1 0.01 //res
 #define DTOUT2 1.e20 //avg
 
 /************************************/
@@ -79,7 +78,7 @@
 #define TSTEPLIM .25
 #define FLUXLIMITER 1
 #define MINMOD_THETA 1.5
-#define NOUTSTOP 40
+#define NOUTSTOP 150
 //#define NSTEPSTOP 1
 //#define ALLSTEPSOUTPUT 1
 
@@ -111,7 +110,7 @@
 #define SIGMAINIT 100
 
 #ifdef SIGMAINIT
-#define THETAINIT 1.
+#define THETAINIT .25
 #else
 #define RHOINIT 1.
 #define PINIT 1.
