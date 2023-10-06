@@ -1,6 +1,5 @@
 //sets the initial conditions
 //called from a loop going over ix,iy,iz
-// https://arxiv.org/pdf/astro-ph/0503420.pdf appendix
 
 /***********************************************/
 //structure of geometry
@@ -72,6 +71,7 @@ if(geom.ix==0 && PROCID==0)
 
 ////////////////////////////
 // Nonlinear case
+// https://arxiv.org/pdf/astro-ph/0503420.pdf appendix
 ////////////////////////////
 
 #else 
@@ -91,13 +91,8 @@ int i;
 //ldouble ucon_lhs[4] = {1.,0.,0.,0.};
 
 //Me (Check ?)
-ldouble Bcon_lhs[4] = {0,7.,1.,0.};
+ldouble Bcon_lhs[4] = {0,5.,1.,0.};
 ldouble ucon_lhs[4] = {1.,0.,0.,0.};
-
-//ldouble Bcon_lhs[4] = {0.,0,2.3094,0.};
-//ldouble ucon_lhs[4] = {0.,0.57735,0.,0.};
-
-
 
 ucon_lhs[0] = sqrt(1 + dot3nr(ucon_lhs,ucon_lhs));
 ldouble bcon_lhs[4],bcov_lhs[4];

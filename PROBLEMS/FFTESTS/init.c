@@ -40,7 +40,7 @@ Ey = 0.;
 //Ez = 1.-mu*By; //McKinney06 pg 8 
 Ez = -mu*By; 
 
-// Alfven wave test, De Villiers and Hawley 2002
+// Alfven wave test komissarov 2004
 #elif(FFPROBLEM==ALFVEN)
 if(ix==0) printf("ALFVEN problem\n");
 

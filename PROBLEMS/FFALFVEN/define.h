@@ -1,5 +1,5 @@
 #define MASS 1.//(1./MSUNCM) //so that x-coordinate in centimeters
-#define LINEARALFVEN
+//#define LINEARALFVEN
 #define PULSEWIDTH 1.//0.5;
 
 /************************************/
@@ -23,18 +23,19 @@
 //#define ENFORCEENTROPY
 #define NOLOGINS
 
-//#define FORCEFREE
+#define FORCEFREE
 
 #ifdef FORCEFREE
+
 #define HYBRID_FORCEFREE
 
 //#define HYBRID_FORCEFREE_SIGMACUT 50
 #define HYBRID_FORCEFREE_XCUT 0.5
-#define HYBRID_FORCEFREE_WIDTH 0.1//0.25
+#define HYBRID_FORCEFREE_WIDTH 0.1
 
 #define FORCEFREE_SOLVE_PARALLEL
-//#define FORCEFREE_PARALLEL_COLD
-#define FORCEFREE_PARALLEL_ENTROPY
+#define FORCEFREE_PARALLEL_COLD
+//#define FORCEFREE_PARALLEL_ENTROPY
 //#define FORCEFREE_PARALLEL_MHD
 //#define SKIPALLFLOORS
 #endif
@@ -75,7 +76,7 @@
 /************************************/
 #define INT_ORDER 1
 #define TIMESTEPPING RK2HEUN
-#define TSTEPLIM .25
+#define TSTEPLIM .2
 #define FLUXLIMITER 1
 #define MINMOD_THETA 1.5
 #define NOUTSTOP 150
@@ -107,10 +108,10 @@
 //problem parameters
 /************************************/
 
-#define SIGMAINIT 100
+#define SIGMAINIT 250
 
 #ifdef SIGMAINIT
-#define THETAINIT .25
+#define THETAINIT 1.//.25
 #else
 #define RHOINIT 1.
 #define PINIT 1.

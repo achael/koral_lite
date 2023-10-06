@@ -17,13 +17,13 @@
 /*********************************************/
 int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 {
-
+ 
   char bufor[50];
   sprintf(bufor,"%s/%s%04d.silo",folder,prefix,num);
-
+ 
   mpi_exchangedata();
   calc_avgs_throughout();
-
+    
   DBfile *file = NULL;    // The Silo file pointer 
   char *coordnames[3];    // Names of the coordinates 
   ldouble *nodex;         // The coordinate arrays 
@@ -209,7 +209,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
   ldouble *entrrad = (ldouble*)malloc(nx*ny*nz*sizeof(double));
   #endif //RADIATION
 
-    
+
   //first fill coordinates on nodes
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
@@ -302,7 +302,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
     }
   }
 
-
+ printf("HEYO\n");   
   //then fill the zones with values
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
@@ -441,7 +441,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       ldouble pregas,premag,ueloc,uiloc;
       ldouble nethloc,nrelelloc,G0relelloc,G0ic_relel_loc,G0syn_relel_loc,G0ic_th_loc,urelelloc,gbrkloc;
       ldouble bcon[4],bcov[4];
-      
+ 
       if(doingavg==0) //using snapshot data
       {
 	
@@ -558,6 +558,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	vischeatnegi[zonalindex]=get_u_scalar(vischeatingnegibalance,ix,iy,iz);; 
 	dtauarr[zonalindex]=-1.;
 #endif //PRINTVISCHEATINGTOSILO
+
       }
       else //using averaged data
       {
@@ -763,13 +764,13 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       lorentz_par[zonalindex]=1./sqrt(1+pow(lorentz[zonalindex],-2)-pow(lorentz_perp[zonalindex],-2));
 
 #endif
-
+printf("hi\n");         
 #ifdef MAGNFIELD
 #ifdef FORCEFREE // must have VELPRIM=VELR
 
       //ffinv[zonalindex]=get_cflag(FFINVFLAG,ix,iy,iz);
       ffinv[zonalindex] = get_u_scalar(ffinvarr, geom.ix,geom.iy,geom.iz);
-      
+printf("hihi\n");                     
       int derdir2[3] = {2,2,2};
       ldouble jcon[4],jcov[4];
       calc_current(&geom,jcon,derdir2);
@@ -784,7 +785,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       ffinv[zonalindex]=0.;
 #endif
 #endif
-      
+
       #ifdef EVOLVEELECTRONS
       tempi[zonalindex]=tempiloc; //ion temperature
       tempe[zonalindex]=tempeloc;  //electron temperature

@@ -717,7 +717,11 @@ initialize_arrays()
 
   //gamma of gas at the beginnning of timestep
   if((gammagas=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
- 
+
+#ifdef FORCEFREE
+  if((ffinvarr=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
+#endif
+  
   /****************** extra arrays, used only for time evolution **********************/
   //we might need some of these arrays in postproc (if doingpostproc_avg==1)
   #ifdef DIVIDEVISCHEATBYDT
@@ -838,10 +842,6 @@ initialize_arrays()
      long long Nemf = (NX+1)*(NY+1)*(NZ+1)*3;
      long long EmfSize = Nemf*sizeof(ldouble);
      if((emf=(ldouble*)malloc(EmfSize))==NULL) my_err("malloc err.\n");
-#endif
-
-#ifdef FORCEFREE
-     if((ffinvarr=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
 #endif
 	 
   }
