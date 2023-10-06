@@ -158,7 +158,6 @@ main(int argc, char **argv)
     readret=fread_restartfile(ifile,folder,&t);
     nfout1=ifile;
     global_time=t;
-
     //exchange initial state
     mpi_exchangedata();
     
@@ -167,7 +166,6 @@ main(int argc, char **argv)
 
     //set bc
     set_bc(t,1);
-
     //run the evolution for a bit if requested
     if(ifrunonthego)
     {
@@ -232,7 +230,6 @@ main(int argc, char **argv)
 	    p2u(&get_u(p,0,iix,iiy,iiz),&get_u(u,0,iix,iiy,iiz),&geom);
 	}  
 #endif //RESCALEDENSITYPOSTPROC
-
     //calculate scalars
     #if(SCAOUTPUT==1)
     ldouble scalars[NSCALARS];
@@ -306,7 +303,6 @@ main(int argc, char **argv)
     //regular dump files
     else
     {
-
       //scalar output
 #if(SCAOUTPUT==1)
       fprint_scalars(t,scalars,NSCALARS);
@@ -343,7 +339,6 @@ main(int argc, char **argv)
       sprintf(prefix,"prim%s",suffix);  
       fprint_primitive_file(t,nfout1,"analysis",prefix);
 #endif
-      
       //hdf5 analysis output (replaces sim)
 #ifdef ANAOUT_HDF5
       #ifdef ANAOUT_HDF5_V1
@@ -363,6 +358,7 @@ main(int argc, char **argv)
 #endif
       
     } //if(phiavg==3)
+
   }  //for(ifile=no1;ifile<=no2;ifile+=nostep)
 
   //Done with all res files  

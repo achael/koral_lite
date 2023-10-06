@@ -302,6 +302,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
     }
   }
 
+
   //then fill the zones with values
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
@@ -763,7 +764,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       lorentz_par[zonalindex]=1./sqrt(1+pow(lorentz[zonalindex],-2)-pow(lorentz_perp[zonalindex],-2));
 
 #endif
-
 #ifdef MAGNFIELD
 #ifdef FORCEFREE // must have VELPRIM=VELR
 

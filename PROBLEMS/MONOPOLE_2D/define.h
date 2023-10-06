@@ -20,7 +20,7 @@
 //#define U2PCONV 1.e-14
 
 #define FORCEFREE
-#define HYBRID_FORCEFREE
+//#define HYBRID_FORCEFREE
 
 /************************************/
 //reconstruction / Courant
@@ -47,13 +47,13 @@
 
 
 #if defined(FORCEFREE)
+//#define FORCEFREE_SOLVE_PARALLEL
+//#define FORCEFREE_PARALLEL_COLD
+//#define FORCEFREE_PARALLEL_ENTROPY
 
 #if defined(HYBRID_FORCEFREE)
 #define HYBRID_FORCEFREE_SIGMACUT 100//50
-#define HYBRID_FORCEFREE_WIDTH 0//0.05
-//#define FORCEFREE_SOLVE_PARALLEL
-//#define FORCEFREE_PARALLEL_COLD
-#define FORCEFREE_PARALLEL_ENTROPY
+#define HYBRID_FORCEFREE_WIDTH 0.//0.05
 #endif
 
 //#define SKIPALLFLOORS // TODO seems critical for SOLVE_PARALLEL? 
@@ -102,8 +102,8 @@
 #define RMIN 0.7*RHOR //1.8<->6 ANDREW
 #define RMAX 200.
 
-#define TNX 128//256
-#define TNY 128//256
+#define TNX 256
+#define TNY 256
 #define TNZ 1
 
 #ifdef myMKS1COORDS //modified Kerr-Shild
@@ -153,7 +153,7 @@
 #define ALLSTEPSOUTPUT 0
 #define NSTEPSTOP 1.e10
 #define NOUTSTOP 150
-#define SILOOUTPUT 1
+//#define SILOOUTPUT 1
 //#define PRIMOUTPUT 1
 #define ANAOUT_HDF5
 //#define PRIMOUTPUTINMYCOORDS
