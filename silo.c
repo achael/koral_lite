@@ -302,7 +302,6 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
     }
   }
 
- printf("HEYO\n");   
   //then fill the zones with values
 #pragma omp parallel for private(ix,iy,iz,iv,imx,imy,imz,i,j,pp,uu,xxvec,xxveccar,xxvecsph,xx1,xx2) schedule (static)
 
@@ -764,13 +763,13 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
       lorentz_par[zonalindex]=1./sqrt(1+pow(lorentz[zonalindex],-2)-pow(lorentz_perp[zonalindex],-2));
 
 #endif
-printf("hi\n");         
+
 #ifdef MAGNFIELD
 #ifdef FORCEFREE // must have VELPRIM=VELR
 
       //ffinv[zonalindex]=get_cflag(FFINVFLAG,ix,iy,iz);
       ffinv[zonalindex] = get_u_scalar(ffinvarr, geom.ix,geom.iy,geom.iz);
-printf("hihi\n");                     
+
       int derdir2[3] = {2,2,2};
       ldouble jcon[4],jcov[4];
       calc_current(&geom,jcon,derdir2);

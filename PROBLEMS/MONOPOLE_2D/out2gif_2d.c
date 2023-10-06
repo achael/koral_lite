@@ -7,10 +7,10 @@
 ldouble minx,miny,maxx,maxy;
 
 #if (OUTCOORDS==KERRCOORDS)
-minx= -.02*(exp(get_xb(-NG,0))+MKS1R0);
-maxx= 1.01*(exp(get_xb(NX,0))+MKS1R0);
-miny= -.02*(exp(get_xb(-NG,0))+MKS1R0);
-maxy= 1.01*(exp(get_xb(NX,0))+MKS1R0);
+minx= -.02*(exp(get_xb(-NG,0))+MKSR0);
+maxx= 1.01*(exp(get_xb(NX,0))+MKSR0);
+miny= -.02*(exp(get_xb(-NG,0))+MKSR0);
+maxy= 1.01*(exp(get_xb(NX,0))+MKSR0);
 
 maxx=maxy=20.;
 #else

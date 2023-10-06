@@ -101,7 +101,6 @@
 #define METRICAXISYMMETRIC
 #define RMIN 0.7*RHOR //1.8<->6 ANDREW
 #define RMAX 200.
-#define MKS1R0 MKSR0
 
 #define TNX 128//256
 #define TNY 128//256
@@ -109,6 +108,7 @@
 
 #ifdef myMKS1COORDS //modified Kerr-Shild
 #define MYCOORDS MKS1COORDS
+#define MKSR0 0.
 #define MINX (log(RMIN - MKSR0))
 #define MAXX (log(RMAX - MKSR0))
 #define MINY 0.005*M_PI
@@ -116,7 +116,7 @@
 
 #elif defined(myMKS2COORDS) //modified Kerr-Shild
 #define MYCOORDS MKS2COORDS
-#define MKSR0 -4.*RHOR
+#define MKSR0 0.//-4.*RHOR
 #define MKSH0 0.8
 
 #define MINX (log(RMIN - MKSR0))
