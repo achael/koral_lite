@@ -3142,27 +3142,7 @@ calc_Rij_M1(ldouble *pp, void* ggg, ldouble Rij[][4])
 //suplementary routines for radiation conversions
 //*************************************************
 
-// calculates LTE temperature from photon number 
-ldouble
-calc_Tnfromn(ldouble n)
-{
-  return cbrt(2.70118*K_BOLTZ*n/4./SIGMA_RAD);
-}
 
-//calculates LTE number of photons from temp
-ldouble
-calc_NFfromT(ldouble T)
-{
-  return A_RAD*T*T*T/2.70118/K_BOLTZ;
-}
-
-//calculates LTE number of photons from energy
-ldouble
-calc_NFfromE(ldouble E)
-{
-  ldouble temp=calc_LTE_TfromE(E);
-  return calc_NFfromT(temp);
-}
 
 //calculates LTE energy from temperature
 ldouble
@@ -3178,15 +3158,13 @@ calc_LTE_TfromE(ldouble E )
   return sqrt(sqrt((one_over_four_sigmarad * E)));
 }
 
-//radiation energy corresponding to gas temperature corresponding with u and rho
-//inconsistent with CONSISTENTGAMMA !!
+//calculates LTE number of photons from energy
 ldouble
-calc_LTE_Efromurho(ldouble u,ldouble rho)
+calc_NFfromE(ldouble E)
 {
-  ldouble p=(GAMMA-1.)*(u); 
-  ldouble T=p*MU_GAS*M_PROTON/K_BOLTZ/rho;
-
-  return calc_LTE_EfromT(T);
+  ldouble temp=calc_LTE_TfromE(E);
+  ldouble nf = A_RAD*temp*temp*temp/2.70118/K_BOLTZ;
+  return nf;
 }
 
 //calculates fluid frame radiative energy density (-R^t_t = Ehat)
@@ -5286,7 +5264,7 @@ test_Gi()
   pp0[VY]=2.69291e-03;
   pp0[VZ]=1.62996e-02;
   pp0[ENTR]=calc_Sfromu(pp0[RHO],pp0[UU],geom.ix,geom.iy,geom.iz);
-  pp0[EE]=1.0*calc_LTE_Efromurho(pp0[UU],pp0[RHO]);
+  pp0[EE]=1.0*calc_LTE_EfromT((GAMMA-1.)*MU_GAS*M_PROTON*pp0[UU]/(K_BOLTZ*pp0[RHO]));
   pp0[FX]=0.01;
   pp0[FY]=0.;
   pp0[FZ]=0.0;

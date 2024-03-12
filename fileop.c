@@ -4,67 +4,6 @@
 
 #include "ko.h"
 #include <string.h>
-/*************************************************/
-/*  adds up current quantities to the pavg array */
-/*************************************************/
-
-int
-save_avg(ldouble dtin)
-{
-  int ix,iy,iz,iv,ii;
-
-#pragma omp parallel for private(ix,iy,iz,iv) 
-  for(ix=0;ix<NX;ix++) 
-    {
-      for(iy=0;iy<NY;iy++)
-	{
-	  ldouble avgz[NV+NAVGVARS];
-	   for(iv=0;iv<NV+NAVGVARS;iv++)
-	     avgz[iv]=0.;
-	   for(iz=0;iz<NZ;iz++)
-	    {
-	      ldouble avg[NV+NAVGVARS];
-	      p2avg(ix,iy,iz,avg);
-
-	      //timestep
-	      ldouble dt=dtin;
-
-#ifdef RADIATION //if implicit failed, do not take this step into account at all for failed cells
-	      if(get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)==0)
-#endif
-		{
-
-#if (AVGOUTPUT==2) //phi-averaged
-		  for(iv=0;iv<NV+NAVGVARS;iv++)
-		    avgz[iv]+=avg[iv];
-#else //regular, without phi-averaging
-		  set_u_scalar(avgselftime,ix,iy,iz,get_u_scalar(avgselftime,ix,iy,iz)+dt);
-		  for(iv=0;iv<NV+NAVGVARS;iv++)
-		    {
-		      set_uavg(pavg,iv,ix,iy,iz, get_uavg(pavg,iv,ix,iy,iz)+avg[iv]*dt);
-		    }
-#endif
-		}
-	    }
-
-#if (AVGOUTPUT==2) //phi-averaged
-	  for(iv=0;iv<NV+NAVGVARS;iv++)
-	    avgz[iv]/=NZ;
-	  set_u_scalar(avgselftime,ix,iy,0,get_u_scalar(avgselftime,ix,iy,0)+dt);
-	  for(iv=0;iv<NV+NAVGVARS;iv++)
-	    {
-	      set_uavg(pavg,iv,ix,iy,0, get_uavg(pavg,iv,ix,iy,0)+avgz[iv]*dt);
-	    }
-#endif
-	}
-    }
-
-  avgtime+=dtin;
-
-  
-  return 0;
-}
-
 
 /*********************************************/
 /* opens files etc. */
@@ -4458,7 +4397,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
 		    rho_arr);
   status = H5Dclose(dumps_dataset_array);
-
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/uint", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
 		    uint_arr);

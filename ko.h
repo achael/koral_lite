@@ -1193,6 +1193,7 @@ ldouble calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
 			       ldouble Gith_ff[4], ldouble Gith_lab[4],
 			       ldouble relel_dudtau, int reltype);
 ldouble calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4],int labframe);
+
 int calc_Compt_Gi(ldouble *pp, void* ggg, ldouble *Gic,
 		  ldouble Ehatrad, ldouble Te, ldouble kappaes, ldouble *ucon);
 int calc_Compt_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble *Gic, ldouble *ucon_frame);
@@ -1204,17 +1205,17 @@ void calc_Ehat_from_Rij_ucov(double Rij[4][4], double uffcov[4], ldouble *Ehat);
 int calc_Rij(ldouble *pp, void* ggg, ldouble Rij[][4]);
 int calc_Rij_M1(ldouble *pp, void* ggg, ldouble Rij[][4]);
 
-ldouble calc_Tnfromn(ldouble n);
-ldouble calc_NFfromT(ldouble T);
 ldouble calc_NFfromE(ldouble E);
 ldouble calc_LTE_EfromT(ldouble T);
 ldouble calc_LTE_TfromE(ldouble E );
-ldouble calc_LTE_Efromurho(ldouble u,ldouble rho);
+
+
 int calc_ff_Rtt(ldouble *pp,ldouble *Rttret, ldouble* ucon,void* ggg);
 int calc_ff_Ehat(ldouble *pp,ldouble *Ehat, ldouble* ucon,void* ggg);
 
 ldouble calc_nsource(ldouble *pp, void* ggg);
 ldouble calc_nsource_with_state(ldouble *pp, void *sss, void* ggg);
+
 ldouble calc_ncompt_Thatrad_4vel(ldouble *pp, void* ggg, ldouble Ehatrad,
 				 ldouble* urfcon, ldouble* uffcov);
 ldouble calc_ncompt_Ehatrad(ldouble Tradhat, ldouble nphhat);
