@@ -496,14 +496,6 @@ calc_wavespeeds_lr_pure(ldouble *pp,void *ggg,ldouble *aaa)
 
   ldouble vtot2; //total characteristic velocity
   vtot2=cs2 + va2 - cs2*va2;
-
-  /*
-  //ANDREW TODO set wavespeed to c
-#ifdef FORCEFREE
-  int ffflag = get_cflag(FFINVFLAG, geom->ix,geom->iy,geom->iz);
-  if(ffflag==1) vtot2=1.; 
-#endif
-  */
   
 #ifdef NONRELMHD //non-rel version
   
@@ -1308,8 +1300,6 @@ int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int l
 
 #ifdef FORCEFREE
 
-  // ANDREW TODO modified to usue regular prims
-
 #ifdef FORCEFREE_PARALLEL_COLD // neglect pressure
   ff[UUFF]= gdetu*bcon[idim+1];
 #else // adiabatic, with pressure
@@ -1438,10 +1428,6 @@ calc_Tij_ff(ldouble *pp, void* ggg, ldouble T[][4])
   int iv,i,j;
   ldouble utcon[4],ucon[4],ucov[4];  
   ldouble bcon[4],bcov[4],bsq=0.;
-
-  // ANDREW TODO changed to regular prims
-  // as long as perp components are the same, it shouldn't matter,
-  // since parallel components cancel out
 
   utcon[0]=0.;
   utcon[1]=pp[VX]; 
@@ -2625,11 +2611,8 @@ heat_electronions_with_state(ldouble dtin)
 	  
 	  du = endenCGS2GU(xxx * RELEL_HEAT_NORM * M_ELECTR_CGS * CCC_CGS * CCC_CGS)*timeGU2CGS(dtau);
           fe=1.;
-	  frel=1.; //ANDREW override??
+	  frel=1.; 
           durelel = du;
-
-	  //printf("%e %e %e %e\n",durelel, p_index, gamma_injmin, gamma_injmax);
-	  //exit(-1);
           #endif    //RELEL_HEAT_ART
 
 	  //Add electrons to nonthermal population
@@ -3203,7 +3186,7 @@ calc_current(void* ggg,ldouble jcon[4],int *derdir)
   //instead:
   for(i=0;i<4;i++)
   {
-    //force d/dt = 0 for now // ANDREW TODO
+    //TODO: force d/dt = 0 for now
     dF[i] = 0.;
   }
 

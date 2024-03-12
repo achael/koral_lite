@@ -226,7 +226,7 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg, int verbose)
     else //(whicheqs_parallel == 3,2,1)
     {
   
-      // initial guess for W is based on current primitives TODO
+      // initial guess for W is based on current primitives
       // recall that force free requires VELPRIM = VELR
 
       ldouble Y=0;
@@ -654,8 +654,6 @@ u2p_solver_ff_parallel(ldouble Wguess,ldouble* cons, int Etype, int verbose)
       //getchar();
       return -202;
     }
-
-    // TODO is this the right convergence test? 
     
     if(err<CONV || (fabs((W-Wprev)/Wprev)<CONV && err<sqrt(CONV))) break;
     
@@ -788,7 +786,7 @@ f_u2p_parallel_entropy(ldouble W, ldouble* cons, ldouble *f, ldouble *df, ldoubl
   // error
   *err = fabs(*f) / (fabs(scalc*D) + fabs(Sc));
 
-  *df = D*(dscalcdrho*drhodW + dscalcdpgas*dpgasdW); // TODO
+  *df = D*(dscalcdrho*drhodW + dscalcdpgas*dpgasdW); 
   
   return 0;  
 
@@ -903,7 +901,7 @@ fill_ffprims_cell(ldouble *pp, void *ggg)
   pp[VXFF] = uperp[1];
   pp[VYFF] = uperp[2];
   pp[VZFF] = uperp[3];
-  pp[UUFF] = gammapar*vpar; //ANDREW TODO ??
+  pp[UUFF] = gammapar*vpar; 
   
 #endif
 #endif
@@ -1121,7 +1119,6 @@ int count_ff(int *n, int *n2, int *n3)
 
 // Source term for adiabatic evolution of mu b^0
 // Based on calc_shear_lab in rad.c
-// TODO
 ldouble
 calc_uuff_source(ldouble *pp0, void* ggg,int *derdir)
 {

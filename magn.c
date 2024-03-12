@@ -738,7 +738,6 @@ calc_Qthetaphi(int ix, int iy, int iz,ldouble *Qtheta,ldouble *Qphi)
       ldouble dxth,dxph;
       ldouble xx1[4],xx2[4],dx[3];
 
-      // ANDREW TODO -- do we need need this to be in BL? 
       if(OUTCOORDS==BLCOORDS)
       {
         get_cellsize_out(ix, iy, iz, dx);
@@ -862,9 +861,8 @@ calc_angle_bpbphibsq(int ix, int iy, int iz, ldouble *bpbphi, ldouble *bsq, ldou
 
 
 /***********************************************************************************************/
-//calculates curl of a 3-vector field from array ptu starting from index idx
+//calculates curl of a 3-vector field from array ptu 
 //returns to curl[1..4]
-//TODO: idx not used
 /***********************************************************************************************/
 
 int

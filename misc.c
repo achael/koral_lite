@@ -1696,8 +1696,6 @@ decompose_vels(ldouble *pp,int velidx, ldouble v[4],void *ggg,  void *gggBL)
 // get cell size in x,y,z
 //**********************************************************************
 
-
-// ANDREW TODO DEBUG
 // get the size of a cell dx in 3 dimensions in OUTCOOORDS
 int get_cellsize_out(int ix, int iy, int iz, ldouble dx[3])
 {

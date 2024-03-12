@@ -1918,7 +1918,6 @@ int set_grid_outcoords()
 	for(ii=0;ii<3;ii++)
 	  set_xout(ii,ix,iy,iz,xxout[ii+1]);
 
-	// TODO these are only needed when postproc==1 ? 
         //x-faces
 	if(ix==-NG)
 	{
@@ -2463,47 +2462,6 @@ calc_xb(int i,int idim)
   return xb;
 } 
 
-///////////////////////////////////////////////////////////////
-//deals with arrays [NX+NG x NY+NG x NZ+NG x gSIZE] - cell centers metric
-/*
-int set_g(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG)
-    my_err("problem w/ set_g - index out of range");
-  
-  uarr[i*5+j + (iX(ix)+NGCX)*gSIZE + \
-               (iY(iy)+NGCY)*(SX)*gSIZE + \
-               (iZMET(iz)+NGCZMET)*(SY)*(SX)*gSIZE \
-      ] = value;
-  return 0;
-}
-*/
-
-///////////////////////////////////////////////////////////////
-//deals with arrays [NX+NG x NY+NG x NZ+NG x 16] - 4x4 tensors
-//metric specific 
-/*
-int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_T - index ouf of range");
-  
-  uarr[i*4+j + (ix+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZMET(iz)+NGCZMET)*(SY)*(SX)*16] = value;
-  return 0;
-}
-*/
-
-///////////////////////////////////////////////////////////////
-//deals with arrays [NX+NG x NY+NG x NZ+NG x 16] - 4x4 tensors
-/*
-int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_T - index ouf of range");
-  
-  uarr[i*4+j + (ix+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZ(iz)+NGCZ)*(SY)*(SX)*16] = value;
-  return 0;
-}
-*/
-
 //deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x NV] - cell boundaries in idim
 
 int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim)
@@ -2564,60 +2522,6 @@ int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim
     }
   return 0;
 }
-
-///////////////////////////////////////////////////////////////
-//deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x gSIZE] - cell boundaries in idim metric
-/*
-ldouble get_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,int idim)
-{
-  if(idim==0)
-    {
-      if(ix<-NG || ix>NX+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_gb x - index ouf of range");  
-      return uarr[i*5+j + (ix+NG)*gSIZE + (iy+NG)*(NX+2*NG+1)*gSIZE + (iz+NG)*(NY+2*NG)*(NX+2*NG+1)*gSIZE];
-    }
-  if(idim==1)
-    {
-      if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_gb y - index ouf of range");  
-      return uarr[i*5+j + (ix+NG)*gSIZE + (iy+NG)*(NX+2*NG)*gSIZE + (iz+NG)*(NY+2*NG+1)*(NX+2*NG)*gSIZE];
-    }
-  if(idim==2)
-    {
-      if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ+NG) my_err("blont w get_gb z - index ouf of range");  
-      return uarr[i*5+j + (ix+NG)*gSIZE + (iy+NG)*(NX+2*NG)*gSIZE + (iz+NG)*(NY+2*NG)*(NX+2*NG)*gSIZE];
-    }
-  return 0;
-}
-*/
-
-///////////////////////////////////////////////////////////////
-//deals with arrays [NX+NG x NY+NG x NZ+NG] - cell centers 
-/*
-int set_u_scalar(ldouble* uarr,int ix,int iy,int iz,ldouble value)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_u_scalar - index ouf of range");
-
-  uarr[ix+NG + (iy+NG)*(NX+2*NG) + (iz+NG)*(NY+2*NG)*(NX+2*NG)] = value;
-  return 0;
-}
-*/
-
-///////////////////////////////////////////////////////////////
-//deals with arrays [NX+NG x NY+NG x NZ+NG x NV] - cell centers 
-/*
-ldouble get_u_scalar(ldouble* uarr,int ix,int iy,int iz)
-{
-  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_u_scalar - index ouf of range");
-  
-  //TODO something better, so far skipping calculating wave speeds at ghosts
-  //as it is easier due to extrapolation of primitives quantities 
-
-  //printf("%4d %4d %4d\n",ix,iy,iz); getchar();
-  
-  return uarr[ix+NG + (iy+NG)*(NX+2*NG) + (iz+NG)*(NY+2*NG)*(NX+2*NG)];
-}
-*/
-
-
 
 //**********************************************************************
 //* Variable copying, multiplication, addition
@@ -4220,7 +4124,6 @@ int set_bc(ldouble t,int ifinit)
 	}
 
        //total total corners
-       //TODO - so far very simplified!!!
        if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=-NG;ix<0;ix++) 
@@ -6296,7 +6199,6 @@ int
 is_cell_active(int ix, int iy, int iz)
 {
   //by default ALWAYS active
-  //ANDREW TODO: use for AMR? 
   return 1;
 }
 //**********************************************************************
@@ -6366,8 +6268,6 @@ get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0,
 
 //**********************************************************************
 // Mixing entropy adjustment
-// TODO: still A LOT of work here
-// ANDREW - made compatible with S4 entropy (02/15/16)
 //**********************************************************************
 
 int

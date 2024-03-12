@@ -111,9 +111,9 @@ trans_pmhd_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxvec, 
     pp2[VZFF]=uconff[3];
 
     //parallel
-    //ANDREW TODO this is NOT right
+    //this is NOT correct
     //but it doesn't matter for now as long as FF prims are not used in evolution
-    //FF conserveds are all derived from normal prims
+    //FF conserveds are all derived from the normal prims
     pp2[UUFF]=pp1[UUFF];
     
 #endif

@@ -127,7 +127,7 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   uu[B2]=gdetu*pp[B2];
   uu[B3]=gdetu*pp[B3];
 
-  // ANDREW TODO I changed to use regular prims instead of FF prims
+
 #ifdef FORCEFREE
 
 #ifdef FORCEFREE_PARALLEL_COLD // neglect pressure

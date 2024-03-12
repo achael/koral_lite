@@ -189,7 +189,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   //************************************
 
   // initial flags
-  // ANDREW - TODO - initial values?
   int ret=0;
   int u2pret=-1;
   int u2pretff=-1,u2pretmhd=-1;
@@ -266,7 +265,6 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
   } // if(mhdflag==1)
 
   // combine ff and mhd inversions (or pick one)
-  // ANDREW TODO COUNTERS
 #ifdef FORCEFREE
 #ifdef HYBRID_FORCEFREE
 
@@ -2398,7 +2396,7 @@ test_inversion()
   printf("Efield: %e %e %e\n",E1,E2,E3);
   
   #ifdef FORCEFREE
-  pp[UUFF] = gamma_par*vpar; // ANDREW TODO ?? 
+  pp[UUFF] = gamma_par*vpar;
   pp[VXFF] = gamma_perp*vcon_perp[1];
   pp[VYFF] = gamma_perp*vcon_perp[2];
   pp[VZFF] = gamma_perp*vcon_perp[3];

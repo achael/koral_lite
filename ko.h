@@ -968,12 +968,10 @@ int fill_utinvel3(ldouble *u1,double gg[][5],ldouble GG[][5]);
 int fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5]);
 int conv_velsinprims(ldouble *pp,int which1, int which2,ldouble gg[][5],ldouble GG[][5]);
 
-//TODO: remove these? 
 int calc_normalobs_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncon);
 int calc_normalobs_ncov_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncov, ldouble *ncon);
 int calc_normalobs_4vel(ldouble GG[][5], ldouble *ncon);
 int calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon);
-//
 
 int set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype);
 int set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype);

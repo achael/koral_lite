@@ -751,7 +751,6 @@ solve_the_problem(ldouble tstart, char* folder)
             #endif
 	    
 	    // Calculate primitves
-	    // ANDREW TODO is this excessive? Should be consistent after implicit!
 	    calc_u2p(0,1); //do not calculate visc. heating, do count entropy inversions
 	    
 	    // Heat species at end

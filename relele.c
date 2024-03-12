@@ -513,7 +513,6 @@ calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon)
 //velocities already in VELPRIM
 //**********************************************************************
 
-// ANDREW TODO -- can't precompute quantities without big changes,
 // since this takes arbitrary position as input
 int
 set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype)

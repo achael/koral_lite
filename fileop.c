@@ -1054,11 +1054,9 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
    for(ic=0;ic<NX*NY*NZ;ic++)
     {
 
-
       // restart options
-      // TODO currently can do EITHER RESTARTFROMMHD (for radiation and/or electrons)
+      // currently can do EITHER RESTARTFROMMHD (for radiation and/or electrons)
       // OR RESTARTFROMNORELEL (FROM radiation+electrons to relelectrons)
-      // SHOULD add more options
 #if defined(RESTARTFROMMHD) //restart from mhd only
 #ifdef RADIATION
 
@@ -1088,7 +1086,7 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
       ldouble ue=(INITUEFRAC)*pp[UU];
       ldouble ui=(1.-INITUEFRAC)*pp[UU];
 
-      pp[ENTRE]=calc_Sefromrhou(rhogas,ue,ELECTRONS); //TODO -- non hydrogen?
+      pp[ENTRE]=calc_Sefromrhou(rhogas,ue,ELECTRONS); 
       pp[ENTRI]=calc_Sefromrhou(rhogas,ui,IONS);
 #endif
 #endif //RADIATION
@@ -1258,7 +1256,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
  int nvold;
 #if defined(RESTARTFROMMHD)
   nvold=9;
-#elif defined(RESTARTFROMNORELEL) //TODO can only do EITHRE RESTARTFROMMHD OR RESTARTFROMNORELEL
+#elif defined(RESTARTFROMNORELEL) // can only do EITHRE RESTARTFROMMHD OR RESTARTFROMNORELEL
   nvold=NV-NRELBIN;
   #ifdef RESTARTFROMNORELEL_NOCOMPT
   nvold += 1;
@@ -1354,14 +1352,14 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 	      ldouble rhogas=pout[ppos+RHO];
 	      ldouble ue=(INITUEFRAC)*pout[ppos+UU];
 	      ldouble ui=(1.-INITUEFRAC)*pout[ppos+UU];
-	      ldouble Se=calc_Sefromrhou(rhogas,ue,ELECTRONS); //TODO -- non hydrogen?
+	      ldouble Se=calc_Sefromrhou(rhogas,ue,ELECTRONS); 
 	      ldouble Si=calc_Sefromrhou(rhogas,ui,IONS);
 	      set_u(p,ENTRE,ix,iy,iz,Se);
 	      set_u(p,ENTRI,ix,iy,iz,Si);
 #endif
 #endif //RADIATION
 	  
-#elif defined(RESTARTFROMNORELEL) // TODO only an option if NOT RESTARTFROMMHD
+#elif defined(RESTARTFROMNORELEL) // only an option if NOT RESTARTFROMMHD
 	      int ie;
 	      for (ie=0; ie<8; ie++) set_u(p,ie,ix,iy,iz,pout[ppos+ie]);
 	      for (ie=0; ie<(NV-NVHD); ie++) set_u(p,NVHD+ie,ix,iy,iz,pout[ppos+8+ie]);
@@ -2319,7 +2317,6 @@ int fprint_simplefile(ldouble t, int nfile, char* folder,char* prefix)
 /* prints in ASCII indices, cart coordinates,*/
 /* primitives, velocities in cartesian       */
 /*********************************************/
-//ANDREW -- TODO: update
 
 int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
  {

@@ -246,7 +246,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
 
 
 	#ifdef CONSERVED_FLUX_OUTPUT
-        // ANDREW TODO
 	// These are all defined on the face, so we can't use precomputed
         // can take a long time and don't seem necessary in radial profiles
 
@@ -624,7 +623,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
 	scaleheight134[ix] += rho*fabs(0.5*M_PI - xxBL[2]) * dx[1]*dx[2]*geomBL.gdet;
 
 	//density-weighted MRI wavelength using code comparison paper defn
-	//ANDREW TODO -- should it be bsq/2?
 	ldouble lambdaMRI = 2*M_PI * fabs(bcon[2]) / sqrt(bsq + rho + uint + pregas) / fabs(Omega);
 	rholambda134[ix] += rho*lambdaMRI* dx[1]*dx[2]*geomBL.gdet; 
 	  
