@@ -8,8 +8,8 @@
 // SPIN, SANE vs MAD, Coordinates, Torus
 // Modified from Ramesh's survey
 //***********************************/
-#define SPINp7     //or: SPINp9 SPINp7 SPINp5 SPIN0 SPINm5 SPINm7 SPINm9
-#define NTORUS 0//1   //3 for SANE, 1 for MAD
+#define SPINp5     //or: SPINp9 SPINp7 SPINp5 SPIN0 SPINm5 SPINm7 SPINm9
+#define NTORUS 1   //3 for SANE, 1 for MAD
 
 #define myMKS2COORDS //or: myMKS2COORDS, myMKS3COORDS
 #define FISHMONCTORUS   // LIMOTORUS or FISHMONCTORUS
@@ -20,8 +20,7 @@
 //#define NORESTART
 #define RESTARTGENERALINDICES
 #define RESTARTNUM -1
-
-//#define PERTURBUINT 0.02
+#define PERTURBUINT 0.02
 //#define PERTURBAFTERINIT //will not perturb after init if this is not defined
 
 /************************************/
@@ -103,9 +102,8 @@
 #define MAXBETA .01 //target initial pmag/pgas int the midplane
 
 
-#define FORCEFREE
+//#define FORCEFREE
 //#define SKIPALLFLOORS
-
 
 /************************************/
 //dynamo choices --  2D ONLY
@@ -144,51 +142,49 @@
 #if defined(FORCEFREE)
 
 //#define REDUCEORDERWHENNEEDED
+//#define REDUCEORDERATBH
 //#define REDUCEORDERFF
 
 //#define ENFORCEENTROPY
 
 #define HYBRID_FORCEFREE
-#define HYBRID_FORCEFREE_SIGMACUT 75//50
-#define HYBRID_FORCEFREE_WIDTH .25//0.25
+#define HYBRID_FORCEFREE_SIGMACUT 50
+#define HYBRID_FORCEFREE_WIDTH 0.25
 #define FORCEFREE_SOLVE_PARALLEL
 
 #define FORCEFREE_PARALLEL_COLD
-
 //#define FORCEFREE_PARALLEL_ENTROPY
 //#define NO_FORCEFREE_PARALLEL_SOURCETERM
-#define FORCEFREE_NO_PARALLEL_AT_BH
+#define FORCEFREE_NO_PARALLEL_ATBH
 
-//#define NOLOGINS // TODO pretty critical for this problem...
-
+//#define NOLOGINS // TODO do we need this in the new version? 
 
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 #define UURHORATIOMIN 1.e-6
-#define UURHORATIOMAX 1000. 
-#define GAMMAMAXHD 200.//25.
-#define GAMMAMAXFF 100.//25.
-#define RHOFLOOR 1.e-14
-
-#define B2RHOFLOORFRAME FFFRAME //DRIFTFRAME
+#define UURHORATIOMAX 10. //1.e3
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX 1.e6
+#define B2UURATIOMAX 1.e10
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 200.
-
+#define B2RHORATIOMAX 1.e10
+#define GAMMAMAXFF 1000.
+#define GAMMAMAXHD 1000.
+#define RHOFLOOR 1.e-14
+#define B2RHOFLOORFRAME FFFRAME //DRIFTFRAME
+//#define RHOFLOOR_INIT
 
 #else
 //#define NOLOGINS
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
-#define UURHORATIOMIN 1.e-8
-#define UURHORATIOMAX 1.e3
+#define UURHORATIOMIN 1.e-6
+#define UURHORATIOMAX 10.
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 100.
 #define B2RHORATIOMIN 0.
 #define B2RHORATIOMAX 50.
 #define GAMMAMAXHD 25.
-#define RHOFLOOR 1.e-16
+#define RHOFLOOR 1.e-14
 #define B2RHOFLOORFRAME ZAMOFRAME
 #endif
 
@@ -196,17 +192,17 @@
 //resolution
 /************************************/
 //total resolution
-#define TNX 128
-#define TNY 128
-#define TNZ 1 //192
+#define TNX 128 //320
+#define TNY 128 //192
+#define TNZ 1//64 //192
 
 #define SILO2D_XZPLANE
 //#define CURRENTTIMEDERIV
 
 //number of tiles
-#define NTX 12 
+#define NTX 8 
 #define NTY 8 
-#define NTZ 6 
+#define NTZ 4 
 
 /************************************/
 //coordinates
@@ -226,8 +222,8 @@
 
 #define MINX (log(RMIN-MKSR0))
 #define MAXX (log(RMAX-MKSR0))
-#define MINY (0.001)*M_PI
-#define MAXY (1. - 0.001)*M_PI
+#define MINY (0.01)*M_PI //(0.005)*M_PI
+#define MAXY (1. - 0.01)*M_PI //(1. - 0.005)*M_PI
 #endif
 
 #ifdef myMKS2COORDS //modified Kerr-Shild
@@ -427,11 +423,14 @@
 
 //stopping condition
 
-#define NOUTSTOP 1000 //2000
+#define NOUTSTOP 0//1000 //2000
 
 //#define DUMPS_READ_HDF5
 //#define DUMPS_WRITE_HDF5
 //#define COORDOUTPUT_HDF5
+
+//#define ANAOUT_HDF5
+#define OUTCOORDS2 KSCOORDS
 
 #define OUTCOORDS KSCOORDS
 #define OUTVEL VEL4

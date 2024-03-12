@@ -1,5 +1,5 @@
 #define MASS 1.//(1./MSUNCM) //so that x-coordinate in centimeters
-//#define LINEARALFVEN
+#define LINEARALFVEN
 #define PULSEWIDTH 1.//0.5;
 
 /************************************/
@@ -21,7 +21,7 @@
 
 #define VELPRIM VELR
 //#define ENFORCEENTROPY
-#define NOLOGINS
+//#define NOLOGINS
 
 #define FORCEFREE
 
@@ -51,7 +51,7 @@
 #define MAXY 2*LLL
 #define MINZ 0.
 #define MAXZ 1.
-#define TNX 512
+#define TNX 256//512
 #define TNY 1//256
 #define TNZ 1
 #define NTX 1
@@ -74,9 +74,9 @@
 /************************************/
 //reconstruction / stepping
 /************************************/
-#define INT_ORDER 1
+#define INT_ORDER 2 //1
 #define TIMESTEPPING RK2HEUN
-#define TSTEPLIM .2
+#define TSTEPLIM .1
 #define FLUXLIMITER 1
 #define MINMOD_THETA 1.5
 #define NOUTSTOP 150
@@ -91,7 +91,7 @@
 #define UURHORATIOMAX 1000.
 #define B2UURATIOMAX 10000.
 
-#define GAMMAMAXHD 500.
+#define GAMMAMAXHD 100.//500.
 #define B2RHOFLOORFRAME FFFRAME 
 
 #define GAMMAMAXFF 100.
@@ -111,7 +111,7 @@
 #define SIGMAINIT 250
 
 #ifdef SIGMAINIT
-#define THETAINIT 1.//.25
+#define THETAINIT 0.1//1.//.25
 #else
 #define RHOINIT 1.
 #define PINIT 1.

@@ -7,7 +7,7 @@
 #define THREEWAVE 4   
 #define BREAKDOWN 5  
 
-#define FFPROBLEM 2
+#define FFPROBLEM 4
 
 /************************************/
 //restart
@@ -31,27 +31,35 @@
 //#define NOLOGINS
 
 #define FORCEFREE
-#define HYBRID_FORCEFREE
+//#define FORCEFREE_PARALLEL_COLD
+//#define FORCEFREE_PARALLEL_ENTROPY
+
+//#define HYBRID_FORCEFREE
+#ifdef HYBRID_FORCEFREE
 //#define HYBRID_FORCEFREE_SIGMACUT 50
 #define HYBRID_FORCEFREE_WIDTH .25//0.25
-
 #define HYBRID_FORCEFREE_XCUT 0.5
-//#define FORCEFREE_PARALLEL_COLD
-#define FORCEFREE_PARALLEL_ENTROPY
-//#define SKIPALLFLOORS
+#endif //HYBRID_FORCEFREE
 
 /************************************/
 //coordinates / resolution
 /************************************/
 #define MYCOORDS MINKCOORDS
+#if (FFPROBLEM==4)
+#define LLL 0.5
+#elif (FFPROBLEM==5)
+#define LLL 0.25
+#else
 #define LLL 1.
+#endif
+
 #define MINX -2*LLL
 #define MAXX 2*LLL
 #define MINY -2*LLL
 #define MAXY 2*LLL
 #define MINZ 0.
 #define MAXZ 1.
-#define TNX 512
+#define TNX 256//512
 #define TNY 1//256
 #define TNZ 1
 #define NTX 1
@@ -91,7 +99,7 @@
 #define UURHORATIOMAX 1000.
 #define B2UURATIOMAX 10000.
 
-#define GAMMAMAXHD 200.
+#define GAMMAMAXHD 100.
 #define B2RHOFLOORFRAME FFFRAME 
 
 #define GAMMAMAXFF 100.
@@ -113,6 +121,7 @@
 #define UUINIT PINIT/(GAMMA-1.)
 
 #define SIGMAINIT 100
+#define THETAINIT .25
 
 // vary initial sigma from left to right
 //#define SIGMARAMP
@@ -125,6 +134,5 @@
 #define SIGMAINITMIN 10
 #define SIGMAINITWIDTH 5
 #define SIGMAINITOFFSET -.5
-#define THETAINIT .25
 //#define UUINIT RHOINIT*THETAINIT/(GAMMA-1.)/MU_GAS//endenCGS2GU(1.*CCC*CCC*1.e-3)
 #endif //SIGMARAMP

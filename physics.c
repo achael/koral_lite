@@ -967,7 +967,7 @@ int f_metric_source_term_arb(ldouble *pp,void *ggg,ldouble *ss)
   //parallel velocity/enthalpy term
 
 #ifndef FORCEFREE_PARALLEL_COLD // neglect pressure
-#ifndef NO_FORCEFREE_PARALLE_SOURCETERM
+#ifndef NO_FORCEFREE_PARALL_SOURCETERM
   int derdir[3]={0,0,0};
   ldouble uuffsource=calc_uuff_source(pp, geom,derdir);
   ss[UUFF]=uuffsource;

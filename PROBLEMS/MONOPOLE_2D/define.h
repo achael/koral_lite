@@ -19,15 +19,13 @@
 
 //#define U2PCONV 1.e-14
 
-#define FORCEFREE
-//#define HYBRID_FORCEFREE
 
 /************************************/
 //reconstruction / Courant
 /************************************/
-#define INT_ORDER 2 //TODO why is int_order 1 more stable???
+#define INT_ORDER 1 //TODO why is int_order 1 more stable???
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .8
+#define TSTEPLIM .75
 #define FLUXLIMITER 1
 #define FLUXMETHOD LAXF_FLUX
 #define MINMOD_THETA 1.5
@@ -38,29 +36,35 @@
 //#define SPLIT_MONOPOLE
 
 #define RHOATMMIN  1.e-20
-#define UINTATMMIN 1.e-20
+//#define UINTATMMIN 1.e-8//1.e-20
 
-#define B2RHORATIOMAXINIT 100//200
-#define B2UURATIOMAXINIT 100//200
+#define B2RHORATIOMAXINIT 1000
+//#define B2UURATIOMAXINIT 100
+#define RHO2UURATIOMAXINIT 1000 
+
 //#define NOLOGINS
-//#define ENFORCEENTROPY
+#define ENFORCEENTROPY
 
+#define FORCEFREE
+//#define HYBRID_FORCEFREE
 
 #if defined(FORCEFREE)
-//#define FORCEFREE_SOLVE_PARALLEL
-//#define FORCEFREE_PARALLEL_COLD
+#define FORCEFREE_SOLVE_PARALLEL
+#define FORCEFREE_PARALLEL_COLD
 //#define FORCEFREE_PARALLEL_ENTROPY
 
 #if defined(HYBRID_FORCEFREE)
 #define HYBRID_FORCEFREE_SIGMACUT 100//50
-#define HYBRID_FORCEFREE_WIDTH 0.//0.05
-#endif
+#define HYBRID_FORCEFREE_WIDTH 0.2
+#endif //HYBRID_FORCEFREE
 
 //#define SKIPALLFLOORS // TODO seems critical for SOLVE_PARALLEL? 
-#define CORRECT_POLARAXIS
-#define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME ZAMOFRAME //DRIFTFRAME // not used
+//TODO
+//#define CORRECT_POLARAXIS //messes up omegaH at the axis
+//#define NCCORRECTPOLAR 1//2
+
+#define B2RHOFLOORFRAME DRIFTFRAME // not used
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 100. 
 #define B2UURATIOMIN 0.
@@ -68,21 +72,21 @@
 #define B2RHORATIOMIN 0.
 #define B2RHORATIOMAX 1.e100
 
-#define GAMMAMAXFF 50//100.  //lower than GAMMAMAXHD? 
-#define GAMMAMAXHD 50//100//100. //why can't this be pushed higher on the monopole? 
+#define GAMMAMAXFF 2000//50//100.  //lower than GAMMAMAXHD? 
+#define GAMMAMAXHD 2000//100. //why can't this be pushed higher on the monopole? 
 
 #else
 
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
 
-#define B2RHOFLOORFRAME ZAMOFRAME //DRIFTFRAME
+#define B2RHOFLOORFRAME DRIFTFRAME
 #define UURHORATIOMIN 0.
 #define UURHORATIOMAX 100.
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX B2UURATIOMAXINIT
+#define B2UURATIOMAX 1000//B2UURATIOMAXINIT
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX B2RHORATIOMAXINIT
+#define B2RHORATIOMAX 1000//B2RHORATIOMAXINIT
 
 #define GAMMAMAXHD 50.//100.
 #endif
@@ -91,7 +95,7 @@
 //blackhole
 /************************************/
 #define MASS 10.
-#define BHSPIN 0.9375
+#define BHSPIN 0.5//9375
 #define RHOR (1.+sqrt(1. - BHSPIN*BHSPIN))
 
 /************************************/
@@ -100,10 +104,10 @@
 #define myMKS2COORDS
 #define METRICAXISYMMETRIC
 #define RMIN 0.7*RHOR //1.8<->6 ANDREW
-#define RMAX 200.
+#define RMAX 250. //200.
 
-#define TNX 256
-#define TNY 256
+#define TNX 192//128//256
+#define TNY 128//256
 #define TNZ 1
 
 #ifdef myMKS1COORDS //modified Kerr-Shild
@@ -152,8 +156,8 @@
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
 #define NSTEPSTOP 1.e10
-#define NOUTSTOP 150
-//#define SILOOUTPUT 1
+#define NOUTSTOP 100
+#define SILOOUTPUT 1
 //#define PRIMOUTPUT 1
 #define ANAOUT_HDF5
 //#define PRIMOUTPUTINMYCOORDS

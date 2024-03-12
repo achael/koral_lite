@@ -4295,7 +4295,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
     {
       for(ix=0;ix<NX;ix++)
       {
-        int zonalindex=iz*(NY*NX) + iy*NX + ix;
+        //int zonalindex=iz*(NY*NX) + iy*NX + ix;
+	int zonalindex=ix*(NY*NZ) + iy*NZ + iz;
 	// coordinates
         struct geometry geom,geomBL,geomBL0;
 	fill_geometry(ix,iy,iz,&geom);

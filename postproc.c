@@ -220,27 +220,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         #endif
 
 	//cell dimensions
-	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-
-	/*
-	ldouble xx1[4],xx2[4];
-        xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-        xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-        coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-        coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-        dx[0]=fabs(xx2[1]-xx1[1]);
-        xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-        xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-        coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-        coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-        dx[1]=fabs(xx2[2]-xx1[2]);
-        xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-        xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-        coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-        coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-        dx[2]=fabs(xx2[3]-xx1[3]);
-        */
 	
 	if(NZ==1) 
         {
@@ -1173,18 +1153,7 @@ int calc_thetaprofiles(ldouble profiles[][NY])
 
 	      //cell dimensions
 	      ldouble dxph[3],dx[0];
-	      
-    	      //ANDREW put cell size code in a function with precompute option
-              get_cellsize_out(iix, iy, iz, dx);
-	      /*
-	      ldouble xx1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(iix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(iix+1,0);xx2[2]=get_xb(iy,1);xx2[3]=get_xb(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS); 
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      */
-		
+	      get_cellsize_out(iix, iy, iz, dx);		
 	      dxph[0]=dx[0]*sqrt(geomBL2.gg[1][1]);
 
 	      ldouble rho2=get_u(p,RHO,iix,iy,iz);

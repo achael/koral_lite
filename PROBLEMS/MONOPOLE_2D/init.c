@@ -12,9 +12,22 @@ ldouble r = geomBL.xx;
 ldouble th = geomBL.yy;
 ldouble rhor = (1. + sqrt(1. - BHSPIN*BHSPIN)) ;
 
-rho = RHOATMMIN + (r/10./rhor)/pow(r,4)/B2RHORATIOMAXINIT;
-uint = UINTATMMIN + (r/10./rhor)/pow(r,4)/B2UURATIOMAXINIT;
-   
+//bsq at the horizon for monopole (I think)
+ldouble bsqh = 1./((rhor*rhor + BHSPIN*BHSPIN)*(rhor*rhor+BHSPIN*BHSPIN));
+
+//rho = RHOATMMIN + (r/10./rhor)/pow(r,4)/B2RHORATIOMAXINIT;
+
+rho = RHOATMMIN + bsqh*pow(r/rhor,-3)/B2RHORATIOMAXINIT;
+
+//uint = UINTATMMIN + (r/10./rhor)/pow(r,4)/B2UURATIOMAXINIT;
+
+//initially isothermal
+uint = rho/RHO2UURATIOMAXINIT;
+  
+// constant density/temperature atmosphere
+//rho = RHOATMMIN; // + pow(r,-4)*B2RHORATIOMAXINIT;
+//uint = UINTATMMIN; //rho/RHO2UURATIOMAXINIT; 
+
 pp[0]=rho;
 pp[1]=uint;
 pp[2]=0.; 
