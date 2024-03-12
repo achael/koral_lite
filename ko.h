@@ -973,8 +973,6 @@ int calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon);
 int set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype);
 int set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype);
 
-int pick_Tb(ldouble *arr,int ix,int iy,int iz,int,ldouble T[][4]);
-int pick_T(ldouble *arr,int ix,int iy,int iz,ldouble T[][4]);
 int pick_g(int ix,int iy,int iz,ldouble gg[][5]);
 ldouble pick_gdet(int ix,int iy,int iz);
 int pick_G(int ix,int iy,int iz,ldouble gg[][5]);
@@ -1028,8 +1026,6 @@ int count_ff(int *n, int *n2, int *n3);
 
 int test_inversion();
 int test_inversion_nonrel();
-int test_inversion_5d();
-
 
 ///////////////////////////////////////////////////////////////
 // u2prad.c ///////////////////////////////////////////////////

@@ -810,34 +810,6 @@ set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int at
   return 0;
 }
 
-//**********************************************************************
-//picks metric like tensor from cell face arr at ix,iy,iz
-//**********************************************************************
-
-int
-pick_Tb(ldouble* arr,int ix,int iy,int iz,int idim,ldouble T[][4])
-{
-  int i,j;
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
-      T[i][j]=get_Tb(arr,i,j,ix,iy,iz,idim);
-  return 0;
-}
-
-
-//**********************************************************************
-//picks metric like tensor from arr at ix,iy,iz
-//**********************************************************************
-
-int
-pick_T(ldouble* arr,int ix,int iy,int iz,ldouble T[][4])
-{
-  int i,j;
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
-      T[i][j]=get_T(arr,i,j,ix,iy,iz);
-  return 0;
-}
 
 //**********************************************************************
 //picks a metric at ix,iy,iz
