@@ -974,10 +974,11 @@ int set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int
 int set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype);
 
 int pick_g(int ix,int iy,int iz,ldouble gg[][5]);
-ldouble pick_gdet(int ix,int iy,int iz);
 int pick_G(int ix,int iy,int iz,ldouble gg[][5]);
 int pick_gb(int ix,int iy,int iz,int,ldouble gg[][5]);
 int pick_Gb(int ix,int iy,int iz,int,ldouble gg[][5]);
+
+ldouble pick_gdet(int ix,int iy,int iz);
 
 int print_p(ldouble *p);
 int print_u(ldouble *p);
@@ -1075,9 +1076,8 @@ int set_x(int ic, int idim,ldouble val);
 int set_xb(int ic, int idim,ldouble val);
 ldouble calc_xb(int i,int idim);
 int calc_bc(int ix,int iy,int iz,ldouble t, ldouble *uu,ldouble *pp,int ifinit,int BCtype);
-int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim);
+
 int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
-int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
 
 int copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, long long N);
 int copy_u(ldouble factor,ldouble *uu1,ldouble* uu2 );
@@ -1085,14 +1085,6 @@ int copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2);
 int add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, long long N);
 int add_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3);
 int addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3);
-int add_u_core_3(ldouble f1, ldouble* uu1,
-		 ldouble f2, ldouble *uu2,
-		 ldouble f3, ldouble *uu3,
-		 ldouble *uu4,long long N);
-int add_u_3(ldouble f1, ldouble* uu1,
-	    ldouble f2, ldouble *uu2,
-	    ldouble f3, ldouble *uu3,
-	    ldouble *uu4);
 int addi_u_3(ldouble f1, ldouble* uu1,
 	     ldouble f2, ldouble *uu2,
 	     ldouble f3, ldouble *uu3,

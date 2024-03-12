@@ -2462,26 +2462,6 @@ calc_xb(int i,int idim)
   return xb;
 } 
 
-//deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x NV] - cell boundaries in idim
-
-int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim)
-{
-  if(idim==0)
-    {
-      uarr[iv + (iX(ix)+NGCX)*NV + (iY(iy)+NGCY)*(SX+1)*NV + (iZ(iz)+NGCZ)*(SY)*(SX+1)*NV] = value;
-    }
-  if(idim==1)
-    {
-      uarr[iv + (iX(ix)+NGCX)*NV + (iY(iy)+NGCY)*(SX)*NV + (iZ(iz)+NGCZ)*(SY+1)*(SX)*NV] = value;
-    }
-  if(idim==2)
-    {
-      uarr[iv + (iX(ix)+NGCX)*NV + (iY(iy)+NGCY)*(SX)*NV + (iZ(iz)+NGCZ)*(SY)*(SX)*NV] = value;
-    }
-  return 0;
-}
-
-
 ///////////////////////////////////////////////////////////////
 //deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x gSIZE] - cell boundaries in idim metric
 
@@ -2502,26 +2482,6 @@ int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim
   return 0;
 }
 
-
-///////////////////////////////////////////////////////////////
-//deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x 16] - tensors at cell boundaries in idim metric
-
-int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim)
-{
-  if(idim==0)
-    {
-      uarr[i*4+j + (iX(ix)+NGCX)*16 + (iY(iy)+NGCY)*(SX+1)*16 + (iZMET(iz)+NGCZMET)*(SY)*(SX+1)*16] = value;
-    }
-  if(idim==1)
-    {
-      uarr[i*4+j + (iX(ix)+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZMET(iz)+NGCZMET)*(SY+1)*(SX)*16] = value;
-    }
-  if(idim==2)
-    {
-      uarr[i*4+j + (iX(ix)+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZMET(iz)+NGCZMET)*(SY)*(SX)*16] = value;
-    }
-  return 0;
-}
 
 //**********************************************************************
 //* Variable copying, multiplication, addition
@@ -2616,32 +2576,6 @@ addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 	set_u(uu3,iv,ix,iy,iz,f1*get_u(uu1,iv,ix,iy,iz)+f2*get_u(uu2,iv,ix,iy,iz));
     }
 
-  return 0;
-}
-
-
-
-///////////////////////////////////////////////////////////////
-//array multiplication plus addition on 3 matrices
-//uu3=f1*uu1+f2*uu2
-int
-add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4,long long N)
-{
-  long long i;
-  #pragma omp parallel for private(i)
-  for (i=0;i<N;i++)
-    uu4[i]=uu1[i]*f1+uu2[i]*f2+uu3[i]*f3;
-  return 0;
-}
-
-
-///////////////////////////////////////////////////////////////
-int
-add_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4)
-{
-  long long Ngrid=SX*SY*SZ;
-  long long Nprim=Ngrid*NV;
-  add_u_core_3(f1,uu1,f2,uu2,f3,uu3,uu4,Nprim);
   return 0;
 }
 
