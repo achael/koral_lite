@@ -566,7 +566,6 @@ ldouble calc_opacities_from_state(ldouble *pp, void *sss, void *ggg, void *op)
 #endif //DOUBLECOMPTON
 
 #ifdef SYNCHROTRON
-#ifndef SYNCHROTRON_NEW_FIT // use old fit by default
 
   ldouble  nu_MBsyn, zetaBsyngas, zetaBsynrad, zetaAdenomNum, zetaAdenomrad, IaByBrad, IaByBnum, emisSynchro;
   ldouble Tc_n;
@@ -656,58 +655,6 @@ ldouble calc_opacities_from_state(ldouble *pp, void *sss, void *ggg, void *op)
   kappagassynross *= Terelfactor;
   #endif
   
-#else //SYNCHROTRON_NEW_FIT - this is a failure!!
-
-ldouble  Te_inv, B_033, B_inv, zetaSy, zetaSy_m033, zetaB, zetaB_m033;
-ldouble  emisSynchro, fit_rad_syn, fit_num_syn, fit_Ross_rad_syn, fit_Ross_gas_syn;
-
-Te_inv = 1./Te;
-B_033 = cbrt(Bmagcgs);
-
-if (Bmagcgs > 0. )
-  B_inv = 1./Bmagcgs;
-else
-  B_inv = 0.; 
-
-kappagassyn = 1.5916*1e-30*Bmagcgs*Bmagcgs*Te_inv*Te_inv*nethcgs*kappacgs2gu*rhocgs2gu; //kappa_{P,e}^{sy} in GU
-zetaSy = 1.75e23*Trad*Te_inv*Te_inv;
-zetaSy_m033 = 1./cbrt(zetaSy);
-zetaB = zetaSy*B_inv;
-
-//limit for zetaB needed because number opacity diverges for low B
-ldouble zetaBmax = 1e5;
-if (zetaB > zetaBmax )
-  zetaB = zetaBmax; 
-
-zetaB_m033 = zetaSy_m033*B_033;
-
-//zetaB is: k_boltCGS*T_{rad,e}/h_planckCGS/nu_MBsyn with nu_MBsyn = 1.19e-13*Te*Te
-//some messing with B_inv is to avoid division by zero
-
-fit_rad_syn = 1.005*zeta_inv_3/(1. + 5.444*zetaB_m033*zetaB_m033 + 7.218*zetaB_m033*zetaB_m033*zetaB_m033*zetaB_m033);
-kapparadsyn = kappagassyn*fit_rad_syn; //kappa_{P,a}^{sy}
-
-fit_num_syn = zeta_inv_3*0.868*zetaB/(1. + 0.589*zetaB_m033 + 0.087*zetaB_m033*zetaB_m033);
-kapparadnumsyn = kappagassyn*fit_num_syn; //kappa_{n}^{sy}
-
-fit_Ross_rad_syn = zeta_inv_3*(3.24*1.e-2)*pow(zetaB,1.31)*exp(-1.6*pow(zetaB,0.463));
-kapparadsynross = kappagassyn*fit_Ross_rad_syn; // kappa_{R,a}^{sy}
-
-fit_Ross_gas_syn = zeta_inv_3*(3.24*1.e-2)*pow(zetaB*zeta_inv,1.31)*exp(-1.6*pow(zetaB*zeta_inv,0.463));
-kappagassynross = kappagassyn*fit_Ross_gas_syn; // kappa_{R,e}^{sy}
-
-emisSynchro = 3.61e-34*(nethcgs/rhocgs)*Te*Te*Bmagcgs*Bmagcgs; // standard emisivity divided by density
-
-  // Ramesh: suppress synchrotron opacity at nonrelativistic temperatures -- avoids numerical problems at low temperatures 
-  ldouble Terel = Te * k_over_mecsq;  // this is kT/mec^2
-  ldouble Terelfactor = (Terel * Terel) / (1. + Terel * Terel);  // suppression factor
-  kapparadsyn *= Terelfactor;
-  kappagassyn *= Terelfactor;
-  kapparadnumsyn *= Terelfactor;
-  kapparadsynross *= Terelfactor;
-  kappagassynross *= Terelfactor;
-
-#endif  //SYNCHROTRON_NEW_FIT
 #endif  //SYNCHROTRON
 
   // sum up all the absorption opacities

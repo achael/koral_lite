@@ -29,7 +29,7 @@
 //total rad energy flux (17)
 //outflowin rad energy flux (18)
 //jet rad energy flux (19)
-//outflowin mass flux (20)
+//outflowing mass flux (20)
 //jet mass flux (21)
 //luminosity at given radius everywhere (22)
 //surface density in the inflow (23)
@@ -292,12 +292,8 @@ int calc_radialprofiles(ldouble profiles[][NX])
 	//transforming interpolated primitives to BL
         #ifdef PRECOMPUTE_MY2OUT
         trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
-	//trans_pall_coco_my2out(fd_pm1,fd_pm1,&geomm1,&geomBLm1); // don't need these anymore
-        //trans_pall_coco_my2out(fd_pp1,fd_pp1,&geomp1,&geomBLp1);
         #else      
         trans_pall_coco(pp,pp,MYCOORDS,OUTCOORDS,xx,&geom,&geomBL);
-	//trans_pall_coco(fd_pm1,fd_pm1,MYCOORDS,OUTCOORDS,xx,&geomm1,&geomBLm1); // don't need these anymore
-        //trans_pall_coco(fd_pp1,fd_pp1,MYCOORDS,OUTCOORDS,xx,&geomp1,&geomBLp1);
         #endif
 	
         ldouble vischeating=0.;
@@ -588,10 +584,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
         profiles[29][ix]+=rho*dxph[1]*pow(tan(fabs(M_PI/2.-xxBL[2])),2.);
 #endif
         
-        //surface density in the inflow (23)
-        //if(utcon[1]<0.)
-        //  profiles[21][ix]+=rho*dxph[1];
-        
         //rho-weighted q-theta (28)
         profiles[26][ix]+=rho*qtheta*dxph[1];
 	       
@@ -759,7 +751,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         if(utcon[1]<0.)
           profiles[22][ix]+=-rhouconr*dxph[1];
         
-        //rho-weighted minus radial velocity in the outflow (36)
+
         #if(PROBLEM==87)
         ldouble angmomR = ucov[3];
         ldouble epsR =-(1.+ucov[0]);
@@ -767,12 +759,13 @@ int calc_radialprofiles(ldouble profiles[][NX])
         if(eccR > -1.) 
         {
           profiles[34][ix]+= rho*dxph[1]*sqrt(1. - 2.*ucov[3]*ucov[3]*(1.+ucov[0]));
-          profiles[21][ix]+=rho*dxph[1];
+          profiles[21][ix]+= rho*dxph[1];
         }
-        //if(eccN > -1.) profiles[34][ix]+= rho*dxph[1]*sqrt(1. + eccN); //eccentricity
         #else
+	//surface density in the inflow (23)
         if(utcon[1]<0.)
           profiles[21][ix]+=rho*dxph[1];
+        //rho-weighted minus radial velocity in the outflow (36)
         if(utcon[1]>0.)
           profiles[34][ix]+=rhouconr*dxph[1];
         #endif
@@ -814,10 +807,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         Jvec[0]+=jvec[0];
         Jvec[1]+=jvec[1];
         Jvec[2]+=jvec[2];
-        
-        //<(rho+u+bsq/2)u^r><u_phi> (5)
-        //profiles[3][ix]+=get_uavg(pavg,AVGWUCON(1),ix,iy,iz)*get_uavg(pavg,AVGUCOV(3),ix,iy,iz)*dxph[1];
-        
+                
         //u_phi everywhere (5)
         //if(utcon[1]<0.)
         {
@@ -827,7 +817,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
             profiles[3][ix]+=rho*ucov[3]*dxph[1];
         }
         
-        //int the outflow (51)
+        //in the outflow (51)
         if(utcon[1]>0.)
         {
           if(doingavg)
@@ -899,7 +889,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
     profiles[28][ix]=-Bangle1/Bangle2;
     
     //normalizing by <(rho+u+bsq/2)u^r>
-    //profiles[3][ix]/=avgsums[AVGWUCON(1)][ix];
     profiles[3][ix]/=profiles[0][ix];
     
     //Keplerian u_phi (6)
