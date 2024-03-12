@@ -694,9 +694,6 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
   int iattribute = 0;
   char prim_name[256], attribute_name[256];
 
-  //dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
-  //dumps_memspace_array = H5Screate_simple(3, chunk_dims, NULL);
-
   for(iv = 0; iv < NV; iv++)
   {
 
@@ -3788,7 +3785,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 
   // Make HDF5 file
   char fname_h5[256];
-  //sprintf(fname_h5, "%s/ana%04d.h5", folder, nfout1);
   sprintf(fname_h5,"%s/%s%04d.h5",folder,prefix,nfout1);
   dumps_file_id = H5Fcreate(fname_h5, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -3862,12 +3858,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 #endif
   
   dumps_group_id = H5Gcreate2(dumps_file_id, "/header", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  sprintf(version,"%s","KORALv2");
 
-  #ifdef ANAOUT_HDF5_V1
-  sprintf(version,"%s","KORALv2");
-  #else
-  sprintf(version,"%s","KORALv2");
-  #endif
   strtype=H5Tcopy(H5T_C_S1);
   status=H5Tset_size(strtype,strlen(metric_run));		     
   dumps_dataset_str = H5Dcreate2(dumps_file_id, "/header/version", strtype, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -4211,47 +4203,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   // Body Data
   // loop over all cells and fill in the arrays with cell data
 
-  /*
-  ldouble x1_arr[NX][NY][NZ];
-  ldouble x2_arr[NX][NY][NZ];
-  ldouble x3_arr[NX][NY][NZ];
-  ldouble gdet_arr[NX][NY][NZ];
-  
-  ldouble r_arr[NX][NY][NZ];
-  ldouble th_arr[NX][NY][NZ];
-  ldouble ph_arr[NX][NY][NZ];
-
-  ldouble rho_arr[NX][NY][NZ];
-  ldouble pgas_arr[NX][NY][NZ];
-  ldouble uint_arr[NX][NY][NZ];
-  
-  ldouble u0_arr[NX][NY][NZ];
-  ldouble u1_arr[NX][NY][NZ];
-  ldouble u2_arr[NX][NY][NZ];
-  ldouble u3_arr[NX][NY][NZ];
-
-  ldouble U1_arr[NX][NY][NZ];
-  ldouble U2_arr[NX][NY][NZ];
-  ldouble U3_arr[NX][NY][NZ];
-
-  #ifdef MAGNFIELD
-  ldouble b0_arr[NX][NY][NZ];
-  ldouble b1_arr[NX][NY][NZ];
-  ldouble b2_arr[NX][NY][NZ];
-  ldouble b3_arr[NX][NY][NZ];
-
-  ldouble B1_arr[NX][NY][NZ];
-  ldouble B2_arr[NX][NY][NZ];
-  ldouble B3_arr[NX][NY][NZ];
-  #endif
-  
-  #ifdef EVOLVEELECTRONS
-  ldouble te_arr[NX][NY][NZ];
-  ldouble ti_arr[NX][NY][NZ];
-  ldouble gam_arr[NX][NY][NZ];
-  #endif
-  */
-
   ldouble *x1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   ldouble *x2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   ldouble *x3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
@@ -4426,46 +4377,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 	  temp=calc_PEQ_Teifrompp(pp,&Te,&Ti,geomBL.ix,geomBL.iy,geomBL.iz);
 	  #endif
 	} //doingavg==0
-	/*
-        x1_arr[ix][iy][iz] = x1;
-        x2_arr[ix][iy][iz] = x2;
-        x3_arr[ix][iy][iz] = x3;
-        gdet_arr[ix][iy][iz] = gdet;
-	
-        r_arr[ix][iy][iz] = r;
-        th_arr[ix][iy][iz] = th;
-        ph_arr[ix][iy][iz] = ph;
-
-        rho_arr[ix][iy][iz] = rho;
-        pgas_arr[ix][iy][iz] = pgas;
-        uint_arr[ix][iy][iz] = uint;
-	
-        u0_arr[ix][iy][iz] = utcon[0];
-        u1_arr[ix][iy][iz] = utcon[1];
-        u2_arr[ix][iy][iz] = utcon[2];
-        u3_arr[ix][iy][iz] = utcon[3];
-        U1_arr[ix][iy][iz] = urel[1];
-        U2_arr[ix][iy][iz] = urel[2];
-        U3_arr[ix][iy][iz] = urel[3];
-
-        #ifdef MAGNFIELD
-        b0_arr[ix][iy][iz] = bcon[0];
-        b1_arr[ix][iy][iz] = bcon[1];
-        b2_arr[ix][iy][iz] = bcon[2];
-        b3_arr[ix][iy][iz] = bcon[3];
-
-        B1_arr[ix][iy][iz] = Bcon[1];
-        B2_arr[ix][iy][iz] = Bcon[2];
-        B3_arr[ix][iy][iz] = Bcon[3];
-        #endif
-
-        #ifdef EVOLVEELECTRONS
-        te_arr[ix][iy][iz] = Te;
-        ti_arr[ix][iy][iz] = Ti;
-	gam_arr[ix][iy][iz] = gamma;
-        #endif
-
-        */
 	x1_arr[zonalindex] = x1;
         x2_arr[zonalindex] = x2;
         x3_arr[zonalindex] = x3;
@@ -4545,89 +4456,26 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/rho", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(rho_arr[0][0][0]));
 		    rho_arr);
   status = H5Dclose(dumps_dataset_array);
 
-#ifdef ANAOUT_HDF5_V1
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/pgas", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(pgas_arr[0][0][0]));
-		    pgas_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u0", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(u0_arr[0][0][0]));
-		    u0_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(u1_arr[0][0][0]));
-		    u1_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(u2_arr[0][0][0]));
-		    u2_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(u3_arr[0][0][0]));
-		    u3_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  #ifdef MAGNFIELD
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b0", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(b0_arr[0][0][0]));
-		    b0_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(b1_arr[0][0][0]));
-		    b1_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(b2_arr[0][0][0]));
-		    b2_arr);
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(b3_arr[0][0][0]));
-		    b3_arr);
-  status = H5Dclose(dumps_dataset_array);
-  #endif
-  
-#else //ifdef ANAOUT_HDF5_V1
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/uint", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(uint_arr[0][0][0]));
 		    uint_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(U1_arr[0][0][0]));
 		    U1_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(U2_arr[0][0][0]));
 		    U2_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(U3_arr[0][0][0]));
 		    U3_arr);
   status = H5Dclose(dumps_dataset_array);
 
@@ -4635,35 +4483,28 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(B1_arr[0][0][0]));
 		    B1_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(B2_arr[0][0][0]));
 		    B2_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(B3_arr[0][0][0]));
 		    B3_arr);
   status = H5Dclose(dumps_dataset_array);
   #endif
-  
-#endif  //ifdef ANAOUT_HDF5_V1
-    
+      
   #ifdef EVOLVEELECTRONS
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/te", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(te_arr[0][0][0]));
 		    te_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/ti", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    //		    &(ti_arr[0][0][0]));
 		    ti_arr);
   status = H5Dclose(dumps_dataset_array);
   #endif
