@@ -752,9 +752,6 @@ int mpi_isitBC_forcorners(int BCtype);
 void mpi_synchtiming(ldouble *time);
 void mpi_myinit(int argc, char *argv[]);
 void mpi_myfinalize();
-//void mpi_tileorigin(long long ti, long long tj, long long tk, long long* toi, long long* toj, long long* tok);
-//void mpi_global2localidx(long long gix, long long giy, long long giz, long long *lix, long long *liy, long long *liz);
-//void mpi_local2globalidx(long long lix, long long liy, long long liz, long long *gix, long long *giy, long long *giz);
 
 void mpi_tileorigin(int ti, int tj, int tk, int* toi, int* toj, int* tok);
 void mpi_global2localidx(int gix,int giy, int giz, int *lix, int *liy, int *liz);
@@ -998,6 +995,7 @@ ldouble calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg);
 int p2u_mhd_nonrel(ldouble *pp, ldouble *uu, void *ggg);
 int p2u_rad(ldouble *pp,ldouble *uu,void *ggg);
 int p2avg(int ix,int iy,int iz,ldouble *avg);
+int save_avg(ldouble dtin);
 int test_maginv();
 
 ///////////////////////////////////////////////////////////////
@@ -1349,6 +1347,7 @@ int test_calcgamma();
 
 int calc_faraday(ldouble F[4][4],int ix,int iy,int iz,int when);
 int calc_current(void* ggg,ldouble jcon[4],int *derdir);
+
 ///////////////////////////////////////////////////////////////
 // nonthermal.c ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
@@ -1361,10 +1360,6 @@ ldouble calc_relel_p(ldouble *pp);
 ldouble calc_gammainj_max_syncool(ldouble bsq, ldouble dtau);
 ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble p_index, ldouble gammamax);
 int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldouble* delta_back, ldouble* pindex_back);
-//ldouble calc_S4fromnT(ldouble n, ldouble temp, int type);
-//ldouble calc_S4fromnu(ldouble n, ldouble uint,int type);
-//ldouble calc_TfromS4n(ldouble S4,ldouble n, int type,int ix,int iy,int iz);
-//ldouble calc_ufromS4n(ldouble S4,ldouble n,int type,int ix,int iy,int iz);
 ldouble calc_gammaint_relel(ldouble* pp, ldouble Te, ldouble Ti);
 ldouble calc_PEQ_ugasfrom_Tei_relel(ldouble *pp, ldouble Te,ldouble Ti);
 ldouble chemical_potential_short(ldouble theta, ldouble neth);
@@ -1429,9 +1424,7 @@ int calc_lum_tausurface(ldouble taumax,ldouble *radlum);
 ///////////////////////////////////////////////////////////////
 // fileop.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-//deleted OUTOUTPUT BOXOUTPUT BOXCORROUTPUT VAROUTPUT, BOXVERTOUTPUT ANARELRADOUTPUT SLICEOUTPUT
 
-int save_avg(ldouble dtin);
 int fprint_openfiles(char* folder);
 int fprint_closefiles();
 int fprint_gridfile(char* folder);

@@ -90,105 +90,12 @@ void initialize_constants()
   
   // Coordinate specific factors
 #if (MYCOORDS==JETCOORDS)
-  //printf("Finding hypx1out\n");
   hypx1in = log(RMIN-MKSR0);
   hypx1brk= log(HYPRBRK-MKSR0);
   hypx1out= hyperexp_x1max(RMAX, HYPRBRK, MKSR0);
-
-  //printf("hyperx1in %e | hyperx2brk %e | hyperx1out %e\n",hypx1in,hypx1brk,hypx1out);
   #ifdef CYLINDRIFY
   set_cyl_params();
   #endif
-  
-  //ANDREW -- diagnostics for new jet coordinates/metric
-  /*
-  //printf("%.7f %.7f %.7f\n",hypx1in,hypx1brk,hypx1out);
-
-  ldouble x0[4] = {0, .15, 0.14863, 1};
-  ldouble x1[4], x2[4];
-
-  printf("%.7f %.7f %.7f %.7f\n",x0[0],x0[1],x0[2],x0[3]);
-
-  struct timespec temp_clock;
-  my_clock_gettime(&temp_clock);    
-  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  
-  coco_JET2KS(x0,x1);
-  
-  my_clock_gettime(&temp_clock);    
-  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("Transform Time %.7f\n",end_time-start_time);
-  
-  printf("%.7f %.7f %.7f %.7f\n",x1[0],x1[1],x1[2],x1[3]);  
-
-  coco_KS2JET(x1,x2);
-  printf("%.7f %.7f %.7f %.7f\n",x2[0],x2[1],x2[2],x2[3]);
-
-  
-  ldouble dxdx[4][4], dxdxinv[4][4], dxdxinv2[4][4];
-  int i,j,tmp;
-
-  my_clock_gettime(&temp_clock);    
-  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-
-  tmp = dxdx_arb_num(x0, dxdx, MYCOORDS, KSCOORDS);
-
-  my_clock_gettime(&temp_clock);    
-  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("DXDX Time %.7f\n",end_time-start_time);
-
-  tmp = dxdx_arb_num(x1, dxdxinv, KSCOORDS, MYCOORDS);
-  inverse_44matrix(dxdx,dxdxinv2);    
-
-  print_tensor(dxdx);
-  print_tensor(dxdxinv);
-  //print_tensor(dxdxinv2);
-  printf("\n\n====================\n\n");
-  ldouble gtmp[4][5], g[4][4], G[4][4], ginv[4][4], Ginv[4][4];
-
-  my_clock_gettime(&temp_clock);    
-  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-
-  calc_g_arb_num(x0, gtmp, MYCOORDS);
-  my_clock_gettime(&temp_clock);    
-  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-  printf("Metric Time %.7f\n",end_time-start_time);
-  
-  DLOOP(i,j) g[i][j]=gtmp[i][j];
-  calc_G_arb_num(x0, gtmp, MYCOORDS);
-  DLOOP(i,j) G[i][j]=gtmp[i][j];
-  inverse_44matrix(g,ginv);
-  inverse_44matrix(G,Ginv);
-
-  //DLOOP(i,j) {if(fabs(g[i][j])<1.e-9) g[i][j]=0;}
-  //DLOOP(i,j) {if(fabs(G[i][j])<1.e-9) G[i][j]=0;}
-  //DLOOP(i,j) {if(fabs(ginv[i][j])<1.e-9) ginv[i][j]=0;}
-  //DLOOP(i,j) {if(fabs(Ginv[i][j])<1.e-9) Ginv[i][j]=0;}
-  
-  print_tensor(g);
-  //print_tensor(Ginv);
-  //DLOOP(i,j) Ginv[i][j] = (g[i][j]-Ginv[i][j])/(g[i][j]+SMALL);
-  //print_tensor(Ginv);
-  
-  printf("\n\n====================\n\n");
-  print_tensor(G);
-  //print_tensor(ginv);
-  //DLOOP(i,j) ginv[i][j] = (G[i][j]-ginv[i][j])/(G[i][j]+SMALL);
-  //print_tensor(ginv);
-
- 
-  exit(-1);
-  */
-
-  /*  
-  printf("Testing gammainterp\n");
-  printf("%e %e %e \n",calc_meanlorentz(1.e-3),calc_meanlorentz(1.1e-3),calc_meanlorentz(5.e-3));
-  printf("%e %e %e \n",calc_meanlorentz(0.74),calc_meanlorentz(1.23),calc_meanlorentz(7.54));
-  printf("%e %e %e \n",calc_meanlorentz(14.3),calc_meanlorentz(77.3),calc_meanlorentz(144.));
-  printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
-  exit(-1);
-  */
-  
 #endif //MYCOORDS==JETCOORDS
 
   // cutoff factors for hybrid force-free
@@ -901,22 +808,6 @@ free_arrays()
   free(g);
   free(G);
   free(gKr);
-  //free(emuup);
-  //free(emulo);
-  //free(emuupbx);
-  //free(emulobx);
-  //free(emuupby);
-  //free(emuloby);
-  //free(emuupbz);
-  //free(emulobz);
-  //free(tmuup);
-  //free(tmulo);
-  //free(tmuupbx);
-  //free(tmulobx);
-  //free(tmuupby);
-  //free(tmuloby);
-  //free(tmuupbz);
-  //free(tmulobz);
 
   free(pbLx);
   free(pbRx);
@@ -1896,7 +1787,7 @@ convert_out2gif_2d(char *fname,char *fname2,int niter,ldouble t)
   FILE *fgnu=fopen(buf1,"w");
 
 #ifdef PR_OUT2GIF_2D
-  #include PR_OUT2GIF_2D   //PROBLEMS/XXX/out2gid_2d.c
+  #include PR_OUT2GIF_2D   //PROBLEMS/XXX/out2gif_2d.c
 #endif
 
   fprintf(fgnu,"\n");
@@ -1914,7 +1805,7 @@ convert_out2gif_1d(char *fname,char *fname2,int niter,ldouble t)
   char bufor[50];
 
 #ifdef PR_OUT2GIF_1D
-  #include PR_OUT2GIF_1D   //PROBLEMS/XXX/out2gid_2d.c
+  #include PR_OUT2GIF_1D   //PROBLEMS/XXX/out2gif_2d.c
 #endif
   fprintf(fgnu,"\n");
   fclose(fgnu);   

@@ -643,6 +643,69 @@ else
   return 0.;
 }
 
+/*************************************************/
+/*  adds up current quantities to the pavg array */
+/*************************************************/
+
+int
+save_avg(ldouble dtin)
+{
+  int ix,iy,iz,iv,ii;
+
+#pragma omp parallel for private(ix,iy,iz,iv) 
+  for(ix=0;ix<NX;ix++) 
+    {
+      for(iy=0;iy<NY;iy++)
+	{
+	  ldouble avgz[NV+NAVGVARS];
+	   for(iv=0;iv<NV+NAVGVARS;iv++)
+	     avgz[iv]=0.;
+	   for(iz=0;iz<NZ;iz++)
+	    {
+	      ldouble avg[NV+NAVGVARS];
+	      p2avg(ix,iy,iz,avg);
+
+	      //timestep
+	      ldouble dt=dtin;
+
+#ifdef RADIATION //if implicit failed, do not take this step into account at all for failed cells
+	      if(get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)==0)
+#endif
+		{
+
+#if (AVGOUTPUT==2) //phi-averaged
+		  for(iv=0;iv<NV+NAVGVARS;iv++)
+		    avgz[iv]+=avg[iv];
+#else //regular, without phi-averaging
+		  set_u_scalar(avgselftime,ix,iy,iz,get_u_scalar(avgselftime,ix,iy,iz)+dt);
+		  for(iv=0;iv<NV+NAVGVARS;iv++)
+		    {
+		      set_uavg(pavg,iv,ix,iy,iz, get_uavg(pavg,iv,ix,iy,iz)+avg[iv]*dt);
+		    }
+#endif
+		}
+	    }
+
+#if (AVGOUTPUT==2) //phi-averaged
+	  for(iv=0;iv<NV+NAVGVARS;iv++)
+	    avgz[iv]/=NZ;
+	  set_u_scalar(avgselftime,ix,iy,0,get_u_scalar(avgselftime,ix,iy,0)+dt);
+	  for(iv=0;iv<NV+NAVGVARS;iv++)
+	    {
+	      set_uavg(pavg,iv,ix,iy,0, get_uavg(pavg,iv,ix,iy,0)+avgz[iv]*dt);
+	    }
+#endif
+	}
+    }
+
+  avgtime+=dtin;
+
+  
+  return 0;
+}
+
+
+
 //**********************************************************************
 /*! int test_maginv()
  \brief Test p2u and u2p for MHD fluid
