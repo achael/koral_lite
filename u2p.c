@@ -383,7 +383,7 @@ u2p(ldouble *uu0, ldouble *pp, void *ggg, int corrected[3], int fixups[2], int t
 #ifdef RADIATION  
 
   //Do the radiative inversion from u2p_rad.c
-  u2p_rad(uu,pp,geom,&radcor)
+  u2p_rad(uu,pp,geom,&radcor);
   if(radcor>0)   //rad fixups only for critical failure in implicit    
   {
     fixups[1]=1;

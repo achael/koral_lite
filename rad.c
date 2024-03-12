@@ -5219,7 +5219,7 @@ test_solve_implicit_lab()
       params[6]=0; //ifelectron
       solve_implicit_lab_4dprim(uu0,pp0,&geom,dt,verbose,params,pp);
       print_primitives(pp);
-      printf("gas temp: %e\nrad temp: %e\n",calc_PEQ_Tfromurho(pp[UU],pp[RHO]),calc_LTE_TfromE(pp[EE]));
+      printf("gas temp: %e\nrad temp: %e\n",calc_PEQ_Tfromurho(pp[UU],pp[RHO],geom.ix,geom.iy,geom.iz),calc_LTE_TfromE(pp[EE]));
     }
 #endif
   exit(1);

@@ -1332,16 +1332,16 @@ int calc_scalars(ldouble *scalars,ldouble t)
   #endif
   int ix;
   for(ix=0;ix<NX;ix++)
-    {
-      get_xx(ix,0,0,xx);
-      #ifdef PRECOMPUTE_MY2OUT
-      get_xxout(ix, 0, 0, xxBL);
-      #else
-      coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
-      #endif
+  {
+    get_xx(ix,0,0,xx);
+    #ifdef PRECOMPUTE_MY2OUT
+    get_xxout(ix, 0, 0, xxBL);
+    #else
+    coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
+    #endif
 
-      if(xxBL[1]>radius) break;
-    }
+    if(xxBL[1]>radius) break;
+  }
 
   double totlum;
   calc_local_lum(ix,NCCORRECTPOLAR+1,0,&radlum,&totlum);

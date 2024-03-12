@@ -125,7 +125,7 @@
 /************************************/
 //radiation choices
 /************************************/
-//#define RADIATION
+#define RADIATION
 #ifdef RADIATION
 
 #define EVOLVEPHOTONNUMBER
@@ -192,7 +192,7 @@
 /************************************/
 //electron choices
 /************************************/
-//#define EVOLVEELECTRONS
+#define EVOLVEELECTRONS
 #ifdef EVOLVEELECTRONS
 
 #define CONSISTENTGAMMA

@@ -666,7 +666,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 	 #endif
 
 	 //electrons
-	 ne=calc_thermal_ne(pp); 
+	 ldouble ne=calc_thermal_ne(pp); 
 	 tempeloc=pe/K_BOLTZ/ne;
 	 ldouble gammae=GAMMAE;
 	 #ifdef CONSISTENTGAMMA
