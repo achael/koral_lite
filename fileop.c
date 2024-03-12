@@ -2582,7 +2582,6 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	      }
 
 	      //cell dimensions
-     	      //ANDREW put cell size code in a function with precompute option
               ldouble dxph[3],dx[3];
               get_cellsize_out(ix, iy, iz, dx);
 	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
@@ -3191,7 +3190,6 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
 	      }
 
 	      //cell dimensions
-      	      //ANDREW put cell size code in a function with precompute option
               ldouble dxph[3],dx[3];
 	      get_cellsize_out(ix, iy, iz, dx);
 		
@@ -3423,7 +3421,6 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
 	 
 	   ldouble dx[3];
 	   //cell dimensions
-    	   //ANDREW put cell size code in a function with precompute option
            get_cellsize_out(ix, iy, iz, dx);
 
 	   if(doingavg)

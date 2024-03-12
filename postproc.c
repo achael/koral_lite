@@ -1407,7 +1407,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   scalars[6]=rhoGU2CGS(pp[RHO]);
 #endif
 
-  //ANDREW should this be in not just one cell??  
+  //ANDREW TODO: move to hdf5 output
 #if (PROBLEM==107 || PROBLEM==114) //RELELTEST or RELELEXPAND
   ldouble pp[NV];
   int iv;
@@ -1755,28 +1755,7 @@ calc_totalmass()
           gdet = geomBL.gdet;
 
 	  //cell dimensions
-    	  //ANDREW put cell size code in a function with precompute option
           get_cellsize_out(ix, iy, iz, dx);
-	  /*
-	  ldouble xx1[4], xx2[4];
-          xx1[0] = 0.; xx1[1] = get_xb(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_x(iz, 2);
-          xx2[0] = 0.; xx2[1] = get_xb(ix+1, 0);xx2[2] = get_x(iy, 1); xx2[3] = get_x(iz, 2);
-          coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-          coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-          dx[0] = fabs(xx2[1] -xx1[1]);
-
-          xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-          xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-          coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-          coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-          dx[1] = fabs(xx2[2] - xx1[2]);
-
-	  xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-          xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-          coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-          coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-          dx[2] = fabs(xx2[3] - xx1[3]);
-          */
 	  if(NZ==1) 
           {
             dx[2] = 2. * M_PI;
@@ -2111,36 +2090,12 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	  struct geometry geom;
 	  fill_geometry(ix,iy,iz,&geom);
 
-	  //get_xx(ix,iy,iz,xx);
-	  //dx[0]=get_size_x(ix,0);
-	  //dx[1]=get_size_x(iy,1);
-	  //dx[2]=2.*M_PI;
-	  //gdet=geom.gdet;
 
 	  ldouble dxph[3],dxBL[3];
 	  
 	  //cell dimensions
-	  //ANDREW put cell size code in a function with precompute option
           get_cellsize_out(ix, iy, iz, dxBL);
-	  /*
-	  ldouble xx1[4],xx2[4];
-	  xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	  xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[0]=fabs(xx2[1]-xx1[1]);
-	  xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	  xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[1]=fabs(xx2[2]-xx1[2]);
-	  xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	  xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[2]=fabs(xx2[3]-xx1[3]);
-          */
-	  if(NZ==1) 
+ 	  if(NZ==1) 
           {
             dxBL[2]=2.*M_PI;
           }
@@ -2288,9 +2243,6 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 #endif
 	      jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
 
-	      //ANDREW -- what is this definition of jet luminosity?
-	      //jet+=-geomBL.gdet*rhour*(ucovgas[0]+sqrt(-geomBL.gg[0][0]))*dxBL[1]*dxBL[2];  
-
 	  } //snapshot
 	} //iy
       } // iz
@@ -2333,7 +2285,6 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 
 	  ldouble xx[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
           ldouble Rij[4][4],Rtt,ehat,ucongas[4],ucovgas[4];
-          //ldouble gdet;
 
 	  int iv;
 	  for(iv=0;iv<NV;iv++)
@@ -2347,7 +2298,6 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 	  ldouble dxph[3],dxBL[3];
 	  
 	  //cell dimensions
-	  //ANDREW put cell size code in a function with precompute option
           get_cellsize_out(ix, iy, iz, dxBL);
 
 	  if(NZ==1) 
@@ -2837,21 +2787,7 @@ calc_mdot(ldouble radius, int type)
         gdet = geomBL.gdet;
 
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-	/*  
-	ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
 	if(NZ==1) 
         {
           dx[2] = 2. * M_PI;
@@ -3075,21 +3011,8 @@ calc_Edot(ldouble radius)
         gdet = geomBL.gdet;
 
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
+
         get_cellsize_out(ix, iy, iz, dx);
-        /*
-	ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
         if(NZ==1) 
         {  
           dx[2] = 2. * M_PI;
@@ -3201,21 +3124,7 @@ calc_Ldot(ldouble radius)
         gdet = geomBL.gdet;
 	
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-	/*
-	ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
         if(NZ==1) 
         {
           dx[2] = 2. * M_PI;
@@ -3364,26 +3273,7 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
         ldouble Br = bcon[1] * ucon[0] - bcon[0] * ucon[1];
 
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-	/*  
-        ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_xb(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_xb(ix+1, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[0] = fabs(xx2[1] - xx1[1]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
         if(NZ==1)
         {
           dx[2] = 2. * M_PI;
