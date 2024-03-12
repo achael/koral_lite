@@ -1098,10 +1098,6 @@ int set_bc(ldouble t,int ifinit);
 
 int cell_fixup(int type);
 
-int f_implicit_metric(const gsl_vector * x, void *paramsp, gsl_vector * f);
-int print_state_metric (int iter, gsl_multiroot_fsolver * s);
-int solve_implicit_metric(int ix,int iy,int iz,ldouble dt,ldouble *ubase);
-
 int smooth_polaraxis();
 int correct_nssurface();
 int correct_polaraxis();
@@ -1206,8 +1202,6 @@ ldouble calc_CoulombCoupling_with_state(ldouble *pp,void *sss,void *ggg);
 
 void calc_Ehat_from_Rij_ucov(double Rij[4][4], double uffcov[4], ldouble *Ehat);
 int calc_Rij(ldouble *pp, void* ggg, ldouble Rij[][4]);
-int calc_Rij_M1_ff(ldouble *pp, ldouble Rij[][4]);
-int calc_Rij_M1_from_4vel(ldouble *pp, void* ggg, ldouble *urfcon, ldouble Rij[][4]);
 int calc_Rij_M1(ldouble *pp, void* ggg, ldouble Rij[][4]);
 
 ldouble calc_Tnfromn(ldouble n);
@@ -1375,8 +1369,6 @@ ldouble calc_relel_photon_ndot_from_state(ldouble *pp,  void* sss, int radtype);
 ldouble calc_relel_cool_dq_from_state(ldouble *pp, void *sss);
 ldouble calc_relel_cool_dn_from_state(ldouble *pp, void *sss);
 ldouble calc_relel_CoulombCoupling_from_state(ldouble *pp, void *sss);
-
-//ANDREW Needed still for silo.c ... 
 ldouble calc_relel_G0_fluidframe(ldouble *pp, void *ggg, ldouble relel_dudtau, int type);
 ldouble calc_relel_G0_fluidframe_direct(ldouble *pp, void *ggg, int radtype);
 

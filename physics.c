@@ -124,7 +124,7 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
 #ifdef RADIATION
   
   calc_urcon_urcov_from_prims(pp, geom, urfcon, urfcov);
-  calc_Rij_M1_from_4vel(pp, geom, urfcon, Rij);
+  calc_Rij_M1(pp, geom, Rij);
   calc_Ehat_from_Rij_ucov(Rij, ucov, &Ehat);
   
   DLOOPA(i)
