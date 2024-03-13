@@ -4165,9 +4165,19 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   ldouble *B2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   ldouble *B3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   #endif
+  #ifdef RADIATION 
+  ldouble *erad_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *F1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *F2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *F3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  #ifdef EVOLVEPHOTONNUMBER
+  ldouble *nphot_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  #endif
+  #endif
+  
   #ifdef EVOLVEELECTRONS
   ldouble *te_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
-  ldouble *gi_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *ti_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   ldouble *gam_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   #endif
   
@@ -4208,6 +4218,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 	
 	// get output quantities in OUTCOORDS2 frame
 	ldouble rho,uint,pgas,temp,Te,Ti,utcon[4],utcov[4],urel[4],bcon[4],bcov[4],Bcon[4],bsq;
+        ldouble erad, nphot, urf[4], urfcon[4], urfcov[4];
 	ldouble gamma=GAMMA;
 	#ifdef CONSISTENTGAMMA
 	gamma=pick_gammagas(ix,iy,iz);
@@ -4259,17 +4270,34 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
           }
 
           #endif //MAGNFIELD
-		  
-          #ifdef EVOLVEELECTRONS
+
+	  #ifdef RADIATION
+	  erad = get_uavg(pavg, EE, ix,iy,iz);
+	  urfcon[0]=get_uavg(pavg,AVGURFCON(0),ix,iy,iz); // TODO correct? 
+	  urfcon[1]=get_uavg(pavg,AVGURFCON(1),ix,iy,iz);
+	  urfcon[2]=get_uavg(pavg,AVGURFCON(2),ix,iy,iz);
+	  urfcon[3]=get_uavg(pavg,AVGURFCON(3),ix,iy,iz);
+                 
+          //NORMALIZE u^0 to be  consistent with u1,u2,u3
+          fill_utinucon(urfcon,geomBL.gg,geomBL.GG);
+	  indices_21(urfcon,urfcov,geomBL.gg);
+
+	  // conv vels to primitive VELR (but in OUTCOORDS)
+	  conv_vels_ut(urfcon, urf, VEL4, VELR, geomBL.gg, geomBL.GG);
 	  
+	  #ifdef EVOLVEPHOTONNUMBER
+	  nphot = get_uavg(pavg, NF, ix,iy,iz);	  
+	  #endif 
+	  #endif
+
+          #ifdef EVOLVEELECTRONS
 	  ldouble pe=get_uavg(pavg,AVGPE,ix,iy,iz);
 	  ldouble pi=get_uavg(pavg,AVGPI,ix,iy,iz);
 	  ldouble ne=get_uavg(pavg,RHO,ix,iy,iz)/MU_E/M_PROTON; 
 	  ldouble ni=get_uavg(pavg,RHO,ix,iy,iz)/MU_I/M_PROTON; 
 
 	  Te=pe/K_BOLTZ/ne;
-	  Ti=pi/K_BOLTZ/ni;
-      	 
+	  Ti=pi/K_BOLTZ/ni;     	 
           #endif                
         } //doingavg==1
 	else 
@@ -4309,6 +4337,20 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
           }
           #endif
 
+	  #ifdef RADIATION
+	  erad = pp[EE]; // energy density
+
+          // get radiation 4-velocity
+          calc_urcon_urcov_from_prims(pp, &geomBL, urfcon, urfcov);
+
+	  // conv vels to primitive VELR (but in OUTCOORDS)
+	  conv_vels_ut(urfcon, urf, VEL4, VELR, geomBL.gg, geomBL.GG);
+
+	  #ifdef EVOLVEPHOTONNUMBER
+          nphot = pp[NF];
+	  #endif
+	  #endif
+	  	  
           #ifdef EVOLVEELECTRONS
 	  temp=calc_PEQ_Teifrompp(pp,&Te,&Ti,geomBL.ix,geomBL.iy,geomBL.iz);
 	  #endif
@@ -4346,6 +4388,17 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
         B3_arr[zonalindex] = Bcon[3];
         #endif
 
+	#ifdef RADIATION
+	erad_arr[zonalindex] = erad;
+	F1_arr[zonalindex] = urf[1];
+	F2_arr[zonalindex] = urf[2];
+	F3_arr[zonalindex] = urf[3];
+
+	#ifdef EVOLVEPHOTONNUMBER
+	nphot_arr[zonalindex] = nphot;
+	#endif
+	#endif
+	
         #ifdef EVOLVEELECTRONS
         te_arr[zonalindex] = Te;
         ti_arr[zonalindex] = Ti;
@@ -4415,7 +4468,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Dclose(dumps_dataset_array);
 
   #ifdef MAGNFIELD
-
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
 		    B1_arr);
@@ -4431,7 +4483,36 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 		    B3_arr);
   status = H5Dclose(dumps_dataset_array);
   #endif
-      
+
+  #ifdef RADIATION
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/erad", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    erad_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/F1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    F1_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/F2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    F2_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/F3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    F3_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  #ifdef EVOLVEPHOTONNUMBER
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/nphot", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    nphot_arr);
+  status = H5Dclose(dumps_dataset_array);  
+  #endif //EVOLVEPHOTONNUMBER
+  #endif //RADIATION
+
   #ifdef EVOLVEELECTRONS
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/te", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
@@ -4442,6 +4523,12 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
 		    ti_arr);
   status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/gammagas", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    gam_arr);
+  status = H5Dclose(dumps_dataset_array);
+  
   #endif
 
   status = H5Gclose(dumps_group_id);  // close /quants
@@ -4476,6 +4563,15 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   free(B1_arr);
   free(B2_arr);
   free(B3_arr);
+  #endif
+  #ifdef RADIATION
+  free(erad_arr);
+  free(F1_arr);
+  free(F2_arr);
+  free(F3_arr);
+  #ifdef EVOLVEPHOTONNUMBER
+  free(nphot_arr);
+  #endif
   #endif
   #ifdef EVOLVEELECTRONS
   free(te_arr);

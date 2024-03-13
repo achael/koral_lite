@@ -223,7 +223,7 @@ ldouble calc_opacities_from_state(ldouble *pp, void *sss, void *ggg, void *op)
 
   if(nethcgs<0) printf("negative neth %e\n",nethcgs);
 
-  ldouble zeta = Trad/Te;
+  ldouble zeta = Trad/Te; // ANDREW This is xi in Sadowski+ 2016
   ldouble zeta_inv = 1. / zeta, zeta_inv_3 = zeta_inv * zeta_inv * zeta_inv;
   ldouble zetaRoot5 = pow(zeta,0.2);
   ldouble zetaRoot5_inv_4 = 1. / (zetaRoot5 * zetaRoot5 * zetaRoot5 * zetaRoot5);
@@ -604,7 +604,7 @@ ldouble calc_opacities_from_state(ldouble *pp, void *sss, void *ggg, void *op)
   + 0.248*zetaBsynrad*zetaBsynrad*zetaBsynrad;
   IaByBrad = Bmagcgs*Bmagcgs/zetaAdenomrad;
   
-  kapparadsyn = kappacgs2gu * (2.13e39*(nethcgs/rhocgs)/ (Te * Te * Te * Te * Te) *IaByBrad)*rho;  
+  kapparadsyn = kappacgs2gu * (2.13e39*(nethcgs/rhocgs)/ (Te * Te * Te * Te * Te) *IaByBrad) * rho;  
   kappagassyn = kappacgs2gu * (emisSynchro/BBenergy) * rho;
 
   //converge to Non-relativistic opacities at low Te

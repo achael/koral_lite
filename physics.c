@@ -2817,7 +2817,6 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   ldouble QpQeRatio;
   QpQeRatio = 35./(1 + pow(betai/15.,-1.4)*exp(-0.1*tratio));
   
-  //fe from Ressler et al. 2015 following Howes 2010
   delta = 1./(1. + QpQeRatio); 
 
 #elif defined(HEATELECTRONS_ROWAN1) || defined(HEATELECTRONS_ROWAN2) || defined(HEATELECTRONS_ROWAN3)
@@ -2921,7 +2920,7 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
   ldouble gmeane = calc_meanlorentz_fit(the);
 
   // ratio of gyroradii
-  ldouble mratio = 1836.15267;
+  ldouble mratio = 1836.15267; // TODO just for hydrogen!
   ldouble gyroratio = mratio * sqrt((gmeani*gmeani - 1.)/(gmeane*gmeane - 1.));
 
   // heating fraction

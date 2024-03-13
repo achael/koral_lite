@@ -2923,15 +2923,6 @@ calc_Compt_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble *Gic, ldoubl
   ldouble kappaes = state->kappaes;
   ldouble ThatradBB = state->TradBB;
   ldouble Thatrad = state->Trad;
-
-  /*
-  ldouble urfcon[4], uffcov[4];
-  for (i = 0; i < 4; i++)
-  {
-    urfcon[i] = state->urfcon[i];
-    uffcov[i] = state->ucov[i];
-  }
-  */
   
   //ANDREW correction factor for the nonthermal electrons present in kappa_es
   ldouble relel_corr = 1.0;
@@ -5745,7 +5736,7 @@ test_Tsynch()
   
   ldouble BBenergy = 4.*sigmaCGS*Te*Te*Te*Te;
   
-  ldouble B = SIGMA_RAD*pow(Te,4.)/Pi;
+
   
   
   ldouble rho=pp[RHO];
@@ -5782,7 +5773,7 @@ test_Tsynch()
   ldouble kappaGasNum=0.;
   ldouble kappaRadNum=kapparadnumsyn;
   
-  
+  ldouble B = SIGMA_RAD*pow(Te,4.)/Pi; //code units
   ldouble emission=fabs(kappaGasAbs*4.*Pi*B);
   
   //emission of photons

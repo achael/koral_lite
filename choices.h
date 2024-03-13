@@ -45,7 +45,8 @@
 #define MU_I (1./(HFRAC + 0.25*HEFRAC + A_INV_MEAN*MFRAC))
 #endif
 
-// Electron mean molecular weight 
+// Electron mean molecular weight
+// ANDREW TODO: only assume H and He ionized? 
 #ifndef MU_E
 #define MU_E (2./(1. + HFRAC))
 #endif
