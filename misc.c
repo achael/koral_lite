@@ -79,7 +79,7 @@ void initialize_constants()
   one_over_kB_2p70118 = k_boltz_inv / 2.70118;
   one_over_mugas_mp = (1. / MU_GAS / M_PROTON);
   one_over_mui_mp = (1. / MU_I / M_PROTON);
-  one_over_muesis_mp =  (1. / MU_E / M_PROTON);
+  one_over_mue_mp =  (1. / MU_E / M_PROTON);
   mui_over_mue = (MU_I/MU_E);
     
   four_third = 4. / 3.;
