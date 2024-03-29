@@ -9,17 +9,27 @@
 /************************************/ 
 #define RESTART
 //#define RESTARTGENERALINDICES
-//#define RESCALEDENSITY 2.
 #define RESTARTNUM -1
+//#define PERTURBRHO 0.05
 
 /************************************/
 //radiation-related choices
 /************************************/
-//#define RADIATION
+#define RADIATION
 //#define RADIMPSTOPWHENFAIL
 //#define SKIPRADSOURCE
 #define BALANCEENTROPYWITHRADIATION
 #define EVOLVEPHOTONNUMBER
+
+#ifndef EVOLVEPHOTONNUMBER
+#ifndef NO_COMPTONIZATION
+#define COMPTONIZATION
+#endif
+#endif
+
+//#define DAMPCOMPTONIZATIONATBH
+#define SKIPIMPLICIT_ATBH // Try skipping implicit step at BH due to increased instability?
+
 #define RADIMP_START_WITH_BISECT
 //#define NPH_START_WITH_BISECT
 #define ALLOWRADCEILINGINIMPLICIT
@@ -39,7 +49,7 @@
 #define RADIMPLICITMAXENCHANGEUP 100.
 #define RADIMPLICITMAXTECHANGE 5.
 #define MAXRADIMPDAMPING 1.e-4
-#define OPDAMPINIMPLICIT 0
+#define OPDAMPINIMPLICIT 1
 #define OPDAMPMAXLEVELS 3
 #define OPDAMPFACTOR 10.
 
@@ -86,10 +96,12 @@
 /************************************/
 //magnetic-related choices
 /************************************/
-//#define MAGNFIELD
+#define MAGNFIELD
 #define GDETIN 1
-//#define VECPOTGIVEN
+#define VECPOTGIVEN
+//#define CURL_IN_SPHERICAL
 #define MAXBETA .01 //target initial pmag/pgas 
+//#define INIT_MAGN_CORNERS
 
 /************************************/
 //dynamo-related choices
@@ -108,31 +120,32 @@
 /************************************/
 #define INT_ORDER 1
 #define TIMESTEPPING RK2IMEX 
-#define TSTEPLIM 0.9
+#define TSTEPLIM 0.6
 #define FLUXLIMITER 0
 #define MINMOD_THETA 1.5
 #define SHUFFLELOOPS 0
-#define DOFIXUPS 0
+#define DOFIXUPS 1
 #define DORADIMPFIXUPS 0
 
 /************************************/
 //blackhole
 /************************************/
 #define MASS 1.e6
-#define BHSPIN 0.0
+#define BHSPIN 0.9
 
 /************************************/
 //coordinates 
 /************************************/
-#define myJETCOORDS
-//#define myMKS2COORDS
-//#define myMKS3COORDS
+//#define myJETCOORDS
+#define myMKS3COORDS
+//#define mySPHCOORDS
+//#define myKSCOORDS
+//#define myCYLCOORDS
+//#define RH 2.//1.348
+#define RMIN 1.1
+#define RMAX 5.e4
 
 #define METRICAXISYMMETRIC
-
-#define RH 2.//1.348
-#define RMIN 1.3
-#define RMAX 1.e4//1.e5
 
 #ifdef myMSPH1COORDS //modified Kerr-Shild
 #define PWPOTENTIAL
@@ -172,23 +185,30 @@
 #endif
 
 #ifdef myMKS2COORDS //modified Kerr-Shild
+#define MYCOORDS MKS2COORDS
+#define MKS_THCUT 0.005
 #define MKSR0 0.
 #define MKSH0 0.7
 #define MKSMY1 0.001
-#define MKSMY2 0.2
+#define MKSMY2 0.01//0.1
 #define MKSMP0 1.5
-#define MYCOORDS MKS2COORDS
 #define MINX (log(RMIN-MKSR0))
 #define MAXX (log(RMAX-MKSR0))
-#define MINY (0.001)
-#define MAXY (1.-0.001)
+#define MINY MKS_THCUT//(0.001)
+#define MAXY (1.-MKS_THCUT)//(1.-0.001)
 #endif
 
 #ifdef myMKS3COORDS //modified Kerr-Shild further from axis
 #define METRICNUMERIC
 #define MYCOORDS MKS3COORDS
-#define MINX (log(1.85-MKSR0))
-#define MAXX (log(100.-MKSR0))
+#define MKS_THCUT 0.005
+#define MKSR0 0.
+#define MKSH0 0.7
+#define MKSMY1 0.001
+#define MKSMY2 0.01//0.1
+#define MKSMP0 1.5
+#define MINX (log(RMIN-MKSR0))
+#define MAXX (log(RMAX-MKSR0))
 #define MINY 0.
 #define MAXY 1.
 #endif
@@ -202,13 +222,13 @@
 
 #define MINX 0
 #define MAXX 1.
-#define Y_OFFSET 0.009
+#define Y_OFFSET 0.001
 #define MINY -(1.-Y_OFFSET) //10^-8 away from the poles seems to be the last safe point
 #define MAXY 1. - Y_OFFSET  
 
 #define MKSR0 0 //-1.35 // Should probably be 0 for jetcoords! (issue with ix=-2 metric)
 #define HYPRBRK 10000
-#define FJET 0.25
+#define FJET 0.35
 #define FDISK 0.4
 
 //#define RUNI RMIN
@@ -231,7 +251,7 @@
 #define NCYL 1.//0.5//1.
 #endif //End of myJETCOORDS
 
-#define PHIWEDGE (0.5*M_PI)
+#define PHIWEDGE (2.*M_PI)
 #define MINZ (-PHIWEDGE/2.)
 #define MAXZ (PHIWEDGE/2.)
 
@@ -239,13 +259,13 @@
 //resolution 
 /************************************/
 //total resolution
-#define TNX 64//28*9
-#define TNY 128//128//26*9
-#define TNZ 1//32//32 //2*8
+#define TNX 160//192//28*9
+#define TNY 128//320
+#define TNZ 64//64//32 //2*8
 //number of tiles
-#define NTX 16
-#define NTY 16
-#define NTZ 1//4
+#define NTX 16//16
+#define NTY 16//8
+#define NTZ 4//4//4//8
 
 /************************************/
 //boundary conditions 
@@ -254,6 +274,14 @@
 #define PERIODIC_ZBC
 //#define PERIODIC_XBC
 //#define PERIODIC_YBC
+#define TRANSMITTING_YBC
+
+#ifndef myCYLCOORDS
+#define CORRECT_POLARAXIS
+#define CORRECTMAGNFIELD
+#endif
+//#define POLARAXISAVGIN3D
+#define NCCORRECTPOLAR 1
 
 /************************************/
 //output
@@ -266,11 +294,11 @@
 #define ALLSTEPSOUTPUT 0
 #define OUTPUTINZAMO
 #define NSTEPSTOP 1.e10
-#define NOUTSTOP 0//5000
+#define NOUTSTOP 140//5000
 #define SILOOUTPUT 1
 #define OUTOUTPUT 0
 #define RADOUTPUT 0
-#define SCAOUTPUT 0
+#define SCAOUTPUT 1
 #define AVGOUTPUT 1
 #define SIMOUTPUT 0
 #define COORDOUTPUT 0
@@ -311,24 +339,18 @@
 #if(NTORUS==2) //TDE disk with single poloidal loop (scales with rho)
 #define KT_A 0.0
 #define KT_RMIN 5.
-#define KT_R0 20.
-#define KT_RIN 18. //used for B field setup
-#define KT_ROUT 100. //used for B field setup
-#define KT_RHO0 10.*(3.*rhoCGS2GU(1.e-3)*6.62/MASS)
+#define KT_R0 40.
+#define KT_RHO0 (3.*rhoCGS2GU(1.e-3)*6.62/MASS)
 #define KT_T0 2.0e10
 #define RADIUS_POWER 3
 #define SIN_POWER 0.5
 #define RHO_CUT_FACTOR 0.
-
-#define BATMZ
-#define BATMZ_B0 1.e-22//1.e-18
-#define BATMZ_MINR RMIN
-#define BATMZ_MAXR 200.//RMAX
-#define BATMZ_TORUSRESCALE 1e3 //rescale outside of torus
+#define KT_RIN 0.5*KT_R0
+#define KT_ROUT 5.e3
 
 #define MAXBETA_SEPARATE
 #undef MAXBETA
-#define MAXBETA 0.003
+#define MAXBETA 0.001
 #endif
 
 #if(NTORUS==3) //TDE disk with single poloidal loop. LRTORUS setup
@@ -357,7 +379,7 @@
 #if(NTORUS==5) //TDE disk with Quadrupolar loops. Wavelength of loops is broken power law. 
 #define KT_A 0.
 #define KT_RMIN 5.
-#define KT_R0 20.
+#define KT_R0 40.
 #define KT_RHO0 (3.*rhoCGS2GU(1.e-3)*6.62/MASS)
 #define KT_T0 2.0e10
 //#define MAXBETA_SEPARATE
@@ -373,7 +395,7 @@
 /************************************/
 #define RHOATMMIN  (KT_RHO0*1.e-4)
 #define UINTATMMIN  (calc_PEQ_ufromTrho(1.e11,RHOATMMIN,0,0,0))
-#define ERADATMMIN  (calc_LTE_EfromT(3.e4)/10*6.62/MASS)
+#define ERADATMMIN  (calc_LTE_EfromT(3.e5)/10*6.62/MASS) //If this is set too high, the torus is not in hydrostatic equilibrium since torus will take on atm value
 
 /************************************/
 //rmhd floors
@@ -386,17 +408,9 @@
 #define EEUURATIOMIN 1.e-20
 #define EEUURATIOMAX 1.e20
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX 100000.
+#define B2UURATIOMAX 100000.//100000.
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 50.
+#define B2RHORATIOMAX 30.
 #define GAMMAMAXRAD 20.
 #define GAMMAMAXHD 20.
 
-/************************************/
-//polar axis
-/************************************/
-#ifndef myCYLCOORDS
-#define CORRECT_POLARAXIS
-#endif
-//#define POLARAXISAVGIN3D
-#define NCCORRECTPOLAR 2

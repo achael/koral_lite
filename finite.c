@@ -692,6 +692,10 @@ op_explicit(ldouble t, ldouble dtin)
       ldouble minmod_theta=MINMOD_THETA;
       int reconstrpar;
       int i,dol,dor;
+      
+      #ifdef TRANSMITTING_YBC
+      ldouble fd_prT[NV],fd_plT[NV]; //Brandon for getting fluxes from GC instead of D+GC as usual
+      #endif
 
 
 
@@ -941,6 +945,78 @@ op_explicit(ldouble t, ldouble dtin)
 		    fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
 		    fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
 		  }
+		  
+		  #ifdef TRANSMITTING_YBC
+		   //copy iy=-1 to iy=0 for calculating fluxes
+		  if(TJ==0 && iy==0) 
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy-1,iz); //iy=0 -> iy=-1
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==0 && iy==1) 
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-2,iz); //iy=0 -> iy=-1
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==0 && iy==2) 
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-3,iz); //iy=0 -> iy=-1
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  
+		  //copy iy=NY to iy=NY-1 for calculating fluxes
+		  if(TJ==NTY-1 && iy==(NY-1) )
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy+1,iz); //iy=NY-1 -> iy=NY
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==NTY-1 && iy==(NY-2) )
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+2,iz); //iy=NY-1 -> iy=NY
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
+		    }
+		  }
+		  if(TJ==NTY-1 && iy==(NY-3) )
+		  {
+		    fd_p0[i]=get_u(p,i,ix,iy,iz);
+		    fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		    fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
+		    if(INT_ORDER>1)
+		    {
+		      fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		      fd_pp2[i]=get_u(p,i,ix,iy+3,iz); //iy=NY-1 -> iy=NY
+		    }
+		  }
+		  #endif
 		}
 	  
 		reconstrpar=0;
@@ -971,7 +1047,7 @@ op_explicit(ldouble t, ldouble dtin)
                   // Right wall of current cell: compute fluxes and save in array ffr[NV]
 		  fill_geometry_face(ix,iy+1,iz,1,&geom);
 		  check_floors_mhd(fd_pr,VELPRIM,&geom);
-		  f_flux_prime(fd_pr,1,ix,iy+1,iz,ffr,0);   	          
+		  f_flux_prime(fd_pr,1,ix,iy+1,iz,ffr,0);  
 		}
 
                 //save interpolated values to memory
@@ -983,7 +1059,6 @@ op_explicit(ldouble t, ldouble dtin)
                   // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
 		  set_uby(pbRy,i,ix,iy,iz,fd_pl[i]);
 		  set_uby(pbLy,i,ix,iy+1,iz,fd_pr[i]);
-
 		  if(dol)
                   // Save ffl in array flRy (F_R) of wall iy
 		  set_uby(flRy,i,ix,iy,iz,ffl[i]);
@@ -1225,6 +1300,12 @@ op_explicit(ldouble t, ldouble dtin)
 		  
 	// Compute Delta U from the six fluxes
 	du = -(flxr-flxl)*dt/dx - (flyr-flyl)*dt/dy - (flzr-flzl)*dt/dz;
+
+        // Look at fluxes at pole:
+        //if( (ix+TOI)==10 && (iy+TOJ)==0 && (iz+TOK)==(4+(TNZ/2)))
+        //{
+          //printf("iv ix iy iz flxl flxr flyl flyr flzl flzr : %i %i %i %i %e %e %e %e %e %e \n",iv,(ix+TOI),(iy+TOJ),(iz+TOK),flxl,flxr,flyl,flyr,flzl,flzr);
+        //}
 
 	// Compute new conserved by adding Delta U and the source term
 	val = get_u(u,iv,ix,iy,iz) + du + ms[iv]*dt;
@@ -6119,6 +6200,7 @@ correct_polaraxis_3d()
 
   return 0; 
 }
+
 
 //**********************************************************************
 // say if given cell is within NCCORRECTPOLAR from axis */
