@@ -394,8 +394,10 @@ flux_ct()
 int adjust_fluxcttoth_emfs()
 {
 
-#ifdef CORRECT_POLARAXIS
   int ix,iz;
+
+#ifdef CORRECT_POLARAXIS
+#ifndef TRANSMITTING_YBC // Brandon - only sets both Er, Ephi to 0 if using reflecting pole
 #ifdef MPI
   if(TJ==0) //upper axis
 #endif
@@ -422,7 +424,37 @@ int adjust_fluxcttoth_emfs()
 	  }
     }
 
+#endif //ifndef TRANSMITTING_YBC
 #endif //CORRECTPOLARAXIS
+
+#ifdef TRANSMITTING_YBC //set E_phi = 0 and average E_r in phi (this is done above by the 0.5)?
+#ifdef MPI
+  if(TJ==0) //upper axis
+#endif
+    {
+      //over all corners at the polar edge
+      for(ix=0;ix<=NX;ix++)
+	for(iz=0;iz<=NZ;iz++)
+	  {  
+	    set_emf(1,ix,0,iz,get_emf(1,ix,0,iz));
+	    set_emf(3,ix,0,iz,0.);
+	  }
+    }
+  
+#ifdef MPI
+  if(TJ==NTY-1) //lower axis
+#endif
+    {
+      //over all corners at the polar edge
+      for(ix=0;ix<=NX;ix++)
+	for(iz=0;iz<=NZ;iz++)
+	  {
+	    set_emf(1,ix,NY,iz,get_emf(1,ix,NY,iz));
+	    set_emf(3,ix,NY,iz,0.);
+	  }
+    }
+
+#endif //TRANSMITTING_YBC
 
   return 0;
 }
