@@ -3249,7 +3249,6 @@ coco_MINK2SPH(ldouble *xMINK, ldouble *xSPH)
 //calculates transformation matrices dxmu/dxnu
 //**********************************************************************
 
-// TODO -- verify results and integrate with trans2_coco? 
 int
 calc_dxdx_arb(ldouble *xx, ldouble dxdx[][4], int CO1, int CO2)
 {
@@ -3701,9 +3700,6 @@ dxdx_MKS22KS(ldouble *xx, ldouble dxdx[][4])
 #endif
 
   int i;
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i=0;i<4;i++)
   {
     int j;
@@ -4726,9 +4722,9 @@ ldouble hyperexp_x1max(ldouble rmax, ldouble rbrk, ldouble r0)
   return hyperexp_func_inv(rmax, &params);
 }
 
-//ANEW -- Cylindrification functions
-//ANEW -- all assume that r is independent of x2, and all use jet coords only 
-//ANEW -- TODO -- generalize these following harmpi for any coord system??
+// Cylindrification functions
+// all assume that r is independent of x2, and all use jet coords only 
+// TODO -- generalize these following harmpi for any coord system??
 
 #ifdef CYLINDRIFY
 //precalculate two angles used throughout cylindrification
@@ -4769,27 +4765,6 @@ int set_cyl_params()
    sinthetaCYL = sin(thetaCYL);
    thetaAX = theta_diskjet(RCYL, MAXY, &tpar);
    sinthetaAX = sin(thetaAX);
-
-   
-   //test
-   /*
-   printf("RCYL %e rmidcyl %e x2cyl %e \n",RCYL,rmidcyl,x2cyl);
-   printf("THETACYL: %e THETAAX %e\n",thetaCYL,thetaAX);
-   
-   ldouble x1test=calc_xb(-NG,0); // inner boundary of ghost cell
-   ldouble x1s = hypx1in + x1test*(hypx1out - hypx1in);
-   ldouble rtest = exp(x1s) + MKSR0;  
-   ldouble x2test=calc_xb(0,1);
-   
-   printf("x1, x2, r | %e %e %e\n",x1test,x2test,rtest);
-   printf("sinth0 %.14e\n",sinth0(rtest,x2test,&tpar));
-   printf("sinth1 %.14e\n",sinth1(rtest,x2test,&tpar));
-   printf("sinth2 %.14e\n",sinth2(rtest,x2test,&tpar));
-   printf("f2 %.14e\n",sinth2(rtest,x2test,&tpar));
-   printf("thcyl %.14e\n",cylindrify(rtest,x2test,&tpar));
-   if(sinth0(rtest,x2test,&tpar)>1)
-     {printf("nan in cylindrify for r=%e, x2test=%e!\n",rtest,x2test); exit(-1);}
-   */
    
    return 0;
 }
@@ -4836,7 +4811,6 @@ ldouble sinth2(ldouble r, ldouble x2, void* params)
   ldouble thetamid = 0.5*Pi;
   
   ldouble thetaA = asin(sinth0(r,x2,par));
-  //ldouble thetaA = asin((RCYL/r)*sinthetaCYL);
   ldouble thetaB = (theta-theta2)*(thetamid-thetaA)/(thetamid-theta2);
   ldouble sinth2 = sin(thetaA + thetaB);
   return sinth2;
@@ -4847,36 +4821,12 @@ ldouble f2func(ldouble r, ldouble x2, void* params)
 {
   struct jetcoords_params *par = (struct jetcoords_params *) params;
 
-  //ANDREW ANEW TODO -- ok to hardcode MAXY here?
-  
-  //theta: at (r, x2)
-  //ldouble theta = theta_diskjet(r, x2, par);
-
-  //theta0: at (r, MAXY)
-  //ldouble theta0 = theta_diskjet(r, MAXY, par);
-  
-  //theta1: at (rcyl, x2)
-  //ldouble theta1 = theta_diskjet(RCYL, x2, par);
-
-  //theta2: at (r, x2cyl)
-  //ldouble theta2 = theta_diskjet(r, x2cyl, par);
-  
-  //ldouble s1in = (RCYL/r)*sin(theta1);     //sinth1(r, x2, par);
-  //ldouble s2in = sinth2(r, theta, theta2); //sinth2(r, x2, par);
-  //ldouble s1ax = (RCYL/r)*sinthetaAX; //sinth1(r, MAXY, par); 
-  //ldouble s2ax = sinth2(r, theta0, thetaAX); //sinth2(r, MAXY, par);
-  //ldouble df = fabs(s2ax - s1ax) + 1.e-16; //is this offset ok?
-
   ldouble s1in = sinth1(r, x2, par);
   ldouble s2in = sinth2(r, x2, par);
   
   ldouble s1ax = sinth1(r, MAXY, par); 
   ldouble s2ax = sinth2(r, MAXY, par);
   ldouble df = fabs(s2ax - s1ax) + 1.e-16; //is this offset ok?
-
-  //printf("F2FUNC\n");
-  //printf("%.7f %.7f %.7f\n",r,x2,MAXY);
-  //printf("%.7f %.7f %.7f %.7f %.7f\n",s1in, s2in, s1ax, s2ax, df);
 
   if(r>=RCYL)
   {
@@ -4888,7 +4838,7 @@ ldouble f2func(ldouble r, ldouble x2, void* params)
   }
 }
 
-ldouble to1stquad(ldouble  x2) //ANDRE ANEW TODO -- assumes that x2 range is (-1,1) -- ok?
+ldouble to1stquad(ldouble  x2)
 {
   ldouble ntimes = floor(0.25*(x2+2));
   ldouble x2out = x2 - 4*ntimes;
@@ -4915,12 +4865,10 @@ ldouble cylindrify(ldouble r, ldouble x2, void* params)
   
   ldouble f1 = sin(thmir);
   ldouble f2 = f2func(r, x2mir, par);
-  //ldouble f2 = f2func(r, x2mir, thmir, par);
 
   ldouble thmid = theta_diskjet(rmidcyl, x2mir, par);
   ldouble f1mid = sin(thmid);
   ldouble f2mid = f2func(rmidcyl, x2mir, par);  
-  //ldouble f2mid = f2func(rmidcyl, x2mir, thmid, par);
   
   ldouble df = f2mid - f1mid;
 
@@ -4928,11 +4876,6 @@ ldouble cylindrify(ldouble r, ldouble x2, void* params)
   if(x2!=x2mir)
     thout = thin + thmir - thout;
 
-  //printf("CYLINDRIFY\n");
-  //printf("%.7f %.7f\n",RCY, x2cyl);
-  //printf("%.7f %.7f %.7f %.7f %.7f\n",thin, x2mir, thmir, f1, f2);
-  //printf("%.7f %.7f %.7f %.7f %.7f\n",rmid, thmid, f1mid, f2mid, df);
-  //printf("%.7f\n",thout);
   return thout;
 }
 

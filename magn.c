@@ -8,7 +8,7 @@
 /* calculate both magnetic field four-vectors and bsq knowing gas four-velocity ucov */
 //***********************************************************************
 
-void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+void calc_bcon_bcov_bsq_from_4vel(ldouble *pp, ldouble *ucon, ldouble *ucov, void* ggg,
 				  ldouble *bcon, ldouble *bcov, ldouble *bsq)
 {
 
@@ -17,23 +17,20 @@ void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, voi
   = (struct geometry *) ggg;
 
   // First calculate bcon0
-  bcon[0] = pr[B1]*ucov[1] + pr[B2] * ucov[2] + pr[B3] * ucov[3] ;
+  bcon[0] = pp[B1]*ucov[1] + pp[B2] * ucov[2] + pp[B3] * ucov[3] ;
   
   // Then spatial components of bcon
   
 #ifdef NONRELMHD
   for(j = 1; j < 4; j++)
-    bcon[j] = pr[B1-1+j]; //b^i=B^i
+    bcon[j] = pp[B1-1+j]; //b^i=B^i
 
 #else  // relativistic case
   
   ldouble u0inv = 1. / ucon[0];
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(j=1;j<4;j++)
-    bcon[j] = (pr[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
+    bcon[j] = (pp[B1-1+j] + bcon[0] * ucon[j]) * u0inv ;
   
 #endif //NONRELMHD
   
@@ -48,25 +45,22 @@ void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, voi
 /* calculate magnetic field four-vector knowing gas four-velocity ucov */
 //***********************************************************************
 
-void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon)
+void calc_bcon_4vel(double *pp, double *ucon, double *ucov, double *bcon)
 {
   int j;
   
-  bcon[0] = pr[B1]*ucov[1] + pr[B2]*ucov[2] + pr[B3]*ucov[3] ;
+  bcon[0] = pp[B1]*ucov[1] + pp[B2]*ucov[2] + pp[B3]*ucov[3] ;
 
 #ifdef NONRELMHD
   for(j=1;j<4;j++)
-    bcon[j] = pr[B1-1+j]; //b^i=B^i
+    bcon[j] = pp[B1-1+j]; //b^i=B^i
 
 #else  // relativistic case
 
   ldouble u0inv = 1. / ucon[0];
 
-#ifdef APPLY_OMP_SIMD
- //#pragma omp simd
-#endif
   for(j=1;j<4;j++)
-      bcon[j] = (pr[B1-1+j] + bcon[0]*ucon[j]) * u0inv ;
+      bcon[j] = (pp[B1-1+j] + bcon[0]*ucon[j]) * u0inv ;
   
 #endif //NONRELMHD
 
@@ -77,8 +71,8 @@ void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon)
 //***********************************************************************
 /* calculate B^i from bcon and gas four-velocity ucon */
 //***********************************************************************
-
-void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon)
+// ANDREW only used once
+void calc_Bcon_4vel(double *pp, double *ucon, double *bcon, double *Bcon)
 {
   int j;
   
@@ -637,6 +631,16 @@ calc_BfromA_core()
       B[2]=(dA[3][1] - dA[1][3])/geom.gdet;
       B[3]=(dA[1][2] - dA[2][1])/geom.gdet;
 
+#if PROBLEM==132 && defined(SPLIT_MONOPOLE)
+      ldouble xxBL[4];
+      get_xx_arb(ix,iy,iz,xxBL,BLCOORDS);
+      if(xxBL[2]>0.5*M_PI)
+      {
+	B[1]*=-1;
+	B[2]*=-2;
+	B[3]*=-3;
+      }
+#endif
       set_u(pvecpot,1,ix,iy,iz,B[1]);
       set_u(pvecpot,2,ix,iy,iz,B[2]);
       set_u(pvecpot,3,ix,iy,iz,B[3]);
@@ -734,7 +738,6 @@ calc_Qthetaphi(int ix, int iy, int iz,ldouble *Qtheta,ldouble *Qphi)
       ldouble dxth,dxph;
       ldouble xx1[4],xx2[4],dx[3];
 
-      // ANDREW TODO -- do we need need this to be in BL? 
       if(OUTCOORDS==BLCOORDS)
       {
         get_cellsize_out(ix, iy, iz, dx);
@@ -858,9 +861,8 @@ calc_angle_bpbphibsq(int ix, int iy, int iz, ldouble *bpbphi, ldouble *bsq, ldou
 
 
 /***********************************************************************************************/
-//calculates curl of a 3-vector field from array ptu starting from index idx
+//calculates curl of a 3-vector field from array ptu 
 //returns to curl[1..4]
-//TODO: idx not used
 /***********************************************************************************************/
 
 int

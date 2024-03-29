@@ -1,3 +1,4 @@
+#pragma once
 //KORAL - problem.h
 //choice of the problem plus some definitions
 
@@ -143,17 +144,20 @@
 //140 RADSURVEY -- radiative parameter survey
 //141 KEPINF -- INFDISK modified for injecting keplerian 
 //142 PARTIALTDE -- INFDISK modified for partial TDE binding energy distribution non-constant
-//143 KKDISC
-// 144 PUFFY
+//143 FFTESTS -- Force Free tests
+//144 FFALFVEN -- hybrid mhd/ff alfven wave test from Komissarov 99
+//145 FFTORUSTEST -- test of force-free torus
+//146 FFBONDI -- bondi flow for ff test
+//147 PUFFY
 
 //ANDREW -- I've gone through problems 100-133 and undefined PR_KAPPA where appropriate
 //If you want to use default calc_opacities_from_state, make sure PR_KAPPA is  undefined!
 //if you are using a problem older than 100 with a different kappa defined in kappa.c
 //make sure your kappa.c ends with (kappa=(.....)) NOT (return kappa)!!
 
-#define PROBLEM 144
+#define PROBLEM 146
 
-#if(PROBLEM==144)
+#if(PROBLEM==147)
 
 #define PR_DEFINE "PROBLEMS/PUFFY/define.h"
 #define PR_BC "PROBLEMS/PUFFY/bc.c"
@@ -163,6 +167,58 @@
 #define PR_KAPPAES "PROBLEMS/PUFFY/kappaes.c"
 #define PR_TOOLS "PROBLEMS/PUFFY/tools.c"
 
+#endif
+
+
+#if(PROBLEM==146)
+
+#define PR_DEFINE "PROBLEMS/FFBONDI/define.h"
+#define PR_BC "PROBLEMS/FFBONDI/bc.c"
+#define PR_INIT "PROBLEMS/FFBONDI/init.c"
+#define PR_KAPPAES "PROBLEMS/FFBONDI/kappaes.c"
+#define PR_TOOLS "PROBLEMS/FFBONDI/tools.c"
+#define PR_POSTINIT "PROBLEMS/FFBONDI/postinit.c"
+
+#endif
+
+
+#if(PROBLEM==145)
+
+#define PR_DEFINE "PROBLEMS/FFTORUSTEST/define.h"
+#define PR_BC "PROBLEMS/FFTORUSTEST/bc.c"
+#define PR_INIT "PROBLEMS/FFTORUSTEST/init.c"
+#define PR_KAPPAES "PROBLEMS/FFTORUSTEST/kappaes.c"
+#define PR_TOOLS "PROBLEMS/FFTORUSTEST/tools.c"
+#define PR_POSTINIT "PROBLEMS/FFTORUSTEST/postinit.c"
+
+#endif
+
+#if(PROBLEM==144)
+#define PR_DEFINE "PROBLEMS/FFALFVEN/define.h"
+#define PR_BC "PROBLEMS/FFALFVEN/bc.c"
+#define PR_INIT "PROBLEMS/FFALFVEN/init.c"
+#define PR_KAPPAES "PROBLEMS/FFALFVEN/kappaes.c"
+#define PR_OUT2GIF_2D "PROBLEMS/FFALFVEN/out2gif_2d.c"
+#define PR_OUT2GIF_1D "PROBLEMS/FFALFVEN/out2gif_1d.c"
+#define PR_DUMP "PROBLEMS/FFALFVEN/dump.c"
+#define PR_FINGER "PROBLEMS/FFALFVEN/finger.c"
+#define PR_TOOLS "PROBLEMS/FFALFVEN/tools.c"
+#define PR_PREPINIT "PROBLEMS/FFALFVEN/prepinit.c"
+#define PR_POSTINIT "PROBLEMS/FFALFVEN/postinit.c"
+#endif
+
+#if(PROBLEM==143)
+#define PR_DEFINE "PROBLEMS/FFTESTS/define.h"
+#define PR_BC "PROBLEMS/FFTESTS/bc.c"
+#define PR_INIT "PROBLEMS/FFTESTS/init.c"
+#define PR_KAPPAES "PROBLEMS/FFTESTS/kappaes.c"
+#define PR_OUT2GIF_2D "PROBLEMS/FFTESTS/out2gif_2d.c"
+#define PR_OUT2GIF_1D "PROBLEMS/FFTESTS/out2gif_1d.c"
+#define PR_DUMP "PROBLEMS/FFTESTS/dump.c"
+#define PR_FINGER "PROBLEMS/FFTESTS/finger.c"
+#define PR_TOOLS "PROBLEMS/FFTESTS/tools.c"
+#define PR_PREPINIT "PROBLEMS/FFTESTS/prepinit.c"
+#define PR_POSTINIT "PROBLEMS/FFTESTS/postinit.c"
 #endif
 
 #if(PROBLEM==142)

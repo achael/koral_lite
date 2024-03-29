@@ -8,10 +8,10 @@
 // SPIN, SANE vs MAD, Coordinates, Torus
 // Modified from Ramesh's survey
 //***********************************/
-#define SPINp7     //or: SPINp9 SPINp7 SPINp5 SPIN0 SPINm5 SPINm7 SPINm9
+#define SPINp5     //or: SPINp9 SPINp7 SPINp5 SPIN0 SPINm5 SPINm7 SPINm9
 #define NTORUS 1   //3 for SANE, 1 for MAD
 
-#define myJETCOORDS //or: myMKS2COORDS, myMKS3COORDS
+#define myMKS2COORDS //or: myMKS2COORDS, myMKS3COORDS
 #define FISHMONCTORUS   // LIMOTORUS or FISHMONCTORUS
 
 /************************************/
@@ -22,14 +22,6 @@
 #define RESTARTNUM -1
 #define PERTURBUINT 0.02
 //#define PERTURBAFTERINIT //will not perturb after init if this is not defined
-
-//#define RADSTART
-#ifdef RADSTART
-#define RESTARTFROMMHD
-#define INITURADFRAC 1.e-4
-#define INITUEFRAC 0.4
-#define RESCALEDENSITY 1.e-6
-#endif
 
 /************************************/
 //blackhole
@@ -97,7 +89,7 @@
 /************************************/
 //#define U2P_EQS U2P_EQS_JONS
 //#define U2P_SOLVER U2P_SOLVER_WP
-#define U2PCONV 1.e-10
+#define U2PCONV 1.e-12
 
 /************************************/
 //magnetic choices
@@ -108,6 +100,10 @@
 #define INIT_MAGN_CORNERS //initialize magnetic field on corners/edges (which?)
 #define MAXBETA_SEPARATE // find maxima of ptot and pmag independently and take ratio
 #define MAXBETA .01 //target initial pmag/pgas int the midplane
+
+
+//#define FORCEFREE
+//#define SKIPALLFLOORS
 
 /************************************/
 //dynamo choices --  2D ONLY
@@ -122,128 +118,17 @@
 #define BETASATURATED 0.1
 #define ALPHABETA 6.28
 */
-/************************************/
-//radiation choices
-/************************************/
-#define RADIATION
-#ifdef RADIATION
-
-#define EVOLVEPHOTONNUMBER
-#define SCALE_JACOBIAN
-
-//opacities                                             
-#define SCATTERING
-#define BREMSSTRAHLUNG
-#define SYNCHROTRON
-#define NO_SYNCHROTRON_BRIDGE_FUNCTIONS
-#define COMPTONIZATION                                
-//#define KLEINNISHINA                                   
-//#define NO_COMPTONIZATION
-//#define SKIPCOULOMBCOUPLING
-
-//implicit convergence
-#define OPDAMPINIMPLICIT 1
-#define RADIMPCONV 1.e-8
-#define RADIMPCONVREL 1.e-6
-#define RADIMPCONVRELERR 1.e-4
-#define RADIMPCONVRELENTR 1.e-6
-#define RADIMPCONVRELENTRERR 1.e-4
-#define RADIMPENTRCONV 1.e-5
-#define RADIMPEPS 1.e-8
-#define RADIMPMAXITER 100
-#define RADIMPLICITDAMPINGFACTOR 5.
-#define RADIMPLICITMAXNPHCHANGE 100.
-#define RADIMPLICITMAXENCHANGEDOWN 100.
-#define RADIMPLICITMAXENCHANGEUP 10.
-#define RADIMPLICITMAXTECHANGE 2.
-#define IMPLICITMAXTGASCHANGE 2.
-#define MAXRADIMPDAMPING 1.e-6
-#define MAXDIFFTRADS 1.e3
-#define MAXDIFFTRADSNEARBH 1.e2
-                           
-#define RADVISCOSITY SHEARVISCOSITY                     
-#define ACCELRADVISCOSITY                                
-#define RADVISCMFPSPHMAX 10.                             
-#define RADVISCMFPSPH                                    
-#define RADVISCNUDAMP                                   
-#define RADVISCMAXVELDAMP                                
-#define ALPHARADVISC 0.1                                
-#define MAXRADVISCVEL 0.1                               
-
-#define DAMPCOMPTONIZATIONATBH
-#define ALLOWRADCEILINGINIMPLICIT                      
-
-//#define BASICRADIMPLICIT                               
-//#define RADIMPSTOPWHENFAIL                              
-//#define RADIMP_START_WITH_BISECT                       
-//#define BALANCEENTROPYWITHRADIATION                            
-
-//#define SKIPRADSOURCE    //advective only             
-//#define SKIPRADEVOLUTION //keeps initial values in place          
-//#define SKIPHDEVOLUTION                               
-//#define SKIPEVOLUTION                                 
-//#define RADIMPSTOPWHENFAIL                      
-//#define SKIPFANCYOPACITIES                                                                                 
-//#define ENFORCEENTROPY                                                                        
-//#define GASRADCOUPLEDWAVESPEEDS
-
-#endif
-
-/************************************/
-//electron choices
-/************************************/
-#define EVOLVEELECTRONS
-#ifdef EVOLVEELECTRONS
-
-#define CONSISTENTGAMMA
-#define GAMMAINTCONSISTENTWITHCV                      
-
-//heating                                                                               
-#define HEATELECTRONS
-//#define HEATELECTRONS_HOWES                                                                       
-//#define HEATELECTRONS_KAWAZURA
-//#define HEATELECTRONS_ROWAN                                                                       
-//#define HEATELECTRONS_ROWAN2
-//#define HEATELECTRONS_ROWAN3
-//#define HEATELECTRONS_WERNER
-#define HEATELECTRONS_ZHDANKIN
-
-#define NOHEATATBH
-//#define HEATELECTRONSATENDRK2                                                                     
-//#define DISSIPATIONFROMGASONLY                       
-//#define FORCEGAMMAGASFIXED
-
-//entropy mixing     
-#define MIXENTROPIESPROPERLY                                                  
-#define UPWINDENTROPYMIXING  
-#define DONOTLIMITENTRINMIXING
-
-//floors                                                                
-#define UEUINTMINRATIO 1.e-3
-#define UIUINTMINRATIO 1.e-3
-#define TEMPEMINIMAL 1.e3
-#define TEMPIMINIMAL 1.e3
-#define TEMPEMINIMALFRACTION 1.e-6
-#define TEMPIMINIMALFRACTION 1.e-6
-#define TEMPEMAXIMALFRACTION 1.e3
-#define TEMPIMAXIMALFRACTION 1.e3
-
-//silo output                                                                                  
-//#define PRINTVISCHEATINGTOSILO                                                 
-//#define PRINTCOULOMBTOSILO                                                              
-
-#endif
 
 /************************************/
 //reconstruction / Courant
 /************************************/
 #define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .9
+#define TSTEPLIM .8
 #define FLUXMETHOD LAXF_FLUX
 
-#define FLUXLIMITER 0
-#define MINMOD_THETA 1.9
+#define FLUXLIMITER 1
+#define MINMOD_THETA 1.5
 #define SHUFFLELOOPS 0
 
 #define DOFIXUPS 1
@@ -254,36 +139,70 @@
 /************************************/
 //rmhd floors
 /************************************/
+#if defined(FORCEFREE)
+
+//#define REDUCEORDERWHENNEEDED
+//#define REDUCEORDERATBH
+//#define REDUCEORDERFF
+
+//#define ENFORCEENTROPY
+
+#define HYBRID_FORCEFREE
+#define HYBRID_FORCEFREE_SIGMACUT 50
+#define HYBRID_FORCEFREE_WIDTH 0.25
+#define FORCEFREE_SOLVE_PARALLEL
+
+#define FORCEFREE_PARALLEL_COLD
+//#define FORCEFREE_PARALLEL_ENTROPY
+//#define NO_FORCEFREE_PARALLEL_SOURCETERM
+#define FORCEFREE_NO_PARALLEL_ATBH
+
+//#define NOLOGINS // TODO do we need this in the new version? 
+
 #define CORRECT_POLARAXIS
 #define NCCORRECTPOLAR 2
-#define UURHORATIOMIN 1.e-8
-#define UURHORATIOMAX 1.e2
-#define EERHORATIOMIN 1.e-20
-#define EERHORATIOMAX 1.e20
-#define EEUURATIOMIN 1.e-20
-#define EEUURATIOMAX 1.e20
+#define UURHORATIOMIN 1.e-6
+#define UURHORATIOMAX 10. //1.e3
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX 1.e3
+#define B2UURATIOMAX 1.e10
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 100.
-#define GAMMAMAXRAD 25.
+#define B2RHORATIOMAX 1.e10
+#define GAMMAMAXFF 1000.
+#define GAMMAMAXHD 1000.
+#define RHOFLOOR 1.e-14
+#define B2RHOFLOORFRAME FFFRAME //DRIFTFRAME
+//#define RHOFLOOR_INIT
+
+#else
+//#define NOLOGINS
+#define CORRECT_POLARAXIS
+#define NCCORRECTPOLAR 2
+#define UURHORATIOMIN 1.e-6
+#define UURHORATIOMAX 10.
+#define B2UURATIOMIN 0.
+#define B2UURATIOMAX 100.
+#define B2RHORATIOMIN 0.
+#define B2RHORATIOMAX 50.
 #define GAMMAMAXHD 25.
-#define RHOFLOOR 1.e-40
+#define RHOFLOOR 1.e-14
+#define B2RHOFLOORFRAME ZAMOFRAME
+#endif
 
 /************************************/
 //resolution
 /************************************/
 //total resolution
-#define TNX 288 //320
-#define TNY 192 //192
-#define TNZ 144 //192
+#define TNX 128 //320
+#define TNY 128 //192
+#define TNZ 1//64 //192
 
 #define SILO2D_XZPLANE
+//#define CURRENTTIMEDERIV
 
 //number of tiles
-#define NTX 12 
+#define NTX 8 
 #define NTY 8 
-#define NTZ 6 
+#define NTZ 4 
 
 /************************************/
 //coordinates
@@ -291,8 +210,21 @@
 
 #define METRICAXISYMMETRIC
 
-#define RMIN 0.825*RH
+#define RMIN 0.7*RH
 #define RMAX 1.e4
+
+#ifdef myMKS1COORDS //modified Kerr-Shild
+#define METRICNUMERIC
+#define MYCOORDS MKS1COORDS
+
+#define MKSR0 0. //-1.35
+#define MKSH0 0.7
+
+#define MINX (log(RMIN-MKSR0))
+#define MAXX (log(RMAX-MKSR0))
+#define MINY (0.01)*M_PI //(0.005)*M_PI
+#define MAXY (1. - 0.01)*M_PI //(1. - 0.005)*M_PI
+#endif
 
 #ifdef myMKS2COORDS //modified Kerr-Shild
 #define METRICNUMERIC
@@ -491,11 +423,14 @@
 
 //stopping condition
 
-#define NOUTSTOP 1000 //2000
+#define NOUTSTOP 0//1000 //2000
 
 //#define DUMPS_READ_HDF5
 //#define DUMPS_WRITE_HDF5
 //#define COORDOUTPUT_HDF5
+
+//#define ANAOUT_HDF5
+#define OUTCOORDS2 KSCOORDS
 
 #define OUTCOORDS KSCOORDS
 #define OUTVEL VEL4
@@ -514,7 +449,7 @@
 //#define RADOUTPUTWITHINDTHETA (M_PI/6.)
 
 #define SCAOUTPUT 0
-#define AVGOUTPUT 1
+#define AVGOUTPUT 0
 #define NORELELAVGS
 #define THOUTPUT 0
 //#define THPROFRADIUS 30

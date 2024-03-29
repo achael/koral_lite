@@ -29,7 +29,7 @@
 //total rad energy flux (17)
 //outflowin rad energy flux (18)
 //jet rad energy flux (19)
-//outflowin mass flux (20)
+//outflowing mass flux (20)
 //jet mass flux (21)
 //luminosity at given radius everywhere (22)
 //surface density in the inflow (23)
@@ -220,27 +220,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         #endif
 
 	//cell dimensions
-	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-
-	/*
-	ldouble xx1[4],xx2[4];
-        xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-        xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-        coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-        coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-        dx[0]=fabs(xx2[1]-xx1[1]);
-        xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-        xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-        coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-        coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-        dx[1]=fabs(xx2[2]-xx1[2]);
-        xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-        xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-        coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-        coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-        dx[2]=fabs(xx2[3]-xx1[3]);
-        */
 	
 	if(NZ==1) 
         {
@@ -266,7 +246,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
 
 
 	#ifdef CONSERVED_FLUX_OUTPUT
-        // ANDREW TODO
 	// These are all defined on the face, so we can't use precomputed
         // can take a long time and don't seem necessary in radial profiles
 
@@ -313,12 +292,8 @@ int calc_radialprofiles(ldouble profiles[][NX])
 	//transforming interpolated primitives to BL
         #ifdef PRECOMPUTE_MY2OUT
         trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
-	//trans_pall_coco_my2out(fd_pm1,fd_pm1,&geomm1,&geomBLm1); // don't need these anymore
-        //trans_pall_coco_my2out(fd_pp1,fd_pp1,&geomp1,&geomBLp1);
         #else      
         trans_pall_coco(pp,pp,MYCOORDS,OUTCOORDS,xx,&geom,&geomBL);
-	//trans_pall_coco(fd_pm1,fd_pm1,MYCOORDS,OUTCOORDS,xx,&geomm1,&geomBLm1); // don't need these anymore
-        //trans_pall_coco(fd_pp1,fd_pp1,MYCOORDS,OUTCOORDS,xx,&geomp1,&geomBLp1);
         #endif
 	
         ldouble vischeating=0.;
@@ -416,11 +391,11 @@ int calc_radialprofiles(ldouble profiles[][NX])
         }  // end if(doingavg)
         else //on the go from the primitives
         {
-          rho=pp[0];
-          uint=pp[1];
-          utcon[1]=pp[2];
-          utcon[2]=pp[3];
-          utcon[3]=pp[4];
+          rho=pp[RHO];
+          uint=pp[UU];
+          utcon[1]=pp[VX];
+          utcon[2]=pp[VY];
+          utcon[3]=pp[VZ];
           temp=calc_PEQ_Tfromurho(uint,rho,ix,iy,iz);
           
 #ifdef MAGNFIELD
@@ -609,10 +584,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
         profiles[29][ix]+=rho*dxph[1]*pow(tan(fabs(M_PI/2.-xxBL[2])),2.);
 #endif
         
-        //surface density in the inflow (23)
-        //if(utcon[1]<0.)
-        //  profiles[21][ix]+=rho*dxph[1];
-        
         //rho-weighted q-theta (28)
         profiles[26][ix]+=rho*qtheta*dxph[1];
 	       
@@ -644,7 +615,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
 	scaleheight134[ix] += rho*fabs(0.5*M_PI - xxBL[2]) * dx[1]*dx[2]*geomBL.gdet;
 
 	//density-weighted MRI wavelength using code comparison paper defn
-	//ANDREW TODO -- should it be bsq/2?
 	ldouble lambdaMRI = 2*M_PI * fabs(bcon[2]) / sqrt(bsq + rho + uint + pregas) / fabs(Omega);
 	rholambda134[ix] += rho*lambdaMRI* dx[1]*dx[2]*geomBL.gdet; 
 	  
@@ -781,7 +751,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         if(utcon[1]<0.)
           profiles[22][ix]+=-rhouconr*dxph[1];
         
-        //rho-weighted minus radial velocity in the outflow (36)
+
         #if(PROBLEM==87)
         ldouble angmomR = ucov[3];
         ldouble epsR =-(1.+ucov[0]);
@@ -789,12 +759,13 @@ int calc_radialprofiles(ldouble profiles[][NX])
         if(eccR > -1.) 
         {
           profiles[34][ix]+= rho*dxph[1]*sqrt(1. - 2.*ucov[3]*ucov[3]*(1.+ucov[0]));
-          profiles[21][ix]+=rho*dxph[1];
+          profiles[21][ix]+= rho*dxph[1];
         }
-        //if(eccN > -1.) profiles[34][ix]+= rho*dxph[1]*sqrt(1. + eccN); //eccentricity
         #else
+	//surface density in the inflow (23)
         if(utcon[1]<0.)
           profiles[21][ix]+=rho*dxph[1];
+        //rho-weighted minus radial velocity in the outflow (36)
         if(utcon[1]>0.)
           profiles[34][ix]+=rhouconr*dxph[1];
         #endif
@@ -836,10 +807,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
         Jvec[0]+=jvec[0];
         Jvec[1]+=jvec[1];
         Jvec[2]+=jvec[2];
-        
-        //<(rho+u+bsq/2)u^r><u_phi> (5)
-        //profiles[3][ix]+=get_uavg(pavg,AVGWUCON(1),ix,iy,iz)*get_uavg(pavg,AVGUCOV(3),ix,iy,iz)*dxph[1];
-        
+                
         //u_phi everywhere (5)
         //if(utcon[1]<0.)
         {
@@ -849,7 +817,7 @@ int calc_radialprofiles(ldouble profiles[][NX])
             profiles[3][ix]+=rho*ucov[3]*dxph[1];
         }
         
-        //int the outflow (51)
+        //in the outflow (51)
         if(utcon[1]>0.)
         {
           if(doingavg)
@@ -921,7 +889,6 @@ int calc_radialprofiles(ldouble profiles[][NX])
     profiles[28][ix]=-Bangle1/Bangle2;
     
     //normalizing by <(rho+u+bsq/2)u^r>
-    //profiles[3][ix]/=avgsums[AVGWUCON(1)][ix];
     profiles[3][ix]/=profiles[0][ix];
     
     //Keplerian u_phi (6)
@@ -1080,11 +1047,11 @@ int calc_thetaprofiles(ldouble profiles[][NY])
 	    }
 	  else
 	    { 
-	      rho=pp[0];
-	      uint=pp[1];
-	      utcon[1]=pp[2];
-	      utcon[2]=pp[3];
-	      utcon[3]=pp[4];
+	      rho=pp[RHO];
+	      uint=pp[UU];
+	      utcon[1]=pp[VX];
+	      utcon[2]=pp[VY];
+	      utcon[3]=pp[VZ];
 		  
 #ifdef MAGNFIELD
 	      calc_bcon_prim(pp,bcon,&geomBL);
@@ -1173,18 +1140,7 @@ int calc_thetaprofiles(ldouble profiles[][NY])
 
 	      //cell dimensions
 	      ldouble dxph[3],dx[0];
-	      
-    	      //ANDREW put cell size code in a function with precompute option
-              get_cellsize_out(iix, iy, iz, dx);
-	      /*
-	      ldouble xx1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(iix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(iix+1,0);xx2[2]=get_xb(iy,1);xx2[3]=get_xb(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS); 
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      */
-		
+	      get_cellsize_out(iix, iy, iz, dx);		
 	      dxph[0]=dx[0]*sqrt(geomBL2.gg[1][1]);
 
 	      ldouble rho2=get_u(p,RHO,iix,iy,iz);
@@ -1365,16 +1321,16 @@ int calc_scalars(ldouble *scalars,ldouble t)
   #endif
   int ix;
   for(ix=0;ix<NX;ix++)
-    {
-      get_xx(ix,0,0,xx);
-      #ifdef PRECOMPUTE_MY2OUT
-      get_xxout(ix, 0, 0, xxBL);
-      #else
-      coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
-      #endif
+  {
+    get_xx(ix,0,0,xx);
+    #ifdef PRECOMPUTE_MY2OUT
+    get_xxout(ix, 0, 0, xxBL);
+    #else
+    coco_N(xx,xxBL,MYCOORDS,OUTCOORDS);
+    #endif
 
-      if(xxBL[1]>radius) break;
-    }
+    if(xxBL[1]>radius) break;
+  }
 
   double totlum;
   calc_local_lum(ix,NCCORRECTPOLAR+1,0,&radlum,&totlum);
@@ -1440,7 +1396,7 @@ int calc_scalars(ldouble *scalars,ldouble t)
   scalars[6]=rhoGU2CGS(pp[RHO]);
 #endif
 
-  //ANDREW should this be in not just one cell??  
+  //ANDREW TODO: move to hdf5 output
 #if (PROBLEM==107 || PROBLEM==114) //RELELTEST or RELELEXPAND
   ldouble pp[NV];
   int iv;
@@ -1788,28 +1744,7 @@ calc_totalmass()
           gdet = geomBL.gdet;
 
 	  //cell dimensions
-    	  //ANDREW put cell size code in a function with precompute option
           get_cellsize_out(ix, iy, iz, dx);
-	  /*
-	  ldouble xx1[4], xx2[4];
-          xx1[0] = 0.; xx1[1] = get_xb(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_x(iz, 2);
-          xx2[0] = 0.; xx2[1] = get_xb(ix+1, 0);xx2[2] = get_x(iy, 1); xx2[3] = get_x(iz, 2);
-          coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-          coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-          dx[0] = fabs(xx2[1] -xx1[1]);
-
-          xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-          xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-          coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-          coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-          dx[1] = fabs(xx2[2] - xx1[2]);
-
-	  xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-          xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-          coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-          coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-          dx[2] = fabs(xx2[3] - xx1[3]);
-          */
 	  if(NZ==1) 
           {
             dx[2] = 2. * M_PI;
@@ -1926,9 +1861,9 @@ calc_local_lum(int ix,int iy,int iz,ldouble *radlum, ldouble *totallum)
   else
     {
 	  
-      ucongas[1]=pp[2];
-      ucongas[2]=pp[3];
-      ucongas[3]=pp[4];	      
+      ucongas[1]=pp[VX];
+      ucongas[2]=pp[VY];
+      ucongas[3]=pp[VZ];	      
       conv_vels(ucongas,ucongas,VELPRIM,VEL4,geom.gg,geom.GG);
 
       rhour = pp[RHO]*ucongas[1];
@@ -2069,9 +2004,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
       else //doingavg
       {
 	
-	  ucongas[1]=pp[2];
-	  ucongas[2]=pp[3];
-	  ucongas[3]=pp[4];	      
+	  ucongas[1]=pp[VX];
+	  ucongas[2]=pp[VY];
+	  ucongas[3]=pp[VZ];	      
 	  conv_vels(ucongas,ucongas,VELPRIM,VEL4,geom.gg,geom.GG);
 
 	  rhour = pp[RHO]*ucongas[1];
@@ -2144,36 +2079,12 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	  struct geometry geom;
 	  fill_geometry(ix,iy,iz,&geom);
 
-	  //get_xx(ix,iy,iz,xx);
-	  //dx[0]=get_size_x(ix,0);
-	  //dx[1]=get_size_x(iy,1);
-	  //dx[2]=2.*M_PI;
-	  //gdet=geom.gdet;
 
 	  ldouble dxph[3],dxBL[3];
 	  
 	  //cell dimensions
-	  //ANDREW put cell size code in a function with precompute option
           get_cellsize_out(ix, iy, iz, dxBL);
-	  /*
-	  ldouble xx1[4],xx2[4];
-	  xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	  xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[0]=fabs(xx2[1]-xx1[1]);
-	  xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	  xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[1]=fabs(xx2[2]-xx1[2]);
-	  xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	  xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	  coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	  coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	  dxBL[2]=fabs(xx2[3]-xx1[3]);
-          */
-	  if(NZ==1) 
+ 	  if(NZ==1) 
           {
             dxBL[2]=2.*M_PI;
           }
@@ -2271,9 +2182,9 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 	      //hydro part may be inconsistent!
 	      calc_tautot(pp,&geomBL,dxph,tautot);
 
-	      ucongas[1]=pp[2];
-	      ucongas[2]=pp[3];
-	      ucongas[3]=pp[4];	      
+	      ucongas[1]=pp[VX];
+	      ucongas[2]=pp[VY];
+	      ucongas[3]=pp[VZ];	      
 	      conv_vels(ucongas,ucongas,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
 
 	      indices_21(ucongas,ucovgas,geomBL.gg);
@@ -2321,9 +2232,6 @@ calc_lum(ldouble radius,int type,ldouble *radlum, ldouble *totallum)
 #endif
 	      jet+=geomBL.gdet*(rhour+Trt+Rrt)*dxBL[1]*dxBL[2];
 
-	      //ANDREW -- what is this definition of jet luminosity?
-	      //jet+=-geomBL.gdet*rhour*(ucovgas[0]+sqrt(-geomBL.gg[0][0]))*dxBL[1]*dxBL[2];  
-
 	  } //snapshot
 	} //iy
       } // iz
@@ -2366,7 +2274,6 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 
 	  ldouble xx[4],dx[3],pp[NV],Rrt,rhour,uintur,Tij[4][4],Trt;
           ldouble Rij[4][4],Rtt,ehat,ucongas[4],ucovgas[4];
-          //ldouble gdet;
 
 	  int iv;
 	  for(iv=0;iv<NV;iv++)
@@ -2380,7 +2287,6 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
 	  ldouble dxph[3],dxBL[3];
 	  
 	  //cell dimensions
-	  //ANDREW put cell size code in a function with precompute option
           get_cellsize_out(ix, iy, iz, dxBL);
 
 	  if(NZ==1) 
@@ -2456,9 +2362,9 @@ calc_lum_tausurface(ldouble taumax,ldouble *radlum)
               trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
               #endif
 
-	      ucongas[1]=pp[2];
-	      ucongas[2]=pp[3];
-	      ucongas[3]=pp[4];	      
+	      ucongas[1]=pp[VX];
+	      ucongas[2]=pp[VY];
+	      ucongas[3]=pp[VZ];	      
 	      conv_vels(ucongas,ucongas,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
 
 	      indices_21(ucongas,ucovgas,geomBL.gg);
@@ -2870,21 +2776,7 @@ calc_mdot(ldouble radius, int type)
         gdet = geomBL.gdet;
 
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-	/*  
-	ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
 	if(NZ==1) 
         {
           dx[2] = 2. * M_PI;
@@ -2917,10 +2809,10 @@ calc_mdot(ldouble radius, int type)
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
 
-        rho = pp[0];
-        ucon[1] = pp[2];
-        ucon[2] = pp[3];
-        ucon[3] = pp[4];
+        rho = pp[RHO];
+        ucon[1] = pp[VX];
+        ucon[2] = pp[VY];
+        ucon[3] = pp[VZ];
         
         conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
         rhouconr = rho * ucon[1];
@@ -3032,13 +2924,13 @@ calc_lum_proxy(ldouble radius, ldouble theta_min, ldouble theta_max)
           pick_g(ix, iy, iz, gg);
           pick_G(ix, iy, iz, GG);
           
-          rho = pp[0];
+          rho = pp[RHO];
           uu = pp[UU];
           pressure = uu * (GAMMA - 1.);
           
-          ucon[1] = pp[2];
-          ucon[2] = pp[3];
-          ucon[3] = pp[4];
+          ucon[1] = pp[VX];
+          ucon[2] = pp[VY];
+          ucon[3] = pp[VZ];
           conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
           indices_21(ucon, ucov, geom.gg);
           
@@ -3108,21 +3000,8 @@ calc_Edot(ldouble radius)
         gdet = geomBL.gdet;
 
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
+
         get_cellsize_out(ix, iy, iz, dx);
-        /*
-	ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
         if(NZ==1) 
         {  
           dx[2] = 2. * M_PI;
@@ -3156,12 +3035,12 @@ calc_Edot(ldouble radius)
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
         
-        rho = pp[0];
+        rho = pp[RHO];
         uu = pp[UU];
         
-        ucon[1] = pp[2];
-        ucon[2] = pp[3];
-        ucon[3] = pp[4];
+        ucon[1] = pp[VX];
+        ucon[2] = pp[VY];
+        ucon[3] = pp[VZ];
         conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
         indices_21(ucon, ucov, geom.gg);
         
@@ -3234,21 +3113,7 @@ calc_Ldot(ldouble radius)
         gdet = geomBL.gdet;
 	
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-	/*
-	ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
         if(NZ==1) 
         {
           dx[2] = 2. * M_PI;
@@ -3282,12 +3147,12 @@ calc_Ldot(ldouble radius)
         pick_g(ix, iy, iz, gg);
         pick_G(ix, iy, iz, GG);
         
-        rho = pp[0];
+        rho = pp[RHO];
         uu = pp[UU];
         
-        ucon[1] = pp[2];
-        ucon[2] = pp[3];
-        ucon[3] = pp[4];
+        ucon[1] = pp[VX];
+        ucon[2] = pp[VY];
+        ucon[3] = pp[VZ];
         conv_vels(ucon, ucon, VELPRIM, VEL4, geom.gg, geom.GG);
         indices_21(ucon, ucov, geom.gg);
         
@@ -3397,26 +3262,7 @@ calc_Bflux(ldouble radius, int type, ldouble *Bflux, ldouble* Bfluxquad)
         ldouble Br = bcon[1] * ucon[0] - bcon[0] * ucon[1];
 
 	//cell dimensions
-    	//ANDREW put cell size code in a function with precompute option
         get_cellsize_out(ix, iy, iz, dx);
-	/*  
-        ldouble xx1[4], xx2[4];
-        xx1[0] = 0.; xx1[1] = get_xb(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_xb(ix+1, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[0] = fabs(xx2[1] - xx1[1]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_xb(iy, 1); xx1[3] = get_x(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_xb(iy+1, 1); xx2[3] = get_x(iz, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[1] = fabs(xx2[2] - xx1[2]);
-        xx1[0] = 0.; xx1[1] = get_x(ix, 0); xx1[2] = get_x(iy, 1); xx1[3] = get_xb(iz, 2);
-        xx2[0] = 0.; xx2[1] = get_x(ix, 0); xx2[2] = get_x(iy, 1); xx2[3] = get_xb(iz+1, 2);
-        coco_N(xx1, xx1, MYCOORDS, OUTCOORDS);
-        coco_N(xx2, xx2, MYCOORDS, OUTCOORDS);
-        dx[2] = fabs(xx2[3] - xx1[3]);
-        */
         if(NZ==1)
         {
           dx[2] = 2. * M_PI;

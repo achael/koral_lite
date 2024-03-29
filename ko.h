@@ -177,6 +177,7 @@ ldouble min_dx,min_dy,min_dz;
 
 //precalculated metric parameters
 ldouble rhorizonBL,rISCOBL,rmboundBL,rphotonBL,etaNT;
+int cells_under_horizon;
 
 // jet coordinate specific
 #if (MYCOORDS==JETCOORDS)
@@ -189,6 +190,11 @@ ldouble x2cyl;
 ldouble sinthetaCYL;
 ldouble sinthetaAX;
 ldouble rmidcyl;
+#endif
+#ifdef FORCEFREE
+#ifdef HYBRID_FORCEFREE
+ldouble ffinv_lower_cutoff,ffinv_upper_cutoff;
+#endif
 #endif
 
 //tile specific
@@ -344,11 +350,7 @@ ldouble *u,*x,*ucent,*xb,*xout, *xbout_xface, *xbout_yface, *xbout_zface,
   *pbLx,*pbRx,*pbLy,*pbRy,*pbLz,*pbRz,*sbLx,*sbRx,*sbLy,*sbRy,*sbLz,*sbRz,
   *flbx,*flby,*flbz,*flLx,*flRx,*flLy,*flRy,*flLz,*flRz,
   *flbx2,*flby2,*flbz2,*flLx2,*flRx2,*flLy2,*flRy2,*flLz2,*flRz2,
-  *gKr;
-  //*emuup,*emulo,*emuupbx,*emulobx,*emuupby,*emuloby,*emuupbz,*emulobz,
-  //*emuup2,*emulo2,*emuupbx2,*emulobx2,*emuupby2,*emuloby2,*emuupbz2,*emulobz2,
-  //*tmuup,*tmulo,*tmuupbx,*tmulobx,*tmuupby,*tmuloby,*tmuupbz,*tmulobz,
-  //*tmuup2,*tmulo2,*tmuupbx2,*tmulobx2,*tmuupby2,*tmuloby2,*tmuupbz2,*tmulobz2;
+  *gKr, *ffinvarr;
 
 int *cellflag;
 
@@ -680,6 +682,7 @@ int my_finger(ldouble t);
 ///////////////////////////////////////////////////////////////
 
 void initialize_constants();
+int calc_cells_under_horiz();
 int print_scalings();
 int set_initial_profile();
 void am_i_sane();
@@ -749,9 +752,6 @@ int mpi_isitBC_forcorners(int BCtype);
 void mpi_synchtiming(ldouble *time);
 void mpi_myinit(int argc, char *argv[]);
 void mpi_myfinalize();
-//void mpi_tileorigin(long long ti, long long tj, long long tk, long long* toi, long long* toj, long long* tok);
-//void mpi_global2localidx(long long gix, long long giy, long long giz, long long *lix, long long *liy, long long *liz);
-//void mpi_local2globalidx(long long lix, long long liy, long long liz, long long *gix, long long *giy, long long *giz);
 
 void mpi_tileorigin(int ti, int tj, int tk, int* toi, int* toj, int* tok);
 void mpi_global2localidx(int gix,int giy, int giz, int *lix, int *liy, int *liz);
@@ -901,23 +901,6 @@ int trans_prad_coco(ldouble *ppin, ldouble *ppout, int CO1,int CO2, ldouble *xxv
 
 //deprecated
 int prad_ff2lab(ldouble *pp1, ldouble *pp2, void* ggg);
-//int prad_lab2ff(ldouble *pp1, ldouble *pp2, void *ggg);
-//int prad_on2lab(ldouble *pp1, ldouble *pp2, void* ggg);
-//int prad_lab2on(ldouble *pp1, ldouble *pp2, void *ggg);
-//int prad_ff2zamo(ldouble *pp1, ldouble *pp2, ldouble gg[][5], ldouble GG[][5], ldouble eup[][4]);
-//int prad_zamo2ff(ldouble *pp1, ldouble *pp2, ldouble gg[][5], ldouble GG[][5], ldouble eup[][4]);
-//int boost2_zamo2ff(ldouble* A1,ldouble* A2,ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int boost2_ff2zamo(ldouble A1[4],ldouble A2[4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int boost22_zamo2ff(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int boost22_ff2zamo(ldouble T1[][4],ldouble T2[][4],ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble eup[][4]);
-//int trans22_zamo2lab(ldouble T1[][4],ldouble T2[][4],ldouble elo[][4]);
-//int trans22_lab2zamo(ldouble T1[][4],ldouble T2[][4],ldouble eup[][4]);
-//int trans2_lab2zamo(ldouble *u1,ldouble *u2,ldouble eup[][4]);
-//int trans2_zamo2lab(ldouble *u1,ldouble *u2,ldouble elo[][4]);
-//int trans22_on2cc(ldouble T1[][4],ldouble T2[][4],ldouble tlo[][4]);
-//int trans22_cc2on(ldouble T1[][4],ldouble T2[][4],ldouble tup[][4]);
-//int trans2_cc2on(ldouble *u1,ldouble *u2,ldouble tup[][4]);
-//int trans2_on2cc(ldouble *u1,ldouble *u2,ldouble tlo[][4]);
 
 int calc_Lorentz_lab2ff(ldouble *pp,ldouble gg[][5],ldouble GG[][5],ldouble L[][4]);
 int calc_Lorentz_lab2ff_4vel(ldouble *pp, ldouble gg[][5], ldouble GG[][5], ldouble L[][4], ldouble ucon[4], ldouble ucov[4]);
@@ -982,23 +965,20 @@ int fill_utinvel3(ldouble *u1,double gg[][5],ldouble GG[][5]);
 int fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5]);
 int conv_velsinprims(ldouble *pp,int which1, int which2,ldouble gg[][5],ldouble GG[][5]);
 
-//TODO: remove these? 
 int calc_normalobs_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncon);
 int calc_normalobs_ncov_ncon(ldouble GG[][5], ldouble alpha, ldouble *ncov, ldouble *ncon);
 int calc_normalobs_4vel(ldouble GG[][5], ldouble *ncon);
 int calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon);
-//
 
 int set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype);
 int set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype);
 
-int pick_Tb(ldouble *arr,int ix,int iy,int iz,int,ldouble T[][4]);
-int pick_T(ldouble *arr,int ix,int iy,int iz,ldouble T[][4]);
 int pick_g(int ix,int iy,int iz,ldouble gg[][5]);
-ldouble pick_gdet(int ix,int iy,int iz);
 int pick_G(int ix,int iy,int iz,ldouble gg[][5]);
 int pick_gb(int ix,int iy,int iz,int,ldouble gg[][5]);
 int pick_Gb(int ix,int iy,int iz,int,ldouble gg[][5]);
+
+ldouble pick_gdet(int ix,int iy,int iz);
 
 int print_p(ldouble *p);
 int print_u(ldouble *p);
@@ -1008,12 +988,13 @@ int print_u(ldouble *p);
 // p2u.c //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-int p2u(ldouble *p, ldouble *u, void *ggg);
-int p2u_mhd(ldouble *p, ldouble *u, void *ggg);
+int p2u(ldouble *pp, ldouble *uu, void *ggg);
+int p2u_mhd(ldouble *pp, ldouble *uu, void *ggg);
 ldouble calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg);
-int p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg);
+int p2u_mhd_nonrel(ldouble *pp, ldouble *uu, void *ggg);
 int p2u_rad(ldouble *pp,ldouble *uu,void *ggg);
 int p2avg(int ix,int iy,int iz,ldouble *avg);
+int save_avg(ldouble dtin);
 int test_maginv();
 
 ///////////////////////////////////////////////////////////////
@@ -1024,19 +1005,28 @@ int calc_primitives(int ix,int iy,int iz,int type,int setflags);
 int u2p(ldouble *uu0, ldouble *pp,void *ggg,int corrected[3],int fixups[2],int type);
 int check_floors_mhd(ldouble *pp, int whichvel,void *ggg);
 
-int u2p_solver(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
+int u2p_solver_mhd(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_nonrel(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Wp(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_W(ldouble *uu, ldouble *pp, void *ggg,int Etype,int verbose);
 int u2p_solver_Bonly(ldouble *uu, ldouble *pp, void *ggg);
-
+int u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg,int verbose);
+int fill_ffprims();
+int fill_ffprims_cell(ldouble *pp, void *gg);
+ldouble get_driftvel_velr(ldouble *pp,ldouble *velff,void* ggg);
+int get_ffinv_flag_face(int ix, int iy, int iz,int ifacedim);
+ldouble calc_ffinv_val(ldouble sigma);
+ldouble calc_ffinv_val_x(ldouble sigma);
+ldouble calc_uuff_source(ldouble *pp0, void* ggg,int *derdir);
+  
 int count_entropy(int *n, int *n2);
 int copy_entropycount();
 int update_entropy();
 
+int count_ff(int *n, int *n2, int *n3);
+
 int test_inversion();
 int test_inversion_nonrel();
-int test_inversion_5d();
 
 ///////////////////////////////////////////////////////////////
 // u2prad.c ///////////////////////////////////////////////////
@@ -1086,12 +1076,8 @@ int set_x(int ic, int idim,ldouble val);
 int set_xb(int ic, int idim,ldouble val);
 ldouble calc_xb(int i,int idim);
 int calc_bc(int ix,int iy,int iz,ldouble t, ldouble *uu,ldouble *pp,int ifinit,int BCtype);
-//int set_g(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
-//int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
-//int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value);
-int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim);
+
 int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
-int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim);
 
 int copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, long long N);
 int copy_u(ldouble factor,ldouble *uu1,ldouble* uu2 );
@@ -1099,14 +1085,6 @@ int copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2);
 int add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, long long N);
 int add_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3);
 int addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3);
-int add_u_core_3(ldouble f1, ldouble* uu1,
-		 ldouble f2, ldouble *uu2,
-		 ldouble f3, ldouble *uu3,
-		 ldouble *uu4,long long N);
-int add_u_3(ldouble f1, ldouble* uu1,
-	    ldouble f2, ldouble *uu2,
-	    ldouble f3, ldouble *uu3,
-	    ldouble *uu4);
 int addi_u_3(ldouble f1, ldouble* uu1,
 	     ldouble f2, ldouble *uu2,
 	     ldouble f3, ldouble *uu3,
@@ -1119,10 +1097,6 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
 int set_bc(ldouble t,int ifinit);
 
 int cell_fixup(int type);
-
-int f_implicit_metric(const gsl_vector * x, void *paramsp, gsl_vector * f);
-int print_state_metric (int iter, gsl_multiroot_fsolver * s);
-int solve_implicit_metric(int ix,int iy,int iz,ldouble dt,ldouble *ubase);
 
 int smooth_polaraxis();
 int correct_nssurface();
@@ -1144,10 +1118,10 @@ int mix_entropies(ldouble dt);
 // magn.c /////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-void calc_bcon_bcov_bsq_from_4vel(ldouble *pr, ldouble *ucon, ldouble *ucov, void* ggg,
+void calc_bcon_bcov_bsq_from_4vel(ldouble *pp, ldouble *ucon, ldouble *ucov, void* ggg,
 				  ldouble *bcon, ldouble *bcov, double *bsq);
-void calc_bcon_4vel(double *pr, double *ucon, double *ucov, double *bcon);
-void calc_Bcon_4vel(double *pr, double *ucon, double *bcon, double *Bcon);
+void calc_bcon_4vel(double *pp, double *ucon, double *ucov, double *bcon);
+void calc_Bcon_4vel(double *pp, double *ucon, double *bcon, double *Bcon);
 void calc_bcon_prim(double *pp, double *bcon, void* ggg);
 void calc_Bcon_prim(double *pp, double *bcon,double *Bcon, void* ggg);
 
@@ -1219,6 +1193,7 @@ ldouble calc_all_Gi_with_state(ldouble *pp, void *sss, void* ggg,
 			       ldouble Gith_ff[4], ldouble Gith_lab[4],
 			       ldouble relel_dudtau, int reltype);
 ldouble calc_Gi_nonrel_with_state(ldouble *pp, void *sss, void *ggg, ldouble Gi[4],int labframe);
+
 int calc_Compt_Gi(ldouble *pp, void* ggg, ldouble *Gic,
 		  ldouble Ehatrad, ldouble Te, ldouble kappaes, ldouble *ucon);
 int calc_Compt_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble *Gic, ldouble *ucon_frame);
@@ -1228,21 +1203,19 @@ ldouble calc_CoulombCoupling_with_state(ldouble *pp,void *sss,void *ggg);
 
 void calc_Ehat_from_Rij_ucov(double Rij[4][4], double uffcov[4], ldouble *Ehat);
 int calc_Rij(ldouble *pp, void* ggg, ldouble Rij[][4]);
-int calc_Rij_M1_ff(ldouble *pp, ldouble Rij[][4]);
-int calc_Rij_M1_from_4vel(ldouble *pp, void* ggg, ldouble *urfcon, ldouble Rij[][4]);
 int calc_Rij_M1(ldouble *pp, void* ggg, ldouble Rij[][4]);
 
-ldouble calc_Tnfromn(ldouble n);
-ldouble calc_NFfromT(ldouble T);
 ldouble calc_NFfromE(ldouble E);
 ldouble calc_LTE_EfromT(ldouble T);
 ldouble calc_LTE_TfromE(ldouble E );
-ldouble calc_LTE_Efromurho(ldouble u,ldouble rho);
+
+
 int calc_ff_Rtt(ldouble *pp,ldouble *Rttret, ldouble* ucon,void* ggg);
 int calc_ff_Ehat(ldouble *pp,ldouble *Ehat, ldouble* ucon,void* ggg);
 
 ldouble calc_nsource(ldouble *pp, void* ggg);
 ldouble calc_nsource_with_state(ldouble *pp, void *sss, void* ggg);
+
 ldouble calc_ncompt_Thatrad_4vel(ldouble *pp, void* ggg, ldouble Ehatrad,
 				 ldouble* urfcon, ldouble* uffcov);
 ldouble calc_ncompt_Ehatrad(ldouble Tradhat, ldouble nphhat);
@@ -1306,6 +1279,7 @@ int f_general_source_term(int ix, int iy, int iz,ldouble *ss);
 
 int f_flux_prime(ldouble *pp, int idim, int ix, int iy, int iz,ldouble *ff,int lr);
 int calc_Tij(ldouble *pp, void* ggg, ldouble T[][4]);
+int calc_Tij_ff(ldouble *pp, void* ggg, ldouble T[][4]);
 
 ldouble calc_ufromS(ldouble S,ldouble rho,int ix,int iy,int iz);
 ldouble calc_TfromS(ldouble S,ldouble rho,int ix,int iy,int iz);
@@ -1354,6 +1328,9 @@ ldouble pick_ViscousHeating(int ix,int iy,int iz);
 int test_gammagas();
 int test_calcgamma();
 
+int calc_faraday(ldouble F[4][4],int ix,int iy,int iz,int when);
+int calc_current(void* ggg,ldouble jcon[4],int *derdir);
+
 ///////////////////////////////////////////////////////////////
 // nonthermal.c ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
@@ -1366,10 +1343,6 @@ ldouble calc_relel_p(ldouble *pp);
 ldouble calc_gammainj_max_syncool(ldouble bsq, ldouble dtau);
 ldouble calc_gammainj_min_jointhermal(ldouble theta, ldouble delta_nth, ldouble p_index, ldouble gammamax);
 int reconnection_plaw_params_from_state(ldouble *pp, void *ggg, void *sss, ldouble* delta_back, ldouble* pindex_back);
-//ldouble calc_S4fromnT(ldouble n, ldouble temp, int type);
-//ldouble calc_S4fromnu(ldouble n, ldouble uint,int type);
-//ldouble calc_TfromS4n(ldouble S4,ldouble n, int type,int ix,int iy,int iz);
-//ldouble calc_ufromS4n(ldouble S4,ldouble n,int type,int ix,int iy,int iz);
 ldouble calc_gammaint_relel(ldouble* pp, ldouble Te, ldouble Ti);
 ldouble calc_PEQ_ugasfrom_Tei_relel(ldouble *pp, ldouble Te,ldouble Ti);
 ldouble chemical_potential_short(ldouble theta, ldouble neth);
@@ -1397,8 +1370,6 @@ ldouble calc_relel_photon_ndot_from_state(ldouble *pp,  void* sss, int radtype);
 ldouble calc_relel_cool_dq_from_state(ldouble *pp, void *sss);
 ldouble calc_relel_cool_dn_from_state(ldouble *pp, void *sss);
 ldouble calc_relel_CoulombCoupling_from_state(ldouble *pp, void *sss);
-
-//ANDREW Needed still for silo.c ... 
 ldouble calc_relel_G0_fluidframe(ldouble *pp, void *ggg, ldouble relel_dudtau, int type);
 ldouble calc_relel_G0_fluidframe_direct(ldouble *pp, void *ggg, int radtype);
 
@@ -1434,9 +1405,7 @@ int calc_lum_tausurface(ldouble taumax,ldouble *radlum);
 ///////////////////////////////////////////////////////////////
 // fileop.c ///////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
-//deleted OUTOUTPUT BOXOUTPUT BOXCORROUTPUT VAROUTPUT, BOXVERTOUTPUT ANARELRADOUTPUT SLICEOUTPUT
 
-int save_avg(ldouble dtin);
 int fprint_openfiles(char* folder);
 int fprint_closefiles();
 int fprint_gridfile(char* folder);
@@ -1461,6 +1430,7 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix);
 int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix);
+int fprint_primitive_file(ldouble t, int nfile, char* folder, char* prefix);
 
 int fprint_restartfile_mpi_hdf5(ldouble t, char* folder);
 int fprint_restartfile_serial_hdf5(ldouble t, char* folder);
@@ -1490,7 +1460,7 @@ ldouble calc_kappaes(ldouble *pp,void *ggg);
 ldouble calc_chi(ldouble *pp,void *ggg);
 int calc_tautot(ldouble *pp, void *ggg, ldouble *dx, ldouble *tautot);
 int calc_tauabs(ldouble *pp, void *ggg, ldouble *dx, ldouble *tauabs);
-ldouble calc_opacities_from_state(ldouble *pp, void *ggg, void *sss, void *op);
+ldouble calc_opacities_from_state(ldouble *pp, void* sss, void *ggg, void *op);
 int init_OpTable(void *optab0, char *filename);
 int init_all_kappa_table();
 

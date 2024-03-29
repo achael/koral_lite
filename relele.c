@@ -248,11 +248,14 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     ldouble alpgam = calc_alpgam(u1, gg, GG);
     
     u2con[0]=-alpgam*GG[0][0];
-    //ANDREW this makes it compatible with Olek's version,
-    //but I'm not sure it's correct:
+    // ANDREW u^0 should be negative below horizon in BL coords!
+    // when energy-at-infinity is >0
+    /*
     if(u2con[0]<0)
+    {
       u2con[0] = fabs(u2con[0]);
-          
+    } 
+    */     
     u2con[1]=u1[1]-alpgam*GG[0][1];
     u2con[2]=u1[2]-alpgam*GG[0][2];
     u2con[3]=u1[3]-alpgam*GG[0][3];
@@ -264,21 +267,17 @@ conv_vels_core(ldouble *u1,ldouble *u2conout,int which1,int which2,ldouble gg[][
     ldouble alpgam = calc_alpgam(u1, gg, GG);
 
     u2con[0]=-alpgam*GG[0][0];
-    //ANDREW this makes it compatible with Olek's version,
-    //but I'm not sure it's correct:
+    // ANDREW u^0 should be negative below horizon in BL coords!
+    // when energy-at-infinity is >0
+    /*
     if(u2con[0]<0)
+    {
       u2con[0] = fabs(u2con[0]);
-
-    //ANDREW's version
-    //u2con[1]=(u1[1]-alpgam*GG[0][1])/u2con[0];
-    //u2con[2]=(u1[2]-alpgam*GG[0][2])/u2con[0];
-    //u2con[3]=(u1[3]-alpgam*GG[0][3])/u2con[0];
-
-    //Identical to Olek's
+    }
+    */
     u2con[1]=u1[1]/u2con[0] + GG[0][1]/GG[0][0];
     u2con[2]=u1[2]/u2con[0] + GG[0][2]/GG[0][0];
     u2con[3]=u1[3]/u2con[0] + GG[0][3]/GG[0][0];
-
   }
 
   /*************** not supported  ***************/
@@ -313,9 +312,6 @@ calc_alpgam(ldouble *u1, ldouble gg[][5], ldouble GG[][5])
   int i, j;
   ldouble qsq=0.;
 
-#ifdef APPLY_OMP_SIMD
-  //#pragma omp simd
-#endif
   for(i=1;i<4;i++)
   {
     for(j=1;j<4;j++)
@@ -328,7 +324,7 @@ calc_alpgam(ldouble *u1, ldouble gg[][5], ldouble GG[][5])
   ldouble alpha2=(-1./GG[0][0]);
   ldouble alpgam2=alpha2*gamma2;
   if(alpgam2<0.) {
-    //printf("alpgam2.lt.0 in VELR->VEL4\n");
+    printf("alpgam2.lt.0 in VELR->VEL4\n");
     return 1.;
   }
   ldouble alpgam=sqrt(alpgam2);
@@ -404,6 +400,9 @@ fill_utinucon(ldouble *u1,double gg[][5],ldouble GG[][5])
   else //this is in ergoregion
   {
     //ANDREW THIS IS WRONG, should be minus sign everywhere
+    //it should definitly be minus below horizon in BL, since u^0<0 there
+    //but is this always true?
+    //I think -/+ choice here corresponds to +/- energy-at-infinity trajectories
     //u1[0] = (-b + sqrt(delta)) / a;
     u1[0] = (-b - sqrt(delta)) / a;
   }
@@ -422,15 +421,15 @@ conv_velsinprims(ldouble *pp,int which1, int which2,ldouble gg[][5],ldouble GG[]
   int ret=0;
   ldouble v1[4],v2[4];
   v1[0]=0.; //not considered
-  v1[1]=pp[2];
-  v1[2]=pp[3];
-  v1[3]=pp[4];
+  v1[1]=pp[VX];
+  v1[2]=pp[VY];
+  v1[3]=pp[VZ];
   ret=conv_vels(v1,v2,which1,which2,gg,GG);
   if(ret==0)
     {
-      pp[2]=v2[1];
-      pp[3]=v2[2];
-      pp[4]=v2[3];
+      pp[VX]=v2[1];
+      pp[VY]=v2[2];
+      pp[VZ]=v2[3];
       return 0;
     }
   else
@@ -514,7 +513,6 @@ calc_normalobs_relvel(ldouble GG[][5], ldouble *ncon)
 //velocities already in VELPRIM
 //**********************************************************************
 
-// ANDREW TODO -- can't precompute quantities without big changes,
 // since this takes arbitrary position as input
 int
 set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atmtype)
@@ -539,16 +537,16 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       // to VELPRIM
       conv_vels(ucon,ucon,VEL4,VELPRIM,gg,GG);
 
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
 
       // density & pressure
       ldouble r=xx2[1];
       ldouble rout=1.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-1.5);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-1.5);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -566,9 +564,9 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       {
         conv_vels(ucon,ucon,VELR,VELPRIM,gg,GG);
       }
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
       
       // Bondi-like atmosphere
       coco_N(xx,xx2,MYCOORDS,BLCOORDS);
@@ -576,8 +574,8 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
 
       ldouble rout=2.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-1.5);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-1.5);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -595,9 +593,9 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       {
         conv_vels(ucon,ucon,VELR,VELPRIM,gg,GG);
       }
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
 
       // Bondi-like atmosphere
       coco_N(xx,xx2,MYCOORDS,BLCOORDS);
@@ -605,8 +603,8 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
 
       ldouble rout=2.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-2.0);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-2.0);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -624,11 +622,11 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       {
         conv_vels(ucon,ucon,VELR,VELPRIM,gg,GG);
       }
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
-      pp[0] = RHOATMMIN;
-      pp[1] = UINTATMMIN;
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
+      pp[RHO] = RHOATMMIN;
+      pp[UU] = UINTATMMIN;
 
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -657,7 +655,10 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       //corrected rho:
       rho=PAR_D/(r*r*sqrtl(2./r));    
 
-      pp[0]=rho; pp[1]=uint; pp[2]=-V; pp[3]=pp[4]=0.; 
+      pp[RHO]=rho;
+      pp[UU]=uint;
+      pp[VX]=-V;
+      pp[VY]=pp[VZ]=0.; 
       conv_velsinprims(pp,VEL3,VELPRIM,gg,GG);
   
       #ifdef MAGNFIELD
@@ -686,17 +687,17 @@ set_hdatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int atm
       // to VELPRIM
       conv_vels(ucon,ucon,VEL4,VELPRIM,gg,GG);
 
-      pp[2]=ucon[1];
-      pp[3]=ucon[2];
-      pp[4]=ucon[3];
+      pp[VX]=ucon[1];
+      pp[VY]=ucon[2];
+      pp[VZ]=ucon[3];
 
       //density etc.
       ldouble r=xx2[1];
 
       ldouble rout=2.; //RHOATMMIN etc. given at rout=2
 
-      pp[0] = RHOATMMIN*pow(r/rout,-1.5);
-      pp[1] = UINTATMMIN*pow(r/rout,-2.5);
+      pp[RHO] = RHOATMMIN*pow(r/rout,-1.5);
+      pp[UU] = UINTATMMIN*pow(r/rout,-2.5);
   
       #ifdef MAGNFIELD
       pp[B1]=pp[B2]=pp[B3]=0.;
@@ -809,34 +810,6 @@ set_radatmosphere(ldouble *pp,ldouble *xx,ldouble gg[][5],ldouble GG[][5],int at
   return 0;
 }
 
-//**********************************************************************
-//picks metric like tensor from cell face arr at ix,iy,iz
-//**********************************************************************
-
-int
-pick_Tb(ldouble* arr,int ix,int iy,int iz,int idim,ldouble T[][4])
-{
-  int i,j;
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
-      T[i][j]=get_Tb(arr,i,j,ix,iy,iz,idim);
-  return 0;
-}
-
-
-//**********************************************************************
-//picks metric like tensor from arr at ix,iy,iz
-//**********************************************************************
-
-int
-pick_T(ldouble* arr,int ix,int iy,int iz,ldouble T[][4])
-{
-  int i,j;
-  for(i=0;i<4;i++)
-    for(j=0;j<4;j++)
-      T[i][j]=get_T(arr,i,j,ix,iy,iz);
-  return 0;
-}
 
 //**********************************************************************
 //picks a metric at ix,iy,iz
@@ -851,18 +824,6 @@ pick_g(int ix,int iy,int iz,ldouble gg[][5])
       gg[i][j]=get_g(g,i,j,ix,iy,iz);
 
   return 0;
-}
-
-
-//**********************************************************************
-//picks gdet at ix,iy,iz
-//**********************************************************************
-
-ldouble
-pick_gdet(int ix,int iy,int iz)
-{
-  int i,j;
-  return get_g(g,3,4,ix,iy,iz);
 }
 
 
@@ -1051,13 +1012,24 @@ pick_Gb(int ix,int iy,int iz,int idim,ldouble gg[][5])
 
 
 //**********************************************************************
+//picks gdet at ix,iy,iz
+//**********************************************************************
+
+ldouble
+pick_gdet(int ix,int iy,int iz)
+{
+  int i,j;
+  return get_g(g,3,4,ix,iy,iz);
+}
+
+//**********************************************************************
 //prints primitives
 //**********************************************************************
 
 int
 print_p(ldouble *p)
 {
-  printf("rho:   %10e\nuu:    %10e\nvr:    %10e\nvth:   %10e\nvph:   %10e\nS:     %10e\n",p[0],p[1],p[2],p[3],p[4],p[5]);
+  printf("rho:   %10e\nuu:    %10e\nvr:    %10e\nvth:   %10e\nvph:   %10e\nS:     %10e\n",p[RHO],p[UU],p[VX],p[VY],p[VZ],p[ENTR]);
 #ifdef RADIATION
   printf("E:     %10e\nFx:    %10e\nFy:    %10e\nFz:    %10e\n\n",p[EE0],p[FX0],p[FY0],p[FZ0]);
 #endif
@@ -1072,7 +1044,7 @@ print_p(ldouble *p)
 int
 print_u(ldouble *u)
 {
-  printf("rhout: %10e\nTtt:   %10e\nTtr:   %10e\nTtth:  %10e\nTtph:  %10e\nSut:   %10e\n",u[0],u[1]-u[0],u[2],u[3],u[4],u[5]);
+  printf("rhout: %10e\nTtt:   %10e\nTtr:   %10e\nTtth:  %10e\nTtph:  %10e\nSut:   %10e\n",u[RHO],u[UU]-u[RHO],u[VX],u[VY],u[VZ],u[ENTR]);
 #ifdef RADIATION
   printf("Rtt:   %10e\nRt1:   %10e\nRt2:   %10e\nRt3:   %10e\n\n",u[EE0],u[FX0],u[FY0],u[FZ0]);
 #endif

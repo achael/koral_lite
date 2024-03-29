@@ -4,67 +4,6 @@
 
 #include "ko.h"
 #include <string.h>
-/*************************************************/
-/*  adds up current quantities to the pavg array */
-/*************************************************/
-
-int
-save_avg(ldouble dtin)
-{
-  int ix,iy,iz,iv,ii;
-
-#pragma omp parallel for private(ix,iy,iz,iv) 
-  for(ix=0;ix<NX;ix++) 
-    {
-      for(iy=0;iy<NY;iy++)
-	{
-	  ldouble avgz[NV+NAVGVARS];
-	   for(iv=0;iv<NV+NAVGVARS;iv++)
-	     avgz[iv]=0.;
-	   for(iz=0;iz<NZ;iz++)
-	    {
-	      ldouble avg[NV+NAVGVARS];
-	      p2avg(ix,iy,iz,avg);
-
-	      //timestep
-	      ldouble dt=dtin;
-
-#ifdef RADIATION //if implicit failed, do not take this step into account at all for failed cells
-	      if(get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)==0)
-#endif
-		{
-
-#if (AVGOUTPUT==2) //phi-averaged
-		  for(iv=0;iv<NV+NAVGVARS;iv++)
-		    avgz[iv]+=avg[iv];
-#else //regular, without phi-averaging
-		  set_u_scalar(avgselftime,ix,iy,iz,get_u_scalar(avgselftime,ix,iy,iz)+dt);
-		  for(iv=0;iv<NV+NAVGVARS;iv++)
-		    {
-		      set_uavg(pavg,iv,ix,iy,iz, get_uavg(pavg,iv,ix,iy,iz)+avg[iv]*dt);
-		    }
-#endif
-		}
-	    }
-
-#if (AVGOUTPUT==2) //phi-averaged
-	  for(iv=0;iv<NV+NAVGVARS;iv++)
-	    avgz[iv]/=NZ;
-	  set_u_scalar(avgselftime,ix,iy,0,get_u_scalar(avgselftime,ix,iy,0)+dt);
-	  for(iv=0;iv<NV+NAVGVARS;iv++)
-	    {
-	      set_uavg(pavg,iv,ix,iy,0, get_uavg(pavg,iv,ix,iy,0)+avgz[iv]*dt);
-	    }
-#endif
-	}
-    }
-
-  avgtime+=dtin;
-
-  
-  return 0;
-}
-
 
 /*********************************************/
 /* opens files etc. */
@@ -445,7 +384,7 @@ fprint_restartfile_mpi(ldouble t, char* folder)
 int 
 fprint_restartfile_bin(ldouble t, char* folder)
 {
-  printf("Entering fprint_restartfile_bin\n");
+  //printf("Entering fprint_restartfile_bin\n");
   char bufor[250];
   
   //header
@@ -693,9 +632,6 @@ fprint_restartfile_mpi_hdf5(ldouble t, char* folder)
   double primitive[NX][NY][NZ];
   int iattribute = 0;
   char prim_name[256], attribute_name[256];
-
-  //dumps_dataspace_array = H5Screate_simple(3, dims_h5, NULL);
-  //dumps_memspace_array = H5Screate_simple(3, chunk_dims, NULL);
 
   for(iv = 0; iv < NV; iv++)
   {
@@ -1054,11 +990,9 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
    for(ic=0;ic<NX*NY*NZ;ic++)
     {
 
-
       // restart options
-      // TODO currently can do EITHER RESTARTFROMMHD (for radiation and/or electrons)
+      // currently can do EITHER RESTARTFROMMHD (for radiation and/or electrons)
       // OR RESTARTFROMNORELEL (FROM radiation+electrons to relelectrons)
-      // SHOULD add more options
 #if defined(RESTARTFROMMHD) //restart from mhd only
 #ifdef RADIATION
 
@@ -1088,7 +1022,7 @@ fread_restartfile_bin(int nout1, char *folder, ldouble *t)
       ldouble ue=(INITUEFRAC)*pp[UU];
       ldouble ui=(1.-INITUEFRAC)*pp[UU];
 
-      pp[ENTRE]=calc_Sefromrhou(rhogas,ue,ELECTRONS); //TODO -- non hydrogen?
+      pp[ENTRE]=calc_Sefromrhou(rhogas,ue,ELECTRONS); 
       pp[ENTRI]=calc_Sefromrhou(rhogas,ui,IONS);
 #endif
 #endif //RADIATION
@@ -1258,7 +1192,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
  int nvold;
 #if defined(RESTARTFROMMHD)
   nvold=9;
-#elif defined(RESTARTFROMNORELEL) //TODO can only do EITHRE RESTARTFROMMHD OR RESTARTFROMNORELEL
+#elif defined(RESTARTFROMNORELEL) // can only do EITHRE RESTARTFROMMHD OR RESTARTFROMNORELEL
   nvold=NV-NRELBIN;
   #ifdef RESTARTFROMNORELEL_NOCOMPT
   nvold += 1;
@@ -1354,14 +1288,14 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 	      ldouble rhogas=pout[ppos+RHO];
 	      ldouble ue=(INITUEFRAC)*pout[ppos+UU];
 	      ldouble ui=(1.-INITUEFRAC)*pout[ppos+UU];
-	      ldouble Se=calc_Sefromrhou(rhogas,ue,ELECTRONS); //TODO -- non hydrogen?
+	      ldouble Se=calc_Sefromrhou(rhogas,ue,ELECTRONS); 
 	      ldouble Si=calc_Sefromrhou(rhogas,ui,IONS);
 	      set_u(p,ENTRE,ix,iy,iz,Se);
 	      set_u(p,ENTRI,ix,iy,iz,Si);
 #endif
 #endif //RADIATION
 	  
-#elif defined(RESTARTFROMNORELEL) // TODO only an option if NOT RESTARTFROMMHD
+#elif defined(RESTARTFROMNORELEL) // only an option if NOT RESTARTFROMMHD
 	      int ie;
 	      for (ie=0; ie<8; ie++) set_u(p,ie,ix,iy,iz,pout[ppos+ie]);
 	      for (ie=0; ie<(NV-NVHD); ie++) set_u(p,NVHD+ie,ix,iy,iz,pout[ppos+8+ie]);
@@ -2319,7 +2253,6 @@ int fprint_simplefile(ldouble t, int nfile, char* folder,char* prefix)
 /* prints in ASCII indices, cart coordinates,*/
 /* primitives, velocities in cartesian       */
 /*********************************************/
-//ANDREW -- TODO: update
 
 int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
  {
@@ -2589,7 +2522,7 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
    for(iz=0;iz<nz;iz++)
      {
        #ifndef RAD_INTEGRATION
-       for(iix=-2;iix<NX;iix++)
+       for(iix=0;iix<NX;iix++)
 	 {
 	   phi=0.;
 	   tausca=0.;
@@ -2649,28 +2582,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 	      }
 
 	      //cell dimensions
-     	      //ANDREW put cell size code in a function with precompute option
               ldouble dxph[3],dx[3];
               get_cellsize_out(ix, iy, iz, dx);
-
-	      /*
-	      ldouble xx1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[1]=fabs(xx2[2]-xx1[2]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[2]=fabs(xx2[3]-xx1[3]);
-              */
 	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
 	      dxph[2]=dx[2]*sqrt(geomBL.gg[3][3]);
@@ -2790,8 +2703,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
                    trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
                    #endif
 
-		   rho=pp[0];
-		   uint=pp[1];
+		   rho=pp[RHO];
+		   uint=pp[UU];
 		   pgas=(gamma-1.)*uint;
                    ldouble vel[4],vcon[4],tauscarloc;
                    
@@ -3007,7 +2920,8 @@ int fprint_simplesph(ldouble t, int nfile, char* folder,char* prefix)
 #elif defined(GRTRANSSIMOUTPUT_2)
 	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e ", bcon[0],bcon[1],bcon[2],bcon[3],bsq); 
 #else    
-	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bsq,bcon[1],bcon[2],bcon[3],phi,betamag);
+	       //fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bsq,bcon[1],bcon[2],bcon[3],phi,betamag);
+	       fprintf(fout1,"%.5e %.5e %.5e %.5e %.5e %.5e ",bcon[0],bcon[1],bcon[2],bcon[3],bsq,phi);
 #endif //GRTRANSSIMOUTPUT
 
 	       // (28) - (29) when rad and magn field on, (20) - (21) with no radiation (+3 with grtrans 3d)
@@ -3276,27 +3190,8 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
 	      }
 
 	      //cell dimensions
-      	      //ANDREW put cell size code in a function with precompute option
               ldouble dxph[3],dx[3];
 	      get_cellsize_out(ix, iy, iz, dx);
-	      /*
-	      ldouble xx1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[1]=fabs(xx2[2]-xx1[2]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[2]=fabs(xx2[3]-xx1[3]);
-              */
 		
 	      dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
 	      dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
@@ -3377,8 +3272,8 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
                    trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
                    #endif
 
-		   rho=pp[0];
-		   uint=pp[1];
+		   rho=pp[RHO];
+		   uint=pp[UU];
 		   pgas=(gamma-1.)*uint;
 
 		   /*
@@ -3466,7 +3361,7 @@ int fprint_simple_phiavg(ldouble t, int nfile, char* folder,char* prefix)
 
    return 0;
 }
-
+ 
 /*********************************************/
 /* print radius and phi dependent correlation functions in rho and betainv ASCII */
 /* see code comparison paper */
@@ -3526,27 +3421,9 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
 	 
 	   ldouble dx[3];
 	   //cell dimensions
-    	   //ANDREW put cell size code in a function with precompute option
            get_cellsize_out(ix, iy, iz, dx);
-	   /*
-	      ldouble x1[4],xx2[4];
-	      xx1[0]=0.;xx1[1]=get_xb(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_xb(ix+1,0);xx2[2]=get_x(iy,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[0]=fabs(xx2[1]-xx1[1]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_xb(iy,1);xx1[3]=get_x(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_xb(iy+1,1);xx2[3]=get_x(iz,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[1]=fabs(xx2[2]-xx1[2]);
-	      xx1[0]=0.;xx1[1]=get_x(ix,0);xx1[2]=get_x(iy,1);xx1[3]=get_xb(iz,2);
-	      xx2[0]=0.;xx2[1]=get_x(ix,0);xx2[2]=get_x(iy,1);xx2[3]=get_xb(iz+1,2);
-	      coco_N(xx1,xx1,MYCOORDS,OUTCOORDS);
-	      coco_N(xx2,xx2,MYCOORDS,OUTCOORDS);
-	      dx[2]=fabs(xx2[3]-xx1[3]);
-	   */
-	    if(doingavg)
+
+	   if(doingavg)
 	    {
 	     rho=get_uavg(pavg,RHO,ix,iy,iz);
 	     pgas=get_uavg(pavg,AVGPGAS,ix,iy,iz);
@@ -3559,8 +3436,8 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
 	    {
 	     for(iv=0;iv<NV;iv++)
 	       pp[iv]=get_u(p,iv,ix,iy,iz);
-	     rho=pp[0];
-	     uint=pp[1];
+	     rho=pp[RHO];
+	     uint=pp[UU];
 	     ldouble gamma=GAMMA; 
              #ifdef CONSISTENTGAMMA
 	     gamma=pick_gammagas(ix,iy,iz);
@@ -3617,12 +3494,103 @@ int fprint_simple_phicorr(ldouble t, int nfile, char* folder,char* prefix)
    return 0;
 }
 
+ 
+/*********************************************/
+/* print primitives only to ASCII */
+/* outcoords argument controls whether output is in OUTCOORDS or in MYCOORDS */
+/*********************************************/
+
+int fprint_primitive_file(ldouble t, int nfile, char* folder, char* prefix)
+{
+   char bufor[50];
+   sprintf(bufor,"%s/%s%04d.dat",folder,prefix,nfile);
+   fout1=fopen(bufor,"w");
+   printf("fopen %s in function fprint_primitive_file\n", bufor);
+
+   /***********************************/  
+   /** writing order is fixed  ********/  
+   /***********************************/  
+ 
+   int ix,iy,iz,iv;
+   int iix;
+   ldouble pp[NV];
+   int nz=NZ;
+   struct geometry geom,geomBL;
+
+   int xmin=0;
+
+   //HEADER
+   
+   // loop over all cells  
+   for(iix=xmin;iix<NX;iix++)
+   {
+     ix=iix;
+     for(iy=0;iy<NY;iy++)
+     {
+       for(iz=0;iz<nz;iz++)
+       {
+         ldouble r,th,ph;
+         ldouble x1,x2,x3;
+           
+	 fill_geometry(ix,iy,iz,&geom);
+	 fill_geometry_arb(ix,iy,iz,&geomBL,OUTCOORDS);
+
+	 r=geomBL.xx; th=geomBL.yy; ph=geomBL.zz;
+	 x1=geom.xx; x2=geom.yy;x3=geom.zz;
+ 
+	 //cell dimensions
+	 ldouble dxph[3],dx[3];
+	 get_cellsize_out(ix, iy, iz, dx);
+
+	 dxph[0]=dx[0]*sqrt(geomBL.gg[1][1]);
+	 dxph[1]=dx[1]*sqrt(geomBL.gg[2][2]);
+	 dxph[2]=dx[2]*sqrt(geomBL.gg[3][3]);
+
+	 ldouble gdet=geom.gdet;
+	 ldouble volume=gdet*get_size_x(ix,0)*get_size_x(iy,1)*get_size_x(iz,2);
+
+	 // fill in primitives
+	 for(iv=0;iv<NV;iv++)
+	 {
+	   if(doingavg)
+	     pp[iv]=get_uavg(pavg,iv,ix,iy,iz);
+	   else
+	     pp[iv]=get_u(p,iv,ix,iy,iz);
+	 }
+
+	 // transfer to outcoords if desired
+	 #ifndef PRIMOUTPUTINMYCOORDS
+	      #ifdef PRECOMPUTE_MY2OUT
+	      trans_pall_coco_my2out(pp,pp,&geom,&geomBL);
+	      #else      
+	      trans_pall_coco(pp, pp, MYCOORDS,OUTCOORDS, geom.xxvec,&geom,&geomBL);
+	      #endif
+ 	 #endif
+
+	 // print primitive profile
+	 fprintf(fout1,"%d %d %d ",ix,iy,iz);
+	 #ifndef PRIMOUTPUTINMYCOORDS
+	   fprintf(fout1,"%.5e %.5e %.5e",r,th,ph); 
+         #else
+	   fprintf(fout1,"%.5e %.5e %.5e",x1,x2,x3);
+         #endif
+	 int iv;
+	 for(iv=0;iv<NV;iv++)
+	   fprintf(fout1," %.5e",pp[iv]);
+	 fprintf(fout1,"\n");
+
+       } // end loop over z
+     } // iy loop
+   } // ix loop
+
+   fflush(fout1);
+   fclose(fout1);
+
+   return 0;
+
+}
 /////////////////////////////////////////////////       
-void get_prim_name
-  (
-   char* prim_name,
-  int iv
-   )
+void get_prim_name(char* prim_name,int iv)
 {
   if (iv == RHO)
     {
@@ -3737,8 +3705,8 @@ void get_prim_name
 int 
 fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 {
-#ifdef ANAOUT_HDF5
 
+#ifdef ANAOUT_HDF5
 
   // Write out header information in group HEADER in HDF5 file
 
@@ -3753,7 +3721,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 
   // Make HDF5 file
   char fname_h5[256];
-  //sprintf(fname_h5, "%s/ana%04d.h5", folder, nfout1);
   sprintf(fname_h5,"%s/%s%04d.h5",folder,prefix,nfout1);
   dumps_file_id = H5Fcreate(fname_h5, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -3827,12 +3794,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 #endif
   
   dumps_group_id = H5Gcreate2(dumps_file_id, "/header", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  sprintf(version,"%s","KORALv2");
 
-  #ifdef ANAOUT_HDF5_V1
-  sprintf(version,"%s","KORALv2");
-  #else
-  sprintf(version,"%s","KORALv2");
-  #endif
   strtype=H5Tcopy(H5T_C_S1);
   status=H5Tset_size(strtype,strlen(metric_run));		     
   dumps_dataset_str = H5Dcreate2(dumps_file_id, "/header/version", strtype, dumps_dataspace_scalar, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -3908,7 +3871,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Dwrite(dumps_dataset_int, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
 		    &has_electrons);
   status = H5Dclose(dumps_dataset_int);
-  
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////  
   // Units Data
@@ -3951,7 +3913,6 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Dclose(dumps_dataset_double);
 
   status = H5Gclose(dumps_group_id2); //close /header/units
-
   
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////  
   // Geometry Data
@@ -4178,43 +4139,46 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   // Body Data
   // loop over all cells and fill in the arrays with cell data
 
-  ldouble x1_arr[NX][NY][NZ];
-  ldouble x2_arr[NX][NY][NZ];
-  ldouble x3_arr[NX][NY][NZ];
-  ldouble gdet_arr[NX][NY][NZ];
-  
-  ldouble r_arr[NX][NY][NZ];
-  ldouble th_arr[NX][NY][NZ];
-  ldouble ph_arr[NX][NY][NZ];
-
-  ldouble rho_arr[NX][NY][NZ];
-  ldouble pgas_arr[NX][NY][NZ];
-  ldouble uint_arr[NX][NY][NZ];
-  
-  ldouble u0_arr[NX][NY][NZ];
-  ldouble u1_arr[NX][NY][NZ];
-  ldouble u2_arr[NX][NY][NZ];
-  ldouble u3_arr[NX][NY][NZ];
-
-  ldouble U1_arr[NX][NY][NZ];
-  ldouble U2_arr[NX][NY][NZ];
-  ldouble U3_arr[NX][NY][NZ];
-
+  ldouble *x1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *x2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *x3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *gdet_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *r_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *th_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *ph_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *rho_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *pgas_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *uint_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *u0_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *u1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *u2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *u3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *U1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *U2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *U3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   #ifdef MAGNFIELD
-  ldouble b0_arr[NX][NY][NZ];
-  ldouble b1_arr[NX][NY][NZ];
-  ldouble b2_arr[NX][NY][NZ];
-  ldouble b3_arr[NX][NY][NZ];
-
-  ldouble B1_arr[NX][NY][NZ];
-  ldouble B2_arr[NX][NY][NZ];
-  ldouble B3_arr[NX][NY][NZ];
+  ldouble *b0_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *b1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *b2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *b3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *B1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *B2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *B3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  #endif
+  #ifdef RADIATION 
+  ldouble *erad_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *F1_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *F2_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *F3_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  #ifdef EVOLVEPHOTONNUMBER
+  ldouble *nphot_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  #endif
   #endif
   
   #ifdef EVOLVEELECTRONS
-  ldouble te_arr[NX][NY][NZ];
-  ldouble ti_arr[NX][NY][NZ];
-  ldouble gam_arr[NX][NY][NZ];
+  ldouble *te_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *ti_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
+  ldouble *gam_arr = (ldouble*)malloc(NX*NY*NZ*sizeof(ldouble));
   #endif
   
   int iz,iy,ix,iv,i;
@@ -4225,7 +4189,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
     {
       for(ix=0;ix<NX;ix++)
       {
-
+        //int zonalindex=iz*(NY*NX) + iy*NX + ix;
+	int zonalindex=ix*(NY*NZ) + iy*NZ + iz;
 	// coordinates
         struct geometry geom,geomBL,geomBL0;
 	fill_geometry(ix,iy,iz,&geom);
@@ -4253,6 +4218,7 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
 	
 	// get output quantities in OUTCOORDS2 frame
 	ldouble rho,uint,pgas,temp,Te,Ti,utcon[4],utcov[4],urel[4],bcon[4],bcov[4],Bcon[4],bsq;
+        ldouble erad, nphot, urf[4], urfcon[4], urfcov[4];
 	ldouble gamma=GAMMA;
 	#ifdef CONSISTENTGAMMA
 	gamma=pick_gammagas(ix,iy,iz);
@@ -4304,17 +4270,34 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
           }
 
           #endif //MAGNFIELD
-		  
-          #ifdef EVOLVEELECTRONS
+
+	  #ifdef RADIATION
+	  erad = get_uavg(pavg, EE, ix,iy,iz);
+	  urfcon[0]=get_uavg(pavg,AVGURFCON(0),ix,iy,iz); // TODO correct? 
+	  urfcon[1]=get_uavg(pavg,AVGURFCON(1),ix,iy,iz);
+	  urfcon[2]=get_uavg(pavg,AVGURFCON(2),ix,iy,iz);
+	  urfcon[3]=get_uavg(pavg,AVGURFCON(3),ix,iy,iz);
+                 
+          //NORMALIZE u^0 to be  consistent with u1,u2,u3
+          fill_utinucon(urfcon,geomBL.gg,geomBL.GG);
+	  indices_21(urfcon,urfcov,geomBL.gg);
+
+	  // conv vels to primitive VELR (but in OUTCOORDS)
+	  conv_vels_ut(urfcon, urf, VEL4, VELR, geomBL.gg, geomBL.GG);
 	  
+	  #ifdef EVOLVEPHOTONNUMBER
+	  nphot = get_uavg(pavg, NF, ix,iy,iz);	  
+	  #endif 
+	  #endif
+
+          #ifdef EVOLVEELECTRONS
 	  ldouble pe=get_uavg(pavg,AVGPE,ix,iy,iz);
 	  ldouble pi=get_uavg(pavg,AVGPI,ix,iy,iz);
 	  ldouble ne=get_uavg(pavg,RHO,ix,iy,iz)/MU_E/M_PROTON; 
 	  ldouble ni=get_uavg(pavg,RHO,ix,iy,iz)/MU_I/M_PROTON; 
 
 	  Te=pe/K_BOLTZ/ne;
-	  Ti=pi/K_BOLTZ/ni;
-      	 
+	  Ti=pi/K_BOLTZ/ni;     	 
           #endif                
         } //doingavg==1
 	else 
@@ -4330,8 +4313,8 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
           #endif
 
 	  // get scalars
-	  rho=pp[0];
-	  uint=pp[1];
+	  rho=pp[RHO];
+	  uint=pp[UU];
 	  pgas=(gamma-1.)*uint;
           temp=calc_PEQ_Tfromurho(uint,rho,ix,iy,iz);
           
@@ -4354,98 +4337,105 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
           }
           #endif
 
+	  #ifdef RADIATION
+	  erad = pp[EE]; // energy density
+
+          // get radiation 4-velocity
+          calc_urcon_urcov_from_prims(pp, &geomBL, urfcon, urfcov);
+
+	  // conv vels to primitive VELR (but in OUTCOORDS)
+	  conv_vels_ut(urfcon, urf, VEL4, VELR, geomBL.gg, geomBL.GG);
+
+	  #ifdef EVOLVEPHOTONNUMBER
+          nphot = pp[NF];
+	  #endif
+	  #endif
+	  	  
           #ifdef EVOLVEELECTRONS
 	  temp=calc_PEQ_Teifrompp(pp,&Te,&Ti,geomBL.ix,geomBL.iy,geomBL.iz);
 	  #endif
 	} //doingavg==0
-
-        x1_arr[ix][iy][iz] = x1;
-        x2_arr[ix][iy][iz] = x2;
-        x3_arr[ix][iy][iz] = x3;
-        gdet_arr[ix][iy][iz] = gdet;
+	x1_arr[zonalindex] = x1;
+        x2_arr[zonalindex] = x2;
+        x3_arr[zonalindex] = x3;
+        gdet_arr[zonalindex] = gdet;
 	
-        r_arr[ix][iy][iz] = r;
-        th_arr[ix][iy][iz] = th;
-        ph_arr[ix][iy][iz] = ph;
+        r_arr[zonalindex] = r;
+        th_arr[zonalindex] = th;
+        ph_arr[zonalindex] = ph;
 
-        rho_arr[ix][iy][iz] = rho;
-        pgas_arr[ix][iy][iz] = pgas;
-        uint_arr[ix][iy][iz] = uint;
+        rho_arr[zonalindex] = rho;
+        pgas_arr[zonalindex] = pgas;
+        uint_arr[zonalindex] = uint;
 	
-        u0_arr[ix][iy][iz] = utcon[0];
-        u1_arr[ix][iy][iz] = utcon[1];
-        u2_arr[ix][iy][iz] = utcon[2];
-        u3_arr[ix][iy][iz] = utcon[3];
+        u0_arr[zonalindex] = utcon[0];
+        u1_arr[zonalindex] = utcon[1];
+        u2_arr[zonalindex] = utcon[2];
+        u3_arr[zonalindex] = utcon[3];
 
-        U1_arr[ix][iy][iz] = urel[1];
-        U2_arr[ix][iy][iz] = urel[2];
-        U3_arr[ix][iy][iz] = urel[3];
+        U1_arr[zonalindex] = urel[1];
+        U2_arr[zonalindex] = urel[2];
+        U3_arr[zonalindex] = urel[3];
 
         #ifdef MAGNFIELD
-        b0_arr[ix][iy][iz] = bcon[0];
-        b1_arr[ix][iy][iz] = bcon[1];
-        b2_arr[ix][iy][iz] = bcon[2];
-        b3_arr[ix][iy][iz] = bcon[3];
+        b0_arr[zonalindex] = bcon[0];
+        b1_arr[zonalindex] = bcon[1];
+        b2_arr[zonalindex] = bcon[2];
+        b3_arr[zonalindex] = bcon[3];
 
-        B1_arr[ix][iy][iz] = Bcon[1];
-        B2_arr[ix][iy][iz] = Bcon[2];
-        B3_arr[ix][iy][iz] = Bcon[3];
+        B1_arr[zonalindex] = Bcon[1];
+        B2_arr[zonalindex] = Bcon[2];
+        B3_arr[zonalindex] = Bcon[3];
         #endif
-  
+
+	#ifdef RADIATION
+	erad_arr[zonalindex] = erad;
+	F1_arr[zonalindex] = urf[1];
+	F2_arr[zonalindex] = urf[2];
+	F3_arr[zonalindex] = urf[3];
+
+	#ifdef EVOLVEPHOTONNUMBER
+	nphot_arr[zonalindex] = nphot;
+	#endif
+	#endif
+	
         #ifdef EVOLVEELECTRONS
-        te_arr[ix][iy][iz] = Te;
-        ti_arr[ix][iy][iz] = Ti;
-	gam_arr[ix][iy][iz] = gamma;
+        te_arr[zonalindex] = Te;
+        ti_arr[zonalindex] = Ti;
+	gam_arr[zonalindex] = gamma;
         #endif
-
+	
       }
     }
   }
 
-  
   // Write runtime grid
   dumps_group_id = H5Gcreate2(dumps_file_id, "/grid_run", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_run/gdet", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(gdet_arr[0][0][0]));
+		    //&(gdet_arr[0][0][0]));
+		    gdet_arr);
   status = H5Dclose(dumps_dataset_array);
-
- // !AC -- we don't need coordinates with the left corner defined in /header/geom
-  /*
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_run/x1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(x1_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_run/x2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(x2_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_run/x3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(x3_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  status = H5Gclose(dumps_group_id);  // close /grid_run
-  */
   
   // Write output grid
   dumps_group_id = H5Gcreate2(dumps_file_id, "/grid_out", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_out/r", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(r_arr[0][0][0]));
+		    //		    &(r_arr[0][0][0]));
+		    r_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_out/th", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(th_arr[0][0][0]));
+		    //		    &(th_arr[0][0][0]));
+		    th_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/grid_out/ph", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(ph_arr[0][0][0]));
+		    //		    &(ph_arr[0][0][0]));
+		    ph_arr);
   status = H5Dclose(dumps_dataset_array);
 
   status = H5Gclose(dumps_group_id);  // close /grid_out
@@ -4455,108 +4445,90 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/rho", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(rho_arr[0][0][0]));
+		    rho_arr);
   status = H5Dclose(dumps_dataset_array);
-
-#ifdef ANAOUT_HDF5_V1
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/pgas", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(pgas_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u0", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(u0_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(u1_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(u2_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/u3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(u3_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  #ifdef MAGNFIELD
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b0", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(b0_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(b1_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(b2_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-
-  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/b3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(b3_arr[0][0][0]));
-  status = H5Dclose(dumps_dataset_array);
-  #endif
-  
-#else //ifdef ANAOUT_HDF5_V1
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/uint", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(uint_arr[0][0][0]));
+		    uint_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(U1_arr[0][0][0]));
+		    U1_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(U2_arr[0][0][0]));
+		    U2_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/U3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(U3_arr[0][0][0]));
+		    U3_arr);
   status = H5Dclose(dumps_dataset_array);
 
   #ifdef MAGNFIELD
-
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(B1_arr[0][0][0]));
+		    B1_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(B2_arr[0][0][0]));
+		    B2_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/B3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(B3_arr[0][0][0]));
+		    B3_arr);
   status = H5Dclose(dumps_dataset_array);
   #endif
-  
-#endif  //ifdef ANAOUT_HDF5_V1
-    
+
+  #ifdef RADIATION
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/erad", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    erad_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/F1", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    F1_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/F2", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    F2_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/F3", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    F3_arr);
+  status = H5Dclose(dumps_dataset_array);
+
+  #ifdef EVOLVEPHOTONNUMBER
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/nphot", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    nphot_arr);
+  status = H5Dclose(dumps_dataset_array);  
+  #endif //EVOLVEPHOTONNUMBER
+  #endif //RADIATION
+
   #ifdef EVOLVEELECTRONS
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/te", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(te_arr[0][0][0]));
+		    te_arr);
   status = H5Dclose(dumps_dataset_array);
 
   dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/ti", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
-		    &(ti_arr[0][0][0]));
+		    ti_arr);
   status = H5Dclose(dumps_dataset_array);
+
+  dumps_dataset_array = H5Dcreate2(dumps_file_id, "/quants/gammagas", H5T_IEEE_F64BE, dumps_dataspace_array, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  status = H5Dwrite(dumps_dataset_array, H5T_NATIVE_DOUBLE, H5S_ALL, dumps_dataspace_array, H5P_DEFAULT,
+		    gam_arr);
+  status = H5Dclose(dumps_dataset_array);
+  
   #endif
 
   status = H5Gclose(dumps_group_id);  // close /quants
@@ -4565,6 +4537,47 @@ fprint_anaout_hdf5(ldouble t, char* folder, char* prefix)
   status = H5Sclose(dumps_dataspace_scalar);
   status = H5Sclose(dumps_dataspace_array);
   status = H5Fclose(dumps_file_id);
+  
+  free(x1_arr);
+  free(x2_arr);
+  free(x3_arr);
+  free(gdet_arr);
+  free(r_arr);
+  free(th_arr);
+  free(ph_arr);
+  free(rho_arr);
+  free(pgas_arr);
+  free(uint_arr);
+  free(u0_arr);
+  free(u1_arr);
+  free(u2_arr);
+  free(u3_arr);
+  free(U1_arr);
+  free(U2_arr);
+  free(U3_arr);
+  #ifdef MAGNFIELD
+  free(b0_arr);
+  free(b1_arr);
+  free(b2_arr);
+  free(b3_arr);
+  free(B1_arr);
+  free(B2_arr);
+  free(B3_arr);
+  #endif
+  #ifdef RADIATION
+  free(erad_arr);
+  free(F1_arr);
+  free(F2_arr);
+  free(F3_arr);
+  #ifdef EVOLVEPHOTONNUMBER
+  free(nphot_arr);
+  #endif
+  #endif
+  #ifdef EVOLVEELECTRONS
+  free(te_arr);
+  free(ti_arr);
+  free(gam_arr);
+  #endif
 
 #endif  // ANAOUT_HDF5
 
