@@ -1460,7 +1460,7 @@ ldouble calc_kappaes(ldouble *pp,void *ggg);
 ldouble calc_chi(ldouble *pp,void *ggg);
 int calc_tautot(ldouble *pp, void *ggg, ldouble *dx, ldouble *tautot);
 int calc_tauabs(ldouble *pp, void *ggg, ldouble *dx, ldouble *tauabs);
-ldouble calc_opacities_from_state(ldouble *pp, void *ggg, void *sss, void *op);
+ldouble calc_opacities_from_state(ldouble *pp, void* sss, void *ggg, void *op);
 int init_OpTable(void *optab0, char *filename);
 int init_all_kappa_table();
 
