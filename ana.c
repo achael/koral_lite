@@ -9,9 +9,6 @@
 #define INCLUDE_WRITE_OUTPUT
 #endif
 
-#ifdef PRINT_FIXUPS_TO_SILO
-  printf("PRINT_FIXUPS_TO_SILO works only on the run!\n\n");
-#endif
 
 int 
 main(int argc, char **argv)
@@ -22,7 +19,7 @@ main(int argc, char **argv)
   if(PROCID==0)
       printf("ana works mostly on shared memory only, do not use MPI\n");
   #endif
-  
+ 
   #ifdef OMP
   omp_myinit();  
   #endif

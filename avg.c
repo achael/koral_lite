@@ -14,11 +14,6 @@ int
 main(int argc, char **argv)
 {  
 
-  #ifdef PRINT_FIXUPS_TO_SILO
-    printf("PRINT_FIXUPS_TO_SILO works only on the run!\n\n");
-  
-  #endif
-
   #ifdef MPI
   printf("avg works on shared memory only, do not use MPI, please\n");
   exit(-1);

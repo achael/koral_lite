@@ -767,7 +767,8 @@ main(int argc, char **argv)
   //perform divergence cleaning (only in 2D) if simulation has B-field
   // (this is non-relativistic, may have to expand code to handle this properly
   #ifdef MAGNFIELD //Only use for MHD
-  if(divBclean == 1){
+  if(divBclean == 1)
+  {
   for(ix=0;ix<NX2;ix++)
     for(iy=0;iy<NY2;iy++)
       for(iz=0;iz<NZ2;iz++)
@@ -821,10 +822,10 @@ main(int argc, char **argv)
               }
             }
 	}
-   #endif
+   
+ 
 
    //calc new Eb
-   #ifdef MAGNFIELD
    for(ix=0;ix<NX2;ix++)
     for(iy=0;iy<NY2;iy++)
       for(iz=0;iz<NZ2;iz++)
@@ -845,8 +846,9 @@ main(int argc, char **argv)
           Bzz = dataout[ix][iy][iz][B3];
           new_Eb += (Bxx*Bxx + Byy*Byy + Bzz*Bzz)*dxx*dyy*dzz*pick_gdet(ix,iy,iz);
 	}
-   #endif
   }
+  #endif
+ 
 
   //compute factor for rescaling B-field to maintain same total magnetic energy in domain
   alpha = 1.;
@@ -854,8 +856,7 @@ main(int argc, char **argv)
   alpha = sqrt(old_Eb/new_Eb);
   #endif
 
-  double newnew_Eb;
-  newnew_Eb = 0.;
+  ldouble newnew_Eb=0.;
 
   for(ix=0;ix<NX2;ix++)
     for(iy=0;iy<NY2;iy++)
@@ -883,8 +884,8 @@ main(int argc, char **argv)
           Byy = dataout[ix][iy][iz][B2];
           Bzz = dataout[ix][iy][iz][B3];
           newnew_Eb += (Bxx*Bxx + Byy*Byy + Bzz*Bzz)*dxx*dyy*dzz*pick_gdet(ix,iy,iz);
-          #endif
           }
+          #endif
 	  fwrite(dataout[ix][iy][iz],sizeof(double),NV,fout);
 	}
 
