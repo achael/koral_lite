@@ -154,7 +154,7 @@
 //147 PUFFY
 
 
-#define PROBLEM 142
+#define PROBLEM 139
 
 #if(PROBLEM==147)
 #define PR_DEFINE "PROBLEMS/PUFFY/define.h"
