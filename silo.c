@@ -705,7 +705,7 @@ int fprint_silofile(ldouble time, int num, char* folder, char* prefix)
 // Nonthermal electron quantities
 #ifdef EVOLVEELECTRONS
 #ifdef RELELECTRONS
-      nethloc=ne;
+      nethloc=calc_thermal_ne(pp);
       nrelelloc = calc_relel_ne(pp);
       urelelloc = calc_relel_uint(pp);
       G0relelloc = -1.*calc_relel_G0_fluidframe(pp,&geomout, 0.0, 0); 

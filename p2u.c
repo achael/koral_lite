@@ -116,7 +116,7 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   for(ib=0;ib<NRELBIN;ib++)
   {
     uu[NEREL(ib)]=gdetu*pp[NEREL(ib)]*ut;
-  }    x
+  }    
 #endif
 
   //************************************
