@@ -45,7 +45,7 @@
 //#define NOLOGINS
 #define ENFORCEENTROPY
 
-#define FORCEFREE
+//#define FORCEFREE
 //#define HYBRID_FORCEFREE
 
 #if defined(FORCEFREE)
