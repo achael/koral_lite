@@ -1278,7 +1278,7 @@ calc_uuff_source(ldouble *pp0, void* ggg,int *derdir)
   if(!isfinite(source) || isnan(source))
   {
     printf("mub^0 source not finite in FF! %d %d %d | %.2e %.2e | %.2e %.2e %.2e | %.2e %.2e %.2e",
-	   pgas/rho,ucon[0],pp[B1],pp[B2],pp[B3],ds[0],ds[1],ds[2]);
+	   ix,iy,iz,pgas/rho,ucon[0],pp[B1],pp[B2],pp[B3],ds[0],ds[1],ds[2]);
     source=0.;
     getch();
   }
