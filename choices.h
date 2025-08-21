@@ -45,8 +45,7 @@
 #define MU_I (1./(HFRAC + 0.25*HEFRAC + A_INV_MEAN*MFRAC))
 #endif
 
-// Electron mean molecular weight
-// ANDREW TODO: only assume H and He ionized? 
+// Electron mean molecular weight 
 #ifndef MU_E
 #define MU_E (2./(1. + HFRAC))
 #endif
@@ -218,12 +217,7 @@
 
 //number of magneto-hydro variables
 #ifdef MAGNFIELD
-#ifdef FORCEFREE
-#define NVMHD (NVHD+7)
-#else
 #define NVMHD (NVHD+3)
-#endif 
-
 #else
 #define NVMHD (NVHD)
 #endif
@@ -269,27 +263,6 @@
 #endif
 
 /****** Fixups *****************/
-
-//Defaults for TRANSMITTING_YBC
-#ifdef TRANSMITTING_YBC
-#ifndef myCYLCOORDS
-
-#ifndef CORRECT_POLARAXIS
-#define CORRECT_POLARAXIS
-#endif
-
-#ifdef MAGNFIELD
-#ifndef CORRECTMAGNFIELD 
-#define CORRECTMAGNFIELD
-#endif
-#endif
-
-#ifndef NCCORRECTPOLAR
-#define NCCORRECTPOLAR 1
-#endif
-
-#endif //ifdef myCYLCOORDS
-#endif //ifdef TRANSMITTING_YBC
 
 #ifndef NCCORRECTPOLAR
 #define NCCORRECTPOLAR 2

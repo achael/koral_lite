@@ -15,7 +15,6 @@ int
 reduce_order_check(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *pp2,int ix,int iy,int iz)
 {
   int reconstrpar=0;
-
 #ifdef REDUCEORDERTEMP
   ldouble t0,tp1,tm1,tmin;
   t0 =calc_PEQ_Tfromurho(p0[UU], p0[RHO]);
@@ -33,13 +32,6 @@ reduce_order_check(ldouble *pm2,ldouble *pm1,ldouble *p0,ldouble *pp1,ldouble *p
     reconstrpar=1;
 #endif
   
-#ifdef REDUCEORDERATBH
-  ldouble xxBL[4];
-  get_xx_arb(ix,iy,iz,xxBL,BLCOORDS);
-  if(xxBL[1]<rhorizonBL)
-    reconstrpar=1;
-#endif
-
   return reconstrpar;
 }
 
@@ -101,46 +93,48 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
 {
   ldouble r0[NV],rm1[NV],rp1[NV];
 
-  int int_order_local = INT_ORDER;
-  
-  if(param!=0) //reduce integration order
+  if(param!=0) //overrule the standard reconstruction
   {
-    int_order_local = INT_ORDER-param;
-  }  // if(param!=0)
-
-  // default to donor cell
-  if(int_order_local<0)
-    int_order_local = 0;
-  
-  if(int_order_local==0) //DONOR CELL
-  {
-    int iv;
-    
-    for(iv=0;iv<NV;iv++)
+    int i;
+    if(param==1) //DONOR CELL
     {
-      ur[iv]=u0[iv];
-      ul[iv]=u0[iv];
+      for(i=0;i<NV;i++)
+      {
+        ur[i]=u0[i];
+        ul[i]=u0[i];
+      }
+    }
+  }  // if(param!=0)
+  
+  else if(INT_ORDER==0) //DONOR CELL
+  {
+    int i;
+    
+    for(i=0;i<NV;i++)
+    {
+      ur[i]=u0[i];
+      ul[i]=u0[i];
     }
   }  // else if(INT_ORDER==0)
   
-  else if(int_order_local==1) //linear
+  else if(INT_ORDER==1) //linear
   {
     ldouble diffpar=theta;
-    int iv;
+    int i;
     
-    for(iv=0;iv<NV;iv++)
+    for(i=0;i<NV;i++)
     {
       // Slope limiter code rewritten by Ramesh. No function-calls, no divisions.
       ldouble slope;
-      ldouble deltam = u0[iv]-um1[iv];
-      ldouble deltap = up1[iv]-u0[iv];
+      ldouble deltam = u0[i]-um1[i];
+      ldouble deltap = up1[i]-u0[i];
       
       if (deltam * deltap <= 0.)
       {
         // We are at a local maximum or minimum. Use zero slope (i.e., donor cell)
         
-        ur[iv] = u0[iv];
-        ul[iv] = u0[iv];
+        ur[i] = u0[i];
+        ul[i] = u0[i];
       }
       else
       {
@@ -198,16 +192,16 @@ avg2point(ldouble *um2,ldouble *um1,ldouble *u0,ldouble *up1,ldouble *up2,
           }
         }
         
-        ur[iv] = u0[iv] + 0.5*slope;
-        ul[iv] = u0[iv] - 0.5*slope;
+        ur[i] = u0[i] + 0.5*slope;
+        ul[i] = u0[i] - 0.5*slope;
       }
       
-      if(isnan(ur[iv]) || isnan (ul[iv])) printf("interperr %d %e %e %e %e %e\n",iv,um2[iv],um1[iv],u0[iv],up1[iv],up2[iv]);
+      if(isnan(ur[i]) || isnan (ul[i])) printf("%d %e %e %e %e %e\n",i,um2[i],um1[i],u0[i],up1[i],up2[i]);
       //u0 remains intact - in linear reconstruction cell averaged equals cell centered
-    } // for(iv=0;iv<NV;iv++)
+    } // for(i=0;i<NV;i++)
   }  // else if(INT_ORDER==1)
 
-  else if(int_order_local==2) //parabolic PPM
+  else if(INT_ORDER==2) //parabolic PPM
   {
     //The following is based on Colella & Woodward (J. Comp. Phys. 54, 174, 1984).
     //It uses five points: m2, m1, 0, p1, p2.
@@ -580,7 +574,7 @@ calc_u2p(int type, int setflags)
   //timer stop
   my_clock_gettime(&temp_clock);
   end_u2ptime=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
-
+  
   return 0;
 } 
 
@@ -697,12 +691,8 @@ op_explicit(ldouble t, ldouble dtin)
       ldouble dx0, dxm2, dxm1, dxp1, dxp2;
       ldouble minmod_theta=MINMOD_THETA;
       int reconstrpar;
-      int dol,dor;
-      int iv;
+      int i,dol,dor;
 
-      #ifdef TRANSMITTING_YBC
-      ldouble fd_prT[NV],fd_plT[NV]; //Brandon for getting fluxes from GC instead of D+GC as usual
-      #endif
 
 
       //**********************************************************************
@@ -757,7 +747,23 @@ op_explicit(ldouble t, ldouble dtin)
 		  dol=0;
 		if((ix==NX-1 && is_cell_active(ix,iy,iz)==0) || (ix<NX-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix+1,iy,iz)==0))
 		  dor=0;
-			      
+		
+                // x0[0] is x of current cell        
+		//x0[0]=get_x(ix,0);
+
+                // xm1[0], xp1[0] are x of left and right cell centers. Are these quantities used anywhere?
+		//xm1[0]=get_x(ix-1,0);
+	        //xp1[0]=get_x(ix+1,0);
+		
+                // x0l[0,1,2] are x, y, z of left x-wall, x0r[0,1,2] are x, y, z of right x-wall,
+		//x0l[0]=get_xb(ix,0);
+		//x0l[1]=xm1[1]=get_x(iy,1); 
+		//x0l[2]=xm1[2]=get_x(iz,2);
+
+		//x0r[0]=get_xb(ix+1,0);
+		//x0r[1]=xp1[1]=get_x(iy,1);
+		//x0r[2]=xp1[2]=get_x(iz,2);
+	      
                 // dx0, dxm1, dxp1 are x-sizes (wall to wall) of cells ix, ix-1, ix+1, dxm2m, dxp2 are sizes of cells ix-2, ix+2		
 		dx0=get_size_x(ix,0);    
 		dxm1=get_size_x(ix-1,0);    
@@ -769,17 +775,17 @@ op_explicit(ldouble t, ldouble dtin)
 		  dxp2=get_size_x(ix+2,0);    
 		}
 	  
-		for(iv=0;iv<NV;iv++)
+		for(i=0;i<NV;i++)
 		{
 		  //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		  fd_p0[iv] =get_u(p,iv,ix,iy,iz);
-		  fd_pp1[iv]=get_u(p,iv,ix+1,iy,iz);
-		  fd_pm1[iv]=get_u(p,iv,ix-1,iy,iz);
+		  fd_p0[i] =get_u(p,i,ix,iy,iz);
+		  fd_pp1[i]=get_u(p,i,ix+1,iy,iz);
+		  fd_pm1[i]=get_u(p,i,ix-1,iy,iz);
             
 		  if(INT_ORDER>1)
 		  {
-		    fd_pm2[iv]=get_u(p,iv,ix-2,iy,iz);
-		    fd_pp2[iv]=get_u(p,iv,ix+2,iy,iz);
+		    fd_pm2[i]=get_u(p,i,ix-2,iy,iz);
+		    fd_pp2[i]=get_u(p,i,ix+2,iy,iz);
 		  }
 		}
 
@@ -817,19 +823,19 @@ op_explicit(ldouble t, ldouble dtin)
 		//save interpolated values to memory
                 //Note that l and r of a given cell ix are the left and right wall of that cell
 		//whereas L and R of given ix are quantities to the left and right of wall ix
-		for(iv=0;iv<NV;iv++)
+		for(i=0;i<NV;i++)
 		{
                   // Save fd_pl in array pbRx (Primitive_R) of wall ix
                   // Save fd_pr in array pbLx (Primitive_L) of wall ix+1
-		  set_ubx(pbRx,iv,ix,iy,iz,fd_pl[iv]);
-		  set_ubx(pbLx,iv,ix+1,iy,iz,fd_pr[iv]);
+		  set_ubx(pbRx,i,ix,iy,iz,fd_pl[i]);
+		  set_ubx(pbLx,i,ix+1,iy,iz,fd_pr[i]);
 		    
 		  if(dol)
                   // Save ffl in array flRx (F_R) of wall ix
-		  set_ubx(flRx,iv,ix,iy,iz,ffl[iv]);
+		  set_ubx(flRx,i,ix,iy,iz,ffl[i]);
 		  if(dor)
                   // Save ffr in array flLx (F_L) of wall ix+1 
-		  set_ubx(flLx,iv,ix+1,iy,iz,ffr[iv]);
+		  set_ubx(flLx,i,ix+1,iy,iz,ffr[i]);
 		} 
        }  // if(NX>1 && iy>=0 && iy<NY && iz>=0 && iz<NZ...)
       
@@ -897,6 +903,22 @@ op_explicit(ldouble t, ldouble dtin)
 		if((iy==NY-1 && is_cell_active(ix,iy,iz)==0) || (iy<NY-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy+1,iz)==0))
 		  dor=0;
         
+                // x0[1] is y of current cell        
+	        //x0[1]=get_x(iy,1);
+
+                // xm1[1], xp1[1] are y of left and right cell centers. Are these quantities used anywhere?
+		//xm1[1]=get_x(iy-1,1);
+                //xp1[1]=get_x(iy+1,1);
+		
+                // x0l[0,1,2] are x, y, z of left y-wall, x0r[0,1,2] are x, y, z of right y-wall,		
+	 	//x0l[1]=get_xb(iy,1);
+		//x0l[0]=xm1[0]=get_x(ix,0); 
+		//x0l[2]=xm1[2]=get_x(iz,2);
+
+		//x0r[1]=get_xb(iy+1,1);
+		//x0r[0]=xp1[0]=get_x(ix,0);
+		//x0r[2]=xp1[2]=get_x(iz,2);
+
                 // dx0, dxm1, dxp1 are y-sizes (wall to wall) of cells iy, iy-1, iy+1, dxm2m, dxp2 are sizes of cells iy-2, iy+2
 		dx0=get_size_x(iy,1);    
 		dxm1=get_size_x(iy-1,1);    
@@ -908,89 +930,17 @@ op_explicit(ldouble t, ldouble dtin)
 		  dxp2=get_size_x(iy+2,1);
 		}    
 		  
-		for(iv=0;iv<NV;iv++)
+		for(i=0;i<NV;i++)
 		{
                   //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-		  fd_p0[iv]=get_u(p,iv,ix,iy,iz);
-		  fd_pp1[iv]=get_u(p,iv,ix,iy+1,iz);
-		  fd_pm1[iv]=get_u(p,iv,ix,iy-1,iz);
+		  fd_p0[i]=get_u(p,i,ix,iy,iz);
+		  fd_pp1[i]=get_u(p,i,ix,iy+1,iz);
+		  fd_pm1[i]=get_u(p,i,ix,iy-1,iz);
 		  if(INT_ORDER>1)
 		  {
-		    fd_pm2[iv]=get_u(p,iv,ix,iy-2,iz);
-		    fd_pp2[iv]=get_u(p,iv,ix,iy+2,iz);
+		    fd_pm2[i]=get_u(p,i,ix,iy-2,iz);
+		    fd_pp2[i]=get_u(p,i,ix,iy+2,iz);
 		  }
-
-#ifdef TRANSMITTING_YBC
-		  //copy iy=-1 to iy=0 for calculating fluxes
-		  if(TJ==0 && iy==0) 
-		  {
-		    fd_p0[iv]=get_u(p,iv,ix,iy-1,iz); //iy=0 -> iy=-1
-		    fd_pp1[iv]=get_u(p,iv,ix,iy+1,iz);
-		    fd_pm1[iv]=get_u(p,iv,ix,iy-1,iz);
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[iv]=get_u(p,iv,ix,iy-2,iz);
-		      fd_pp2[iv]=get_u(p,iv,ix,iy+2,iz);
-		    }
-		  }
-		  if(TJ==0 && iy==1) 
-		  {
-		    fd_p0[iv]=get_u(p,iv,ix,iy,iz);
-		    fd_pp1[iv]=get_u(p,iv,ix,iy+1,iz);
-		    fd_pm1[iv]=get_u(p,iv,ix,iy-2,iz); //iy=0 -> iy=-1
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[iv]=get_u(p,iv,ix,iy-2,iz);
-		      fd_pp2[iv]=get_u(p,iv,ix,iy+2,iz);
-		    }
-		  }
-		  if(TJ==0 && iy==2) 
-		  {
-		    fd_p0[iv]=get_u(p,iv,ix,iy,iz);
-		    fd_pp1[iv]=get_u(p,iv,ix,iy+1,iz);
-		    fd_pm1[iv]=get_u(p,iv,ix,iy-1,iz);
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[iv]=get_u(p,iv,ix,iy-3,iz); //iy=0 -> iy=-1
-		      fd_pp2[iv]=get_u(p,iv,ix,iy+2,iz);
-		    }
-		  }
-		  
-		  //copy iy=NY to iy=NY-1 for calculating fluxes
-		  if(TJ==NTY-1 && iy==(NY-1) )
-		  {
-		    fd_p0[iv]=get_u(p,iv,ix,iy+1,iz); //iy=NY-1 -> iy=NY
-		    fd_pp1[iv]=get_u(p,iv,ix,iy+1,iz);
-		    fd_pm1[iv]=get_u(p,iv,ix,iy-1,iz);
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[iv]=get_u(p,iv,ix,iy-2,iz);
-		      fd_pp2[iv]=get_u(p,iv,ix,iy+2,iz);
-		    }
-		  }
-		  if(TJ==NTY-1 && iy==(NY-2) )
-		  {
-		    fd_p0[iv]=get_u(p,iv,ix,iy,iz);
-		    fd_pp1[iv]=get_u(p,iv,ix,iy+2,iz); //iy=NY-1 -> iy=NY
-		    fd_pm1[iv]=get_u(p,iv,ix,iy-1,iz);
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[iv]=get_u(p,iv,ix,iy-2,iz);
-		      fd_pp2[iv]=get_u(p,iv,ix,iy+2,iz);
-		    }
-		  }
-		  if(TJ==NTY-1 && iy==(NY-3) )
-		  {
-		    fd_p0[iv]=get_u(p,iv,ix,iy,iz);
-		    fd_pp1[iv]=get_u(p,iv,ix,iy+1,iz);
-		    fd_pm1[iv]=get_u(p,iv,ix,iy-1,iz);
-		    if(INT_ORDER>1)
-		    {
-		      fd_pm2[iv]=get_u(p,iv,ix,iy-2,iz);
-		      fd_pp2[iv]=get_u(p,iv,ix,iy+3,iz); //iy=NY-1 -> iy=NY
-		    }
-		  }
-#endif //TRANSMITTING_YBC		  
 		}
 	  
 		reconstrpar=0;
@@ -1027,19 +977,19 @@ op_explicit(ldouble t, ldouble dtin)
                 //save interpolated values to memory
                 //Note that l and r of a given cell iy are the left and right wall of that cell,
 		//whereas L and R of given iy are quantities to the left and right of wall iy
-		for(iv=0;iv<NV;iv++)
+		for(i=0;i<NV;i++)
 		{
                   // Save fd_pl in array pbRy (Primitive_R) of wall iy
                   // Save fd_pr in array pbLy (Primitive_L) of wall iy+1
-		  set_uby(pbRy,iv,ix,iy,iz,fd_pl[iv]);
-		  set_uby(pbLy,iv,ix,iy+1,iz,fd_pr[iv]);
+		  set_uby(pbRy,i,ix,iy,iz,fd_pl[i]);
+		  set_uby(pbLy,i,ix,iy+1,iz,fd_pr[i]);
 
 		  if(dol)
                   // Save ffl in array flRy (F_R) of wall iy
-		  set_uby(flRy,iv,ix,iy,iz,ffl[iv]);
+		  set_uby(flRy,i,ix,iy,iz,ffl[i]);
 		  if(dor)
                   // Save ffr in array flLy (F_R) of wall iy+1
-		  set_uby(flLy,iv,ix,iy+1,iz,ffr[iv]);
+		  set_uby(flLy,i,ix,iy+1,iz,ffr[i]);
 		}
       }  // if(NY>1 && ix>=0 && ix<NX && iz>=0 && iz<NZ...)
 
@@ -1104,7 +1054,23 @@ op_explicit(ldouble t, ldouble dtin)
                   dol=0;
                 if((iz==NZ-1 && is_cell_active(ix,iy,iz)==0) || (iz<NZ-1 && is_cell_active(ix,iy,iz)==0 && is_cell_active(ix,iy,iz+1)==0))
                   dor=0;
-                  
+         
+                // x0[2] is z of current cell        
+	        //x0[2]=get_x(iz,2);
+
+                // xm1[2], xp1[2] are z of left and right cell centers. Are these quantities used anywhere?
+		//xm1[2]=get_x(iz-1,2);
+                //xp1[2]=get_x(iz+1,2);
+
+                // x0l[0,1,2] are x, y, z of left z-wall, x0r[0,1,2] are x, y, z of right z-wall,		
+                //x0l[2]=get_xb(iz,2);
+                //x0l[0]=xm1[0]=get_x(ix,0);
+                //x0l[1]=xm1[1]=get_x(iy,1);
+         
+                //x0r[2]=get_xb(iz+1,2);
+                //x0r[0]=xp1[0]=get_x(ix,0);
+                //x0r[1]=xp1[1]=get_x(iy,1);
+         
                 // dx0, dxm1, dxp1 are z-sizes (wall to wall) of cells iz, iz-1, iz+1, dxm2m, dxp2 are sizes of cells iz-2, iz+2
                 dx0=get_size_x(iz,2);
                 dxm1=get_size_x(iz-1,2);
@@ -1116,17 +1082,17 @@ op_explicit(ldouble t, ldouble dtin)
                   dxp2=get_size_x(iz+2,2);
                 }
          
-                for(iv=0;iv<NV;iv++)
+                for(i=0;i<NV;i++)
                 {
                   //fd_p0, fd_pp1, fd_pm1 are primitives at current, left and right cells, fd_pm2, fd_pp2 are for next two cells
-                  fd_p0[iv]=get_u(p,iv,ix,iy,iz);
-                  fd_pp1[iv]=get_u(p,iv,ix,iy,iz+1);
-                  fd_pm1[iv]=get_u(p,iv,ix,iy,iz-1);
+                  fd_p0[i]=get_u(p,i,ix,iy,iz);
+                  fd_pp1[i]=get_u(p,i,ix,iy,iz+1);
+                  fd_pm1[i]=get_u(p,i,ix,iy,iz-1);
            
                   if(INT_ORDER>1)
                   {
-                    fd_pm2[iv]=get_u(p,iv,ix,iy,iz-2);
-                    fd_pp2[iv]=get_u(p,iv,ix,iy,iz+2);
+                    fd_pm2[i]=get_u(p,i,ix,iy,iz-2);
+                    fd_pp2[i]=get_u(p,i,ix,iy,iz+2);
                   }
                 }
          
@@ -1164,19 +1130,19 @@ op_explicit(ldouble t, ldouble dtin)
                 //save interpolated values to memory
                 //Note that l and r of a given cell iy are the left and right wall of that cell,
                 //whereas L and R of given iy are quantities to the left and right of wall iy
-                for(iv=0;iv<NV;iv++)
+                for(i=0;i<NV;i++)
                 {
                   // Save fd_pl in array pbRz (Primitive_R) of wall iz
                   // Save fd_pr in array pbLz (Primitive_L) of wall iz+1
-                  set_ubz(pbRz,iv,ix,iy,iz,fd_pl[iv]);
-                  set_ubz(pbLz,iv,ix,iy,iz+1,fd_pr[iv]);
+                  set_ubz(pbRz,i,ix,iy,iz,fd_pl[i]);
+                  set_ubz(pbLz,i,ix,iy,iz+1,fd_pr[i]);
            
                   if(dol)
                   // Save ffl in array flRz (F_R) of wall iz
-                  set_ubz(flRz,iv,ix,iy,iz,ffl[iv]);
+                  set_ubz(flRz,i,ix,iy,iz,ffl[i]);
                   if(dor)
                   // Save ffr in array flLz (F_R) of wall iz+1
-                  set_ubz(flLz,iv,ix,iy,iz+1,ffr[iv]);   
+                  set_ubz(flLz,i,ix,iy,iz+1,ffr[i]);   
                 }
       }  // if(NZ>1 && ix>=0 && ix<NX && iy>=0 && iy<NY...)
 	     
@@ -1910,7 +1876,7 @@ int
 set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
 {
   int i1,i2,ix,iy,iz;
-  ldouble mdx,mdy,mdz,dx,dy,dz,gloc[4][5],xx[4],xxBL[4];
+  ldouble mdx,mdy,mdz,dx,dy,dz,gloc[4][5],xx[4];
   mdx=mdy=mdz=-1;
   ldouble maxdt=-1;
 
@@ -1941,6 +1907,15 @@ set_grid(ldouble *mindx,ldouble *mindy, ldouble *mindz, ldouble *maxdtfac)
       set_xb(i1,2,calc_xb(i1,2));  
       if(i1>-NG) set_x(i1-1,2,.5*(get_xb(i1,2)+get_xb(i1-1,2)));
     }
+
+  //consistency check
+#if(MYCOORDS==BLCOORDS)
+  if(get_x(-1,0)<=rhorizonBL)
+    {
+      printf("ix %d > %f\n",-1,get_x(-1,0));
+      my_err("-1 cell inside horizon\n");
+    }
+#endif
 
   // what is the minimal cell size
   for(ix=ix1;ix<ix2;ix++)
@@ -1991,6 +1966,7 @@ int set_grid_outcoords()
 	for(ii=0;ii<3;ii++)
 	  set_xout(ii,ix,iy,iz,xxout[ii+1]);
 
+	// TODO these are only needed when postproc==1 ? 
         //x-faces
 	if(ix==-NG)
 	{
@@ -2491,14 +2467,23 @@ int
 get_xx_arb(int ix,int iy,int iz,ldouble *xx,int COORDSOUT)
 {
   
-#if defined(PRECOMPUTE_MY2OUT) && (COORDSOUT==OUTCOORDS) // use precomputed coordinates if COORDS == OUTCOORDS
+#ifdef PRECOMPUTE_MY2OUT // use precomputed coordinates if COORDS == OUTCOORDS
+  if(COORDSOUT == OUTCOORDS)
+  {
     get_xxout(ix, iy, iz, xx); // time will be nonsense! seems ok everywhere this is used
+  }
+  else
+  {
+    ldouble xx0[4];
+    get_xx(ix,iy,iz,xx0);
+    coco_N(xx0,xx,MYCOORDS,COORDSOUT);
+  }
 #else
     ldouble xx0[4];
     get_xx(ix,iy,iz,xx0);
     coco_N(xx0,xx,MYCOORDS,COORDSOUT);
-#endif
-    return 0;
+#endif  
+  return 0;
 }
 
 
@@ -2536,6 +2521,67 @@ calc_xb(int i,int idim)
 } 
 
 ///////////////////////////////////////////////////////////////
+//deals with arrays [NX+NG x NY+NG x NZ+NG x gSIZE] - cell centers metric
+/*
+int set_g(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
+{
+  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG)
+    my_err("problem w/ set_g - index out of range");
+  
+  uarr[i*5+j + (iX(ix)+NGCX)*gSIZE + \
+               (iY(iy)+NGCY)*(SX)*gSIZE + \
+               (iZMET(iz)+NGCZMET)*(SY)*(SX)*gSIZE \
+      ] = value;
+  return 0;
+}
+*/
+
+///////////////////////////////////////////////////////////////
+//deals with arrays [NX+NG x NY+NG x NZ+NG x 16] - 4x4 tensors
+//metric specific 
+/*
+int set_T(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
+{
+  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_T - index ouf of range");
+  
+  uarr[i*4+j + (ix+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZMET(iz)+NGCZMET)*(SY)*(SX)*16] = value;
+  return 0;
+}
+*/
+
+///////////////////////////////////////////////////////////////
+//deals with arrays [NX+NG x NY+NG x NZ+NG x 16] - 4x4 tensors
+/*
+int set_Tfull(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value)
+{
+  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_T - index ouf of range");
+  
+  uarr[i*4+j + (ix+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZ(iz)+NGCZ)*(SY)*(SX)*16] = value;
+  return 0;
+}
+*/
+
+//deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x NV] - cell boundaries in idim
+
+int set_ub(ldouble* uarr,int iv,int ix,int iy,int iz,ldouble value,int idim)
+{
+  if(idim==0)
+    {
+      uarr[iv + (iX(ix)+NGCX)*NV + (iY(iy)+NGCY)*(SX+1)*NV + (iZ(iz)+NGCZ)*(SY)*(SX+1)*NV] = value;
+    }
+  if(idim==1)
+    {
+      uarr[iv + (iX(ix)+NGCX)*NV + (iY(iy)+NGCY)*(SX)*NV + (iZ(iz)+NGCZ)*(SY+1)*(SX)*NV] = value;
+    }
+  if(idim==2)
+    {
+      uarr[iv + (iX(ix)+NGCX)*NV + (iY(iy)+NGCY)*(SX)*NV + (iZ(iz)+NGCZ)*(SY)*(SX)*NV] = value;
+    }
+  return 0;
+}
+
+
+///////////////////////////////////////////////////////////////
 //deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x gSIZE] - cell boundaries in idim metric
 
 int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim)
@@ -2556,6 +2602,80 @@ int set_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim
 }
 
 
+///////////////////////////////////////////////////////////////
+//deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x 16] - tensors at cell boundaries in idim metric
+
+int set_Tb(ldouble* uarr,int i,int j,int ix,int iy,int iz,ldouble value,int idim)
+{
+  if(idim==0)
+    {
+      uarr[i*4+j + (iX(ix)+NGCX)*16 + (iY(iy)+NGCY)*(SX+1)*16 + (iZMET(iz)+NGCZMET)*(SY)*(SX+1)*16] = value;
+    }
+  if(idim==1)
+    {
+      uarr[i*4+j + (iX(ix)+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZMET(iz)+NGCZMET)*(SY+1)*(SX)*16] = value;
+    }
+  if(idim==2)
+    {
+      uarr[i*4+j + (iX(ix)+NGCX)*16 + (iY(iy)+NGCY)*(SX)*16 + (iZMET(iz)+NGCZMET)*(SY)*(SX)*16] = value;
+    }
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////
+//deals with arrays ~[NX+NG+1 x NY+NG x NZ+NG x gSIZE] - cell boundaries in idim metric
+/*
+ldouble get_gb(ldouble* uarr,int i,int j,int ix,int iy,int iz,int idim)
+{
+  if(idim==0)
+    {
+      if(ix<-NG || ix>NX+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_gb x - index ouf of range");  
+      return uarr[i*5+j + (ix+NG)*gSIZE + (iy+NG)*(NX+2*NG+1)*gSIZE + (iz+NG)*(NY+2*NG)*(NX+2*NG+1)*gSIZE];
+    }
+  if(idim==1)
+    {
+      if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_gb y - index ouf of range");  
+      return uarr[i*5+j + (ix+NG)*gSIZE + (iy+NG)*(NX+2*NG)*gSIZE + (iz+NG)*(NY+2*NG+1)*(NX+2*NG)*gSIZE];
+    }
+  if(idim==2)
+    {
+      if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ+NG) my_err("blont w get_gb z - index ouf of range");  
+      return uarr[i*5+j + (ix+NG)*gSIZE + (iy+NG)*(NX+2*NG)*gSIZE + (iz+NG)*(NY+2*NG)*(NX+2*NG)*gSIZE];
+    }
+  return 0;
+}
+*/
+
+///////////////////////////////////////////////////////////////
+//deals with arrays [NX+NG x NY+NG x NZ+NG] - cell centers 
+/*
+int set_u_scalar(ldouble* uarr,int ix,int iy,int iz,ldouble value)
+{
+  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w set_u_scalar - index ouf of range");
+
+  uarr[ix+NG + (iy+NG)*(NX+2*NG) + (iz+NG)*(NY+2*NG)*(NX+2*NG)] = value;
+  return 0;
+}
+*/
+
+///////////////////////////////////////////////////////////////
+//deals with arrays [NX+NG x NY+NG x NZ+NG x NV] - cell centers 
+/*
+ldouble get_u_scalar(ldouble* uarr,int ix,int iy,int iz)
+{
+  if(ix<-NG || ix>NX-1+NG || iy<-NG || iy>NY-1+NG || iz<-NG || iz>NZ-1+NG) my_err("blont w get_u_scalar - index ouf of range");
+  
+  //TODO something better, so far skipping calculating wave speeds at ghosts
+  //as it is easier due to extrapolation of primitives quantities 
+
+  //printf("%4d %4d %4d\n",ix,iy,iz); getchar();
+  
+  return uarr[ix+NG + (iy+NG)*(NX+2*NG) + (iz+NG)*(NY+2*NG)*(NX+2*NG)];
+}
+*/
+
+
+
 //**********************************************************************
 //* Variable copying, multiplication, addition
 //**********************************************************************
@@ -2568,7 +2688,11 @@ int
 copy_u_core(ldouble factor,ldouble *uu1,ldouble* uu2, long long N)
 {
   long long i;
+#ifdef APPLY_OMP_SIMD
+  #pragma omp parallel for simd
+#else
   #pragma omp parallel for private(i)
+#endif
   for (i=0;i<N;i++)
     uu2[i]=uu1[i]*factor;
   return 0;
@@ -2591,7 +2715,11 @@ int
 copyi_u(ldouble factor,ldouble *uu1,ldouble* uu2)	
 {
   int ii;
+#ifdef APPLY_OMP_SIMD
+  #pragma omp parallel for simd
+#else
   #pragma omp parallel for private(ii)
+#endif
   for(ii=0;ii<Nloop_02;ii++) //domain + ghost cells, but no corners
   {
     int ix,iy,iz,iv;
@@ -2614,7 +2742,11 @@ int
 add_u_core(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3, long long N)
 {
   long long i;
+#ifdef APPLY_OMP_SIMD
+  #pragma omp parallel for simd private(i)
+#else
   #pragma omp parallel for private(i)
+#endif
   for (i=0;i<N;i++)
     uu3[i]=uu1[i]*f1+uu2[i]*f2;
   return 0;
@@ -2638,7 +2770,11 @@ int
 addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 {
   int ii;
+#ifdef APPLY_OMP_SIMD
+  #pragma omp parallel for simd
+#else
   #pragma omp parallel for
+#endif
   for(ii=0;ii<Nloop_0;ii++) //domain only
     {
       int ix,iy,iz,iv;
@@ -2653,12 +2789,46 @@ addi_u(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble *uu3)
 }
 
 
+
+///////////////////////////////////////////////////////////////
+//array multiplication plus addition on 3 matrices
+//uu3=f1*uu1+f2*uu2
+int
+add_u_core_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4,long long N)
+{
+  long long i;
+#ifdef APPLY_OMP_SIMD
+  #pragma omp parallel for simd private(i)
+#else
+  #pragma omp parallel for private(i)
+#endif
+  for (i=0;i<N;i++)
+    uu4[i]=uu1[i]*f1+uu2[i]*f2+uu3[i]*f3;
+  return 0;
+}
+
+
+///////////////////////////////////////////////////////////////
+int
+add_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4)
+{
+  long long Ngrid=SX*SY*SZ;
+  long long Nprim=Ngrid*NV;
+  add_u_core_3(f1,uu1,f2,uu2,f3,uu3,uu4,Nprim);
+  return 0;
+}
+
+
 ///////////////////////////////////////////////////////////////
 int
 addi_u_3(ldouble f1, ldouble* uu1, ldouble f2, ldouble *uu2, ldouble f3, ldouble *uu3, ldouble *uu4)
 {
   int ii;
+#ifdef APPLY_OMP_SIMD
+  #pragma omp parallel for simd
+#else
   #pragma omp parallel for
+#endif
   for(ii=0;ii<Nloop_0;ii++) //domain only
     {
       int ix,iy,iz,iv;
@@ -2780,18 +2950,11 @@ int set_bc_core(int ix,int iy,int iz,double t,ldouble *uval,ldouble *pval,int if
 
   for(iv=0;iv<NV;iv++)
     pval[iv]=get_u(p,iv,iix,iiy,iiz);
-  
+    
   #ifdef CONSISTENTGAMMA
-  set_u_scalar(gammagas, ix, iy, iz, get_u_scalar(gammagas,iix,iiy,iiz));
+  set_u_scalar(gammagas, ix, iy, ix, get_u_scalar(gammagas,iix,iiy,iiz));
   #endif
 
-  set_cflag(RHOFLOORFLAG, ix, iy, iz, get_cflag(RHOFLOORFLAG, iix, iiy, iiz));
-  #ifdef FORCEFREE
-  set_u_scalar(ffinvarr, ix, iy, iz, get_u_scalar(ffinvarr, iix, iiy, iiz));
-  set_cflag(FFINVFLAG, ix, iy, iz, get_cflag(FFINVFLAG, iix, iiy, iiz));
-  set_cflag(MHDINVFLAG, ix, iy, iz, get_cflag(MHDINVFLAG, iix, iiy, iiz));
-  #endif
-  
   struct geometry geom;
   fill_geometry(ix,iy,iz,&geom);
   p2u(pval,uval,&geom);
@@ -2807,7 +2970,11 @@ int set_bc(ldouble t,int ifinit)
   int ii;
   
   //first fill the GC with no corners
+#ifdef APPLY_OMP_SIMD
+  #pragma omp parallel for simd schedule(static)
+#else
   #pragma omp parallel for schedule(static)
+#endif
   for(ii=0;ii<Nloop_2;ii++) //ghost cells only, no corners
     {
       int ix,iy,iz,iv;
@@ -4131,6 +4298,7 @@ int set_bc(ldouble t,int ifinit)
 	}
 
        //total total corners
+       //TODO - so far very simplified!!!
        if(mpi_isitBC_forcorners(XBCLO)==1 && mpi_isitBC_forcorners(YBCLO)==1 && mpi_isitBC_forcorners(ZBCLO)==1)
 	{
 	  for(ix=-NG;ix<0;ix++) 
@@ -5047,7 +5215,8 @@ cell_fixup(int type)
 	  (get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)!=0 && type==FIXUP_RADIMP)) && is_cell_active(ix,iy,iz)
 	)
 	{
-
+	  //ANDREW - I think maybe this should be here, to set the flag back to its default? 
+	  //this should not be here, should it?
 	  /*
 	  if(type==FIXUP_U2PMHD) set_cflag(HDFIXUPFLAG,ix,iy,iz,0); //try only once
 	  if(type==FIXUP_U2PRAD) set_cflag(RADFIXUPFLAG,ix,iy,iz,0); //try only once
@@ -5394,12 +5563,7 @@ return 0;
 #ifdef CORRECT_NSSURFACE
 int
 correct_nssurface()
-{
-#ifdef FORCEFREE
-  printf("ERROR! correct_nssurface not implemented for FORCEFREE\n");
-  exit(-1);
-#endif
-  
+{   
     #ifdef MPI
     if(TI != 0) return 0; // only first X cells in the first radial tile do fixup
     #endif
@@ -5586,12 +5750,6 @@ correct_polaraxis()
 			  pp[B3]=get_u(p,B3,ix,iysrc,iz);
 			  pp[B2]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,B2,ix,iysrc,iz);
 #endif
-#ifdef FORCEFREE
-			  //force-free velocities
-			  pp[VXFF]=get_u(p,VXFF,ix,iysrc,iz);
-			  pp[VZFF]=get_u(p,VZFF,ix,iysrc,iz);
-			  pp[VYFF]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,VYFF,ix,iysrc,iz);
-#endif			  
 #endif
 
 #ifdef RADIATION
@@ -5672,12 +5830,6 @@ correct_polaraxis()
 			  pp[B3]=get_u(p,B3,ix,iysrc,iz);
 			  pp[B2]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,B2,ix,iysrc,iz);
 #endif
-#ifdef FORCEFREE
-			  //force-free velocities
-			  pp[VXFF]=get_u(p,VXFF,ix,iysrc,iz);
-			  pp[VZFF]=get_u(p,VZFF,ix,iysrc,iz);
-			  pp[VYFF]=fabs((th-thaxis)/(thsrc-thaxis))*get_u(p,VYFF,ix,iysrc,iz);
-#endif			  			  
 #endif
 
 
@@ -5769,13 +5921,6 @@ correct_polaraxis()
 		      pp[B1]=fabs((R-Raxis)/(Rsrc-Raxis))*get_u(p,B1,ixsrc,iy,iz);
 		      
 #endif
-#ifdef FORCEFREE
-		      //force-free velocities
-		      pp[VYFF]=get_u(p,VYFF,ixsrc,iy,iz);
-		      pp[VZFF]=get_u(p,VZFF,ixsrc,iy,iz);
-		      pp[VXFF]=fabs((R-Raxis)/(Rsrc-Raxis))*get_u(p,VXFF,ixsrc,iy,iz);
-
-#endif
 #endif
 	
 
@@ -5826,10 +5971,6 @@ correct_polaraxis()
 int
 correct_polaraxis_3d()
 {
-#ifdef FORCEFREE
-  printf("ERROR! correct_polaraxis_3d not implemented for FORCEFREE\n");
-  exit(-1);
-#endif
       int nc=NCCORRECTPOLAR; //correct velocity in nc most polar cells;
 
       //spherical like coords
@@ -5913,6 +6054,23 @@ correct_polaraxis_3d()
 			    vph/=sqrt(geom.gg[3][3]);
 
 			    ucon[1]=vr; ucon[2]=vth; ucon[3]=vph;
+			    /*
+			      ldouble xxvec[4],xxvecBL[4];
+			      get_xx(ix,iy,iz,xxvec);
+			      coco_N(xxvec,xxvecBL,MYCOORDS,BLCOORDS);
+			      printf("%d > %e %e %e\n",ix,r,th,ph);
+			      print_4vector(xxvec);
+			      print_4vector(xxvecBL);
+			      print_metric(geomBL.gg);
+			      print_metric(geom.gg);
+			      print_4vector(ucon);
+			    */
+
+			    //conv_vels(ucon,ucon,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
+			    //trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+			    //conv_vels(ucon,ucon,VEL4,VELPRIM,geom.gg,geom.GG);
+			    //			  print_4vector(ucon);
+			    //getch();
 
 			    pp[VX]=ucon[1];
 			    pp[VY]=ucon[2];
@@ -5953,7 +6111,12 @@ correct_polaraxis_3d()
 			    vr/=sqrt(geom.gg[1][1]);
 			    vth/=sqrt(geom.gg[2][2]);
 			    vph/=sqrt(geom.gg[3][3]);
+			    //if(ic==0 && ix==10)
+			    //  printf("1 %d > %e %e | %e %e %e\n",iy,vth,sqrt(geom.gg[2][2]),vx,vy,vz);
 			    ucon[1]=vr; ucon[2]=vth; ucon[3]=vph;
+			    //conv_vels(ucon,ucon,VELPRIM,VEL4,geomBL.gg,geomBL.GG);
+			    //trans2_coco(geomBL.xxvec,ucon,ucon,BLCOORDS,MYCOORDS);
+			    //conv_vels(ucon,ucon,VEL4,VELPRIMRAD,geom.gg,geom.GG);
 			  
 			    pp[FX]=ucon[1];
 			    pp[FY]=ucon[2];
@@ -6206,6 +6369,7 @@ int
 is_cell_active(int ix, int iy, int iz)
 {
   //by default ALWAYS active
+  //ANDREW TODO: use for AMR? 
   return 1;
 }
 //**********************************************************************
@@ -6275,6 +6439,8 @@ get_factors_entropies_following_gas(int ix,int iy,int iz,ldouble *f0,
 
 //**********************************************************************
 // Mixing entropy adjustment
+// TODO: still A LOT of work here
+// ANDREW - made compatible with S4 entropy (02/15/16)
 //**********************************************************************
 
 int

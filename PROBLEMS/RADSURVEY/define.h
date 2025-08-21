@@ -11,7 +11,7 @@
 #define SPINp7     //or: SPINp9 SPINp7 SPINp5 SPIN0 SPINm5 SPINm7 SPINm9
 #define NTORUS 1   //3 for SANE, 1 for MAD
 
-#define myJETCOORDS //or: myMKS2COORDS, myMKS3COORDS
+#define myJETCOORDS     //or: myMKS2COORDS, myMKS3COORDS
 #define FISHMONCTORUS   // LIMOTORUS or FISHMONCTORUS
 
 /************************************/
@@ -20,16 +20,17 @@
 //#define NORESTART
 #define RESTARTGENERALINDICES
 #define RESTARTNUM -1
-#define PERTURBUINT 0.02
+//#define PERTURBUINT 0.02
 //#define PERTURBAFTERINIT //will not perturb after init if this is not defined
+//#define RESCALEDENSITY 6.25
 
 //#define RADSTART
-#ifdef RADSTART
-#define RESTARTFROMMHD
-#define INITURADFRAC 1.e-4
-#define INITUEFRAC 0.4
-#define RESCALEDENSITY 1.e-6
-#endif
+//#ifdef RADSTART
+//#define RESTARTFROMMHD
+//#define INITURADFRAC 1.e-4
+//#define INITUEFRAC 0.05
+//#define RESCALEDENSITY 4.064403e-19
+//#endif
 
 /************************************/
 //blackhole
@@ -121,6 +122,7 @@
 #define DAMPBETA
 #define BETASATURATED 0.1
 #define ALPHABETA 6.28
+
 */
 /************************************/
 //radiation choices
@@ -142,7 +144,7 @@
 //#define SKIPCOULOMBCOUPLING
 
 //implicit convergence
-#define OPDAMPINIMPLICIT 1
+#define OPDAMPINIMPLICIT 0//1
 #define RADIMPCONV 1.e-8
 #define RADIMPCONVREL 1.e-6
 #define RADIMPCONVRELERR 1.e-4
@@ -155,8 +157,8 @@
 #define RADIMPLICITMAXNPHCHANGE 100.
 #define RADIMPLICITMAXENCHANGEDOWN 100.
 #define RADIMPLICITMAXENCHANGEUP 10.
-#define RADIMPLICITMAXTECHANGE 2.
-#define IMPLICITMAXTGASCHANGE 2.
+#define RADIMPLICITMAXTECHANGE 5.//2.
+#define IMPLICITMAXTGASCHANGE 5.//2.
 #define MAXRADIMPDAMPING 1.e-6
 #define MAXDIFFTRADS 1.e3
 #define MAXDIFFTRADSNEARBH 1.e2
@@ -172,6 +174,8 @@
 
 #define DAMPCOMPTONIZATIONATBH
 #define ALLOWRADCEILINGINIMPLICIT                      
+
+#define SKIPIMPLICIT_ATBH
 
 //#define BASICRADIMPLICIT                               
 //#define RADIMPSTOPWHENFAIL                              
@@ -200,15 +204,17 @@
 
 //heating                                                                               
 #define HEATELECTRONS
+
 //#define HEATELECTRONS_HOWES                                                                       
-//#define HEATELECTRONS_KAWAZURA
 //#define HEATELECTRONS_ROWAN                                                                       
 //#define HEATELECTRONS_ROWAN2
 //#define HEATELECTRONS_ROWAN3
-//#define HEATELECTRONS_WERNER
-#define HEATELECTRONS_ZHDANKIN
 
-#define NOHEATATBH
+//#define HEATELECTRONS_ZHDANKIN
+#define HEATELECTRONS_KAWAZURA
+//#define HEATELECTRONS_WERNER
+
+//#define NOHEATATBH
 //#define HEATELECTRONSATENDRK2                                                                     
 //#define DISSIPATIONFROMGASONLY                       
 //#define FORCEGAMMAGASFIXED
@@ -219,12 +225,12 @@
 #define DONOTLIMITENTRINMIXING
 
 //floors                                                                
-#define UEUINTMINRATIO 1.e-3
-#define UIUINTMINRATIO 1.e-3
+#define UEUINTMINRATIO 1.e-2
+#define UIUINTMINRATIO 1.e-2
 #define TEMPEMINIMAL 1.e3
 #define TEMPIMINIMAL 1.e3
-#define TEMPEMINIMALFRACTION 1.e-6
-#define TEMPIMINIMALFRACTION 1.e-6
+#define TEMPEMINIMALFRACTION 1.e-3
+#define TEMPIMINIMALFRACTION 1.e-3
 #define TEMPEMAXIMALFRACTION 1.e3
 #define TEMPIMAXIMALFRACTION 1.e3
 
@@ -239,7 +245,7 @@
 /************************************/
 #define INT_ORDER 2
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .9
+#define TSTEPLIM .75
 #define FLUXMETHOD LAXF_FLUX
 
 #define FLUXLIMITER 0
@@ -263,27 +269,27 @@
 #define EEUURATIOMIN 1.e-20
 #define EEUURATIOMAX 1.e20
 #define B2UURATIOMIN 0.
-#define B2UURATIOMAX 1.e3
+#define B2UURATIOMAX 100. // 1.e3 // TODO
 #define B2RHORATIOMIN 0.
 #define B2RHORATIOMAX 100.
-#define GAMMAMAXRAD 25.
-#define GAMMAMAXHD 25.
-#define RHOFLOOR 1.e-40
+#define GAMMAMAXRAD 20.//25.
+#define GAMMAMAXHD 20.//25.
+#define RHOFLOOR 1.e-33//1.e-32//1.e-40
 
 /************************************/
 //resolution
 /************************************/
 //total resolution
 #define TNX 288 //320
-#define TNY 192 //192
+#define TNY 1//192 //192
 #define TNZ 144 //192
 
 #define SILO2D_XZPLANE
 
 //number of tiles
-#define NTX 12 
-#define NTY 8 
-#define NTZ 6 
+#define NTX 18 
+#define NTY 12 
+#define NTZ 8//9
 
 /************************************/
 //coordinates
@@ -332,7 +338,7 @@
 
 #define MINX 0
 #define MAXX 1.
-#define Y_OFFSET 1.e-5
+#define Y_OFFSET 1.e-3 //1.e-5
 #define MINY -(1.-Y_OFFSET) //10^-8 away from the poles seems to be the last safe point
 #define MAXY 1.-Y_OFFSET  
 
@@ -350,9 +356,11 @@
 #define ALPHA_1 1
 #define ALPHA_2 0.25 //0.2
 
+#if(TNY!=1)
 #define CYLINDRIFY
 #define RCYL 30. //20.
 #define NCYL 1.  //0.5
+#endif
 #endif
 
 #define PHIWEDGE (2*M_PI)
@@ -444,8 +452,8 @@
 
 // atmosphere //TODO better scalings!
 #define ATMTYPE 0
-#define RHOATMMIN   1.e-5*pow(2.,-1.5)*FM_rho0 
-#define UINTATMMIN  1.e-7*pow(2.,-2.5)*FM_rho0/(GAMMA-1.)/3. 
+#define RHOATMMIN   1.e-9*pow(2.,-1.5)
+#define UINTATMMIN  1.e-10*pow(2.,-2.5)/(GAMMA-1.)/3. 
 #define ATMTRADINIT 2.7
 #define ERADATMMIN  calc_LTE_EfromT(ATMTRADINIT) 
 
@@ -491,14 +499,17 @@
 
 //stopping condition
 
-#define NOUTSTOP 1000 //2000
+#define NOUTSTOP 1050 //2000
 
 //#define DUMPS_READ_HDF5
-//#define DUMPS_WRITE_HDF5
+#define DUMPS_WRITE_HDF5
 //#define COORDOUTPUT_HDF5
 
 #define OUTCOORDS KSCOORDS
 #define OUTVEL VEL4
+
+#define OUTCOORDS2 KSCOORDS
+//#define ANAOUT_HDF5
 
 //#define CGSOUTPUT
 #define COORDOUTPUT 0
@@ -514,7 +525,7 @@
 //#define RADOUTPUTWITHINDTHETA (M_PI/6.)
 
 #define SCAOUTPUT 0
-#define AVGOUTPUT 1
+#define AVGOUTPUT 0
 #define NORELELAVGS
 #define THOUTPUT 0
 //#define THPROFRADIUS 30

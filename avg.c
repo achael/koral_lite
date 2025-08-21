@@ -13,7 +13,6 @@
 int 
 main(int argc, char **argv)
 {  
-
   #ifdef MPI
   printf("avg works on shared memory only, do not use MPI, please\n");
   exit(-1);

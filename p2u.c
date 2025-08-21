@@ -11,12 +11,12 @@
 //**********************************************************************
 
 int
-p2u(ldouble *pp, ldouble *uu, void *ggg)
+p2u(ldouble *p, ldouble *u, void *ggg)
 {
-  p2u_mhd(pp,uu,ggg);
+  p2u_mhd(p,u,ggg);
 
 #ifdef RADIATION
-  p2u_rad(pp,uu,ggg);
+  p2u_rad(p,u,ggg);
 #endif
 
   return 0;
@@ -29,11 +29,11 @@ p2u(ldouble *pp, ldouble *uu, void *ggg)
 
 
 int
-p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
+p2u_mhd(ldouble *p, ldouble *u, void *ggg)
 {
 
 #ifdef NONRELMHD
-  p2u_mhd_nonrel(pp,uu,ggg);
+  p2u_mhd_nonrel(p,u,ggg);
   return 0;
 #endif
 
@@ -50,42 +50,41 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   gdetu=1.;
   #endif
 
-  ldouble rho=pp[RHO];
-  ldouble ugas=pp[UU];
-  ldouble S=pp[ENTR];
-  
+  ldouble rho=p[0];
+  ldouble uu=p[1];
   ldouble vcon[4],vcov[4],ucon[4],ucov[4];
   ldouble bcon[4]={0.,0.,0.,0.}, bcov[4]={0.,0.,0.,0.}, bsq=0.;
   vcon[0]=0.;
-  vcon[1]=pp[VX];
-  vcon[2]=pp[VY];
-  vcon[3]=pp[VZ];
-
+  vcon[1]=p[2];
+  vcon[2]=p[3];
+  vcon[3]=p[4];
+  ldouble S=p[5];
 
   conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 
 #ifdef MAGNFIELD
-  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
+  calc_bcon_bcov_bsq_from_4vel(p, ucon, ucov, geom, bcon, bcov, &bsq);
 #endif
 
   //************************************
   //hydro part
   //************************************
  
-  ldouble ut = ucon[0];
+  ldouble ut=ucon[0];
   ldouble rhout = rho*ut;
   ldouble Sut = S*ut;
 
+  //ANDREW Do we need to ensure gamma is consistent here?
   ldouble gamma=GAMMA;
   #ifdef CONSISTENTGAMMA
   gamma=pick_gammagas(geom->ix,geom->iy,geom->iz);
   #endif
   ldouble gammam1=gamma-1.;
 
-  ldouble pre=(gamma-1.)*ugas; 
-  ldouble w=rho+ugas+pre;
+  ldouble pre=(gamma-1.)*uu; 
+  ldouble w=rho+uu+pre;
   ldouble eta=w+bsq;
-  ldouble etap=ugas+pre+bsq; //eta-rho
+  ldouble etap = uu+pre+bsq; //eta-rho
   ldouble ptot=pre+0.5*bsq;
   
   //this computes utp1=1+u_t
@@ -97,58 +96,35 @@ p2u_mhd(ldouble *pp, ldouble *uu, void *ggg)
   ldouble Ttth =eta*ucon[0]*ucov[2] - bcon[0]*bcov[2];
   ldouble Ttph =eta*ucon[0]*ucov[3] - bcon[0]*bcov[3];
 
-  uu[RHO]=gdetu*rhout;
-  uu[UU]=gdetu*Tttt;
-  uu[VX]=gdetu*Ttr;
-  uu[VY]=gdetu*Ttth;
-  uu[VZ]=gdetu*Ttph;
-  uu[ENTR]=gdetu*Sut;
-  
+  u[0]=gdetu*rhout;
+  u[1]=gdetu*Tttt;
+  u[2]=gdetu*Ttr;
+  u[3]=gdetu*Ttth;
+  u[4]=gdetu*Ttph;
+  u[5]=gdetu*Sut;
+
 #ifdef EVOLVEELECTRONS
-  ldouble Seut=pp[ENTRE]*ut;
-  uu[ENTRE]= gdetu*Seut;
-  ldouble Siut=pp[ENTRI]*ut;
-  uu[ENTRI]= gdetu*Siut;
+  ldouble Seut=p[ENTRE]*ut;
+  u[ENTRE]= gdetu*Seut;
+  ldouble Siut=p[ENTRI]*ut;
+  u[ENTRI]= gdetu*Siut;
 #endif
 
 #ifdef RELELECTRONS
   int ib;
   for(ib=0;ib<NRELBIN;ib++)
-  {
-    uu[NEREL(ib)]=gdetu*pp[NEREL(ib)]*ut;
-  }    
+    {
+      u[NEREL(ib)]=gdetu*p[NEREL(ib)]*ut;
+    }    
 #endif
 
   //************************************
   //magnetic part
   //************************************ 
 #ifdef MAGNFIELD
-  uu[B1]=gdetu*pp[B1];
-  uu[B2]=gdetu*pp[B2];
-  uu[B3]=gdetu*pp[B3];
-
-
-#ifdef FORCEFREE
-
-#ifdef FORCEFREE_PARALLEL_COLD // neglect pressure
-  uu[UUFF] = gdetu * bcon[0];
-#else // adiabatic, with pressure
-
-  //ldouble w_s = (pp[RHO] + gamma*pp[UU])/pp[RHO];
-  ldouble w_s = 1 + gamma*pp[UU]/pp[RHO]; // specific enthalpy
-  uu[UUFF] = gdetu * w_s * bcon[0];
-#endif
-  
-  ldouble Ttr_ff  = bsq*ucon[0]*ucov[1] - bcon[0]*bcov[1];
-  ldouble Ttth_ff = bsq*ucon[0]*ucov[2] - bcon[0]*bcov[2];
-  ldouble Ttph_ff = bsq*ucon[0]*ucov[3] - bcon[0]*bcov[3];
-
-  
-  uu[VXFF] = gdetu*Ttr_ff;
-  uu[VYFF] = gdetu*Ttth_ff;
-  uu[VZFF] = gdetu*Ttph_ff;
-  
-#endif
+  u[B1]=gdetu*p[B1];
+  u[B2]=gdetu*p[B2];
+  u[B3]=gdetu*p[B3];
 #endif
 
   return 0.;
@@ -217,12 +193,13 @@ calc_utp1(ldouble *vcon, ldouble *ucon, void *ggg)
   return utp1;
 }
 
+
 //**********************************************************************
 //primitive to conserved converter - non-relativistic!
 //**********************************************************************
 
 int
-p2u_mhd_nonrel(ldouble *pp, ldouble *uu, void *ggg)
+p2u_mhd_nonrel(ldouble *p, ldouble *u, void *ggg)
 {
 
   struct geometry *geom
@@ -238,17 +215,15 @@ p2u_mhd_nonrel(ldouble *pp, ldouble *uu, void *ggg)
   gdetu=1.;
   #endif
 
-  ldouble rho=pp[RHO];
-  ldouble ugas=pp[UU];
-  ldouble S=pp[ENTR];
-  
+  ldouble rho=p[0];
+  ldouble uu=p[1];
   ldouble vcon[4],vcov[4],ucon[4],ucov[4];
   ldouble bcon[4]={0.,0.,0.,0.},bcov[4]={0.,0.,0.,0.},bsq=0.;
-  vcon[1]=pp[VX];
-  vcon[2]=pp[VY];
-  vcon[3]=pp[VZ];
+  vcon[1]=p[2];
+  vcon[2]=p[3];
+  vcon[3]=p[4];
   vcon[0]=0.;
-
+  ldouble S=p[5];
 
   conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG);
 
@@ -260,34 +235,34 @@ p2u_mhd_nonrel(ldouble *pp, ldouble *uu, void *ggg)
   ldouble v2=dot3nr(ucon,ucov);
 
 #ifdef MAGNFIELD
-  calc_bcon_bcov_bsq_from_4vel(pp, ucon, ucov, geom, bcon, bcov, &bsq);
+  calc_bcon_bcov_bsq_from_4vel(p, ucon, ucov, geom, bcon, bcov, &bsq);
 #endif
 
   //************************************
   //hydro part
   //************************************
  
-  ldouble Ttt=-(ugas + bsq/2. + rho*v2/2.);
+  ldouble Ttt=-(uu + bsq/2. + rho*v2/2.);
   ldouble Tttt=Ttt;
   ldouble Ttr =rho*ucov[1];
   ldouble Ttth =rho*ucov[2];
   ldouble Ttph =rho*ucov[3];
 
-  uu[RHO]=gdetu*rho;
-  uu[UU]=gdetu*Tttt;
-  uu[VX]=gdetu*Ttr;
-  uu[VY]=gdetu*Ttth;
-  uu[VZ]=gdetu*Ttph;
-  uu[ENTR]=gdetu*S;
+  u[0]=gdetu*rho;
+  u[1]=gdetu*Tttt;
+  u[2]=gdetu*Ttr;
+  u[3]=gdetu*Ttth;
+  u[4]=gdetu*Ttph;
+  u[5]=gdetu*S;
 
   //************************************
   //magnetic part
   //************************************
  
 #ifdef MAGNFIELD
-  uu[B1]=gdetu*pp[B1];
-  uu[B2]=gdetu*pp[B2];
-  uu[B3]=gdetu*pp[B3];
+  u[B1]=gdetu*p[B1];
+  u[B2]=gdetu*p[B2];
+  u[B3]=gdetu*p[B3];
 #endif
 
   return 0.;
@@ -392,8 +367,8 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   GG=geomout.GG;
 
   //four-vectors etc
-  ldouble rho=pp[RHO];
-  ldouble uint=pp[UU];
+  ldouble rho=pp[0];
+  ldouble uint=pp[1];
   ldouble gamma=GAMMA;
   #ifdef CONSISTENTGAMMA
   gamma=pick_gammagas(ix,iy,iz);
@@ -406,11 +381,11 @@ p2avg(int ix,int iy,int iz,ldouble *avg)
   ldouble Tgas=calc_PEQ_Teifrompp(pp,&Te,&Ti,ix,iy,iz);
   ldouble vcon[4],vcov[4],ucon[4],ucov[4];
   ldouble bcon[4]={0.,0.,0.,0.},bcov[4]={0.,0.,0.,0.},bsq=0.;
-  vcon[1]=pp[VX];
-  vcon[2]=pp[VY];
-  vcon[3]=pp[VZ];
+  vcon[1]=pp[2];
+  vcon[2]=pp[3];
+  vcon[3]=pp[4];
   vcon[0]=0.;
-  ldouble S=pp[ENTR];
+  ldouble S=pp[5];
   conv_vels_both(vcon,ucon,ucov,VELPRIM,VEL4,gg,GG); 
 
 #ifdef MAGNFIELD
@@ -643,69 +618,6 @@ else
   return 0.;
 }
 
-/*************************************************/
-/*  adds up current quantities to the pavg array */
-/*************************************************/
-
-int
-save_avg(ldouble dtin)
-{
-  int ix,iy,iz,iv,ii;
-
-#pragma omp parallel for private(ix,iy,iz,iv) 
-  for(ix=0;ix<NX;ix++) 
-    {
-      for(iy=0;iy<NY;iy++)
-	{
-	  ldouble avgz[NV+NAVGVARS];
-	   for(iv=0;iv<NV+NAVGVARS;iv++)
-	     avgz[iv]=0.;
-	   for(iz=0;iz<NZ;iz++)
-	    {
-	      ldouble avg[NV+NAVGVARS];
-	      p2avg(ix,iy,iz,avg);
-
-	      //timestep
-	      ldouble dt=dtin;
-
-#ifdef RADIATION //if implicit failed, do not take this step into account at all for failed cells
-	      if(get_cflag(RADIMPFIXUPFLAG,ix,iy,iz)==0)
-#endif
-		{
-
-#if (AVGOUTPUT==2) //phi-averaged
-		  for(iv=0;iv<NV+NAVGVARS;iv++)
-		    avgz[iv]+=avg[iv];
-#else //regular, without phi-averaging
-		  set_u_scalar(avgselftime,ix,iy,iz,get_u_scalar(avgselftime,ix,iy,iz)+dt);
-		  for(iv=0;iv<NV+NAVGVARS;iv++)
-		    {
-		      set_uavg(pavg,iv,ix,iy,iz, get_uavg(pavg,iv,ix,iy,iz)+avg[iv]*dt);
-		    }
-#endif
-		}
-	    }
-
-#if (AVGOUTPUT==2) //phi-averaged
-	  for(iv=0;iv<NV+NAVGVARS;iv++)
-	    avgz[iv]/=NZ;
-	  set_u_scalar(avgselftime,ix,iy,0,get_u_scalar(avgselftime,ix,iy,0)+dt);
-	  for(iv=0;iv<NV+NAVGVARS;iv++)
-	    {
-	      set_uavg(pavg,iv,ix,iy,0, get_uavg(pavg,iv,ix,iy,0)+avgz[iv]*dt);
-	    }
-#endif
-	}
-    }
-
-  avgtime+=dtin;
-
-  
-  return 0;
-}
-
-
-
 //**********************************************************************
 /*! int test_maginv()
  \brief Test p2u and u2p for MHD fluid
@@ -741,7 +653,7 @@ test_maginv()
 #endif
   
   //entropy
-  pp[ENTR]=calc_Sfromu(pp[RHO],pp[UU],0,0,0);
+  pp[5]=calc_Sfromu(pp[RHO],pp[UU],0,0,0);
   
   print_NVvector(pp);
   p2u(pp,uu,&geom);

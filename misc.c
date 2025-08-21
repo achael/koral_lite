@@ -87,88 +87,113 @@ void initialize_constants()
   two_third = 2. / 3.;
   log_2p6 = log(2.6);
   one_over_log_2p6 = 1. / log_2p6;
-  
+
+  /*  
+  printf("Testing gammainterp\n");
+  printf("%e %e %e \n",calc_meanlorentz(1.e-3),calc_meanlorentz(1.1e-3),calc_meanlorentz(5.e-3));
+  printf("%e %e %e \n",calc_meanlorentz(0.74),calc_meanlorentz(1.23),calc_meanlorentz(7.54));
+  printf("%e %e %e \n",calc_meanlorentz(14.3),calc_meanlorentz(77.3),calc_meanlorentz(144.));
+  printf("%e %e %e \n",calc_meanlorentz(555.),calc_meanlorentz(999.),calc_meanlorentz(1000.));
+  exit(-1);
+  */
   // Coordinate specific factors
-#if (MYCOORDS==JETCOORDS)
+  #if (MYCOORDS==JETCOORDS)
+  //printf("Finding hypx1out\n");
   hypx1in = log(RMIN-MKSR0);
   hypx1brk= log(HYPRBRK-MKSR0);
   hypx1out= hyperexp_x1max(RMAX, HYPRBRK, MKSR0);
+
+  //printf("hyperx1in %e | hyperx2brk %e | hyperx1out %e\n",hypx1in,hypx1brk,hypx1out);
   #ifdef CYLINDRIFY
   set_cyl_params();
   #endif
-#endif //MYCOORDS==JETCOORDS
 
-  // cutoff factors for hybrid force-free
-#ifdef FORCEFREE
-#if defined(HYBRID_FORCEFREE) && !defined(HYBRID_FORCEFREE_XCUT)
-  ldouble sigcut = HYBRID_FORCEFREE_SIGMACUT;
-  ldouble tanhwidth = HYBRID_FORCEFREE_WIDTH;
-  if(tanhwidth<=0.) // step function cutoff
-  {
-    ffinv_lower_cutoff=sigcut;
-    ffinv_upper_cutoff=sigcut;
-  }
-  else //cutoff at f(sigma) = 1/64 and f(sigma) = 63/64 
-  {
-    ldouble fac=pow(3.,tanhwidth)*pow(7.,0.5*tanhwidth);
-    
-    ffinv_upper_cutoff = sigcut*fac;
-    ffinv_lower_cutoff = sigcut/fac;
-  }
-  if(PROCID==0) printf("ff cutoffs %e %e\n",ffinv_lower_cutoff,ffinv_upper_cutoff);
-#endif
-#endif
+  
+  //ANDREW -- diagnostics for new jet coordinates/metric
 
+  /*
+  //printf("%.7f %.7f %.7f\n",hypx1in,hypx1brk,hypx1out);
+
+  ldouble x0[4] = {0, .15, 0.14863, 1};
+  ldouble x1[4], x2[4];
+
+  printf("%.7f %.7f %.7f %.7f\n",x0[0],x0[1],x0[2],x0[3]);
+
+  struct timespec temp_clock;
+  my_clock_gettime(&temp_clock);    
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  
+  coco_JET2KS(x0,x1);
+  
+  my_clock_gettime(&temp_clock);    
+  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("Transform Time %.7f\n",end_time-start_time);
+  
+  printf("%.7f %.7f %.7f %.7f\n",x1[0],x1[1],x1[2],x1[3]);  
+
+  coco_KS2JET(x1,x2);
+  printf("%.7f %.7f %.7f %.7f\n",x2[0],x2[1],x2[2],x2[3]);
+
+  
+  ldouble dxdx[4][4], dxdxinv[4][4], dxdxinv2[4][4];
+  int i,j,tmp;
+
+  my_clock_gettime(&temp_clock);    
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  tmp = dxdx_arb_num(x0, dxdx, MYCOORDS, KSCOORDS);
+
+  my_clock_gettime(&temp_clock);    
+  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("DXDX Time %.7f\n",end_time-start_time);
+
+  tmp = dxdx_arb_num(x1, dxdxinv, KSCOORDS, MYCOORDS);
+  inverse_44matrix(dxdx,dxdxinv2);    
+
+  print_tensor(dxdx);
+  print_tensor(dxdxinv);
+  //print_tensor(dxdxinv2);
+  printf("\n\n====================\n\n");
+  ldouble gtmp[4][5], g[4][4], G[4][4], ginv[4][4], Ginv[4][4];
+
+  my_clock_gettime(&temp_clock);    
+  start_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+
+  calc_g_arb_num(x0, gtmp, MYCOORDS);
+  my_clock_gettime(&temp_clock);    
+  end_time=(ldouble)temp_clock.tv_sec+(ldouble)temp_clock.tv_nsec/1.e9;
+  printf("Metric Time %.7f\n",end_time-start_time);
+  
+  DLOOP(i,j) g[i][j]=gtmp[i][j];
+  calc_G_arb_num(x0, gtmp, MYCOORDS);
+  DLOOP(i,j) G[i][j]=gtmp[i][j];
+  inverse_44matrix(g,ginv);
+  inverse_44matrix(G,Ginv);
+
+  //DLOOP(i,j) {if(fabs(g[i][j])<1.e-9) g[i][j]=0;}
+  //DLOOP(i,j) {if(fabs(G[i][j])<1.e-9) G[i][j]=0;}
+  //DLOOP(i,j) {if(fabs(ginv[i][j])<1.e-9) ginv[i][j]=0;}
+  //DLOOP(i,j) {if(fabs(Ginv[i][j])<1.e-9) Ginv[i][j]=0;}
+  
+  print_tensor(g);
+  //print_tensor(Ginv);
+  //DLOOP(i,j) Ginv[i][j] = (g[i][j]-Ginv[i][j])/(g[i][j]+SMALL);
+  //print_tensor(Ginv);
+  
+  printf("\n\n====================\n\n");
+  print_tensor(G);
+  //print_tensor(ginv);
+  //DLOOP(i,j) ginv[i][j] = (G[i][j]-ginv[i][j])/(G[i][j]+SMALL);
+  //print_tensor(ginv);
+
+ 
+  exit(-1);
+  */
+  #endif
   
   return;
 }
 
-//**********************************************************************
-/*! \fn int calc_cells_under_horiz()
- \brief calculate the number of cells beneath the horizon for bhdisk problems
-*/
-//**********************************************************************
-
-int
-calc_cells_under_horiz()
-{
-    //consistency check -- how many cell centers are under horizon? 
-#ifdef BHDISK_PROBLEMTYPE
-  ldouble xx[4],xxBL[4];
-  int ix;
-  if(TOI==0 && TOJ==0 && TOK==0) // only do on 0th tile
-  {
-    cells_under_horizon=0;
-    for(ix=0;ix<NX;ix++)
-    {
-      get_xx(ix,0,0,xx); //BH problem types should have r coord independent of theta,phi
-      coco_N(xx,xxBL,MYCOORDS,BLCOORDS);
-      if(xxBL[1]>rhorizonBL)
-	break;
-      else
-	cells_under_horizon+=1;
-    }
-
-    
-    if(cells_under_horizon<3)
-    {
-      printf("There are only %d cells under horizon at rh=%.2f! increase to at least 4\n",
-	     cells_under_horizon,rhorizonBL);
-      //exit(-1);
-    }
-   
-    if(cells_under_horizon==NX)
-    {
-      printf("All cells on inner tile are under horizon! \n");
-      exit(-1);
-    }
-
-    printf("There are %d cells under the horizon at rh=%.2f\n",
-	   cells_under_horizon,rhorizonBL);
-  }
-#endif
-  return 0;
-}
 
 //**********************************************************************
 /*! \fn int print_scalings()
@@ -331,33 +356,6 @@ if (NTZ % 2 != 0)
  printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 }
 #endif
-
-#ifdef FORCEFREE
-  #ifdef NONRELMHD
-  printf("FORCEFREE does not work with NONRELMHD!\n");
-  exit(-1);
-  #endif
-  #ifdef RADIATION
-  printf("FORCEFREE does not work yet with RADIATION!\n");
-  exit(-1);
-  #endif
-  #ifndef MAGNFIELD
-  printf("FORCEFREE requires MAGNFIELD!\n");
-  exit(-1);
-  #endif
-  #if (VELPRIM!=VELR)
-  printf("FORCEFREE requries VELPRIM==VELR!\n");
-  exit(-1);
-  #endif
-  #if(GDETIN==0)
-  printf("FORCEFREE does not work with GDETIN==0!\n");
-  exit(-1);
-  #endif
-  #ifdef CORRECT_POLARAXIS_3D
-  printf("FORCEFREE does not work with CORRECT_POLARAXIS_3D!\n");
-  exit(-1);
-  #endif
-#endif
   
 #ifdef PWPOTENTIAL
   printf("PWPOTENTIAL has been removed!\n");
@@ -368,7 +366,7 @@ if (NTZ % 2 != 0)
   printf("NCOMPTONIZATION has been replaced by EVOLVEPHOTONNUMBER!\n");
   exit(-1);
 #endif
-  
+
 #ifdef RADIATION  
 #if defined(COMPTONIZATIONFLAG)
   if (PROCID == 0)
@@ -513,8 +511,6 @@ if (NTZ % 2 != 0)
   if(PROCID==0) printf("RESTARTFROMMHD\n");
   if(PROCID==0) printf("urad/uu: %e ue/uu: %e\n", INITURADFRAC, INITUEFRAC);
 #endif
-
-
   return;
 }
 
@@ -624,11 +620,7 @@ initialize_arrays()
 
   //gamma of gas at the beginnning of timestep
   if((gammagas=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
-
-#ifdef FORCEFREE
-  if((ffinvarr=(ldouble*)malloc(GridSize))==NULL) my_err("malloc err.\n");
-#endif
-  
+ 
   /****************** extra arrays, used only for time evolution **********************/
   //we might need some of these arrays in postproc (if doingpostproc_avg==1)
   #ifdef DIVIDEVISCHEATBYDT
@@ -665,6 +657,14 @@ initialize_arrays()
      //metric at cell z-faces
      if((gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
      if((Gbz=(ldouble*)malloc(MetZSize))==NULL) my_err("malloc err.\n");
+      
+     //LNRF basis one-forms and vectors
+     //if((emuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((emulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+
+     //tetrad one-forms and vectors
+     //if((tmuup=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
+     //if((tmulo=(ldouble*)malloc(MetVecSize))==NULL) my_err("malloc err.\n");
 
      //Fluxes and wavespeeds
      long long NfluxX = (SX+1)*(SY)*(SZ)*NV;
@@ -750,7 +750,7 @@ initialize_arrays()
      long long EmfSize = Nemf*sizeof(ldouble);
      if((emf=(ldouble*)malloc(EmfSize))==NULL) my_err("malloc err.\n");
 #endif
-	 
+  
   }
 
   init_all_kappa_table();
@@ -808,6 +808,22 @@ free_arrays()
   free(g);
   free(G);
   free(gKr);
+  //free(emuup);
+  //free(emulo);
+  //free(emuupbx);
+  //free(emulobx);
+  //free(emuupby);
+  //free(emuloby);
+  //free(emuupbz);
+  //free(emulobz);
+  //free(tmuup);
+  //free(tmulo);
+  //free(tmuupbx);
+  //free(tmulobx);
+  //free(tmuupby);
+  //free(tmuloby);
+  //free(tmuupbz);
+  //free(tmulobz);
 
   free(pbLx);
   free(pbRx);
@@ -884,9 +900,7 @@ free_arrays()
   //free(temperaturelog);
   //free(Lambdalog);
   //#endif
-  #ifdef FORCEFREE
-  free(ffinvarr);
-  #endif
+  
   return 0;
 }
 
@@ -1433,12 +1447,6 @@ print_primitives(ldouble *p)
   printf("B^1 = %.15e\n",p[B1]);
   printf("B^2 = %.15e\n",p[B2]);
   printf("B^3 = %.15e\n",p[B3]);
-#ifdef FORCEFREE
-  printf("upar (ff) = %.15e\n", p[UUFF]);
-  printf("u^1 (ff) = %.15e\n",p[VXFF]);
-  printf("u^2 (ff) = %.15e\n",p[VYFF]);
-  printf("u^3 (ff) = %.15e\n",p[VZFF]);
-#endif
 #endif
 #ifdef RADIATION
   printf("Erf = %.15e\n",p[EE0]);
@@ -1482,12 +1490,6 @@ print_conserved(ldouble *u)
   printf("B^1 = %.15e\n",u[B1]);
   printf("B^2 = %.15e\n",u[B2]);
   printf("B^3 = %.15e\n",u[B3]);
-#ifdef FORCEFREE
-  printf("mu b^0 (ff) = %.15e\n",u[UUFF]);
-  printf("T^t_1 (ff) = %.15e\n",u[VXFF]);
-  printf("T^t_2 (ff) = %.15e\n",u[VYFF]);
-  printf("T^t_3 (ff) = %.15e\n",u[VZFF]);
-#endif
 #endif
 #ifdef RADIATION
   printf("R^t_t = %.15e\n",u[EE0]);
@@ -1587,6 +1589,8 @@ decompose_vels(ldouble *pp,int velidx, ldouble v[4],void *ggg,  void *gggBL)
 // get cell size in x,y,z
 //**********************************************************************
 
+
+// ANDREW TODO DEBUG
 // get the size of a cell dx in 3 dimensions in OUTCOOORDS
 int get_cellsize_out(int ix, int iy, int iz, ldouble dx[3])
 {
@@ -1787,7 +1791,7 @@ convert_out2gif_2d(char *fname,char *fname2,int niter,ldouble t)
   FILE *fgnu=fopen(buf1,"w");
 
 #ifdef PR_OUT2GIF_2D
-  #include PR_OUT2GIF_2D   //PROBLEMS/XXX/out2gif_2d.c
+  #include PR_OUT2GIF_2D   //PROBLEMS/XXX/out2gid_2d.c
 #endif
 
   fprintf(fgnu,"\n");
@@ -1805,7 +1809,7 @@ convert_out2gif_1d(char *fname,char *fname2,int niter,ldouble t)
   char bufor[50];
 
 #ifdef PR_OUT2GIF_1D
-  #include PR_OUT2GIF_1D   //PROBLEMS/XXX/out2gif_2d.c
+  #include PR_OUT2GIF_1D   //PROBLEMS/XXX/out2gid_2d.c
 #endif
   fprintf(fgnu,"\n");
   fclose(fgnu);   
