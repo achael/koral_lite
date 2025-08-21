@@ -829,9 +829,9 @@ fill_ffprims()
       int fflag = 1;
       ldouble ffval= 1.;
 	
-      #ifdef HYBRID_FORCEFREE
+#ifdef HYBRID_FORCEFREE
       
-      #ifdef HYBRID_FORCEFREE_XCUT //cut based on x-domain for test problems
+#ifdef HYBRID_FORCEFREE_XCUT //cut based on x-domain for test problems
       //if(geom.xx < HYBRID_FORCEFREE_XCUT) ffval = 0.;
       //else ffval = 1.;
 
@@ -861,11 +861,11 @@ fill_ffprims()
 
       if(ffval>=1.) mhdflag=0; // mhd inversion is NOT required
       else mhdflag = 1; // mhd inversion is required
-      
+
+      //printf("%d %d %d %e\n",ix,iy,iz,ffval);
       set_u_scalar(ffinvarr, ix, iy, iz, ffval);
       set_cflag(FFINVFLAG, ix,iy,iz,ffflag);
       set_cflag(MHDINVFLAG, ix,iy,iz,mhdflag);
-      
     }
 
 #endif  

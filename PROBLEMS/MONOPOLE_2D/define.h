@@ -39,18 +39,18 @@
 //#define UINTATMMIN 1.e-8//1.e-20
 
 #define B2RHORATIOMAXINIT 1000
-//#define B2UURATIOMAXINIT 100
-#define RHO2UURATIOMAXINIT 1000 
+//#define B2UURATIOMAXINIT 1000
+#define RHO2UURATIOMAXINIT 10000
 
 //#define NOLOGINS
 #define ENFORCEENTROPY
 
-//#define FORCEFREE
+#define FORCEFREE
 //#define HYBRID_FORCEFREE
 
 #if defined(FORCEFREE)
-#define FORCEFREE_SOLVE_PARALLEL
-#define FORCEFREE_PARALLEL_COLD
+//#define FORCEFREE_SOLVE_PARALLEL
+//#define FORCEFREE_PARALLEL_COLD
 //#define FORCEFREE_PARALLEL_ENTROPY
 
 #if defined(HYBRID_FORCEFREE)
@@ -78,7 +78,7 @@
 #else
 
 #define CORRECT_POLARAXIS
-#define NCCORRECTPOLAR 2
+#define NCCORRECTPOLAR 1//2
 
 #define B2RHOFLOORFRAME DRIFTFRAME
 #define UURHORATIOMIN 0.
@@ -86,7 +86,7 @@
 #define B2UURATIOMIN 0.
 #define B2UURATIOMAX 1000//B2UURATIOMAXINIT
 #define B2RHORATIOMIN 0.
-#define B2RHORATIOMAX 1000//B2RHORATIOMAXINIT
+#define B2RHORATIOMAX 100//1000//B2RHORATIOMAXINIT
 
 #define GAMMAMAXHD 50.//100.
 #endif
@@ -95,7 +95,7 @@
 //blackhole
 /************************************/
 #define MASS 10.
-#define BHSPIN 0.5//9375
+#define BHSPIN 0.9//375
 #define RHOR (1.+sqrt(1. - BHSPIN*BHSPIN))
 
 /************************************/
@@ -107,7 +107,7 @@
 #define RMAX 250. //200.
 
 #define TNX 192//128//256
-#define TNY 128//256
+#define TNY 192//256
 #define TNZ 1
 
 #ifdef myMKS1COORDS //modified Kerr-Shild
@@ -156,7 +156,7 @@
 #define OUTVEL VEL4
 #define ALLSTEPSOUTPUT 0
 #define NSTEPSTOP 1.e10
-#define NOUTSTOP 100
+#define NOUTSTOP 50
 #define SILOOUTPUT 1
 //#define PRIMOUTPUT 1
 #define ANAOUT_HDF5

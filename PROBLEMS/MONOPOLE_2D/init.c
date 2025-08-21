@@ -17,8 +17,8 @@ ldouble bsqh = 1./((rhor*rhor + BHSPIN*BHSPIN)*(rhor*rhor+BHSPIN*BHSPIN));
 
 //rho = RHOATMMIN + (r/10./rhor)/pow(r,4)/B2RHORATIOMAXINIT;
 
-rho = RHOATMMIN + bsqh*pow(r/rhor,-3)/B2RHORATIOMAXINIT;
 
+rho = RHOATMMIN + bsqh*pow(r/rhor,-3)/B2RHORATIOMAXINIT;
 //uint = UINTATMMIN + (r/10./rhor)/pow(r,4)/B2UURATIOMAXINIT;
 
 //initially isothermal
@@ -105,3 +105,9 @@ for(iv=0;iv<NV;iv++)
 //entropy
 update_entropy_cell(ix,iy,iz,0);
 set_cflag(0,ix,iy,iz,0);
+
+#ifdef FORCEFREE
+set_u_scalar(ffinvarr, ix, iy, iz, 1.0);
+set_cflag(FFINVFLAG, ix,iy,iz,1);
+set_cflag(MHDINVFLAG,ix,iy,iz,0);
+#endif
