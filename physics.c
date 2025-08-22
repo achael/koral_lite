@@ -2935,7 +2935,7 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
       delta=0.5; //default to equal heating
     }
   else if(delta<0.)
-    delta=0.;
+    delta=0.; 
   
   return delta;
 }
