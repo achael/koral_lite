@@ -16,7 +16,7 @@ static int f_u2p_parallel_entropy(ldouble W, ldouble* cons,ldouble *f,ldouble *d
 int
 u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg, int verbose)
 {
-
+  int ret=-1;
 #ifdef FORCEFREE
   int i,j,k;
   ldouble alpha,alphasq;
@@ -151,8 +151,7 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg, int verbose)
   // MHD conserveds
   ldouble D  = uu[RHO] * alpha * gdetu_inv; // uu[RHO] = gdet rho ut, so D = gamma * rho
   ldouble Sc = uu[ENTR] * alpha * gdetu_inv; // uu[ENTR] = gdet S ut, so Sc = gamma * S
-
-  int ret=-1;
+  
   int whicheqs_parallel = 1;
   ldouble vpar = 0, vsq_par=0;
   ldouble W = -1.;
@@ -499,9 +498,8 @@ u2p_solver_ff(ldouble *uu, ldouble *pp, void *ggg, int verbose)
   pp[VXFF] = vcon_perp[1]*gamma_perp;
   pp[VYFF] = vcon_perp[2]*gamma_perp;
   pp[VZFF] = vcon_perp[3]*gamma_perp;
-  
-  return ret; 
 #endif
+  return ret; 
 }
 
 //*********************************************************************
