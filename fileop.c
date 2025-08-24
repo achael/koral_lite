@@ -1187,9 +1187,9 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
     printf( "Unable to open/create file %s\n", fname );fflush(stdout); exit(-1);
   }
 
-  /***** first read ALL the indices ******/
 
- int nvold;
+  /***** primitive lengths for restarting with radiation ******/
+  int nvold;
 #if defined(RESTARTFROMMHD)
   nvold=9;
 #elif defined(RESTARTFROMNORELEL) // can only do EITHRE RESTARTFROMMHD OR RESTARTFROMNORELEL
@@ -1202,6 +1202,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
   nvold=NV;
 #endif
 
+  /***** first read ALL the indices ******/
   //first read the indices pretending to be a single process
   int *indices;
   if((indices = (int *)malloc(NX*NY*NZ*3*sizeof(int)))==NULL) my_err("malloc err. - fileop 5\n");
@@ -1226,6 +1227,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
       MPI_File_read( cFile, indices, 3*len, MPI_INT, &status );
 
       //convert to local
+      int some_in_domain=0;
       for(ic=0;ic<len;ic++)
 	{
 	  gix=indices[ic*3+0];
@@ -1235,10 +1237,15 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 	  indices[ic*3+0]=ix;
 	  indices[ic*3+1]=iy;
 	  indices[ic*3+2]=iz;
+	  if(some_in_domain==0 && if_indomain(ix,iy,iz))
+	  {
+	    some_in_domain=1;
+	  }
 	}
 
+      if(some_in_domain)
+      {
       /***** then read primitives in the same order ******/
-
       pos=TNX*TNY*TNZ*(3*sizeof(int)) + procid*NX*NY*NZ*(nvold*sizeof(ldouble)); 
       MPI_File_seek( cFile, pos, MPI_SEEK_SET ); 
       MPI_File_read( cFile, pout, len*nvold, MPI_LDOUBLE, &status );
@@ -1326,6 +1333,7 @@ fread_restartfile_mpi(int nout1, char *folder, ldouble *t)
 
 	    }
 	}
+      }
     }
 
 
