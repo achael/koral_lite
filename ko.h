@@ -1201,9 +1201,10 @@ int calc_Compt_Gi_with_state(ldouble *pp, void *sss, void* ggg, ldouble *Gic, ld
 ldouble calc_CoulombCoupling(ldouble *pp,void *ggg);
 ldouble calc_CoulombCoupling_with_state(ldouble *pp,void *sss,void *ggg);
 
-void calc_Ehat_from_Rij_ucov(double Rij[4][4], double uffcov[4], ldouble *Ehat);
+void calc_Ehat_from_Rij_ucov(double Rij[4][4], ldouble uffcov[4], ldouble *Ehat);
 int calc_Rij(ldouble *pp, void* ggg, ldouble Rij[][4]);
 int calc_Rij_M1(ldouble *pp, void* ggg, ldouble Rij[][4]);
+int calc_Rij_M1_from_4vel(ldouble *pp, void* ggg, ldouble *urfcon, ldouble Rij[][4]);
 
 ldouble calc_NFfromE(ldouble E);
 ldouble calc_LTE_EfromT(ldouble T);

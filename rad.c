@@ -3089,6 +3089,43 @@ calc_Rij(ldouble *pp, void* ggg, ldouble Rij[][4])
   return 0;
 }
 
+
+/****************************************************/
+/***** radiative stress energy tensor ***************/
+/***** from radiation four-velocity *****************/
+/***** pure M1 only *********************************/
+/****************************************************/
+
+int
+calc_Rij_M1_from_4vel(ldouble *pp, void* ggg, ldouble *urfcon, ldouble Rij[][4])
+{
+#ifdef RADIATION
+  struct geometry *geom
+  = (struct geometry *) ggg;
+  
+  ldouble (*gg)[5],(*GG)[5];
+  gg=geom->gg;
+  GG=geom->GG;
+  
+  int verbose=0;
+  int i,j;
+  
+  //radiative energy density in the radiation rest frame
+  ldouble Erf = pp[EE0]; 
+
+  //lab frame stress energy tensor:
+  for(i = 0; i < 4; i++)
+  {
+    for(j = 0; j < 4; j++)
+    {
+      Rij[i][j] = four_third * Erf * urfcon[i] * urfcon[j] + one_third * Erf * GG[i][j];
+    }
+  }
+#endif
+  
+  return 0;
+}
+
 /****************************************************/
 /***** radiative stress energy tensor ***************/
 /***** pure M1 only here ****************************/
