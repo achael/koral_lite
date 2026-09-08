@@ -124,7 +124,8 @@ fill_struct_of_state(ldouble *pp, void* ggg, void* sss)
 #ifdef RADIATION
   
   calc_urcon_urcov_from_prims(pp, geom, urfcon, urfcov);
-  calc_Rij_M1(pp, geom, Rij);
+  calc_Rij_M1_from_4vel(pp, geom, urfcon, Rij);
+  //calc_Rij_M1(pp, geom, Rij);
   calc_Ehat_from_Rij_ucov(Rij, ucov, &Ehat);
   
   DLOOPA(i)
@@ -2935,8 +2936,9 @@ ldouble calc_ViscousElectronHeatingFraction_from_state(ldouble *pp,void *sss, vo
       delta=0.5; //default to equal heating
     }
   else if(delta<0.)
-    delta=0.; 
-  
+    {
+      delta=0.5; // change to equal in this case too
+    }
   return delta;
 }
 
