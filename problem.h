@@ -153,7 +153,7 @@
 //146 FFBONDI -- bondi flow for ff test
 //147 PUFFY
 
-#define PROBLEM 132
+#define PROBLEM 115
 
 #if(PROBLEM==147)
 #define PR_DEFINE "PROBLEMS/PUFFY/define.h"

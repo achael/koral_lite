@@ -96,10 +96,10 @@
 /************************************/
 #define INT_ORDER 1
 #define TIMESTEPPING RK2IMEX
-#define TSTEPLIM .8
-#define FLUXLIMITER 0
+#define TSTEPLIM .5//0.8
+#define FLUXLIMITER 0//1
 #define FLUXMETHOD LAXF_FLUX
-#define MINMOD_THETA 1.8
+#define MINMOD_THETA 1.5//1.8
 #define SHUFFLELOOPS 0
 #define DOFIXUPS 1
 #define DORADFIXUPS 1
@@ -139,56 +139,60 @@
 /************************************/
 //initial setup
 /************************************/
-#define TESTNO 100
+#define TESTNO 1
 
 #if (TESTNO==0) //Ressler+15
+#define FORCEGAMMAGASFIXED
+#define FIXEDGAMMASPECIES
 #define GAMMA (5./3.)
 #define GAMMAE (4./3.) //gamma of electrons
 #define GAMMAI (5./3.) //gamma of ions
 #define HEATELECTRONSATENDRK2
 #define DISSIPATIONFROMGASONLY 
 #define NSTEPSTOP 50000.
-#define DTOUT1 (1.e1)  //dt for output in seconds
+#define NOUTSTOP 30
+#define DTOUT1 (10)  //dt for output in seconds
 #define RHO_INIT 1.0
 #define TE_INIT 30.
 #define TI_INIT 30.
 #define TEINITFACTOR 1.
-#define VEL 1.e-3
-#define FORCEGAMMAGASFIXED  
+#define VEL 1.e-3  
 #endif
 
 #if (TESTNO==1) //modified Ressler+15
+#define FORCEGAMMAGASFIXED
+#define FIXEDGAMMASPECIES
 #define GAMMA (5./3.)
 #define GAMMAE (4./3.) //gamma of electrons
 #define GAMMAI (5./3.) //gamma of ions
 #define HEATELECTRONSATENDRK2
 #define DISSIPATIONFROMGASONLY
 #define NSTEPSTOP 50000.
-#define NOUTSTOP 5
-#define DTOUT1 (100)  //dt for output in seconds
+#define NOUTSTOP 30
+#define DTOUT1 (10)  //dt for output in seconds
 #define RHO_INIT 1.0
 #define TE_INIT .1
 #define TI_INIT 10.
 #define TEINITFACTOR 1.
-#define FORCEGAMMAGASFIXED
 #define VEL 1.e-3
 #endif
 
 #if (TESTNO==10) //to test electron heating 
+#define FIXEDGAMMASPECIES
+#define FORCEGAMMAGASFIXED
 //#define CONSISTENTGAMMA
-//#define DISSIPATIONFROMGASONLY 
+#define DISSIPATIONFROMGASONLY 
 #define GAMMA (5./3.)
 #define GAMMAE (4./3.) //gamma of electrons
 #define GAMMAI (5./3.) //gamma of ions
-#define NSTEPSTOP 50000.
-#define NOUTSTOP 5
-#define DTOUT1 (100)  //dt for output in seconds
+#define NSTEPSTOP 500000.
+#define NOUTSTOP 30
+#define DTOUT1 (10)  //dt for output in seconds
 #define RHO_INIT 1.0
 #define TE_INIT .1
 #define TI_INIT 10.
 #define TEINITFACTOR 1.
 #define VEL 1.e-3
-#define FORCEGAMMAGASFIXED
 #endif
 
 
@@ -199,9 +203,9 @@
 #define GAMMA (5./3.)
 #define GAMMAE (4./3.) //gamma of electrons
 #define GAMMAI (5./3.) //gamma of ions
-#define NSTEPSTOP 50000.
-#define NOUTSTOP 5
-#define DTOUT1 (100)  //dt for output in seconds
+#define NSTEPSTOP 500000.
+#define NOUTSTOP 30
+#define DTOUT1 (10)  //dt for output in seconds
 #define RHO_INIT 1.
 #define TE_INIT .1
 #define TI_INIT 10.
@@ -214,12 +218,9 @@
 #define FORCEGAMMAGASFIXED
 //#define CONSISTENTGAMMA
 //#define FIXEDGAMMASPECIES
-
 #define DISSIPATIONFROMGASONLY
 #define HEATELECTRONSATENDRK2
-
 #define GAMMA (5./3.)
-//#define GAMMA 1.5
 #define GAMMAE (4./3.) //gamma of electrons
 #define GAMMAI (5./3.) //gamma of ions
 #define NSTEPSTOP 50000.
@@ -246,7 +247,7 @@
 #define MAXZ 1.
 
 //total resolution
-#define TNX 2000//128
+#define TNX 512
 #define TNY 1
 #define TNZ 1
 
@@ -255,9 +256,9 @@
 #define NTY 1
 #define NTZ 1
 
-//#define SPECIFIC_BC
+#define SPECIFIC_BC
 #define PERIODIC_ZBC
-#define PERIODIC_XBC
+//#define PERIODIC_XBC
 #define PERIODIC_YBC
 
 /************************************/
@@ -268,8 +269,8 @@
 #define ALLSTEPSOUTPUT 0
 #define SILOOUTPUT 0
 #define OUTOUTPUT 0
-#define SIMOUTPUT 0
-//#define SIMOUTPUTINTERNAL
+#define SIMOUTPUT 1
+#define SIMOUTPUTINTERNAL
 #define RADOUTPUT 0
 #define SCAOUTPUT 0
 #define AVGOUTPUT 0

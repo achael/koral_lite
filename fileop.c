@@ -2359,7 +2359,7 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
 
 	       fprintf(fout1,"%.5e ",volume);//12
 
-	       #ifdef RADIATION
+#ifdef RADIATION
 	       ldouble Rtt,ehat,Rij[4][4];
 	       ldouble ugas[4],Fx,Fy,Fz;
 	       if(doingavg==0)
@@ -2445,7 +2445,7 @@ int fprint_simplecart(ldouble t, int nfile, char* folder,char* prefix)
 	      	      uugas,ui,ue,
 		      get_u_scalar(vischeating,ix,iy,iz),
 		      get_u_scalar(vischeatingnegebalance,ix,iy,iz),
-		      gammagas,Te,Ti,gammae,gammai);//17-21 with rad, 13-17 without
+		      gammagas,Te,Ti,gammae,gammai);//17-26 with rad, 13-22 without
 #endif //PROBLEM==115 || PROBLEM==135
 
 	      fprintf(fout1,"\n");
