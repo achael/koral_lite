@@ -417,6 +417,29 @@ main(int argc, char **argv)
 #endif  // ifdef PERTURBUINT
       
   
+  //*************************************
+  // Force-free primitives and inversion flags
+  //*************************************
+
+  // Build the force-free primitives and the FFINVFLAG/MHDINVFLAG/ffinvarr
+  // inversion flags for both startup paths, once everything that can touch p
+  // is done: the torus/atmosphere setup or the restart read, calc_BfromA(),
+  // PR_POSTINIT (which renormalises B, and so changes sigma=bsq/rho), and any
+  // rescaling or perturbation above.
+  //
+  // This has to happen before the first u2p(). cellflag and ffinvarr are
+  // malloc'd and are not stored in the restart file, so without this a restart
+  // would invert against uninitialised arrays -- zero-filled pages give
+  // ffval=0 with mhdflag=0, which trips the "mhdflag inconsistent with ffval"
+  // check in u2p(). Nothing between here and solve_the_problem() calls u2p():
+  // calc_primitives() is reached only from calc_u2p() in the stepper.
+  //
+  // Domain cells only, matching the calls at the end of each RK step in
+  // problem.c, which likewise run after set_bc().
+#ifdef FORCEFREE
+  fill_ffprims();
+#endif
+
   //********************
   // Prepare initial arrays
   //********************
